@@ -8,11 +8,25 @@ Status meanings:
 
 ---
 
-### D-01 · Asset: canonical wrapped USDC · DECIDED
-Use the Token Wrap program's canonical Token-2022 wrapped mint for USDC (facts C1 to C5). Consequences you must respect:
-- The mint has **no auditor** and an immutable confidential configuration (C2). Sotto cannot use a mint level auditor. Compliance and accountant access are built with application level disclosures (D-05).
-- The USDC issuer's freeze authority carries over to the wrapped mint (C3). The UI must say so in the trust page.
-- If the wrapped mint does not exist on a cluster, Sotto creates it once with the permissionless `CreateMint` (C4).
+### D-01 · Asset: wrapped USDC · DECIDED for devnet and localnet, BLOCKER for mainnet
+Gate G1 (2026-09-26) found that the Token Wrap program is not deployed at its canonical ID `TwRapQCDhWkZRrDaHfZGuHxkZ91gHDRkyuzNqeU5MgR` on mainnet or devnet, so no canonical wrapped USDC exists (facts C5). The decision is split by cluster.
+
+**Devnet and localnet · DECIDED (founder, 2026-09-26).**
+- Sotto uses its own **patched test deployment** of Token Wrap, not the canonical program: `spl-token-wrap` 1.0.0 built with one source change, the `declare_id!` line set to `EEvqpjNRQkNRwXzVziuTGGi1wYDiPv7haYVVu3XZCoQn` (facts C6, C8; build record in `VERSIONS.md`). Program `EEvqpjNRQkNRwXzVziuTGGi1wYDiPv7haYVVu3XZCoQn` on devnet, upgrade authority wallet A. Localnet loads the same `.so` at the same ID.
+- Devnet wrapped USDC mint: `AhJfP4JJBaHWRtXRiaScZUC7SMm4RqUPSb3g9H5RT8Bd` (Token-2022, derived under `EEvq…` from devnet USDC `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`).
+- The Token Wrap program ID and the wrapped mint address are **per cluster configuration values, never constants**, so Sotto can switch to the canonical deployment when it exists.
+- The UI must label every asset wrapped by this deployment as **"devnet test wrap"**.
+- Consequences you must respect (verified on the test deployment, same as for canonical Token Wrap):
+  - The mint has **no auditor** and an immutable confidential configuration (C2). Sotto cannot use a mint level auditor. Compliance and accountant access are built with application level disclosures (D-05).
+  - The USDC issuer's freeze authority carries over to the wrapped mint (C3). The UI must say so in the trust page.
+  - If the wrapped mint does not exist on a cluster, Sotto creates it once with the permissionless `CreateMint` (C4).
+- The `declare_id!` patch changes only the program ID; the program logic is unchanged. The compliance customizer in the crate is not reachable (C7).
+
+**Mainnet · BLOCKER for mainnet (any mainnet configuration or deployment).**
+- Which asset Sotto uses on mainnet is open. Canonical Token Wrap is not deployed there. Do not deploy anything to mainnet.
+- Input: the read only survey of Token-2022 USD stablecoins on mainnet (`VERIFICATION-LOG.md`, G1 part 3, task M) and `QUESTIONS.md` Q-04.
+- Blocks: mainnet cluster config, the trust page asset statement for mainnet, and copy row L8 in `13-COPY-CORRECTIONS.md`.
+
 Rejected: forking Token Wrap to add an auditor (new program risk, splits liquidity, adds a trusted party).
 
 ### D-02 · Custody model · DECIDED
@@ -65,6 +79,9 @@ Web on Vercel. Worker on Fly.io. Founder may override.
 
 ### D-14 · RPC provider · DEFAULT with GATE
 Helius for devnet and mainnet, public RPC as a devnet fallback only. Gate G1 must confirm the provider serves v1 transactions (`maxSupportedTransactionVersion: 1`) and the ZK ElGamal program is active on the cluster.
+**Gate result · PASSED 2026-09-26** (`VERIFICATION-LOG.md`, G1 part 1, task 1 and part 2, task 5):
+- Helius devnet and Helius mainnet return `getBlock` with `maxSupportedTransactionVersion: 1` on blocks that contain v1 transactions (devnet slot 504428333, mainnet slot 450692590); `0` or an omitted parameter fails with `-32015` when full transactions are requested (facts D2). The public devnet RPC behaves the same.
+- The ZK ElGamal Proof program is active on devnet and mainnet: enable, disable and re-enable gates all active, which satisfies the activation rule (facts B3, B6).
 
 ### D-15 · Authentication · DEFAULT
 Sign-In With Solana through the Wallet Standard sign in feature when available, otherwise a signed nonce message. Session: httpOnly, secure, SameSite=Lax cookie holding an opaque session ID. No JWT in localStorage.

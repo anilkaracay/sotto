@@ -38,3 +38,6 @@ test-ledger/
 # Fetched and built artifacts (Token Wrap .so) and the local validator ledger
 .cache/
 .localnet/
+
+# Next.js generated types (recreated by next typegen)
+next-env.d.ts

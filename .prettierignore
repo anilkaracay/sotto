@@ -1,0 +1,10 @@
+docs/
+design/
+ENGINEERING-RULES.md
+pnpm-lock.yaml
+.cache/
+.localnet/
+target/
+programs/
+vendor/
+.next/

@@ -1,0 +1,6 @@
+# Host toolchain for cargo test and tooling. Onchain programs build with the platform tools
+# bundled with cargo-build-sbf 4.1.0 (rustc 1.89.0), see docs/VERSIONS.md.
+[toolchain]
+channel = "1.98.1"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

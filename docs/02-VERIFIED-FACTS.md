@@ -118,3 +118,4 @@ F1. Sotto uses USDC wrapped into Token-2022 through Token Wrap. **RE-VERIFY** th
 - Exact Rust module paths for proof context state parsing and ElGamal ciphertext arithmetic that `sotto_proofs` needs. Gate G4.
 - Compute units used by `sotto_proofs::verify_balance_threshold`. Gate G4.
 - SAS program ID per cluster (E3), Token Wrap deployment (C5), USDC mints (F1).
+- The Token-2022 program ID, the ZK ElGamal Proof program ID, and the deprecated ZK Token Proof program ID (from the pinned Agave source). Gate G1 step 4 records them from pinned sources and chain; they are added to this file as verified facts after the gate. Until then, code must import them from package constants, never literals.

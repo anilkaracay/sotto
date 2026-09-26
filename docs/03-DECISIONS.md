@@ -20,13 +20,19 @@ Non-custodial. Each organization's confidential wUSDC account is owned by the or
 
 ### D-03 · Confidential key derivation scheme · GATE (G2)
 - If all target wallets (Phantom, Solflare, Backpack; list in `14-ENVIRONMENTS-DEPLOY.md`) allow a dApp to call `signMessage` on the exact bytes `solana-conf-bal/v1`, use the standard `deriveConfidentialKeys` (facts A11). Interoperable with other confidential aware wallets.
-- If any target wallet refuses (facts A12), use `ConfidentialKeys.fromIkm` where IKM is the Ed25519 signature over the UTF-8 message `sotto-conf-keys/v1` followed by a newline and the owner address in base58. Ed25519 signatures are deterministic, so the keys are reproducible from the wallet alone.
+- If any target wallet refuses (facts A12), use `ConfidentialKeys.fromIkm` where IKM is the Ed25519 signature over exactly this UTF-8 message of three lines separated by newlines:
+  ```
+  sotto-conf-keys/v1
+  This signature unlocks your Sotto confidential balances. Sign it only in the official Sotto app.
+  Wallet: <ownerBase58>
+  ```
+  It is intentionally not bound to a domain (a domain change would lose key recovery). The residual phishing risk is accepted and documented in `10-SECURITY.md` section 2. Ed25519 signatures are deterministic, so the keys are reproducible from the wallet alone; Gate G2 checks this per wallet. If a wallet is not deterministic, it is unsupported for owners.
 - The chosen scheme is stored per token account (`key_scheme` column, values `standard_v1` or `sotto_ikm_v1`). Never mix schemes on one account. Changing scheme requires a new token account and a full move of funds.
 - Hardware wallets that cannot `signMessage` are not supported for owners in the MVP. Show a clear message.
 
-### D-04 · Organization signing and approvals · DEFAULT (founder please confirm)
-MVP: one owner wallet signs every money operation. Approvals (for example "2 of 2" on payroll) are an application policy enforced by Sotto: the backend refuses to hand out an execution plan until the required approvers have signed an approval message (Sign-In With Solana style signed payload, stored with signature). The UI must describe this truthfully: "Approvals are recorded in Sotto and signed by each approver. The owner wallet executes."
-Phase 2: Squads multisig as the token account owner. This requires confidential key material shared by approvers (`fromIkm` from a shared secret) and proof regeneration if the balance changes between proposal and execution. Out of scope until designed in a separate document.
+### D-04 · Organization signing and approvals · DECIDED
+MVP: one owner wallet signs every money operation. Approvals (for example "2 of 2" on payroll) are recorded policy, not onchain enforcement, because the owner wallet can always sign directly. Sotto's API refuses to authorize, and the Sotto client refuses to execute, until the required approvers have signed an approval message (Sign-In With Solana style signed payload, stored with signature). Approval messages must include: org ID, cluster, subject type and ID, and `contents_hash` = lowercase hex SHA-256 of the canonical JSON list of `{ line_id, recipient_wallet, idempotency_key, private_blob_sha256 }`. Any change to the run after approval invalidates approvals. The UI must describe this truthfully: "Approvals are recorded in Sotto and signed by each approver. The owner wallet executes."
+Post-hackathon: Squads multisig as the token account owner. This requires confidential key material shared by approvers (`fromIkm` from a shared secret) and proof regeneration if the balance changes between proposal and execution. Out of scope until designed in a separate document.
 
 ### D-05 · Viewing keys are application level disclosures · DECIDED
 Forced by facts A8, A11 and D-01: onchain keys are wallet wide and cannot be scoped or revoked, and the wrapped mint has no auditor. Sotto implements scoped, expiring, revocable access with per viewer encrypted disclosure records. Full design in `07-SELECTIVE-DISCLOSURE.md`. Revocation stops future disclosures and deletes stored ciphertexts; it cannot erase what a viewer already decrypted. The UI must say this.
@@ -35,21 +41,21 @@ Forced by facts A8, A11 and D-01: onchain keys are wallet wide and cannot be sco
 "Balance is at least X" is proven with the same cryptography Token-2022 uses for withdraw: a ciphertext commitment equality proof plus a range proof over `available_balance minus X`, verified by the ZK ElGamal Proof program into context state accounts, then checked and recorded by the Sotto program `sotto_proofs` (spec in `05-ONCHAIN-PROGRAM.md`). No new cryptography.
 Result vocabulary: **Proven** or **Not proven**. A false statement cannot be proven, so "False" is never shown as a cryptographic result. Copy change in `13-COPY-CORRECTIONS.md`.
 
-### D-07 · Proof of income · DEFAULT: Phase 2
-Requires an onchain record of each payroll ciphertext so a program can sum them. Design sketch in `05-ONCHAIN-PROGRAM.md` section 8. Not in the hackathon build. The "Prove income" screen ships only when Phase 2 ships.
+### D-07 · Proof of income · DEFAULT: Post-hackathon
+Requires an onchain record of each payroll ciphertext so a program can sum them. Design sketch in `05-ONCHAIN-PROGRAM.md` section 8. Not in the hackathon build. The "Prove income" screen ships only when the Post-hackathon income proof ships.
 
-### D-08 · Recipients without a wallet (email claim) · BLOCKER for Phase 2
-MVP (Phase 1): every recipient connects a standard wallet and configures their confidential account through a Sotto invite link before they can be paid confidentially.
-Phase 2 needs an embedded wallet provider. Founder must choose after Gate G2 style checks on: Solana support, deterministic `signMessage`, v1 transaction signing, key export, pricing. Candidates to evaluate: Privy, Dynamic, Turnkey, Para, Web3Auth.
+### D-08 · Recipients without a wallet (email claim) · BLOCKER for Post-hackathon
+MVP: every recipient connects a standard wallet and configures their confidential account through a Sotto invite link before they can be paid confidentially.
+Post-hackathon email claim needs an embedded wallet provider. Founder must choose after Gate G2 style checks on: Solana support, deterministic `signMessage`, v1 transaction signing, key export, pricing. Candidates to evaluate: Privy, Dynamic, Turnkey, Para, Web3Auth.
 
 ### D-09 · Business verification (KYB) · DEFAULT for hackathon, BLOCKER for public mainnet
 Hackathon and private beta: manual review by a Sotto admin in the admin console, then Sotto issues a "verified business" SAS attestation. Public mainnet: founder picks a KYB provider (for example Sumsub, Persona, Onfido) after legal review (D-23).
 
-### D-10 · Sanctions screening · BLOCKER for Phase 1 payments
+### D-10 · Sanctions screening · BLOCKER for mainnet payments
 Every recipient address must be screened before a payment plan is issued. Founder chooses the provider and provides credentials. Candidates: Range, Chainalysis sanctions screening, TRM Labs. Until chosen, devnet uses a local deny list file so the code path is exercised; mainnet payments are disabled by feature flag until a provider is configured.
 
 ### D-11 · Frontend stack · DEFAULT
-Next.js (App Router) with TypeScript strict mode, React, CSS Modules plus a global token stylesheet that reproduces the design variables exactly. Solana client: `@solana/kit` and the `@solana-program/*` clients. Wallets through the Wallet Standard. Proof generation runs in a Web Worker. Versions resolved and pinned at scaffold.
+Next.js (App Router) with TypeScript strict mode, React, CSS Modules plus a global token stylesheet that reproduces the design variables exactly. Solana client: `@solana/kit` and the `@solana-program/*` clients. Wallets through the Wallet Standard, using the official Solana Kit React bindings. At scaffold, verify the exact package names (expected `@solana/react` and `@wallet-standard/react`) and record them; if either does not exist, stop and ask. Proof generation runs in a Web Worker. Versions resolved and pinned at scaffold.
 
 ### D-12 · Backend and data · DEFAULT
 Next.js route handlers for the API, PostgreSQL 16 with Drizzle ORM and SQL migrations, a separate Node worker for chain indexing and jobs. Managed Postgres: Neon (branch per environment). Founder may switch to Supabase or another Postgres host; schema is plain Postgres.
@@ -80,8 +86,8 @@ pnpm workspaces and Turborepo. Layout in `04-ARCHITECTURE.md`.
 - "Privacy score": kept, with the formula defined in `01-PRODUCT.md` F-18. If the founder prefers, remove it; do not show an undefined number.
 - Any other demo only element is listed in `13-COPY-CORRECTIONS.md` with its fate.
 
-### D-21 · Payroll execution · DECIDED
-One confidential transfer per recipient. A run of N recipients is N transactions (v1: one transaction each; v0 fallback: several each). Proofs are generated sequentially because each transfer changes the sender's available balance; the client computes the next available balance ciphertext locally so all plans can be prepared before signing. Signing uses one `signAllTransactions` prompt when the wallet supports it, otherwise one prompt per transaction. Copy must not claim "one transaction".
+### D-21 · Payroll execution · GATE (G3)
+One confidential transfer per recipient. A run of N recipients is N transactions (v1: one transaction each; v0 fallback: several each). Proofs are generated sequentially because each transfer changes the sender's available balance. Gate G3 decides whether the client can compute the next available balance ciphertext locally so the plans of a chunk can be prepared before signing; otherwise lines are prepared and executed one at a time (`06-CONFIDENTIAL-FLOWS.md` section 7). Signing chunks are at most 10 lines: a 24 line run is 3 prompts when `signAllTransactions` works, otherwise one prompt per transaction. Copy must not claim "one transaction" and never promises a number of prompts.
 
 ### D-22 · Pricing · DEFAULT
 No fees in the MVP. No fee logic in code.

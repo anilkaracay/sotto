@@ -4,19 +4,20 @@ Stack per D-12: Next.js route handlers, PostgreSQL 16, Drizzle ORM with SQL migr
 
 ## 1. The golden rule for data
 
-The database must never contain: plaintext payment amounts, salaries, balances, budgets, notes about money, or any key material. Amount bearing data exists only as ciphertext (disclosures, encrypted blobs to the owner). A schema test fails the build if any column name matches `amount|salary|balance|budget|gross|tax|net` outside the allow list (`proof_records.threshold_base_units`, which is public onchain anyway).
+The database must never contain: plaintext payment amounts, salaries, balances, budgets, notes about money, or any key material. Amount bearing data exists only as ciphertext (disclosures, encrypted blobs to the owner). A schema test fails the build if any column name matches `amount|salary|balance|budget|gross|tax|net` outside the allow list: `proof_records.threshold_base_units` and `chain_activity.public_amount_base_units`. Both hold amounts that are already public onchain (proof thresholds, confidential deposit and withdraw amounts; ENGINEERING-RULES.md rule 4).
 
 ## 2. Schema (logical; implement as Drizzle migrations)
 
 ```
-users(id uuid pk, wallet text unique not null, created_at)
+users(id uuid pk, wallet text unique not null, display_name, created_at)
 auth_nonces(nonce text pk, wallet text, expires_at, used_at)
 sessions(id text pk, user_id fk, created_at, last_seen_at, expires_at, revoked_at)
-admins(wallet text pk)
+admins(wallet text pk)          -- source of truth for Sotto admins; ADMIN_WALLETS is used only by the seed script to insert rows
 
 orgs(id uuid pk, display_name, legal_name, country char(2), registration_no, website, contact_email,
      status enum(pending_review, active, suspended), owner_user_id fk,
-     attestation_address text null, reviewed_by text null, reviewed_at null, created_at)
+     attestation_address text null, reviewed_by text null, reviewed_at null, created_at,
+     private_blob bytea null)          -- encrypted to owner self: budgets and settings with amounts
 memberships(id uuid pk, org_id fk, user_id fk, role enum(owner, approver, accountant, board, recipient),
             created_at, removed_at null, unique(org_id, user_id, role))
 invites(token text pk, org_id fk, role, created_by fk, expires_at, accepted_by null, accepted_at null)
@@ -36,23 +37,27 @@ screenings(id uuid pk, org_id fk, wallet, provider, result enum(clear, hit, erro
 payments(id uuid pk, org_id fk, kind enum(single, payroll_line), run_id fk null, recipient_id fk,
          idempotency_key text unique, status enum(draft, authorized, executing, settled, failed_clean, failed),
          signatures text[], settled_slot bigint null, error_code text null, created_at, updated_at)
+payment_attempts(id, payment_id, attempt_no, signatures text[], status enum(sent, confirmed, finalized, failed, failed_clean),
+                 error_code, created_at)
 payroll_runs(id uuid pk, org_id fk, title, period char(7), status enum(draft, awaiting_approval, approved,
              executing, settled, partially_settled, failed), line_count int, created_by fk, created_at,
              executed_at null, private_blob bytea)   -- encrypted to owner: amounts per line
 approvals(id uuid pk, org_id fk, subject_type enum(payment, payroll_run), subject_id uuid,
           approver_user_id fk, message text, signature bytea, created_at, unique(subject_type, subject_id, approver_user_id))
 
-grants(id uuid pk, org_id fk, viewer_user_id fk, scope enum(all_payments, period, payroll_only, totals_only, own_payslips),
+grants(id uuid pk, org_id fk, viewer_user_id fk null, invite_token text fk, scope enum(all_payments, period, payroll_only, totals_only, own_payslips),
        period_from date null, period_to date null, expires_at null,
        status enum(pending_viewer_key, active, revoked, expired), created_by fk, created_at, revoked_at null,
-       last_used_at null)
+       last_used_at null)          -- always created through an invite; viewer_user_id is null until the invite is accepted
 manifests(id uuid pk, org_id fk, signer_wallet text, manifest jsonb, signature bytea, created_at)
 disclosures(id uuid pk, org_id fk, grant_id fk null, viewer_user_id fk, kind enum(payment, payroll_line, month_total, balance_snapshot),
             subject text, ciphertext bytea, manifest_id fk, created_at)
 
 proof_records(id uuid pk, org_id fk, cluster, record_address text unique, threshold_base_units bigint,
-              counterparty_label text, expiry timestamptz, created_at)
+              counterparty_label text, counterparty_salt bytea(16), expiry timestamptz, created_at)
 reconciliations(payment_id pk fk, org_id fk, status enum(matched, needs_receipt), updated_by fk, updated_at)
+reconciliation_notes(id uuid pk, payment_id fk, org_id fk, viewer_user_id fk, ciphertext bytea, manifest_id fk, created_at,
+                     unique(payment_id, viewer_user_id))   -- one sealed box per reader (owner plus each accountant with a covering grant), created and signed exactly like disclosures
 close_items(org_id fk, month char(7), item_key text, done bool, done_by fk null, done_at null, primary key(org_id, month, item_key))
 access_log(id bigserial pk, org_id fk, actor_user_id fk null, action text, subject_type text, subject_id text,
            metadata jsonb, created_at)
@@ -87,7 +92,7 @@ Recipients and screening
 Payments and payroll
 - `POST /orgs/:id/payments { recipientId, idempotencyKey }` creates a draft.
 - `POST /orgs/:id/payroll-runs { title, period, lines:[{ recipientId, idempotencyKey }], privateBlob }`.
-- `POST /approvals { subjectType, subjectId, message, signature }`.
+- `POST /approvals { subjectType, subjectId, message, signature }`. The message must include org ID, cluster, subject type and ID, and `contents_hash` = lowercase hex SHA-256 of the canonical JSON list of `{ line_id, recipient_wallet, idempotency_key, private_blob_sha256 }` (D-04). Any change to the run after approval invalidates approvals.
 - `POST /orgs/:id/payments/:pid/authorize` returns `{ authorized: true }` only if: org active, recipient ready, screening clear within 24 hours, approvals satisfied, proof program available. Otherwise a precise error code.
 - `POST /orgs/:id/payments/:pid/executions { signatures[] }` records attempt signatures before and after sending.
 - The worker moves payments to `settled` after finality.
@@ -99,7 +104,10 @@ Disclosure
 
 Proofs
 - `POST /orgs/:id/proofs { recordAddress, counterpartyLabel }`: server reads the record from chain and stores metadata.
-- `GET /public/proofs/:address`: no auth. Reads chain, returns statement, slot, time, expiry, org display name from the SAS attestation, and `balanceDisclosed: "none"`.
+- `GET /public/proofs/:address`: no auth. Reads chain, returns statement, slot, time, expiry, org `legal_name` from the SAS attestation, and `balanceDisclosed: "none"`.
+
+RPC proxy
+- `POST /rpc`: all browser Solana RPC goes through this server proxy, with a JSON-RPC method allow list, a per session rate limit and a body size limit.
 
 Other
 - `GET /orgs/:id/access-log`, reconciliation and close checklist endpoints, `POST /waitlist`, `GET /waitlist/confirm/:token`, `GET /health`.
@@ -109,19 +117,19 @@ Other
 | Job | Interval | What |
 |-----|----------|------|
 | `confirm-executions` | 5 s | For payments `executing`: fetch signature statuses; mark `settled` at finalized; mark failures with decoded error. |
-| `index-accounts` | 15 s | For every org token account: `getSignaturesForAddress`, fetch with `maxSupportedTransactionVersion: 1`, classify with `identifyToken2022Instruction`, store public activity rows (type, signature, slot, counterparty address, public amount only for deposit and withdraw). |
+| `index-accounts` | 15 s | For every org token account: `getSignaturesForAddress`, fetch with `maxSupportedTransactionVersion: 1`, classify with `identifyToken2022Instruction`, store public activity rows (type, signature, slot, counterparty address, public amount only for deposit and withdraw, raw destination ciphertext for incoming confidential transfers). |
 | `recipient-readiness` | 60 s | Re-check recipients not `ready`. |
 | `proof-program-health` | 5 min | Simulate a minimal proof verification; set a global flag (F-19). |
 | `sas-issue` | on event | Issue or close attestations after admin actions. |
 | `grant-expiry` | hourly | Expire grants, delete their disclosures, log. |
 
-Public activity table (add to schema): `chain_activity(id, org_id, signature, slot, block_time, instruction_type, counterparty_address, public_amount_base_units null)`. Public amounts exist only for deposit and withdraw, which are public onchain (facts A2); they are allowed in the column allow list with this justification.
+Public activity table (add to schema): `chain_activity(id, org_id, signature, slot, block_time, instruction_type, counterparty_address, public_amount_base_units null, destination_ciphertext bytea null)`. Public amounts exist only for deposit and withdraw, which are public onchain (facts A2); they are allowed in the column allow list with this justification. For each incoming confidential transfer, `destination_ciphertext` stores the raw destination ciphertext bytes (public data, allowed; see `07-SELECTIVE-DISCLOSURE.md` section 3).
 
 ## 5. SAS setup
 
 - One Sotto credential per cluster with the worker's attestation signer as authorized signer. Created by `scripts/bootstrap-sas.ts`.
 - Schema `sotto.business.v1` fields: `org_id` (string), `legal_name` (string), `country` (string), `verified_at` (i64), `level` (u8). Encode the layout exactly as `sas-lib` requires for the pinned version (Gate G5).
-- Attestation subject: the org owner wallet. Expiry: 365 days. Nonce: a new keypair address per attestation.
+- Attestation nonce: the org owner's wallet address, so the attestation is discoverable from `ProofRecord.owner`. Verify in G5 that SAS derives the attestation address from credential, schema and nonce; if not, stop and ask. Expiry: 365 days.
 
 ## 6. Cross cutting
 

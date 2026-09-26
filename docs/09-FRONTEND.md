@@ -6,10 +6,15 @@
 |-------|--------|------|
 | `/` | Landing (from `design/sotto-landing.html`) | Public |
 | `/v/[address]` | Public proof verification | Public |
+| `/trust` | Trust page (D-01, `13-COPY-CORRECTIONS.md` L6 and L7, `10-SECURITY.md` section 4) | Public |
 | `/app` | Redirects to the first page of the user's role in their last used org | Session |
 | `/app/onboarding` | Create org, KYB form, status | Session |
-| `/app/[org]/overview` | Owner overview | Owner |
-| `/app/[org]/payroll` and `/app/[org]/payroll/[run]` | Payroll | Owner, approver |
+| `/app/[org]/overview` | Owner overview; withdraw (F-09) opens as a drawer here | Owner |
+| `/app/[org]/setup` | Confidential account setup and funding (F-03, F-04) | Owner |
+| `/app/[org]/recipients` | Recipients (F-07) | Owner |
+| `/app/[org]/settings` | Approval policy, budgets | Owner |
+| `/app/[org]/board` | Board view: read only totals | Board viewer |
+| `/app/[org]/payroll` and `/app/[org]/payroll/[run]` | Payroll; approvers use the "Approve" action on the run page and see the contents hash they sign | Owner, approver |
 | `/app/[org]/payments/new` | Single payment | Owner |
 | `/app/[org]/keys` | Viewing keys (grants) | Owner |
 | `/app/[org]/proofs` | Proofs of funds | Owner |
@@ -23,10 +28,10 @@ The role switcher in the design becomes an **org and role switcher**: it lists t
 
 ## 2. Design fidelity
 
-- Tokens: extract every CSS variable, font size, radius, shadow and animation from `design/sotto-app.html` and `design/sotto-landing.html` into `packages/ui/tokens.css`. Fonts: Geist and Geist Mono through `next/font`.
+- Tokens: extract every CSS variable, font size, radius, shadow and animation into two scoped themes: `packages/ui/theme-landing.css` scoped to `.theme-landing` (from `design/sotto-landing.html`) and `packages/ui/theme-app.css` scoped to `.theme-app` (from `design/sotto-app.html`). Fonts: Geist and Geist Mono through `next/font`.
 - Components to build: top pill nav, page header (overline plus title), dark hero card, white card, glowing bar chart, radial tick gauge (with fill by progress), hatched benchmark bar, barcode strip, sky card with glass card, table, chips, pill buttons, drawer, command palette, toast, privacy screen, role switcher menu.
 - Motion: keep entrance animations; respect `prefers-reduced-motion`.
-- Visual regression: Playwright screenshots of each screen at 1440 and 390 widths compared with the design HTML files rendered with the same fixture data (tolerance documented in `11-TESTING.md`).
+- Visual regression: Playwright screenshots of each screen. Baselines come from our own build after founder visual sign off, not from the design HTML. The app is desktop first, minimum width 1280 in MVP, baselines at 1440 only. Landing baselines at 1440 and 390 (tolerance documented in `11-TESTING.md`).
 
 ## 3. Screen data mapping
 
@@ -45,13 +50,16 @@ Every element either maps to real data below or is removed per `13-COPY-CORRECTI
 | Recent activity table | `chain_activity` joined with owner self disclosures for amounts (decrypted in browser); "Can read amount" avatars from active grants covering each payment |
 
 ### Payroll
-Run total by team: decrypted from the run private blob in the browser. Settlement gauge: one tick per settled line, from payment statuses. Approvals: from `approvals`. Recipients table: recipients plus line status. "Last 12 runs": counts and settled state only (amount bars are relative heights computed in the browser from self disclosures).
+Run total by team: decrypted from the run private blob in the browser. Settlement gauge: as many ticks as lines, clamped to 12 minimum and 48 maximum; above 48, each tick represents ceil(lines/48) lines; fill from payment statuses. Approvals: from `approvals`; approvers approve on the run page and see the contents hash they sign. Recipients table: recipients plus line status. "Last 12 runs": counts and settled state only (amount bars are relative heights computed in the browser from self disclosures).
 
 ### Viewing keys
 Coverage bars: share of disclosure items per viewer out of all owner self items in the last 12 months (counts, computed in browser from metadata). Keys table: `grants`. Access log: `access_log`.
 
+### Board
+Read only, in the app design language, reusing overview cards: totals and month totals, treasury balance snapshot, balance growth, privacy score, recent activity without amounts.
+
 ### Proofs
-Builder: thresholds `$100k, $500k, $1M, $2.5M` plus custom; counterparty label free text. Certificate: from the onchain record just written. Issued list: `proof_records`.
+Builder: thresholds `$100k, $500k, $1M, $2.5M` plus custom; counterparty label free text. Statement wording: "Balance is at least $X". Certificate: from the onchain record just written. Issued list: `proof_records`.
 
 ### Books (accountant)
 Money in and out totals: sums of decrypted disclosures in the browser. Reconciliation: `reconciliations`. Ledger: disclosures in scope, decrypted, joined with `chain_activity` for signatures and times.

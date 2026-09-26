@@ -45,7 +45,7 @@ Every element either maps to real data below or is removed per `13-COPY-CORRECTI
 | Balance growth bars | Browser computed from balance snapshots and public flows (07 section 6). Locked state if keys not unlocked. |
 | Privacy score | F-18 formula, server computed, with breakdown popover |
 | Payroll against budget | Budget stored in the owner private blob; actual from the owner's self disclosures of the current run |
-| Settlement percentage and strip | Server: share of payments settled on first attempt in period; strip = per day counts |
+| Settlement percentage and strip | Server: percentage computed from `payment_attempts` as (payments settled on attempt 1) / (payments settled) for the selected period; shown only when the period has at least 20 settled payments, otherwise the card shows the empty state "Not enough payments yet"; strip = per day counts |
 | Confidential account card | Token account address (public), "Sealed" |
 | Recent activity table | `chain_activity` joined with owner self disclosures for amounts (decrypted in browser); "Can read amount" avatars from active grants covering each payment |
 

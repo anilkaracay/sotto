@@ -59,6 +59,8 @@ Preconditions: recipient token account configured (`allow_confidential_credits` 
 5. After settlement: read the sender account, AES decrypt the new available balance, assert it equals previous minus amount. If not, raise an integrity alert.
 6. Create disclosures (see `07-SELECTIVE-DISCLOSURE.md`).
 Failure handling: if a transaction in a multi transaction plan fails after proof context accounts were created, run the plan's cleanup (close context accounts) and mark the attempt `failed_clean`. Never resend a transfer transaction without first checking chain state for that attempt's signature.
+Closing proof accounts: every proof context account (and any proof record account) is closed with the lamport destination set to the **fee payer wallet**, never to a token account, both on success and in cleanup. If the helper chooses the destination itself, override it or build the close instructions directly. Reason: `spl-token` 5.6.1 closes them into the sender's token account, which parks the rent there until the token account is closed (facts H4).
+Transaction count observed in Gate G1 (CLI path, `spl-token` 5.6.1, legacy transactions): 8 transactions per confidential transfer and 6 per withdraw (facts A5). Gate G3 must measure the app path with v1 transactions and record the count and sizes here.
 
 ## 6. Withdraw and unwrap
 
@@ -85,7 +87,7 @@ Given threshold `X` (base units), the owner's token account and keys:
 5. Build a range proof over `C` for 64 bits using the batched range proof type that Token-2022 withdraw uses for the remaining balance (Gate G4 confirms the exact type).
 6. Verify both proofs into two context state accounts (context authority = owner) with `@solana-program/zk-elgamal-proof` instructions.
 7. Call `sotto_proofs::verify_balance_threshold` (spec in `05-ONCHAIN-PROGRAM.md`) in the same transaction when size allows (v1), otherwise in the next transaction.
-8. Close both context accounts.
+8. Close both context accounts with the lamport destination set to the fee payer wallet, never to a token account (section 5).
 If the balance changes between step 1 and step 7, the program rejects the proof (ciphertext mismatch). The client re-reads and retries once, then asks the owner to pause payments while proving.
 
 ## 9. Transaction building rules

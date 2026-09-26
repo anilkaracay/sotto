@@ -20,7 +20,7 @@ A person can hold several roles in several orgs. Roles live on memberships, not 
 
 ## 3. Scope
 
-**MVP (everything built for the hackathon, devnet complete, mainnet private beta if D-23 allows):** F-01 to F-19, except where marked.
+**MVP (everything built for the hackathon, devnet only; mainnet is Post-hackathon per D-01):** F-01 to F-19, except where marked.
 **Post-hackathon:** income proof (D-07), email claim (D-08), Squads (D-04), KYB provider (D-09).
 "Phase 0 to 4" means only the schedule in `12-MILESTONES.md`.
 

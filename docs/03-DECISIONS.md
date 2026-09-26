@@ -8,7 +8,7 @@ Status meanings:
 
 ---
 
-### D-01 · Asset: wrapped USDC · DECIDED for devnet and localnet, BLOCKER for mainnet
+### D-01 · Asset: wrapped USDC · DECIDED for devnet and localnet, Post-hackathon for mainnet
 Gate G1 (2026-09-26) found that the Token Wrap program is not deployed at its canonical ID `TwRapQCDhWkZRrDaHfZGuHxkZ91gHDRkyuzNqeU5MgR` on mainnet or devnet, so no canonical wrapped USDC exists (facts C5). The decision is split by cluster.
 
 **Devnet and localnet · DECIDED (founder, 2026-09-26).**
@@ -22,10 +22,14 @@ Gate G1 (2026-09-26) found that the Token Wrap program is not deployed at its ca
   - If the wrapped mint does not exist on a cluster, Sotto creates it once with the permissionless `CreateMint` (C4).
 - The `declare_id!` patch changes only the program ID; the program logic is unchanged. The compliance customizer in the crate is not reachable (C7).
 
-**Mainnet · BLOCKER for mainnet (any mainnet configuration or deployment).**
-- Which asset Sotto uses on mainnet is open. Canonical Token Wrap is not deployed there. Do not deploy anything to mainnet.
-- Input: the read only survey of Token-2022 USD stablecoins on mainnet (`VERIFICATION-LOG.md`, G1 part 3, task M) and `QUESTIONS.md` Q-04.
-- Blocks: mainnet cluster config, the trust page asset statement for mainnet, and copy row L8 in `13-COPY-CORRECTIONS.md`.
+**Mainnet · Post-hackathon (founder, 2026-09-26, Q-04).**
+- The hackathon build runs on **devnet only**. No mainnet money flows and no mainnet deployment of any Sotto program during the hackathon.
+- Reason: no Token-2022 USD stablecoin on mainnet allows permissionless confidential accounts today. In the G1 survey (`VERIFICATION-LOG.md`, G1 part 3, task M) `autoApproveNewAccounts` is false on PYUSD, USDG, USDP and AUSD, and canonical Token Wrap is not deployed on mainnet (facts C5).
+- Candidate paths after the hackathon, in this order:
+  1. Issuer approved confidential accounts on USDG or PYUSD through a partnership with Paxos. On these Paxos mints the issuer also holds the permanent delegate and the freeze authority (`2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk`, which is also their confidential transfer authority). How a permanent delegate interacts with confidential balances must be researched before this path (`QUESTIONS.md` Q-05).
+  2. Canonical wrapped USDC once Token Wrap is officially deployed on mainnet.
+  3. An audited, immutable Sotto deployment of Token Wrap on mainnet.
+- Until one path is chosen: the mainnet cluster config stays unavailable, the trust page makes no mainnet asset statement, and no copy implies mainnet availability (`13-COPY-CORRECTIONS.md`).
 
 Rejected: forking Token Wrap to add an auditor (new program risk, splits liquidity, adds a trusted party).
 
@@ -96,7 +100,7 @@ Framework: decided by a dependency check at step 0.4, before scaffolding `progra
 Devnet upgrade authority: deployer keypair. Mainnet upgrade authority: a Squads multisig controlled by the founders, created before the first mainnet deploy. Verifiable build published.
 
 ### D-17 · Clusters · DECIDED
-Localnet (validator with the ZK ElGamal program enabled) for automated tests, devnet as the public test environment ("testnet" in product language), mainnet-beta for production. Solana's `testnet` cluster is not used because it has no USDC.
+Localnet (validator with the ZK ElGamal program enabled) for automated tests, devnet as the public test environment, mainnet-beta for production after the hackathon (D-01). During the hackathon and the beta the product runs on devnet only and calls it "devnet" (founder, 2026-09-26, Q-04; earlier wording "testnet" in product language is replaced). Solana's `testnet` cluster is not used because it has no USDC.
 
 ### D-18 · Repository layout · DEFAULT
 pnpm workspaces and Turborepo. Layout in `04-ARCHITECTURE.md`.

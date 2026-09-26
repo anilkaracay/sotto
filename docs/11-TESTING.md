@@ -35,6 +35,7 @@ Key scenarios that must exist:
 4. Proof of funds: proven, not proven, balance changed mid proof (rejected), public verify page.
 5. Locked states everywhere after reload.
 6. Proof program unavailable simulation (mock the availability flag) shows the banner and disables actions.
+7. Proof account close destination: for a confidential transfer, a withdraw and a proof of funds on localnet, every proof context and proof record account that the flow creates is closed, and its lamports go to the fee payer wallet. The test asserts the token accounts' lamports are unchanged by the closes and that no ZK ElGamal Proof program account created by the flow remains open (06 sections 5 and 8, facts H4).
 
 ## 5. Devnet release checklist
 

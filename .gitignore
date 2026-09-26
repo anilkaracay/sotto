@@ -34,3 +34,7 @@ id.json
 target/
 .anchor/
 test-ledger/
+
+# Fetched and built artifacts (Token Wrap .so) and the local validator ledger
+.cache/
+.localnet/

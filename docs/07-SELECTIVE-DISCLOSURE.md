@@ -10,6 +10,7 @@ Onchain confidential keys are wallet wide (facts A11) and the wrapped USDC mint 
 - Viewer keypair: X25519, derived from a wallet signature (see `06-CONFIDENTIAL-FLOWS.md` section 2).
 - Encryption: `crypto_box_seal(plaintext, viewerPublicKey)` (anonymous sender, authenticated by the manifest in section 4).
 - Hashing: SHA-256.
+- Encodings: hashes are lowercase hex; base64 is RFC 4648 standard alphabet with padding.
 - Canonical JSON: keys sorted, UTF-8, no insignificant whitespace (implement once in `packages/sdk/src/disclosure/canonical.ts` with tests).
 
 ## 3. Payload (version 1)
@@ -19,6 +20,8 @@ Onchain confidential keys are wallet wide (facts A11) and the wrapped USDC mint 
   "v": 1,
   "org": "<org uuid>",
   "kind": "payment | payroll_line | month_total | balance_snapshot",
+  "direction": "in | out",
+  "category": "payroll | supplier | revenue | payouts | software | other",
   "subject": "<payment or line uuid, or YYYY-MM for totals, or ISO date for snapshots>",
   "amount": "<base units as decimal string>",
   "currency": "USDC",
@@ -32,11 +35,14 @@ Onchain confidential keys are wallet wide (facts A11) and the wrapped USDC mint 
 ```
 No plaintext hash of the payload is ever stored (small amounts are brute forceable from a hash).
 
+Incoming payments ("Money in"): the worker stores, for each incoming confidential transfer, the raw destination ciphertext bytes (public data, allowed; `chain_activity.destination_ciphertext` in `08-BACKEND.md`). On unlock, the owner's worker decrypts them (lo 16 bits, hi 32 bits) and writes `payment` self disclosures with `direction: "in"`. Gate G3 measures decryption time; if above 2 seconds per transfer on the reference laptop, fall back to an aggregate "received since last unlock" from the AES balance delta at apply time, and stop showing per payer revenue.
+
 ## 4. Authenticity: signed manifests
 
 A viewer must know a disclosure really came from the org owner.
 - Each time the owner's browser creates disclosures (after a payment, a payroll run, a grant back fill, a month total), it builds a manifest: canonical JSON `{ "v":1, "org":..., "items":[{ "id":..., "viewer":..., "sha256_ciphertext":... }], "created_at":... }`.
 - The owner wallet signs `sotto-disclosure-manifest/v1\n` plus SHA-256 of the manifest (one `signMessage` per batch).
+- Payroll runs: one manifest per chunk (`06-CONFIDENTIAL-FLOWS.md` section 7), signed after the chunk settles; an interrupted run signs a manifest for its settled lines on resume.
 - Viewers verify the signature against the org owner address before trusting any item. Unsigned or invalid items are hidden and reported.
 
 ## 5. Viewer key registration
@@ -58,16 +64,19 @@ A viewer must know a disclosure really came from the org owner.
 
 Balance history for charts: the owner's browser writes a `balance_snapshot` self disclosure at most once per day when the owner unlocks keys. The chart combines snapshots with public deposit and withdraw amounts from chain.
 
+`month_total` items are written on the owner's first unlock after month end (final) and refreshed on each unlock during the current month (provisional, flagged).
+
 ## 7. Lifecycle
 
-- **Create grant:** owner selects viewer and scope. If the viewer has a registered key, the owner's browser immediately back fills: decrypts the owner's self items in scope, re-encrypts to the viewer, uploads with a signed manifest.
+- **Create grant:** grants are always created through an invite: the owner selects the scope and invites the viewer; the viewer accepts, becomes a user, registers a viewing key, and the grant activates. When the grant activates, the owner's browser back fills: decrypts the owner's self items in scope, re-encrypts to the viewer, uploads with a signed manifest.
+- **Recipient invite:** accepting a recipient invite automatically creates an `own_payslips` grant for that recipient.
 - **New payment:** after settlement, the owner's browser evaluates every active grant and creates the items.
 - **Expire:** the worker deletes disclosures of grants past expiry and marks them `expired`.
 - **Revoke:** the API deletes all disclosures of the grant in the same transaction as setting `revoked_at`. The viewer app never persists decrypted data to disk or browser storage, so a reload removes access. The UI must state: "Revoking stops access from now on. It cannot erase what was already viewed."
 
 ## 8. Integrity against chain
 
-- Recipient: can decrypt the transfer's destination ciphertext with their own ElGamal secret and compare with the disclosure. Do it automatically when they unlock keys.
+- Recipient: on demand, with a "Verify against chain" button (not automatically), decrypts the stored destination ciphertext of the transfer (section 3) with their own ElGamal secret and compares it with the disclosure.
 - Owner: compares each self disclosure with the decrypted balance delta of the corresponding settlement.
 - Accountant and board: rely on the owner's signed manifest. The UI labels these numbers "Shared by <owner name>".
 

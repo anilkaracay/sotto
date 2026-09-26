@@ -41,7 +41,7 @@ Do not implement any curve arithmetic yourself.
 | unix_time | i64 | Clock unix timestamp |
 | expiry | i64 | Chosen by owner, at most 365 days after `unix_time` |
 | balance_ciphertext_hash | [u8; 32] | SHA-256 of the `available_balance` ciphertext bytes used |
-| counterparty_hash | [u8; 32] | SHA-256 of the counterparty label, the label itself is offchain |
+| counterparty_hash | [u8; 32] | SHA-256 of (16 byte random salt concatenated with the UTF-8 counterparty label). The salt and the label are offchain (`proof_records.counterparty_salt`, `proof_records.counterparty_label`) |
 | bump | u8 | |
 
 ## 4. Instructions
@@ -68,11 +68,11 @@ Checks, in this order, each with its own error:
 10. Write the record, emit `ProofVerified { record, token_account, owner, threshold, slot, expiry }`.
 
 ### 4.4 `close_proof_record()`
-Signer: `owner` of the record. Closes the account, rent to owner.
+Signer: `owner` of the record. Allowed only after `expiry` (error `NotExpired`). Closes the account, rent to owner.
 
 ## 5. Errors
 
-`Paused`, `ZeroThreshold`, `BadExpiry`, `WrongTokenProgram`, `WrongMint`, `WrongOwner`, `NotConfidential`, `NotApproved`, `WrongProofProgram`, `WrongProofType`, `WrongContextAuthority`, `PubkeyMismatch`, `CiphertextMismatch`, `RangeShape`, `CommitmentMismatch`, `Unauthorized`.
+`Paused`, `ZeroThreshold`, `BadExpiry`, `WrongTokenProgram`, `WrongMint`, `WrongOwner`, `NotConfidential`, `NotApproved`, `WrongProofProgram`, `WrongProofType`, `WrongContextAuthority`, `PubkeyMismatch`, `CiphertextMismatch`, `RangeShape`, `CommitmentMismatch`, `Unauthorized`, `NotExpired`.
 
 ## 6. Compute
 
@@ -88,7 +88,7 @@ Measure at Gate G4 with `solana-program-test` or LiteSVM and a real proof. Set t
 - The program has no instruction that references a token program in a CPI (static test: grep the IDL and source).
 - Fuzz the instruction data (threshold, expiry, nonce) with `proptest` or Trident.
 
-## 8. Phase 2 design sketch: proof of income (do not build in Phase 1)
+## 8. Post-hackathon design sketch: proof of income (do not build in the MVP)
 
 Goal: prove "every month in the last N months, confidential payments from employer E to me summed to at least X".
 Sketch:

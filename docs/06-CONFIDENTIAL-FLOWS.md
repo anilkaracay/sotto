@@ -1,6 +1,6 @@
 # 06 · Confidential flows
 
-All flows live in `packages/sdk`. Every function takes an explicit `cluster` config object whose program IDs were verified at startup (section 0). Use the high level helpers documented in facts A9 whenever they fit; drop to lower level builders only when a flow below says so. Verify every export name against the installed version before use (ENGINEERING-RULES.md rule 1).
+All flows live in `packages/sdk`. Every function takes an explicit `cluster` config object whose program IDs were verified at startup (section 0). Use the high level helpers documented in facts A9 whenever they fit; drop to lower level builders only when a flow below says so. Verify every export name against the installed version before use (ENGINEERING-RULES.md rule 1). Encodings: hashes are lowercase hex; base64 is RFC 4648 standard alphabet with padding.
 
 ## 0. Startup verification (every app load and every worker start)
 
@@ -16,7 +16,13 @@ Failure of 1 or 2 disables confidential features with a banner; failure of 3 swi
 unlockConfidentialKeys(wallet, scheme) -> { elgamalKeypair, aeKey }
 ```
 - `standard_v1`: `deriveConfidentialKeys({ signer })` from `@solana-program/token-2022/confidential`.
-- `sotto_ikm_v1`: message = UTF-8 `sotto-conf-keys/v1\n<ownerBase58>`, signature = wallet `signMessage(message)`, keys = `ConfidentialKeys.fromIkm(signature)` from `@solana/zk-sdk`. Rebuild WASM objects from bytes as the guide describes.
+- `sotto_ikm_v1`: message = exactly this UTF-8 message of three lines separated by newlines (D-03):
+  ```
+  sotto-conf-keys/v1
+  This signature unlocks your Sotto confidential balances. Sign it only in the official Sotto app.
+  Wallet: <ownerBase58>
+  ```
+  signature = wallet `signMessage(message)`, keys = `ConfidentialKeys.fromIkm(signature)` from `@solana/zk-sdk`. Rebuild WASM objects from bytes as the guide describes.
 - Before first use on an account: derive, then compare the derived ElGamal public key with the `elgamal_pubkey` stored on the configured token account. Mismatch means wrong scheme or wrong wallet: stop, never proceed.
 
 ## 2. Viewing key derivation (application level)
@@ -47,7 +53,7 @@ Steps 1 and 2 may share one transaction; step 3 must read fresh account state fi
 
 Preconditions: recipient token account configured (`allow_confidential_credits` true, credit counter below maximum), sender available balance at least the amount (check with AES decrypt), screening passed, approvals satisfied.
 1. If sender pending is non zero, apply first (section 4.3) and wait for confirmation.
-2. `getConfidentialTransferInstructionPlan({ rpc, payer, sourceToken, mint, destinationToken, sourceTokenAccount, destinationTokenAccount, authority, amount, sourceElgamalKeypair, aesKey, auditorElgamalPubkey })`. `auditorElgamalPubkey` is `undefined` because the wrapped mint has no auditor (D-01).
+2. `getConfidentialTransferInstructionPlan({ rpc, payer, sourceToken, mint, destinationToken, sourceTokenAccount, destinationTokenAccount, authority, amount, sourceElgamalKeypair, aesKey, auditorElgamalPubkey })`. `auditorElgamalPubkey` is `undefined` because the wrapped mint has no auditor (D-01). This parameter list is illustrative: Gate G3 records the real signature of `getConfidentialTransferInstructionPlan` and this section is updated to match.
 3. Build transactions from the plan. If v1 is available and the plan fits in 4096 bytes, use one v1 transaction and set compute unit limit and loaded accounts data size in the v1 config mask (facts D3). Otherwise use the plan's multi transaction sequence with v0.
 4. Sign (see section 7 for batches), send, confirm each at `confirmed`, then `finalized` before marking the payment settled.
 5. After settlement: read the sender account, AES decrypt the new available balance, assert it equals previous minus amount. If not, raise an integrity alert.
@@ -65,7 +71,7 @@ Failure handling: if a transaction in a multi transaction plan fails after proof
 Input: validated lines, each with a stable `line_id` and idempotency key.
 1. Apply pending once. Read sender available balance ciphertext `B0` and plaintext `b0` (AES).
 2. For each line i in order: build the transfer plan against a **simulated** source state where available balance ciphertext is `B(i-1)` and decryptable balance is re-encrypted `b(i-1)`. Compute `B(i)` locally with the ciphertext arithmetic the helper exposes, or, if the helper cannot take a simulated source state, prepare and execute lines one at a time (fallback, slower). Gate G3 decides which path is possible with the installed helpers; record the result.
-3. Signing: if the wallet supports `signAllTransactions` for the transaction version used, request one signature batch per chunk of at most 10 lines; otherwise one prompt per line.
+3. Signing: if the wallet supports `signAllTransactions` for the transaction version used, request one signature batch per chunk of at most 10 lines (a 24 line run is 3 prompts); otherwise one prompt per line. Copy never promises a number of prompts. Gate G3 measures the time per line; chunk size is reduced so a chunk completes within 60 seconds. If a pre signed chunk's blockhash expires before sending, rebuild the remaining lines and prompt again. Durable nonces are out of MVP.
 4. Send sequentially. Line i+1 is sent only after line i is `confirmed`. If a line fails, stop, mark the run `partially_settled`, and require the owner to resume. Resume recomputes from chain state; settled lines are skipped by checking their stored signatures.
 5. Disclosures are created per settled line.
 

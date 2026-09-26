@@ -12,7 +12,7 @@ Browser (Next.js app, Web Worker for proofs)
   |                       execution metadata, access log. Never plaintext amounts, never keys.
   |               talks to: Postgres, sanctions provider, SAS (via worker)
   |
-  |-- RPC ----> Solana (Token-2022, Token Wrap, ZK ElGamal Proof, SAS, sotto_proofs)
+  |-- RPC via /api/rpc (Sotto API JSON-RPC proxy) --> Solana (Token-2022, Token Wrap, ZK ElGamal Proof, SAS, sotto_proofs)
   |
 Worker (Node)
   indexes org accounts, confirms executions, issues SAS attestations,
@@ -30,7 +30,7 @@ Worker (Node)
 | Viewer's browser | Decrypting what was granted | Keeping data after revocation (cannot be enforced) |
 | Sanctions and KYB providers | Screening results | Anything else |
 
-Integrity rule: any amount shown to a viewer from a disclosure must be checked, when possible, against chain data. For the owner, disclosures are checked against their own decrypted balance deltas. For recipients, the disclosure amount is checked by decrypting the transfer ciphertext for their destination handle (possible with their ElGamal secret). Mismatch shows a red "disclosure does not match chain" warning and is logged.
+Integrity rule: any amount shown to a viewer from a disclosure must be checked, when possible, against chain data. For the owner, disclosures are checked against their own decrypted balance deltas. For recipients, the check runs on demand ("Verify against chain" button), not automatically: the recipient's browser decrypts the stored destination ciphertext of the transfer (`07-SELECTIVE-DISCLOSURE.md` section 3) with their ElGamal secret and compares it with the disclosure amount. Mismatch shows a red "disclosure does not match chain" warning and is logged.
 
 ## 3. Repository layout
 
@@ -84,4 +84,4 @@ Detailed sequences live in `06-CONFIDENTIAL-FLOWS.md`.
 | Provider API keys (sanctions, RPC) | Server environment variables | Rotated per `10-SECURITY.md` |
 | SAS credential signer | Worker environment (devnet); hardware or KMS backed key on mainnet | Rotated per `10-SECURITY.md` |
 
-Web Worker: proof generation and decryption run in a dedicated worker. Keys are transferred to the worker by `postMessage` of raw bytes and zeroed after use where the WASM API allows.
+Web Worker: proof generation and decryption run in a dedicated worker. Wallet signatures happen on the main thread; the signature bytes are transferred to the worker by `postMessage` and zeroed on the main thread. Keys are zeroed after use where the WASM API allows. Gate G3 confirms the helpers accept raw key material; if a helper needs a signer object, the raw keys are wrapped inside the worker.

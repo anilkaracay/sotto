@@ -46,14 +46,14 @@ Idempotent: if already configured with the same key, skip; if configured with a 
 
 1. `wrap(amount)`: Token Wrap `Wrap` from the owner's USDC account into the owner's wUSDC account (public balance). Escrow and PDAs from facts C1.
 2. `deposit(amount)`: Token-2022 confidential deposit from public wUSDC to pending. Amount is public by design (facts A2).
-3. `applyPending()`: `getApplyConfidentialPendingBalanceInstructionFromToken` with the ElGamal secret and AES key. No proofs.
+3. `applyPending()`: `getApplyConfidentialPendingBalanceInstructionFromToken` (import from `@solana-program/token-2022/confidential`) with the ElGamal secret and AES key. No proofs.
 Steps 1 and 2 may share one transaction; step 3 must read fresh account state first.
 
 ## 5. Confidential transfer (one recipient)
 
 Preconditions: recipient token account configured (`allow_confidential_credits` true, credit counter below maximum), sender available balance at least the amount (check with AES decrypt), screening passed, approvals satisfied.
 1. If sender pending is non zero, apply first (section 4.3) and wait for confirmation.
-2. `getConfidentialTransferInstructionPlan({ rpc, payer, sourceToken, mint, destinationToken, sourceTokenAccount, destinationTokenAccount, authority, amount, sourceElgamalKeypair, aesKey, auditorElgamalPubkey })`. `auditorElgamalPubkey` is `undefined` because the wrapped mint has no auditor (D-01). This parameter list is illustrative: Gate G3 records the real signature of `getConfidentialTransferInstructionPlan` and this section is updated to match.
+2. `getConfidentialTransferInstructionPlan` (import from `@solana-program/token-2022/confidential`) with `({ rpc, payer, sourceToken, mint, destinationToken, sourceTokenAccount, destinationTokenAccount, authority, amount, sourceElgamalKeypair, aesKey, auditorElgamalPubkey })`. `auditorElgamalPubkey` is `undefined` because the wrapped mint has no auditor (D-01). This parameter list is illustrative: Gate G3 records the real signature of `getConfidentialTransferInstructionPlan` and this section is updated to match.
 3. Build transactions from the plan. If v1 is available and the plan fits in 4096 bytes, use one v1 transaction and set compute unit limit and loaded accounts data size in the v1 config mask (facts D3). Otherwise use the plan's multi transaction sequence with v0.
 4. Sign (see section 7 for batches), send, confirm each at `confirmed`, then `finalized` before marking the payment settled.
 5. After settlement: read the sender account, AES decrypt the new available balance, assert it equals previous minus amount. If not, raise an integrity alert.
@@ -65,7 +65,7 @@ Transaction count observed in Gate G1 (CLI path, `spl-token` 5.6.1, legacy trans
 ## 6. Withdraw and unwrap
 
 1. Apply pending if needed.
-2. `getConfidentialWithdrawInstructionPlan(...)` for the amount, then execute (v1 or v0 as above).
+2. `getConfidentialWithdrawInstructionPlan(...)` (import from `@solana-program/token-2022/confidential`) for the amount, then execute (v1 or v0 as above).
 3. Token Wrap `Unwrap` from wUSDC to USDC.
 
 ## 7. Payroll batch (D-21)

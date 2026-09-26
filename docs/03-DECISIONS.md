@@ -129,3 +129,8 @@ No fees in the MVP. No fee logic in code.
 
 ### D-23 · Legal · BLOCKER for public mainnet
 Terms of service, privacy policy and a regulatory review (Turkey and target markets) before public mainnet onboarding. Private beta on mainnet with invited design partners is allowed only with written founder approval recorded in `QUESTIONS.md`.
+
+### D-24 · SAS client and a second `@solana/kit` version · DECIDED (founder, 2026-09-26, Q-07)
+- `sas-lib` 1.0.10 is used only inside `apps/worker`, which issues and reads attestations (08). It depends on `@solana/kit ^5.0.0`, so the worker carries a second `@solana/kit` version (5.x next to 8.3.0) until `sas-lib` targets kit 8. Types are converted at the boundary; G5 tests the conversion.
+- `apps/web` and `packages/sdk` never import `sas-lib`; they read attestation data through the Sotto API. An ESLint `no-restricted-imports` rule enforces this everywhere outside `apps/worker`.
+- Revisit when a `sas-lib` release on `@solana/kit` 8 exists (2.0.0-beta.1 peers kit 7).

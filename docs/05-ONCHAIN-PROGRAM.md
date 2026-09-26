@@ -12,7 +12,7 @@ Hard limits (tests must prove each one):
 
 ## 2. Dependencies (resolve at Gate G4, pin, record in `VERSIONS.md`)
 
-- Anchor (latest stable at scaffold).
+- No Anchor (D-16, decided at step 0.4): a native program on the solana-* crate versions that `spl-token-2022` 11.1.0 resolves (core program crates 3.x, `solana-address` 2.x). Built with `cargo-build-sbf` 4.1.0, tested with `cargo test`; TypeScript client generated with Codama from a hand written IDL.
 - `spl-token-2022` for state parsing with extensions (`StateWithExtensions`, `ConfidentialTransferAccount`).
 - The ZK ElGamal Proof program's state types for proof context accounts (`ProofContextState`, `ProofType`, and the context data structs for ciphertext commitment equality and batched range proofs). Expected location: the `solana-zk-sdk` crate. Confirm the exact module path on docs.rs for the pinned version.
 - ElGamal ciphertext arithmetic that runs onchain through syscalls, the same code Token-2022 uses to subtract a plaintext amount from a ciphertext. Expected: the `spl-token-confidential-transfer-ciphertext-arithmetic` crate. Confirm function names on docs.rs.

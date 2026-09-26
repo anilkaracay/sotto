@@ -74,3 +74,4 @@ solana-test-validator --reset --quiet \
 - `solana-test-validator` 4.2.2 activates all features at genesis, including the three ZK ElGamal gates and `enable_tx_v1`, so the proof program is enabled (facts B6).
 - `--clone-upgradeable-program` Token-2022 from devnet is required: the bundled Token-2022 10.0.0 rejects confidential instructions (facts H3). The clone needs network access to the public devnet RPC at start.
 - Token Wrap is loaded at the same ID as devnet, with wallet A as upgrade authority.
+| Anchor CLI and avm (update) | not used | 2026-09-26 | `03-DECISIONS.md` D-16 | D-16 gate at step 0.4 selected a native program; Anchor is not installed |

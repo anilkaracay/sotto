@@ -55,7 +55,7 @@ Integrity rule: any amount shown to a viewer from a disclosure must be checked, 
     ui/                        design tokens, primitives shared by landing and app
     config/                    eslint, tsconfig, prettier
   programs/
-    sotto_proofs/              Anchor program
+    sotto_proofs/              native Solana program (D-16, no Anchor)
   tests/
     e2e/                       Playwright against localnet and devnet
     fixtures/

@@ -6,7 +6,7 @@
 |-------|------|--------------|--------------------|
 | Unit (TS) | Vitest | Pure functions: canonical JSON, scope evaluation, CSV parsing, amount math with `bigint` | Yes |
 | Unit (Rust) | `cargo test` | `sotto_proofs` helpers | Yes |
-| Program | Anchor tests or LiteSVM, plus Rust `solana-program-test` if needed | Localnet program with real proofs | Yes |
+| Program | Rust `cargo test` of the native program (D-16), with LiteSVM or `solana-program-test` for runtime tests | Localnet program with real proofs | Yes |
 | SDK integration | Vitest | Local validator with Token-2022, Token Wrap, ZK ElGamal Proof program active | Yes |
 | API | Vitest plus a test Postgres | Route handlers, authorization matrix | Yes |
 | E2E | Playwright | Localnet (every PR), devnet (nightly and before release) | Yes (localnet) |

@@ -1,0 +1,25 @@
+[package]
+name = "sotto_proofs"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Verifies confidential balance thresholds and writes proof records (docs/05-ONCHAIN-PROGRAM.md). Native program, D-16."
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[features]
+no-entrypoint = []
+# Checked by the solana-program-entrypoint macros; unused (default heap and panic handler).
+custom-heap = []
+custom-panic = []
+
+# Same solana-* versions that spl-token-2022 11.1.0 resolves (D-16, docs/VERSIONS.md).
+[dependencies]
+solana-account-info = "=3.1.1"
+solana-address = { version = "=2.8.0", features = ["decode"] }
+solana-program-entrypoint = "=3.1.1"
+solana-program-error = "=3.0.1"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

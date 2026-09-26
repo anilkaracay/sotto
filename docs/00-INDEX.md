@@ -1,6 +1,6 @@
 # Sotto build documentation
 
-Read in this order. Each document states what it owns; if two documents seem to disagree, the one listed first in the "Authority" column wins and you must open a question in `QUESTIONS.md`.
+Read in this order. Each document states what it owns. If two documents seem to disagree: lower authority number wins. On a tie, the row listed earlier wins. Every conflict still gets an entry in `QUESTIONS.md`.
 
 | # | File | What it owns | Authority |
 |---|------|--------------|-----------|
@@ -21,7 +21,7 @@ Read in this order. Each document states what it owns; if two documents seem to 
 | 15 | `14-ENVIRONMENTS-DEPLOY.md` | Localnet, devnet, mainnet, runbooks | 6 |
 | 16 | `RESOLUTIONS-0.1.md` | Record of step 0.1 decisions (already applied to the documents above) | Record |
 
-Files you create during the build (append only, never rewrite history):
+Files that grow during the build (append only, never rewrite history):
 
 - `VERIFICATION-LOG.md`: output of every gate you ran, with date, cluster, command and result.
 - `VERSIONS.md`: every pinned tool, crate and package version.

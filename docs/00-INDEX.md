@@ -19,6 +19,7 @@ Read in this order. Each document states what it owns; if two documents seem to 
 | 13 | `12-MILESTONES.md` | Phases, verification gates, deadlines | 6 |
 | 14 | `13-COPY-CORRECTIONS.md` | Design copy that must change before launch | 6 |
 | 15 | `14-ENVIRONMENTS-DEPLOY.md` | Localnet, devnet, mainnet, runbooks | 6 |
+| 16 | `RESOLUTIONS-0.1.md` | Record of step 0.1 decisions (already applied to the documents above) | Record |
 
 Files you create during the build (append only, never rewrite history):
 

@@ -1,0 +1,36 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# Environment files (.env.example stays tracked)
+.env
+.env.*
+!.env.example
+.env*.local
+
+# Keypairs: never commit wallet or program secrets
+*keypair*.json
+wallet-*.json
+id.json
+*-deployer.json
+*.keypair
+
+# Rust and Anchor
+target/
+.anchor/
+test-ledger/

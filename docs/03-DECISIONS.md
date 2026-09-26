@@ -69,8 +69,14 @@ Helius for devnet and mainnet, public RPC as a devnet fallback only. Gate G1 mus
 ### D-15 · Authentication · DEFAULT
 Sign-In With Solana through the Wallet Standard sign in feature when available, otherwise a signed nonce message. Session: httpOnly, secure, SameSite=Lax cookie holding an opaque session ID. No JWT in localStorage.
 
-### D-16 · Onchain framework and upgrade authority · DEFAULT
-`sotto_proofs` written with Anchor (version pinned at scaffold). Devnet upgrade authority: deployer keypair. Mainnet upgrade authority: a Squads multisig controlled by the founders, created before the first mainnet deploy. Verifiable build published.
+### D-16 · Onchain framework and upgrade authority · GATE (step 0.4 dependency check)
+Framework: decided by a dependency check at step 0.4, before scaffolding `programs/sotto_proofs`. At step 0.2 no documentation stated that Anchor 1.2.0 (latest stable) is compatible with Agave 4.2.x: Anchor's avm map recommends Solana 4.1.2 for Anchor 1.2.0, and Anchor 1.2.0 depends on solana-* 3.x crates (see `VERIFICATION-LOG.md`, G0 task 6).
+- At step 0.4, resolve the latest stable versions of `spl-token-2022`, `solana-zk-sdk` and `spl-token-confidential-transfer-ciphertext-arithmetic` (or whatever crates G4 identifies for proof context parsing and ciphertext arithmetic) and record which major version of the solana-* crates each depends on (`cargo tree` or the crate manifests on crates.io).
+- If they all depend on the same solana-* major as Anchor 1.2.0 (3.x): use Anchor 1.2.0, installed with `cargo install --git https://github.com/otter-sec/anchor --tag v1.2.0 --locked avm --force`, then `avm install 1.2.0`, `avm use 1.2.0`. Programs are built with the Agave pinned `cargo-build-sbf` 4.1.0. Record that Anchor with Agave 4.2.2 is "compatible by build and test evidence", not by documentation.
+- If any of them depends on solana-* 4.x: do not use Anchor. Write `sotto_proofs` as a native program on the same solana-* major as those crates, keep the account layouts and instruction semantics from `05-ONCHAIN-PROGRAM.md` unchanged, and generate the TypeScript client with Codama from a hand written IDL. Record the reason here.
+- Recheck issue otter-sec/anchor#5081 ("Bump solana/agave deps from 3.x to 4.2") at step 0.4.
+
+Devnet upgrade authority: deployer keypair. Mainnet upgrade authority: a Squads multisig controlled by the founders, created before the first mainnet deploy. Verifiable build published.
 
 ### D-17 · Clusters · DECIDED
 Localnet (validator with the ZK ElGamal program enabled) for automated tests, devnet as the public test environment ("testnet" in product language), mainnet-beta for production. Solana's `testnet` cluster is not used because it has no USDC.

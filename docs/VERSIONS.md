@@ -75,3 +75,38 @@ solana-test-validator --reset --quiet \
 - `--clone-upgradeable-program` Token-2022 from devnet is required: the bundled Token-2022 10.0.0 rejects confidential instructions (facts H3). The clone needs network access to the public devnet RPC at start.
 - Token Wrap is loaded at the same ID as devnet, with wallet A as upgrade authority.
 | Anchor CLI and avm (update) | not used | 2026-09-26 | `03-DECISIONS.md` D-16 | D-16 gate at step 0.4 selected a native program; Anchor is not installed |
+| Turborepo (`turbo`) | 2.11.4 | 2026-09-26 | https://registry.npmjs.org/turbo (dist-tag `latest`); GitHub release v2.11.4 (2026-09-24) | pnpm 12 support: https://turborepo.com/docs/getting-started/support-policy lists "pnpm 8+ Stable"; Turborepo's own repository moved to pnpm 12 in PR #13879 (2026-08-29) |
+| TypeScript | 6.0.3 | 2026-09-26 | https://registry.npmjs.org/typescript | `latest` is 7.0.2, but `typescript-eslint` 8.70.1 requires `typescript >=4.8.4 <6.1.0`; 6.0.3 is the newest version inside that range. Satisfies `@solana/kit` 8.3.0 (`>=5.4.0`) |
+| ESLint, `@eslint/js` | 10.11.0, 10.0.1 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | Flat config in `@sotto/config` |
+| `typescript-eslint` | 8.70.1 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | `configs.strict` |
+| `@next/eslint-plugin-next`, `eslint-plugin-react-hooks`, `globals` | 16.3.6, 7.1.1, 17.12.0 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | Web lint rules |
+| Prettier | 3.9.9 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | `printWidth` 100; `docs/`, `design/`, `programs/`, `vendor/` ignored |
+| Vitest, Vite | 5.0.2, 8.3.1 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | Vite is a required peer of Vitest 5 (`^6.4.0 || ^7.0.0 || ^8.0.0`) |
+| `@types/node` | 24.19.0 | 2026-09-26 | https://registry.npmjs.org/@types/node | Latest 24.x, matching Node 24.21.0 (`latest` is 26.6.3). pnpm 12 added it to `minimumReleaseAgeExclude` in `pnpm-workspace.yaml` at first install because it was published within pnpm's default minimum release age |
+| Next.js | 16.3.6 | 2026-09-26 | https://registry.npmjs.org/next (dist-tag `latest`) | App Router; `next typegen` before `tsc` |
+| React, React DOM, `@types/react`, `@types/react-dom` | 19.3.0 each | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | |
+| `@solana/kit` | 8.3.0 | 2026-09-26 | https://registry.npmjs.org/@solana/kit (dist-tag `latest`) | `sas-lib` 1.0.10 brings its own `@solana/kit` 5.5.1 (Q-07) |
+| `@solana-program/token-2022` | 0.19.0 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | Exports `.` and `./confidential`. `@solana-program/token-wrap` 2.7.1 also pulls `@solana-program/token-2022` 0.17.0 |
+| `@solana/zk-sdk` | 0.5.3 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | Exports `.`, `./node`, `./web`, `./bundler` |
+| `@solana-program/zk-elgamal-proof` | 0.4.0 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | |
+| `@solana-program/token-wrap` | 2.7.1 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | Program ID from the cluster config, never `TOKEN_WRAP_PROGRAM_ADDRESS` (D-01) |
+| `@solana/sysvars` | 8.3.0 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | Peer of `@solana-program/token-2022` 0.19.0 |
+| `sas-lib` (installed) | 1.0.10 | 2026-09-26 | https://registry.npmjs.org/sas-lib (dist-tag `latest`) | Depends on `@solana/kit ^5.0.0`; 2.0.0-beta.1 peers `@solana/kit ^7.0.0` (Q-07) |
+| Wallet Standard React (X-11, verified, not installed) | `@solana/react` 8.3.0, `@wallet-standard/react` 1.0.3 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | Both exist. `@solana/react` peers: `@solana/kit ^8.3.0`, `react >=18`, `swr ^2.5.1`, `@tanstack/react-query ^5.0.0`. `@wallet-standard/react` engines `node >=22`. Installed with the wallet work (step 0.6 or Phase 1) |
+| `sotto_proofs` crates | `solana-account-info` 3.1.1, `solana-address` 2.8.0, `solana-program-entrypoint` 3.1.1, `solana-program-error` 3.0.1 | 2026-09-26 | https://crates.io (max stable; equal to the versions `spl-token-2022` 11.1.0 resolves) | Exact pins (`=`) in `programs/sotto_proofs/Cargo.toml`; `Cargo.lock` committed. Native program (D-16) |
+
+## Project commands (step 0.4, 2026-09-26)
+
+```sh
+pnpm install --frozen-lockfile
+pnpm lint          # turbo run lint (ESLint per package) and prettier --check .
+pnpm typecheck     # turbo run typecheck (tsc --noEmit; web runs next typegen first)
+pnpm test          # turbo run test (Vitest per package)
+pnpm build         # turbo run build (Next.js production build)
+pnpm program:build # cargo-build-sbf --manifest-path programs/sotto_proofs/Cargo.toml -- --locked
+pnpm program:test  # cargo test --locked -p sotto_proofs
+scripts/localnet.sh        # foreground validator (fetches the Token Wrap .so first)
+scripts/localnet-smoke.sh  # against a running localnet
+```
+
+`scripts/localnet.sh` implements the localnet validator command recorded above, with the ledger at `.localnet/ledger` and the Token Wrap program at `.cache/token-wrap/spl_token_wrap.so` (both ignored).

@@ -1,0 +1,32 @@
+{
+  "name": "@sotto/sdk",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cluster": "./src/cluster/config.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@solana-program/token-2022": "catalog:",
+    "@solana-program/token-wrap": "catalog:",
+    "@solana-program/zk-elgamal-proof": "catalog:",
+    "@solana/kit": "catalog:",
+    "@solana/sysvars": "catalog:",
+    "@solana/zk-sdk": "catalog:",
+    "sas-lib": "catalog:"
+  },
+  "devDependencies": {
+    "@sotto/config": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

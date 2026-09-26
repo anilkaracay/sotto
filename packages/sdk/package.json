@@ -18,8 +18,7 @@
     "@solana-program/zk-elgamal-proof": "catalog:",
     "@solana/kit": "catalog:",
     "@solana/sysvars": "catalog:",
-    "@solana/zk-sdk": "catalog:",
-    "sas-lib": "catalog:"
+    "@solana/zk-sdk": "catalog:"
   },
   "devDependencies": {
     "@sotto/config": "workspace:*",

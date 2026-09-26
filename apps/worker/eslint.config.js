@@ -1,3 +1,4 @@
 import config from "@sotto/config/eslint";
 
-export default config;
+// The worker is the only place allowed to import sas-lib (D-24).
+export default [...config, { rules: { "no-restricted-imports": "off" } }];

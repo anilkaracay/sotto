@@ -11,5 +11,17 @@ export default tseslint.config(
     languageOptions: {
       globals: { ...globals.node },
     },
+    rules: {
+      // D-24: sas-lib (on @solana/kit 5) is allowed only in apps/worker.
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [{ name: "sas-lib", message: "sas-lib is allowed only in apps/worker (D-24)." }],
+          patterns: [
+            { group: ["sas-lib/*"], message: "sas-lib is allowed only in apps/worker (D-24)." },
+          ],
+        },
+      ],
+    },
   },
 );

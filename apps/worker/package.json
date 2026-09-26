@@ -9,6 +9,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@sotto/sdk": "workspace:*",
+    "sas-lib": "catalog:"
+  },
   "devDependencies": {
     "@sotto/config": "workspace:*",
     "@types/node": "catalog:",

@@ -1,11 +1,11 @@
 // Per cluster configuration (docs/14-ENVIRONMENTS-DEPLOY.md section 1).
 // Values are the ones verified by Gate G1 (docs/02-VERIFIED-FACTS.md). Program IDs come from package
 // constants where the package exports one; the Token Wrap program and the wrapped mint are per cluster
-// values (D-01, facts C5, C8).
+// values (D-01, facts C5, C8). The SAS program ID is the verified value from facts E3: this package must
+// not import sas-lib (D-24); apps/worker tests that it still equals the sas-lib constant.
 import { address, type Address } from "@solana/kit";
 import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022";
 import { ZK_ELGAMAL_PROOF_PROGRAM_ADDRESS } from "@solana-program/zk-elgamal-proof";
-import { SOLANA_ATTESTATION_SERVICE_PROGRAM_ADDRESS } from "sas-lib";
 
 export type ClusterName = "localnet" | "devnet" | "mainnet";
 
@@ -39,7 +39,7 @@ export interface UnavailableClusterConfig {
 export type ClusterConfig = AvailableClusterConfig | UnavailableClusterConfig;
 
 const SOTTO_TOKEN_WRAP_TEST_PROGRAM = address("EEvqpjNRQkNRwXzVziuTGGi1wYDiPv7haYVVu3XZCoQn");
-const SAS_PROGRAM = address(String(SOLANA_ATTESTATION_SERVICE_PROGRAM_ADDRESS));
+const SAS_PROGRAM = address("22zoJMtdu4tQc2PzL74ZUT7FrwgB1Udec8DdW4yw4BdG");
 
 export const clusters: Readonly<Record<ClusterName, ClusterConfig>> = {
   localnet: {

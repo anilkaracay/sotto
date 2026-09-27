@@ -1,7 +1,8 @@
 // /app/recovery (10 section 2, mitigation 3; D-03): how to reach confidential balances with the
 // standard Solana command line tools when a wallet refuses to sign the key message in Sotto, or Sotto is
-// not available. Public, no session. Every command below was run for this guide on localnet with
-// spl-token-cli 5.6.1 and solana-keygen 4.2.2 (VERIFICATION-LOG step 1.5).
+// not available. Public, no session. The commands were run on localnet with spl-token-cli 5.6.1 and
+// solana-keygen 4.2.2 (VERIFICATION-LOG steps 1.5 and 1.6); scripts/recover-balance.ts prints the exact
+// amount (founder, 2026-09-27), and scripts/build-token-wrap.sh --cli builds the unwrap tool.
 import { getClusterConfig } from "@sotto/sdk/cluster";
 import { Card, Chip } from "@sotto/ui";
 import type { Metadata } from "next";
@@ -23,6 +24,7 @@ function Command({ children }: { children: string }) {
 export default function RecoveryPage() {
   const devnet = getClusterConfig("devnet");
   const mint = devnet.available && devnet.wrappedUsdcMint ? devnet.wrappedUsdcMint : "<wUSDC mint>";
+  const usdc = devnet.available && devnet.usdcMint ? devnet.usdcMint : "<USDC mint>";
   return (
     <div className={styles.page}>
       <header className={styles.top}>
@@ -39,7 +41,8 @@ export default function RecoveryPage() {
             keys from the same wallet. We checked this with spl-token-cli 5.6.1: it configures the
             same encryption key, and our key decrypts the balance it records. So if your wallet
             stops signing that message in Sotto, or Sotto is not available, you can still move your
-            confidential balance back to a public balance.
+            confidential balance back to a public balance. A small script from Sotto&apos;s source
+            code tells you the exact amount.
           </p>
 
           <h2 className={styles.heading}>What you need</h2>
@@ -48,6 +51,11 @@ export default function RecoveryPage() {
               The Solana command line tools: <code className="mono">solana</code>,{" "}
               <code className="mono">solana-keygen</code> and{" "}
               <code className="mono">spl-token</code>.
+            </li>
+            <li>
+              Node.js 24 and pnpm, to run Sotto&apos;s recovery script. It is part of Sotto&apos;s
+              source code (github.com/anilkaracay/sotto), which Sotto publishes at its public
+              launch.
             </li>
             <li>
               Your wallet&apos;s recovery phrase, or its private key exported from the wallet.
@@ -83,24 +91,44 @@ export default function RecoveryPage() {
           <h2 className={styles.heading}>4. Move pending tokens into your available balance</h2>
           <Command>{`spl-token apply-pending-balance ${mint}`}</Command>
 
+          <h2 className={styles.heading}>5. Find the exact amount</h2>
+          <p>In a copy of Sotto&apos;s source code, after pnpm install:</p>
+          <Command>{`node scripts/recover-balance.ts --keypair wallet.json --mint ${mint} --url devnet`}</Command>
+          <p>
+            The script derives your keys on your computer, the same keys Sotto and spl-token derive,
+            reads your token account, and prints the available and pending balances with the exact
+            command for the next step. It sends nothing: no transaction, and your keys stay on your
+            computer. If it still shows a pending balance, repeat step 4 first.
+          </p>
+
           <h2 className={styles.heading}>
-            5. Move the confidential balance to your public balance
+            6. Move the confidential balance to your public balance
           </h2>
           <Command>{`spl-token withdraw-confidential-tokens ${mint} <amount>`}</Command>
           <p>
-            The amount is in whole tokens, for example <code className="mono">40</code> for 40
-            wUSDC. The keyword ALL is not supported for this command. An amount above your available
-            balance fails with InsufficientFunds and costs nothing, so you can try lower amounts
-            until one succeeds.
+            Use the command the script printed: it has the exact amount, in whole tokens. The
+            keyword ALL is not supported for this command in spl-token-cli 5.6.1.
           </p>
 
           <h2 className={styles.heading}>After recovery</h2>
           <p>
             The tokens are now a public wUSDC balance of your wallet, which any Solana wallet can
-            send. During the devnet beta they are test tokens: wUSDC is wrapped by Sotto&apos;s test
-            deployment of Token Wrap on devnet, which the standard{" "}
-            <code className="mono">spl-token-wrap</code> tool cannot address, so unwrapping it to
-            devnet USDC needs a Token Wrap tool built for that deployment.
+            send. During the devnet beta they are test tokens. wUSDC on devnet is wrapped by
+            Sotto&apos;s test deployment of Token Wrap, which the standard{" "}
+            <code className="mono">spl-token-wrap</code> tool cannot address. To unwrap it to devnet
+            USDC, build the tool for that deployment from Sotto&apos;s source code (it needs Rust
+            with cargo 1.98.1), create a USDC account if you have none, and unwrap:
+          </p>
+          <Command>scripts/build-token-wrap.sh --cli</Command>
+          <Command>{`spl-token create-account ${usdc}`}</Command>
+          <Command>
+            {
+              ".cache/token-wrap/cli/target/release/spl-token-wrap unwrap <wUSDC token account> <USDC token account> <amount in base units>"
+            }
+          </Command>
+          <p>
+            The wUSDC token account is the one the script printed. Unwrap amounts are in base units:
+            1 wUSDC is 1000000.
           </p>
           <p className={styles.back}>
             <Link href="/app">Back to Sotto</Link>

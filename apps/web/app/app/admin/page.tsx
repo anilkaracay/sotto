@@ -6,7 +6,7 @@ import { currentSession } from "../../../lib/server/current-session.ts";
 import { getDb } from "../../../lib/server/db.ts";
 import { loadMe } from "../../../lib/server/me.ts";
 import { listOrgsForAdmin } from "../../../lib/server/orgs.ts";
-import { networkLabel } from "../../../lib/network.ts";
+import { currentNetworkLabel } from "../../../lib/network.ts";
 import { AppShell } from "../_components/app-shell.tsx";
 import { AdminConsole } from "./admin-console.tsx";
 import { FILTERS, type Filter } from "./filters.ts";
@@ -27,7 +27,7 @@ export default async function AdminPage({
   const filter: Filter = FILTERS.find((item) => item === requested) ?? "pending_review";
   const { orgs, truncated } = await listOrgsForAdmin(db, filter === "all" ? null : filter);
   return (
-    <AppShell me={me} network={networkLabel(process.env.NEXT_PUBLIC_CLUSTER)}>
+    <AppShell me={me} network={currentNetworkLabel()}>
       <AdminConsole
         filter={filter}
         truncated={truncated}

@@ -255,6 +255,12 @@ export const tokenAccounts = pgTable(
     mint: text("mint").notNull(),
     keyScheme: keyScheme("key_scheme").notNull(),
     configuredSlot: bigint("configured_slot", { mode: "bigint" }),
+    /**
+     * Set by the worker's pending-credits job while the account's pending balance credit counter is at
+     * or above 80 percent of its maximum (AC-04.3); the app then prompts the owner to apply on the next
+     * unlock. Cleared when the counter is below again.
+     */
+    applyFlaggedAt: timestamptz("apply_flagged_at"),
   },
   (t) => [
     unique("token_accounts_cluster_address_key").on(t.cluster, t.address),

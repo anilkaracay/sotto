@@ -1,0 +1,1 @@
+ALTER TABLE "token_accounts" ADD COLUMN "apply_flagged_at" timestamp with time zone;

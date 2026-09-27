@@ -15,6 +15,13 @@
       "when": 1790514233026,
       "tag": "0001_one_org_per_owner",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790529246047,
+      "tag": "0002_token_account_apply_flag",
+      "breakpoints": true
     }
   ]
 }

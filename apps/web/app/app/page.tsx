@@ -1,13 +1,13 @@
 // /app (09 section 1): sends a signed out visitor to the sign in screen. The owner of an active
-// organization goes to its setup page (the first owner screen until the overview exists, step 1.10); a
-// user who owns an organization in review or suspended, or has none yet, goes to /app/onboarding.
-// Members with other roles see the shell until their pages exist.
+// organization goes to its setup page (the first owner screen until the overview is complete, step
+// 1.10); a user who owns an organization in review or suspended, or has none yet, goes to
+// /app/onboarding. Members with other roles see the shell until their pages exist.
 import { Card, PageHeader } from "@sotto/ui";
 import { redirect } from "next/navigation";
 import { currentSession } from "../../lib/server/current-session.ts";
 import { getDb } from "../../lib/server/db.ts";
 import { loadMe } from "../../lib/server/me.ts";
-import { networkLabel } from "../../lib/network.ts";
+import { currentNetworkLabel } from "../../lib/network.ts";
 import { shortWallet } from "../../lib/format.ts";
 import { AppShell } from "./_components/app-shell.tsx";
 
@@ -21,7 +21,7 @@ export default async function AppPage() {
   if (owned?.orgStatus === "active") redirect(`/app/${owned.orgId}/setup`);
   if (me.memberships.length === 0 || owned) redirect("/app/onboarding");
   return (
-    <AppShell me={me} network={networkLabel(process.env.NEXT_PUBLIC_CLUSTER)}>
+    <AppShell me={me} network={currentNetworkLabel()}>
       <PageHeader
         overline={`Signed in with ${shortWallet(me.user.wallet)}`}
         title="Welcome to Sotto"

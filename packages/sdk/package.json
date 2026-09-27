@@ -8,11 +8,14 @@
     "./cluster": "./src/cluster/config.ts",
     "./cluster/verify": "./src/cluster/verify.ts",
     "./confidential": "./src/confidential/index.ts",
+    "./confidential/public": "./src/confidential/public.ts",
     "./keys": "./src/keys/index.ts",
     "./keys/public": "./src/keys/public.ts",
     "./tx": "./src/tx/index.ts",
     "./wallet": "./src/wallet/index.ts",
-    "./wrap": "./src/wrap/index.ts"
+    "./wrap": "./src/wrap/index.ts",
+    "./testing": "./src/testing/index.ts",
+    "./testing/localnet": "./src/testing/localnet.ts"
   },
   "scripts": {
     "lint": "eslint .",
@@ -22,6 +25,7 @@
   },
   "dependencies": {
     "@solana-program/system": "catalog:",
+    "@solana-program/token": "catalog:",
     "@solana-program/token-2022": "catalog:",
     "@solana-program/token-wrap": "catalog:",
     "@solana-program/zk-elgamal-proof": "catalog:",

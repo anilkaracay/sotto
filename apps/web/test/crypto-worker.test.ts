@@ -5,9 +5,20 @@ import {
   confidentialKeysMessage,
   deriveStandardKeys,
   deriveViewingKey,
+  verifyWalletSignature,
   viewKeyMessage,
 } from "@sotto/sdk/keys";
-import { createKeyPairFromPrivateKeyBytes, getAddressFromPublicKey, signBytes } from "@solana/kit";
+import {
+  encodeToken2022Account,
+  encryptedTokenAccount,
+  randomizedEd25519Signature,
+} from "@sotto/sdk/testing";
+import {
+  address,
+  createKeyPairFromPrivateKeyBytes,
+  getAddressFromPublicKey,
+  signBytes,
+} from "@solana/kit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createAutoLock, HIDDEN_LOCK_MS, IDLE_LOCK_MS } from "../lib/crypto-worker/auto-lock.ts";
 import {
@@ -16,7 +27,7 @@ import {
   type WorkerLike,
 } from "../lib/crypto-worker/client.ts";
 import type { WorkerRequest, WorkerResponse } from "../lib/crypto-worker/protocol.ts";
-import { createVault } from "../lib/crypto-worker/vault.ts";
+import { createVault, loadVaultModules } from "../lib/crypto-worker/vault.ts";
 
 // The spl-token CLI check keypair (VERIFICATION-LOG step 1.5).
 const CLI_SEED = createHash("sha256").update("sotto-cli-key-check/v1").digest();
@@ -39,7 +50,7 @@ afterEach(() => {
 
 describe("key vault (inside the worker)", () => {
   it("AC-03.2 derives and holds the keys and answers with public keys only", async () => {
-    const vault = createVault(() => import("@sotto/sdk/keys"));
+    const vault = createVault(loadVaultModules);
     const wallet = await testWallet(CLI_SEED);
     const signature = await wallet.sign(confidentialKeysMessage());
     const viewSignature = await wallet.sign(viewKeyMessage(wallet.address));
@@ -96,7 +107,7 @@ describe("key vault (inside the worker)", () => {
   });
 
   it("I-5 refuses the account check before unlock, and bad signatures", async () => {
-    const vault = createVault(() => import("@sotto/sdk/keys"));
+    const vault = createVault(loadVaultModules);
     const wallet = await testWallet(CLI_SEED);
     expect(
       await vault.handle({ id: 1, type: "checkAccount", elgamalPubkey: CLI_ELGAMAL_KEY }),
@@ -119,7 +130,7 @@ describe("key vault (inside the worker)", () => {
   });
 
   it("clears the keys of the previous wallet when another wallet unlocks", async () => {
-    const vault = createVault(() => import("@sotto/sdk/keys"));
+    const vault = createVault(loadVaultModules);
     const first = await testWallet(CLI_SEED);
     const second = await testWallet(new Uint8Array(32).fill(4));
     await vault.handle({
@@ -139,6 +150,142 @@ describe("key vault (inside the worker)", () => {
       ok: true,
       result: { wallet: second.address, unlocked: false, viewing: true },
     });
+  });
+});
+
+const MINT = address("AhJfP4JJBaHWRtXRiaScZUC7SMm4RqUPSb3g9H5RT8Bd");
+
+describe("account work in the vault (step 1.7)", () => {
+  it("AC-03.3 refuses account setup when the wallet's second key signature differs (determinism check)", async () => {
+    const vault = createVault(loadVaultModules);
+    const wallet = await testWallet(CLI_SEED);
+    const message = confidentialKeysMessage();
+    const confirm = (id: number, signature: Uint8Array, from = wallet.address) =>
+      vault.handle({
+        id,
+        type: "confirmSignature",
+        wallet: from,
+        signature: signature.buffer as ArrayBuffer,
+      });
+
+    expect(await confirm(1, await wallet.sign(message))).toMatchObject({
+      ok: false,
+      error: { code: "not_unlocked" },
+    });
+    await vault.handle({
+      id: 2,
+      type: "unlock",
+      wallet: wallet.address,
+      signature: (await wallet.sign(message)).buffer,
+    });
+
+    // A deterministic wallet gives the same signature again; the vault zeroes it after the check.
+    const again = await wallet.sign(message);
+    expect(await confirm(3, again)).toEqual({ id: 3, ok: true, result: { same: true } });
+    expect(again.every((byte) => byte === 0)).toBe(true);
+
+    // A wallet with random nonces gives another valid signature: the keys would change next time.
+    const randomized = await randomizedEd25519Signature(CLI_SEED, message);
+    expect(await verifyWalletSignature(wallet.address, message, randomized)).toBe(true);
+    expect(await confirm(4, randomized)).toEqual({ id: 4, ok: true, result: { same: false } });
+
+    const other = await testWallet(new Uint8Array(32).fill(9));
+    expect(await confirm(5, await other.sign(message))).toMatchObject({
+      error: { code: "bad_signature" },
+    });
+    expect(await confirm(6, await other.sign(message), other.address)).toMatchObject({
+      error: { code: "not_unlocked" },
+    });
+  });
+
+  it("AC-03.3 AC-03.4 builds the setup instructions and decrypts only with the account's keys", async () => {
+    const vault = createVault(loadVaultModules);
+    const wallet = await testWallet(CLI_SEED);
+    const signature = await wallet.sign(confidentialKeysMessage());
+    const keys = await deriveStandardKeys(wallet.address, signature);
+    const secretPatterns = [signature, keys.elgamalSecretKey, keys.aeKey].flatMap((bytes) => [
+      hex(bytes),
+      b64(bytes),
+    ]);
+    expect(
+      await vault.handle({ id: 1, type: "decrypt", account: new ArrayBuffer(8) }),
+    ).toMatchObject({ error: { code: "not_unlocked" } });
+    await vault.handle({
+      id: 2,
+      type: "unlock",
+      wallet: wallet.address,
+      signature: new Uint8Array(signature).buffer,
+    });
+
+    const setup = await vault.handle({ id: 3, type: "setupInstructions", mint: MINT });
+    expect(setup).toMatchObject({ ok: true, result: { instructions: expect.any(Array) } });
+    if (!("ok" in setup) || !setup.ok || !("instructions" in setup.result)) {
+      throw new Error("no setup instructions");
+    }
+    expect(setup.result.instructions).toHaveLength(4);
+    expect(structuredClone(setup.result)).toEqual(setup.result);
+
+    const own = encodeToken2022Account(
+      encryptedTokenAccount({
+        owner: wallet.address,
+        mint: MINT,
+        keys,
+        available: 42n,
+        pending: 5n,
+      }),
+    );
+    const decrypted = await vault.handle({ id: 4, type: "decrypt", account: own.slice().buffer });
+    expect(decrypted).toEqual({
+      id: 4,
+      ok: true,
+      result: {
+        available: 42n,
+        pending: 5n,
+        pendingBalanceCreditCounter: 0n,
+        maximumPendingBalanceCreditCounter: 65_536n,
+      },
+    });
+    const apply = await vault.handle({
+      id: 5,
+      type: "applyInstruction",
+      token: MINT,
+      account: own.slice().buffer,
+    });
+    expect(apply).toMatchObject({
+      ok: true,
+      result: { instruction: { accounts: expect.any(Array) } },
+    });
+
+    const stranger = await testWallet(new Uint8Array(32).fill(5));
+    const strangerKeys = await deriveStandardKeys(
+      stranger.address,
+      await stranger.sign(confidentialKeysMessage()),
+    );
+    const theirs = encodeToken2022Account(
+      encryptedTokenAccount({
+        owner: stranger.address,
+        mint: MINT,
+        keys: strangerKeys,
+        available: 1n,
+        pending: 0n,
+      }),
+    );
+    expect(
+      await vault.handle({ id: 6, type: "decrypt", account: theirs.slice().buffer }),
+    ).toMatchObject({ ok: false, error: { code: "key_mismatch" } });
+    expect(
+      await vault.handle({
+        id: 7,
+        type: "applyInstruction",
+        token: MINT,
+        account: theirs.slice().buffer,
+      }),
+    ).toMatchObject({ ok: false, error: { code: "wrong_owner" } });
+
+    const serialized = JSON.stringify([setup, decrypted, apply], (_, value: unknown) =>
+      typeof value === "bigint" ? value.toString() : value,
+    );
+    for (const pattern of secretPatterns) expect(serialized).not.toContain(pattern);
   });
 });
 

@@ -160,6 +160,12 @@ job_localnet() {
       echo "+ SOTTO_LOCALNET_RPC_URL=$RPC_URL_LOCAL pnpm --filter $package test:localnet"
       SOTTO_LOCALNET_RPC_URL="$RPC_URL_LOCAL" pnpm --filter "$package" test:localnet || status=1
     done
+    # The browser flows that send transactions (step 1.7): Playwright with the injected test wallet
+    # against the production build the node job made, on this validator.
+    if [[ "$status" -eq 0 ]]; then
+      run pnpm --filter @sotto/e2e exec playwright install chromium &&
+        run pnpm --filter @sotto/e2e e2e:localnet || status=1
+    fi
     run scripts/db-local.sh test-down
   fi
   stop_validator

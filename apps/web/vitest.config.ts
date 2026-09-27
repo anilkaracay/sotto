@@ -5,5 +5,10 @@ import { defineConfig } from "vitest/config";
 // (scripts/db-local.sh test-up).
 export default defineConfig({
   oxc: { jsx: { runtime: "automatic" } },
-  test: { testTimeout: 30_000, hookTimeout: 60_000 },
+  test: {
+    testTimeout: 30_000,
+    hookTimeout: 60_000,
+    // Component tests render with react-dom/server; CSS Modules keep their local class names.
+    css: { include: [/.+/], modules: { classNameStrategy: "non-scoped" } },
+  },
 });

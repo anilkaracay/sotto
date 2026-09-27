@@ -1,17 +1,20 @@
-// /app/[org]/setup (F-03, 09 section 1): the owner's confidential account setup. Step 1.5 builds its
-// keys part: the confidential keys, unlocked in the crypto Web Worker only after an explicit click
-// (AC-03.2, the Locked state of AC-03.5), and the viewing key registration (07 section 5). Money
-// features need an active org (AC-02.2), so an org in review or suspended goes back to onboarding.
+// /app/[org]/setup (F-03, F-04, 09 section 1): the owner's confidential account setup and funding. The
+// keys unlock in the crypto Web Worker only after an explicit click (AC-03.2, step 1.5); the network
+// view (06 section 0), the wrapped mint (AC-03.1), the account (AC-03.3), the balances (AC-03.4,
+// AC-03.5), funding (AC-04.x) and the viewing key (07 section 5) come in step 1.7. Money features need
+// an active org (AC-02.2), so an org in review or suspended goes back to onboarding.
 import { PageHeader } from "@sotto/ui";
 import { notFound, redirect } from "next/navigation";
+import { ownerNav } from "../../../../lib/org-nav.ts";
 import { currentSession } from "../../../../lib/server/current-session.ts";
 import { getDb } from "../../../../lib/server/db.ts";
 import { ApiError } from "../../../../lib/server/errors.ts";
 import { loadMe } from "../../../../lib/server/me.ts";
+import { loadNetworkView } from "../../../../lib/server/network-view.ts";
+import { readOrgTokenAccount } from "../../../../lib/server/token-accounts.ts";
 import { readViewerKey } from "../../../../lib/server/viewer-keys.ts";
-import { networkLabel } from "../../../../lib/network.ts";
 import { AppShell } from "../../_components/app-shell.tsx";
-import { KeysPanel } from "./keys-panel.tsx";
+import { SetupPanel } from "./setup-panel.tsx";
 
 export const dynamic = "force-dynamic";
 
@@ -24,21 +27,39 @@ export default async function SetupPage({ params }: { params: Promise<{ org: str
   const owned = me.memberships.find((m) => m.orgId === orgId && m.role === "owner");
   if (!owned) notFound();
   if (owned.orgStatus !== "active") redirect("/app/onboarding");
-  const viewerKey = await readViewerKey(db, session, session.userId).catch((error: unknown) => {
-    if (error instanceof ApiError && error.status === 404) return null;
-    throw error;
-  });
+  const [viewerKey, network] = await Promise.all([
+    readViewerKey(db, session, session.userId).catch((error: unknown) => {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
+    }),
+    loadNetworkView(),
+  ]);
+  const recorded = network.available
+    ? await readOrgTokenAccount(db, session.userId, orgId, network.cluster)
+    : null;
   return (
-    <AppShell me={me} network={networkLabel(process.env.NEXT_PUBLIC_CLUSTER)}>
+    <AppShell me={me} network={network.label} nav={ownerNav(orgId, "setup")}>
       <PageHeader overline={owned.orgName} title="Account setup" />
-      <KeysPanel
-        wallet={me.user.wallet}
-        viewerKey={
-          viewerKey
-            ? { publicKey: viewerKey.publicKey, createdAt: viewerKey.createdAt.toISOString() }
-            : null
-        }
-      />
+      {network.available ? (
+        <SetupPanel
+          wallet={me.user.wallet}
+          orgId={orgId}
+          network={network}
+          viewerKey={
+            viewerKey
+              ? { publicKey: viewerKey.publicKey, createdAt: viewerKey.createdAt.toISOString() }
+              : null
+          }
+          recorded={
+            recorded ? { address: recorded.address, applyFlagged: recorded.applyFlagged } : null
+          }
+        />
+      ) : (
+        <p role="status">
+          Sotto runs on devnet only during the beta, so confidential accounts are not available on
+          this network.
+        </p>
+      )}
     </AppShell>
   );
 }

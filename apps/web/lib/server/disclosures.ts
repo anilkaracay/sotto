@@ -1,15 +1,16 @@
 // Disclosures (07 sections 3 to 7, 08 section 3; step 1.8). POST stores a batch the owner's browser
 // sealed and signed: the manifest must name this org and carry the org owner wallet's signature, list
-// exactly the posted items with the SHA-256 of each ciphertext, and every viewer must be allowed by the
-// table of 07 section 6: the owner's own items need no grant, every other item names an active grant of
-// this org for that viewer whose scope covers the kind (a recipient's payslips come through the
-// own_payslips grant its invite created). GET returns the caller's own items with their manifests,
-// which the browser verifies again (I-9). Money endpoints (requireMoneyAccess, AC-02.2). The server
-// never opens a ciphertext.
+// exactly the posted items with the SHA-256 of each ciphertext, and every viewer must be allowed:
+// without a grant, the owner's own items (07 section 6) and a current recipient's disclosures of a
+// payment or payslip line (AC-06.4, AC-12.1); with a grant, an active grant of this org for that viewer
+// whose scope covers the kind. GET returns the caller's own items with their manifests, which the
+// browser verifies again (I-9). Money endpoints (requireMoneyAccess, AC-02.2). The server never opens a
+// ciphertext.
 import {
   disclosures,
   grants,
   manifests,
+  memberships,
   membershipRole,
   orgs,
   users,
@@ -23,8 +24,9 @@ import {
   scopeAllowsKind,
   validateManifest,
   verifyManifest,
+  type DisclosureKind,
 } from "@sotto/sdk/disclosure";
-import { and, asc, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lt } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError, apiErrors } from "./errors.ts";
 import { requireMoneyAccess } from "./orgs.ts";
@@ -32,6 +34,12 @@ import type { Session } from "./session.ts";
 
 /** 500 items of a few hundred bytes each, in base64 with their fields. */
 export const DISCLOSURE_MAX_BODY_BYTES = 1_048_576;
+
+/**
+ * What a recipient of the org receives without a grant: the recipient disclosure of a payment to them
+ * (AC-06.4) and their payslip lines (AC-12.1); never org level items such as balance snapshots.
+ */
+const RECIPIENT_KINDS: readonly DisclosureKind[] = ["payment", "payroll_line"];
 
 const base64Of = (min: number, max: number) =>
   z
@@ -136,7 +144,8 @@ export async function createDisclosures(
     }
   }
 
-  // Every viewer must be allowed (07 section 6): the owner, or an active grant that covers the kind.
+  // Every viewer must be allowed: the owner, a current recipient for the recipient kinds, or an active
+  // grant that covers the kind.
   const grantIds = [
     ...new Set(input.items.flatMap((item) => (item.grantId ? [item.grantId] : []))),
   ];
@@ -151,9 +160,33 @@ export async function createDisclosures(
         .from(grants)
         .where(and(eq(grants.orgId, orgId), inArray(grants.id, grantIds)))
     : [];
+  const recipientViewers = [
+    ...new Set(
+      input.items
+        .filter((item) => item.grantId === null && item.viewerUserId !== owner.userId)
+        .map((item) => item.viewerUserId),
+    ),
+  ];
+  const recipientRows = recipientViewers.length
+    ? await db
+        .select({ userId: memberships.userId })
+        .from(memberships)
+        .where(
+          and(
+            eq(memberships.orgId, orgId),
+            eq(memberships.role, "recipient"),
+            isNull(memberships.removedAt),
+            inArray(memberships.userId, recipientViewers),
+          ),
+        )
+    : [];
+  const recipientsOfOrg = new Set(recipientRows.map((row) => row.userId));
   for (const item of input.items) {
     if (item.grantId === null) {
-      if (item.viewerUserId !== owner.userId) throw disclosureErrors.notAllowed();
+      if (item.viewerUserId === owner.userId) continue;
+      if (!recipientsOfOrg.has(item.viewerUserId) || !RECIPIENT_KINDS.includes(item.kind)) {
+        throw disclosureErrors.notAllowed();
+      }
       continue;
     }
     const grant = grantRows.find((row) => row.id === item.grantId);

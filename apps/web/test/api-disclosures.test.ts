@@ -1,8 +1,9 @@
 // Disclosures (07 sections 3 to 7, 08 section 3; step 1.8): the server stores a batch only when the
 // org owner's wallet signed its manifest for this org and the manifest lists exactly the posted items
-// with the SHA-256 of each ciphertext, and only for viewers the org shares with (07 section 6: the
-// owner, or an active grant covering the kind); each viewer reads its own items with their manifests,
-// which verify in the client (I-9); the money gate of AC-02.2.
+// with the SHA-256 of each ciphertext, and only for viewers the org shares with (the owner, a current
+// recipient for payments and payslip lines, AC-06.4, or an active grant covering the kind, 07 section
+// 6); each viewer reads its own items with their manifests, which verify in the client (I-9); the money
+// gate of AC-02.2.
 import { createHash, randomUUID } from "node:crypto";
 import { grants, invites, memberships, recipients } from "@sotto/db";
 import type { TestDatabase } from "@sotto/db/testing";
@@ -291,8 +292,23 @@ describe("disclosures", () => {
     expect(await refused(await item(orgId, stranger.userId, null))).toMatchObject({
       code: "disclosure_not_allowed",
     });
-    // Only the owner's own items go without a grant; a recipient's come through own_payslips.
-    expect(await refused(await item(orgId, recipient.userId, null))).toMatchObject({
+    // Without a grant a recipient receives the disclosure of a payment to them (AC-06.4) and payslip
+    // lines, never org level items; a removed recipient receives nothing.
+    const receipt = await item(orgId, recipient.userId, null, "payment");
+    expect((await post(owner.cookie, orgId, await batch(owner, orgId, [receipt]))).status).toBe(
+      201,
+    );
+    for (const kind of ["balance_snapshot", "month_total"] as const) {
+      expect(await refused(await item(orgId, recipient.userId, null, kind))).toMatchObject({
+        code: "disclosure_not_allowed",
+      });
+    }
+    const { eq } = await import("drizzle-orm");
+    await test.db
+      .update(memberships)
+      .set({ removedAt: new Date() })
+      .where(eq(memberships.userId, recipient.userId));
+    expect(await refused(await item(orgId, recipient.userId, null, "payment"))).toMatchObject({
       code: "disclosure_not_allowed",
     });
     // own_payslips covers payroll lines only (07 section 6).
@@ -327,7 +343,6 @@ describe("disclosures", () => {
       code: "disclosure_exists",
     });
     // A revoked grant stops new items.
-    const { eq } = await import("drizzle-orm");
     await test.db.update(grants).set({ status: "revoked" }).where(eq(grants.id, grantId));
     expect(
       await errorOf(

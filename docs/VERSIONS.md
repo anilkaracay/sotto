@@ -118,3 +118,16 @@ scripts/localnet-smoke.sh  # against a running localnet
 | Agave installer for CI | `https://release.anza.xyz/v4.2.2/install` | 2026-09-26 | https://docs.anza.xyz/cli/install ("You can replace v4.3.0 with the release tag matching the software version of your desired release") | Used by `.github/actions/setup-agave`. The tag v4.2.2 build (`c9c6f32`) differs from this machine's install (`e29e5d9`, v4.2.2 plus one CI only backport commit) |
 | GitHub runner image | `ubuntu-24.04` | 2026-09-26 | GitHub hosted runner label | Workflow only; runs after the public launch (D-25) |
 | Wallet packages installed in `apps/web` (step 0.6) | `@solana/react` 8.3.0, `@wallet-standard/react` 1.0.3, `@solana/wallet-standard-features` 1.5.0, `@solana-program/system` 0.15.0 | 2026-09-27 | https://registry.npmjs.org (dist-tag `latest`; resolved versions read from the installed packages) | Catalog pins in `pnpm-workspace.yaml`. `@solana/wallet-standard-features` 1.5.0 is the minimum for v1 transactions (G0 task 1 source). Used by the dev only wallet lab; `@solana/react` peers `swr` and `@tanstack/react-query` are optional and not installed |
+| Local Postgres (Docker) | `postgres:16.15`, `sha256:1a6ab3f5345eb6dbe04a1349529caabdb0ab09293a09590fad07b2246bfa4b54` | 2026-09-27 | https://hub.docker.com/_/postgres (latest 16.x tag; D-12 PostgreSQL 16) | Container `sotto-postgres`, volume `sotto-pgdata`, port `127.0.0.1:56432`. Command below |
+
+## Local Postgres container (Phase 1 kickoff, 2026-09-27)
+
+```sh
+docker volume create sotto-pgdata
+docker run -d --name sotto-postgres --restart unless-stopped \
+  -e POSTGRES_USER=sotto -e POSTGRES_DB=sotto \
+  -e POSTGRES_PASSWORD=<the password in DATABASE_URL of the .env.local files> \
+  -p 127.0.0.1:56432:5432 -v sotto-pgdata:/var/lib/postgresql/data postgres:16.15
+```
+
+`DATABASE_URL=postgresql://sotto:<password>@127.0.0.1:56432/sotto` in `apps/web/.env.local` and `apps/worker/.env.local`. Step 1.2 wraps this in `scripts/db-local.sh`.

@@ -49,6 +49,7 @@ Observation 2026-09-26 · G1 part 3, task 7 and 8: `spl-token` 5.6.1 configured 
 
 A12. The official guidance says wallets **should refuse** generic `signMessage` requests for messages starting with `solana-conf-bal/v1`, because that signature is key material. A dApp may therefore be unable to derive the standard keys through a generic wallet `signMessage` call.
 Source: same as A1. This drives decision D-03.
+**Observed** 2026-09-27 · devnet · Gate G2 (`VERIFICATION-LOG.md` step 0.6, row R4): Phantom, Solflare and Backpack (desktop Chrome extensions) allowed a generic `signMessage` of the exact bytes `solana-conf-bal/v1`; the signatures verified and were byte identical across the three wallets for the same seed. Phantom showed no warning; the popup text of the other two was not observed. The guidance above stays the source statement: a wallet may start refusing, which D-03 and `10-SECURITY.md` section 2 handle.
 
 A13. Confidential keys can instead be derived from independent key material with `ConfidentialKeys.fromIkm` or `ConfidentialKeys.fromPrf` (WebAuthn PRF).
 Source: same as A1.
@@ -129,7 +130,8 @@ Source: https://solanacompass.com/news/solana-v1-transactions-now-testable-local
 D4. With v1, a confidential transfer can execute in a single onchain transaction. Without v1 it spans several dependent transactions (proof accounts, transfer, cleanup).
 Source: A1 guide.
 
-D5. v1 activation on devnet: **VERIFIED** 2026-09-26 · G1 part 1, task 1: slot 492480000, epoch 1140, 2026-09-03 11:38:04 UTC; localnet (`solana-test-validator` 4.2.2) active from slot 0. **RE-VERIFY** which target wallets can sign v1 transactions (Gate G2). Sotto must support both paths. Note: `spl-token` 5.6.1 sent legacy transactions in G1 tasks 7 and 8.
+D5. v1 activation on devnet: **VERIFIED** 2026-09-26 · G1 part 1, task 1: slot 492480000, epoch 1140, 2026-09-03 11:38:04 UTC; localnet (`solana-test-validator` 4.2.2) active from slot 0. Sotto must support both paths. Note: `spl-token` 5.6.1 sent legacy transactions in G1 tasks 7 and 8.
+**VERIFIED (wallets)** 2026-09-27 · devnet · Gate G2 (`VERIFICATION-LOG.md` step 0.6, rows R1, R8 to R10): `supportedTransactionVersions` of `solana:signTransaction` is `["legacy", 0, 1]` in Solflare (a v1 self transfer confirmed on devnet, `41vyVV2ADjfnzrJL6odXHqPaoUza67pDpRVZejNoC812RZV9R9k6UA1z8c8aZS2nqUgFVVW6REkpDXqw9xfp72j7`) and `["legacy", 0]` in Phantom (a v1 transaction fails with "Reached end of buffer unexpectedly") and Backpack (refuses v1 with `UnsupportedTransactionVersionError`). One `signTransaction` call with several transactions works for v0 in all three and for v1 in Solflare. Sotto picks the path per wallet from the declared versions (D-26).
 
 ## E. Solana Attestation Service (SAS)
 
@@ -155,12 +157,12 @@ F2. A read only survey of USD stablecoins that are Token-2022 mints on mainnet (
 
 ## G. Explicitly unknown (verify before use)
 
-- Whether Phantom, Solflare and Backpack allow `signMessage` of `solana-conf-bal/v1` (A12). Gate G2.
-- Whether those wallets sign v1 transactions and `signAllTransactions` with v1. Gate G2.
 - Browser performance of `@solana/zk-sdk` proof generation (time per transfer). Gate G3.
 - Exact Rust module paths for proof context state parsing and ElGamal ciphertext arithmetic that `sotto_proofs` needs. Gate G4.
 - Compute units used by `sotto_proofs::verify_balance_threshold`. Gate G4.
 - The mainnet asset (D-01, Q-04). Canonical Token Wrap is not deployed (C5).
+
+Resolved by Gate G2 on 2026-09-27 and moved out of this list: whether the tested wallets allow `signMessage` of `solana-conf-bal/v1` (A12) and sign v1 transactions, including batches (D5).
 
 Resolved by Gate G1 on 2026-09-26 and moved out of this list: SAS program ID per cluster (E3), Token Wrap deployment (C5), USDC mints (F1), and the Token-2022, ZK ElGamal Proof and ZK Token Proof program IDs (H1).
 

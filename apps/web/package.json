@@ -12,7 +12,12 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@solana-program/system": "catalog:",
+    "@solana/kit": "catalog:",
+    "@solana/react": "catalog:",
+    "@solana/wallet-standard-features": "catalog:",
     "@sotto/ui": "workspace:*",
+    "@wallet-standard/react": "catalog:",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"

@@ -58,13 +58,13 @@ A viewer must know a disclosure really came from the org owner.
 | `all_payments` | `payment` and `payroll_line` items for every payment, plus `balance_snapshot` |
 | `period` (from, to) | same as above, limited to payments settled in the period |
 | `payroll_only` | `payroll_line` items |
-| `totals_only` | `month_total` items (sum of outgoing, sum of incoming, payroll total) and `balance_snapshot` |
+| `totals_only` (Post-hackathon, D-27) | `month_total` items (sum of outgoing, sum of incoming, payroll total) and `balance_snapshot` |
 | `own_payslips` | `payroll_line` items where the viewer is the recipient |
 | Owner self | every item, always (this is the owner's own history and the source for back fill and charts) |
 
 Balance history for charts: the owner's browser writes a `balance_snapshot` self disclosure at most once per day when the owner unlocks keys. The chart combines snapshots with public deposit and withdraw amounts from chain.
 
-`month_total` items are written on the owner's first unlock after month end (final) and refreshed on each unlock during the current month (provisional, flagged).
+Post-hackathon with `totals_only` (D-27): `month_total` items are written on the owner's first unlock after month end (final) and refreshed on each unlock during the current month (provisional, flagged).
 
 ## 7. Lifecycle
 

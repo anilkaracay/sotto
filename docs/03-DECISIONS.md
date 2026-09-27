@@ -54,6 +54,7 @@ Non-custodial. Each organization's confidential wUSDC account is owned by the or
 
 ### D-04 · Organization signing and approvals · DECIDED
 MVP: one owner wallet signs every money operation. Approvals (for example "2 of 2" on payroll) are recorded policy, not onchain enforcement, because the owner wallet can always sign directly. Sotto's API refuses to authorize, and the Sotto client refuses to execute, until the required approvers have signed an approval message (Sign-In With Solana style signed payload, stored with signature). Approval messages must include: org ID, cluster, subject type and ID, and `contents_hash` = lowercase hex SHA-256 of the canonical JSON list of `{ line_id, recipient_wallet, idempotency_key, private_blob_sha256 }`. Any change to the run after approval invalidates approvals. The UI must describe this truthfully: "Approvals are recorded in Sotto and signed by each approver. The owner wallet executes."
+**Default policy (founder, 2026-09-27, Q-11):** 1 approval, for payments and payroll runs (the `org_policy` defaults). The initiator's own execution counts as their approval and is recorded with the execution signature, so an owner only organization pays without an extra prompt. If the organization sets 2 or more, the other approvers must sign an approval message with the contents hash above before the payment or run is authorized. The approver screen is Post-hackathon (D-27; its scope for payroll runs is Q-12), so in the hackathon build policies of 2 or more are exercised through the API and its tests.
 Post-hackathon: Squads multisig as the token account owner. This requires confidential key material shared by approvers (`fromIkm` from a shared secret) and proof regeneration if the balance changes between proposal and execution. Out of scope until designed in a separate document.
 
 ### D-05 · Viewing keys are application level disclosures · DECIDED
@@ -123,7 +124,7 @@ pnpm workspaces and Turborepo. Layout in `04-ARCHITECTURE.md`.
 
 ### D-20 · Design elements without defined data · DECIDED
 - "Ask anything about your payments" input: removed from the MVP.
-- "Privacy score": kept, with the formula defined in `01-PRODUCT.md` F-18. If the founder prefers, remove it; do not show an undefined number.
+- "Privacy score": Post-hackathon (D-27, 2026-09-27); it is not shown. Before D-27 it was kept with the formula in `01-PRODUCT.md` F-18.
 - Any other demo only element is listed in `13-COPY-CORRECTIONS.md` with its fate.
 
 ### D-21 · Payroll execution · GATE (G3)
@@ -155,4 +156,10 @@ Sotto is wallet agnostic. Any wallet that implements the Wallet Standard for Sol
 - **Batch signing:** one `signTransaction` call with several transactions; if the wallet does not support it, fall back to one call per transaction.
 - **Wallet specific behavior** (for example, modifying the transaction message before signing) is handled by capability checks and by comparing the signed message with the built one, never by wallet name, unless no check can detect it. Such an exception is documented here with evidence. None exists today.
 - The wallets tested in Gate G2 (Phantom, Solflare, Backpack) are verified examples, not a supported list (`VERIFICATION-LOG.md` step 0.6; `14-ENVIRONMENTS-DEPLOY.md` section 3).
+
+### D-27 · Hackathon scope · DECIDED (founder, 2026-09-27)
+- **Kept in the hackathon build:** F-01 to F-09; F-10 grants and back fill (scopes `all_payments`, `period`, `payroll_only`, `own_payslips`); F-11 accountant books with the ledger and CSV export (AC-11.1 to AC-11.4, with reconciliation status only, no notes); F-12 my pay; F-13 proof of funds and the public verify page; F-14 access log; F-15 privacy screen; F-17 landing; F-19 proof program health.
+- **Moved to Post-hackathon:** F-16 command palette; F-18 privacy score (removed from the overview mapping; supersedes D-20); AC-11.5 close checklist and the Close and export page `/app/[org]/close` (the CSV export stays inside Books); the board viewer role and route `/app/[org]/board` (X-13) and the `totals_only` scope with its `month_total` items; reconciliation notes (the `reconciliation_notes` table is not built now); M5, the approver screen (whether this includes the payroll run Approve action of AC-08.3 is Q-12).
+- **Critical demo path**, which must work end to end on devnet by Phase 4: owner onboarding and verification, fund, confidential payroll batch, accountant reads through a grant, recipient sees the payslip, proof of funds with the public verify page, and the landing. It is the hackathon acceptance scenario in `12-MILESTONES.md`, and Phase 2 is planned around it.
+- Nothing Post-hackathon is shown in the landing or the app (ENGINEERING-RULES.md rule 6); the affected rows are in `13-COPY-CORRECTIONS.md`.
 

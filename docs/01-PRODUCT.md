@@ -9,9 +9,9 @@ Sotto is the business account for companies that pay in stablecoins: every payme
 | Role | Who | Can do | Can read |
 |------|-----|--------|----------|
 | Owner | Company founder or finance lead. Holds the owner wallet. | Everything, including signing all money operations | Everything of the org |
-| Approver | Another company member | Approve payroll runs and payments (D-04) on `/app/[org]/payroll/[run]`, seeing the contents hash they sign | What their grant allows |
+| Approver | Another company member | Approve payroll runs and payments (D-04) on `/app/[org]/payroll/[run]`, seeing the contents hash they sign. With the default policy of 1, the initiator's execution is the approval (Q-11); the approver screen is Post-hackathon (D-27, Q-12) | What their grant allows |
 | Accountant | Internal or external | Read, reconcile, annotate, export within grant scope | Grant scope |
-| Board viewer | Board member or investor | Read totals and treasury balance within grant scope on the board screen `/app/[org]/board` | Totals only |
+| Board viewer (Post-hackathon, D-27) | Board member or investor | Read totals and treasury balance within grant scope on the board screen `/app/[org]/board` | Totals only |
 | Recipient | Employee, contractor, supplier | Configure their confidential account, read their own payslips, withdraw | Their own payments |
 | Counterparty | Supplier, lender, landlord | Open a proof link and see the result | The proven statement only |
 | Sotto admin | Sotto team | Review KYB, issue or revoke the verified business attestation | No customer amounts, ever |
@@ -20,8 +20,8 @@ A person can hold several roles in several orgs. Roles live on memberships, not 
 
 ## 3. Scope
 
-**MVP (everything built for the hackathon, devnet only; mainnet is Post-hackathon per D-01):** F-01 to F-19, except where marked.
-**Post-hackathon:** income proof (D-07), email claim (D-08), Squads (D-04), KYB provider (D-09).
+**MVP (the hackathon build, devnet only; mainnet is Post-hackathon per D-01):** the scope of D-27: F-01 to F-15, F-17 and F-19, except where marked.
+**Post-hackathon:** income proof (D-07), email claim (D-08), Squads (D-04), KYB provider (D-09), and per D-27: F-16 command palette, F-18 privacy score, AC-11.5 close checklist and the Close and export page, the board viewer role and route and the `totals_only` scope, reconciliation notes, the approver screen.
 "Phase 0 to 4" means only the schedule in `12-MILESTONES.md`.
 
 ## 4. Features and acceptance criteria
@@ -60,7 +60,7 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 ### F-06 Single confidential payment
 - AC-06.1 Owner picks a recipient whose confidential account is configured, enters amount and memo.
 - AC-06.2 The recipient address is screened (D-10). A hit blocks the payment and logs the event.
-- AC-06.3 Approval policy (D-04) is enforced before a plan is issued.
+- AC-06.3 Approval policy (D-04) is enforced before a plan is issued. The default policy is 1 approval, and the initiator's own execution counts as it, recorded with the execution signature; with a policy of 2 or more, the other approvers' signed approval messages are required before authorization (Q-11).
 - AC-06.4 The client builds and executes the confidential transfer (v1 single transaction when available, else the multi transaction plan). On success, the client creates disclosures for every active grant whose scope covers the payment, plus a self disclosure for the owner and a recipient disclosure. Self and recipient disclosures are scheduled for Phase 1; the grant part of this criterion is scheduled for Phase 2 (`12-MILESTONES.md`).
 - AC-06.5 If any transaction in the plan fails, the app shows exactly which step failed, closes any proof context accounts it created, and lets the owner retry safely. Tokens are never lost: a failed transfer leaves balances unchanged.
 
@@ -73,7 +73,7 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 ### F-08 Payroll run
 - AC-08.1 Owner uploads a CSV with header `wallet,amount,memo,name,team,country`. Amounts are decimal strings with at most 6 decimals. The app validates every row and shows errors per row. Rows match existing recipients by wallet; an unknown wallet is a row error with the message "Add this recipient first".
 - AC-08.2 A run has statuses: `draft`, `awaiting_approval`, `approved`, `executing`, `settled`, `partially_settled`, `failed`.
-- AC-08.3 Approvers approve with a signed message (D-04) using the "Approve" action on `/app/[org]/payroll/[run]`, and see the contents hash they sign; the required count comes from org policy.
+- AC-08.3 Approvers approve with a signed message (D-04) using the "Approve" action on `/app/[org]/payroll/[run]`, and see the contents hash they sign; the required count comes from org policy, and the initiator's execution counts as one approval (Q-11). Whether this Approve action is in the hackathon build is Q-12 (D-27).
 - AC-08.4 Execution follows D-21. Each line gets its own status and signature(s). Progress is shown live on the payroll gauge: it has as many ticks as lines, clamped to 12 minimum and 48 maximum; above 48, each tick represents ceil(lines/48) lines. Ticks fill as lines settle.
 - AC-08.5 A partially settled run can be resumed; already settled lines are never paid twice (idempotency key per line stored before signing, and chain check before retry).
 - AC-08.6 Disclosures for each line are created after that line settles.
@@ -82,7 +82,7 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 - AC-09.1 Owner or recipient withdraws from confidential available to public wUSDC, then unwraps to USDC.
 
 ### F-10 Viewing grants
-- AC-10.1 Owner grants a viewer a scope: `all_payments`, `period` (from, to), `payroll_only`, `totals_only`, `own_payslips` (recipient), with optional expiry.
+- AC-10.1 Owner grants a viewer a scope: `all_payments`, `period` (from, to), `payroll_only`, `own_payslips` (recipient), with optional expiry. The `totals_only` scope is Post-hackathon (D-27).
 - AC-10.2 Grants are always created through an invite: the viewer accepts, becomes a user, registers a viewing public key (see `07-SELECTIVE-DISCLOSURE.md`), and the grant activates. Until then the grant is `pending_viewer_key`.
 - AC-10.3 On grant creation, the owner's browser back fills disclosures for past payments inside the scope.
 - AC-10.4 Revoke deletes stored disclosures for that grant and stops future ones. UI states that already viewed data cannot be unseen.
@@ -91,9 +91,9 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 ### F-11 Accountant books
 - AC-11.1 The accountant sees orgs where they hold an active grant, chooses one, and sees the scope banner (who granted it, scope, expiry).
 - AC-11.2 The ledger decrypts disclosures in the browser. Filters: month, category (the disclosure payload `category`: `payroll`, `supplier`, `revenue`, `payouts`, `software`, `other`), needs receipt. Attaching receipts is out of MVP. Search runs on decrypted data in memory.
-- AC-11.3 Reconciliation status and notes per payment. Notes are stored in `reconciliation_notes`: one sealed box per reader (the owner and each accountant with a covering grant), created and signed exactly like disclosures (`08-BACKEND.md`).
+- AC-11.3 Reconciliation status per payment. Reconciliation notes (`reconciliation_notes`: one sealed box per reader, created and signed like disclosures) are Post-hackathon (D-27).
 - AC-11.4 CSV export is generated in the browser. The server records an export event (who, when, scope, row count) visible to the owner in the access log.
-- AC-11.5 Month close checklist items persist per org and month.
+- AC-11.5 (Post-hackathon, D-27) Month close checklist items persist per org and month.
 
 ### F-12 Recipient: My pay
 - AC-12.1 Shows the recipient's payslips from recipient disclosures (gross, tax withheld, net if provided by the payroll CSV extension columns `gross,tax`; otherwise net only).
@@ -112,14 +112,14 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 ### F-15 Privacy screen
 - AC-15.1 Toggle blurs every amount in the UI; hovering one amount reveals it. Preference stored per device.
 
-### F-16 Command palette
+### F-16 Command palette (Post-hackathon, D-27)
 - AC-16.1 Cmd or Ctrl plus K opens it; commands are role aware and only include implemented actions.
 
 ### F-17 Marketing site
 - AC-17.1 The landing page matches `design/sotto-landing.html` with the copy corrections applied.
 - AC-17.2 The "Request access" form has "Work email" and "Company" fields and stores both in the waitlist table with double opt in. Confirmation emails are sent through Resend (DEFAULT).
 
-### F-18 Privacy score (if kept, D-20)
+### F-18 Privacy score (Post-hackathon, D-27)
 Computed per org per quarter, 0 to 100, compared with the previous quarter, shown with its breakdown:
 - 40 points times the share of outgoing payments in the quarter that were confidential transfers, counted by number of payments (the server does not know values).
 - 25 points if every active grant has an expiry at most 400 days away.

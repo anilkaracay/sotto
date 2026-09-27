@@ -43,12 +43,15 @@ payroll_runs(id uuid pk, org_id fk, title, period char(7), status enum(draft, aw
              executing, settled, partially_settled, failed), line_count int, created_by fk, created_at,
              executed_at null, private_blob bytea)   -- encrypted to owner: amounts per line
 approvals(id uuid pk, org_id fk, subject_type enum(payment, payroll_run), subject_id uuid,
-          approver_user_id fk, message text, signature bytea, created_at, unique(subject_type, subject_id, approver_user_id))
+          approver_user_id fk, kind enum(message, execution) default message,
+          message text null, signature bytea null, execution_signature text null,
+          created_at, unique(subject_type, subject_id, approver_user_id))
+          -- kind execution: the initiator's approval, recorded with the execution signature (Q-11)
 
-grants(id uuid pk, org_id fk, viewer_user_id fk null, invite_token text fk, scope enum(all_payments, period, payroll_only, totals_only, own_payslips),
+grants(id uuid pk, org_id fk, viewer_user_id fk null, invite_token text fk, scope enum(all_payments, period, payroll_only, own_payslips),
        period_from date null, period_to date null, expires_at null,
        status enum(pending_viewer_key, active, revoked, expired), created_by fk, created_at, revoked_at null,
-       last_used_at null)          -- always created through an invite; viewer_user_id is null until the invite is accepted
+       last_used_at null)          -- always created through an invite; viewer_user_id is null until the invite is accepted; totals_only is Post-hackathon (D-27)
 manifests(id uuid pk, org_id fk, signer_wallet text, manifest jsonb, signature bytea, created_at)
 disclosures(id uuid pk, org_id fk, grant_id fk null, viewer_user_id fk, kind enum(payment, payroll_line, month_total, balance_snapshot),
             subject text, ciphertext bytea, manifest_id fk, created_at)
@@ -56,6 +59,7 @@ disclosures(id uuid pk, org_id fk, grant_id fk null, viewer_user_id fk, kind enu
 proof_records(id uuid pk, org_id fk, cluster, record_address text unique, threshold_base_units bigint,
               counterparty_label text, counterparty_salt bytea(16), expiry timestamptz, created_at)
 reconciliations(payment_id pk fk, org_id fk, status enum(matched, needs_receipt), updated_by fk, updated_at)
+-- reconciliation_notes and close_items are Post-hackathon (D-27) and are not built in the hackathon build
 reconciliation_notes(id uuid pk, payment_id fk, org_id fk, viewer_user_id fk, ciphertext bytea, manifest_id fk, created_at,
                      unique(payment_id, viewer_user_id))   -- one sealed box per reader (owner plus each accountant with a covering grant), created and signed exactly like disclosures
 close_items(org_id fk, month char(7), item_key text, done bool, done_by fk null, done_at null, primary key(org_id, month, item_key))
@@ -93,8 +97,8 @@ Payments and payroll
 - `POST /orgs/:id/payments { recipientId, idempotencyKey }` creates a draft.
 - `POST /orgs/:id/payroll-runs { title, period, lines:[{ recipientId, idempotencyKey }], privateBlob }`.
 - `POST /approvals { subjectType, subjectId, message, signature }`. The message must include org ID, cluster, subject type and ID, and `contents_hash` = lowercase hex SHA-256 of the canonical JSON list of `{ line_id, recipient_wallet, idempotency_key, private_blob_sha256 }` (D-04). Any change to the run after approval invalidates approvals.
-- `POST /orgs/:id/payments/:pid/authorize` returns `{ authorized: true }` only if: org active, recipient ready, screening clear within 24 hours, approvals satisfied, proof program available. Otherwise a precise error code.
-- `POST /orgs/:id/payments/:pid/executions { signatures[] }` records attempt signatures before and after sending.
+- `POST /orgs/:id/payments/:pid/authorize` returns `{ authorized: true }` only if: org active, recipient ready, screening clear within 24 hours, approvals satisfied, proof program available. Approvals (D-04, Q-11): the initiator counts as one approval; a policy of N (2 or more) needs N minus 1 approval messages signed by other members. Otherwise a precise error code.
+- `POST /orgs/:id/payments/:pid/executions { signatures[] }` records attempt signatures before and after sending. With the first execution signature it records the initiator's approval (`approvals.kind = execution`, `execution_signature` set; Q-11).
 - The worker moves payments to `settled` after finality.
 
 Disclosure
@@ -110,7 +114,7 @@ RPC proxy
 - `POST /rpc`: all browser Solana RPC goes through this server proxy, with a JSON-RPC method allow list, a per session rate limit and a body size limit.
 
 Other
-- `GET /orgs/:id/access-log`, reconciliation and close checklist endpoints, `POST /waitlist`, `GET /waitlist/confirm/:token`, `GET /health`.
+- `GET /orgs/:id/access-log`, reconciliation status endpoints (the close checklist is Post-hackathon, D-27), `POST /waitlist`, `GET /waitlist/confirm/:token`, `GET /health`.
 
 ## 4. Worker jobs
 

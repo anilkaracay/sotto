@@ -7,7 +7,8 @@
 | `/` | Landing (from `design/sotto-landing.html`) | Public |
 | `/v/[address]` | Public proof verification | Public |
 | `/trust` | Trust page (D-01, `13-COPY-CORRECTIONS.md` L6 and L7, `10-SECURITY.md` section 4) | Public |
-| `/app` | Redirects to the first page of the user's role in their last used org | Session |
+| `/app` | Redirects to the first page of the user's role in their last used org. Without a session it sends the visitor to `/app/sign-in`; until the org screens exist (step 1.4 and later) it shows the signed in shell | Session |
+| `/app/sign-in` | Sign in (F-01): the wallets that meet D-26, connect, then sign in (`solana:signIn` or a signed message, D-15). A signed in visitor goes to `/app` | Public |
 | `/app/onboarding` | Create org, KYB form, status | Session |
 | `/app/[org]/overview` | Owner overview; withdraw (F-09) opens as a drawer here | Owner |
 | `/app/[org]/setup` | Confidential account setup and funding (F-03, F-04) | Owner |
@@ -31,6 +32,7 @@ The role switcher in the design becomes an **org and role switcher**: it lists t
 - Tokens: extract every CSS variable, font size, radius, shadow and animation into two scoped themes: `packages/ui/theme-landing.css` scoped to `.theme-landing` (from `design/sotto-landing.html`) and `packages/ui/theme-app.css` scoped to `.theme-app` (from `design/sotto-app.html`). Fonts: Geist and Geist Mono through `next/font`.
 - Components to build: top pill nav, page header (overline plus title), dark hero card, white card, glowing bar chart, radial tick gauge (with fill by progress), hatched benchmark bar, barcode strip, sky card with glass card, table, chips, pill buttons, drawer, toast, privacy screen, role switcher menu. The command palette is Post-hackathon (D-27).
 - Motion: keep entrance animations; respect `prefers-reduced-motion`.
+- Built in step 1.3: the app tokens in `packages/ui/theme-app.css`; `Button`, `Chip`, `Card` (white and dark), `PageHeader`, `TopNav`, `Table` with `Th` and `Td`, `Drawer` and `Toast` in `packages/ui` (CSS Modules with the design's values); the shell in `apps/web` (header, network label per 13 A25, org and role switcher per A9 with sign out). The top nav shows only screens that exist, and the header shows no privacy toggle, command search or notifications until they are built (13 A29, A33). Pixel polish comes with the visual baselines (plan move M2).
 - Visual regression: Playwright screenshots of each screen. Baselines come from our own build after founder visual sign off, not from the design HTML. The app is desktop first, minimum width 1280 in MVP, baselines at 1440 only. Landing baselines at 1440 and 390 (tolerance documented in `11-TESTING.md`).
 
 ## 3. Screen data mapping

@@ -95,6 +95,7 @@ Helius for devnet and mainnet, public RPC as a devnet fallback only. Gate G1 mus
 
 ### D-15 · Authentication · DEFAULT
 Sign-In With Solana through the Wallet Standard sign in feature when available, otherwise a signed nonce message. Session: httpOnly, secure, SameSite=Lax cookie holding an opaque session ID. No JWT in localStorage.
+Implementation (step 1.3, 08 section 3): the message is the Sign-In With Solana text of `@solana/wallet-standard-util` 1.1.4, naming the host of `NEXT_PUBLIC_APP_URL`; the database stores only an HMAC of the session token. G2 R2 showed `solana:signIn` working in Phantom, Solflare and Backpack.
 
 ### D-16 · Onchain framework and upgrade authority · DECIDED by gate on 2026-09-26: native program, no Anchor
 Framework: decided by a dependency check at step 0.4, before scaffolding `programs/sotto_proofs`. At step 0.2 no documentation stated that Anchor 1.2.0 (latest stable) is compatible with Agave 4.2.x: Anchor's avm map recommends Solana 4.1.2 for Anchor 1.2.0, and Anchor 1.2.0 depends on solana-* 3.x crates (see `VERIFICATION-LOG.md`, G0 task 6).

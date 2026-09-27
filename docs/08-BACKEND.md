@@ -74,12 +74,17 @@ Row access is enforced in the API layer with one helper `requireMembership(orgId
 
 ## 3. API
 
-All endpoints under `/api`. Errors: `{ "error": { "code": "...", "message": "..." } }` with correct HTTP status. The message is also the HTTP reason phrase (the RPC client reads only that). Codes used by the foundation (step 1.2, `apps/web/lib/server/errors.ts`): `invalid_request` (400), `unauthenticated` (401), `forbidden` and `forbidden_origin` (403), `payload_too_large` (413), `unsupported_media_type` (415), `rate_limited` (429 with `Retry-After`), `internal_error` and `server_misconfigured` (500), and `approval_policy_not_available` (422, Q-12). Every response carries `x-request-id`.
+All endpoints under `/api`. Errors: `{ "error": { "code": "...", "message": "..." } }` with correct HTTP status. The message is also the HTTP reason phrase (the RPC client reads only that). Codes used by the foundation (step 1.2, `apps/web/lib/server/errors.ts`): `invalid_request` (400), `unauthenticated` (401), `forbidden` and `forbidden_origin` (403), `payload_too_large` (413), `unsupported_media_type` (415), `rate_limited` (429 with `Retry-After`), `internal_error` and `server_misconfigured` (500), `approval_policy_not_available` (422, Q-12), and `sign_in_invalid` and `sign_in_expired` (401, step 1.3). Every response carries `x-request-id`.
 
 Auth
 - `POST /auth/nonce { wallet }` returns a sign in message (domain, statement, nonce, issued at, expiration 5 minutes).
 - `POST /auth/verify { wallet, message, signature }` verifies Ed25519, nonce unused and unexpired, sets the session cookie.
 - `POST /auth/logout`, `GET /me`.
+- Implementation (step 1.3, `apps/web/lib/server/auth.ts`, `app/api/auth`, `app/api/me`):
+  - `POST /auth/nonce { wallet }` returns `{ input, message }`. `input` holds the `solana:signIn` fields: `domain` (the host of `NEXT_PUBLIC_APP_URL`), `address`, `statement` "Sign in to Sotto. This request does not send a transaction or cost any fees.", `uri` (that origin), `version` "1", `nonce` (16 random bytes, hex), `issuedAt`, `expirationTime` (5 minutes later). `message` is the same fields as Sign-In With Solana text, built by `@solana/wallet-standard-util` `createSignInMessageText`, for wallets without `solana:signIn` (D-15). The nonce is stored in `auth_nonces` for that wallet.
+  - `POST /auth/verify { wallet, message, signature }` (base64): the signed text is parsed with the util's parser and must name the configured origin (never the request's Host header), the wallet, the statement, version 1 and the issued nonce, with issue and expiry times exactly 5 minutes apart, no Not Before, Request ID or Resources, and nothing outside the canonical text of its fields; a Chain ID added by the wallet is tolerated. The Ed25519 signature is checked before the nonce is consumed, so bad signatures cannot burn a pending nonce; the nonce is then consumed atomically (unused, unexpired, same wallet and expiry). The user is created on first sign in and the session cookie set. Failures are 401 `sign_in_invalid` (the message or signature does not match) or `sign_in_expired` (replayed or expired, AC-01.2).
+  - `POST /auth/logout` sets `sessions.revoked_at` and clears the cookie (204, AC-01.3).
+  - `GET /me` returns `{ user: { id, wallet, displayName }, memberships: [{ orgId, orgName, orgStatus, role }], isAdmin }`.
 
 Organizations and people
 - `POST /orgs`, `GET /orgs/:id`, `PATCH /orgs/:id` (owner).

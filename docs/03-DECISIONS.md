@@ -73,6 +73,7 @@ Post-hackathon email claim needs an embedded wallet provider. Founder must choos
 
 ### D-09 · Business verification (KYB) · DEFAULT for hackathon, BLOCKER for public mainnet
 Hackathon and private beta: manual review by a Sotto admin in the admin console, then Sotto issues a "verified business" SAS attestation. Public mainnet: founder picks a KYB provider (for example Sumsub, Persona, Onfido) after legal review (D-23).
+**Rejected organizations (founder, 2026-09-27, Q-13):** in the hackathon build, rejecting an organization in review sets it to `suspended`, the same status as a revoked verification, and nothing returns a suspended organization to review (option a). A separate `rejected` status with resubmission (option b) or an admin reinstate action (option c) is decided together with the KYB provider.
 
 ### D-10 · Sanctions screening · BLOCKER for mainnet payments
 Every recipient address must be screened before a payment plan is issued. Founder chooses the provider and provides credentials. Candidates: Range, Chainalysis sanctions screening, TRM Labs. Until chosen, devnet uses a local deny list file so the code path is exercised; mainnet payments are disabled by feature flag until a provider is configured.

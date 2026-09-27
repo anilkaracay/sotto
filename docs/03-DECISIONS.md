@@ -134,3 +134,10 @@ Terms of service, privacy policy and a regulatory review (Turkey and target mark
 - `sas-lib` 1.0.10 is used only inside `apps/worker`, which issues and reads attestations (08). It depends on `@solana/kit ^5.0.0`, so the worker carries a second `@solana/kit` version (5.x next to 8.3.0) until `sas-lib` targets kit 8. Types are converted at the boundary; G5 tests the conversion.
 - `apps/web` and `packages/sdk` never import `sas-lib`; they read attestation data through the Sotto API. An ESLint `no-restricted-imports` rule enforces this everywhere outside `apps/worker`.
 - Revisit when a `sas-lib` release on `@solana/kit` 8 exists (2.0.0-beta.1 peers kit 7).
+
+### D-25 · Local CI until public launch · DECIDED (founder, 2026-09-27)
+- The repository `anilkaracay/sotto` stays private until the end of the project. The founder makes it public after the public launch checklist (`12-MILESTONES.md`, Phase 4).
+- Reason: on the private repository GitHub Actions jobs do not start ("recent account payments have failed or your spending limit needs to be increased") and branch protection requires GitHub Pro or a public repository (HTTP 403). See `VERIFICATION-LOG.md`, step 0.5.
+- Until then CI runs locally with `pnpm ci:local` (`scripts/ci-local.sh`), the same four jobs as `.github/workflows/ci.yml`; the workflow runs on `workflow_dispatch` only. Merge rules are in ENGINEERING-RULES.md (Git workflow).
+- At the public launch: restore the `push` and `pull_request` triggers, apply branch protection, and record the first green GitHub Actions run.
+

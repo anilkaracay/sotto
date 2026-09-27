@@ -45,6 +45,16 @@ Run the full E2E suite on devnet with fresh wallets. Record run ID, commit, and 
 
 Pixel diff at most 0.5 percent per screen after masking dynamic regions (times, addresses, animated elements). Update baselines only with founder approval.
 
-## 7. CI (GitHub Actions)
+## 7. CI
 
-Jobs: install with frozen lockfile, lint, typecheck, unit, program build and test, SDK integration on local validator, API tests, E2E localnet, visual, security checks, `pnpm audit`, `cargo audit`. Cache toolchains. Block merge on any failure.
+**Until the public launch: local CI (D-25).** `pnpm ci:local` (`scripts/ci-local.sh`) runs the same four jobs as `.github/workflows/ci.yml`, in the same order, on the development machine, stops at the first failure and prints a summary table. It must be green before any merge into `main`, and the summary goes into the step report (ENGINEERING-RULES.md, Git workflow).
+1. `node`: Node 24.21.0 and pnpm 12.6.0 version checks, `pnpm install --frozen-lockfile`, `pnpm lint` (ESLint and Prettier), `pnpm typecheck`, `pnpm test`, `pnpm build`.
+2. `program`: Agave 4.2.2 and `cargo-build-sbf` 4.1.0 version checks, `cargo-build-sbf` build of `sotto_proofs`, `cargo test --locked -p sotto_proofs`.
+3. `localnet`: `scripts/fetch-token-wrap.sh` (SHA-256 checked), `scripts/localnet.sh` in the background, wait for `getHealth`, `scripts/localnet-smoke.sh`, stop the validator, remove the ledger and smoke keypairs.
+4. `checks`: `scripts/checks/no-dashes.py` (tracked files and the last commit message), `scripts/checks/ac-manifest.py` (required ACs for the current phase), gitleaks 8.30.1 from its release tarball (SHA-256 pinned and checked against the release checksums file) over the full history with `.gitleaks.toml`, `scripts/checks/no-zk-token-proof.sh` (invariant I-4).
+
+The current phase for the AC manifest check has a single source: `currentPhase` in `tests/ac-manifest.json`. It is raised when a phase starts.
+
+**After the public launch: GitHub Actions.** The same jobs run in `.github/workflows/ci.yml` on `push` and `pull_request`, with third party actions pinned by commit SHA (`VERSIONS.md`), Agave installed with the official Anza installer through `.github/actions/setup-agave`, caches for the pnpm store, the cargo registry and target, and the Agave install, and branch protection on `main` requiring all four jobs (public launch checklist in `12-MILESTONES.md`). Until then the workflow runs on `workflow_dispatch` only.
+
+Planned additions as the code grows: SDK integration on the local validator, API tests with a test Postgres, E2E on localnet, visual tests from Phase 3, the remaining security checks (I-1 to I-10), `pnpm audit` and `cargo audit`. Each is added to both `scripts/ci-local.sh` and the workflow.

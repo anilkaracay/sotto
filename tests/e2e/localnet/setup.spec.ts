@@ -1,17 +1,23 @@
-// F-03 and F-04 in the browser on localnet (step 1.7): the owner of an active org, with the injected
-// test wallet, meets the determinism check, sets up the confidential wUSDC account and funds it through
-// the UI; every balance on the page comes from chain state (AC-04.4) and matches what the owner's keys
-// decrypt from chain here; nothing secret travels; a reload shows Locked until the owner unlocks again
-// (AC-03.5), on the setup page and on the overview (AC-05.1). Runs in the localnet job of
+// F-03 and F-04 in the browser on localnet (steps 1.7 and 1.7.1): the owner of an active org, with the
+// injected test wallet, meets the determinism check, sets up the confidential wUSDC account and funds it
+// in two signatures (wrap and deposit in one transaction, then apply), deposits public wUSDC it already
+// had on its own; every balance on the page comes from chain state (AC-04.4) and matches what the
+// owner's keys decrypt from chain here; nothing secret travels. The keys serve every page of the tab
+// without a new signature, and end on reload, the Lock button, sign out and a change of the wallet
+// account, closing the crypto worker (AC-03.5, AC-05.1). Runs in the localnet job of
 // scripts/ci-local.sh against the bootstrapped validator, never devnet.
 import { createPrivateKey, sign as ed25519Sign } from "node:crypto";
 import { readConfidentialBalance } from "@sotto/sdk/confidential";
-import { associatedTokenAccount } from "@sotto/sdk/confidential/public";
+import { associatedTokenAccount, readTokenAccountState } from "@sotto/sdk/confidential/public";
 import { confidentialKeysMessage, deriveStandardKeys } from "@sotto/sdk/keys";
 import { randomizedEd25519Signature } from "@sotto/sdk/testing";
-import { fundLocalnetWallet, readLocalnetBootstrap } from "@sotto/sdk/testing/localnet";
+import {
+  fundLocalnetWallet,
+  readLocalnetBootstrap,
+  wrapLocalnetUsdcAs,
+} from "@sotto/sdk/testing/localnet";
 import { createRetryingRpc } from "@sotto/sdk/tx";
-import { address, getBase58Decoder } from "@solana/kit";
+import { address, createKeyPairSignerFromBytes, getBase58Decoder } from "@solana/kit";
 import { expect, test, type Page } from "@playwright/test";
 import { E2E_ADMIN_WALLET, E2E_KEYPAIR_SEED, e2eKeypair } from "../fixtures.ts";
 import { signIn } from "../helpers.ts";
@@ -19,6 +25,7 @@ import { signIn } from "../helpers.ts";
 const bootstrap = readLocalnetBootstrap();
 const rpc = createRetryingRpc(bootstrap.rpcUrl);
 const SETUP_URL = /\/app\/[0-9a-f-]{36}\/setup$/;
+const OVERVIEW_URL = /\/app\/[0-9a-f-]{36}\/overview$/;
 
 const privateKey = createPrivateKey({
   key: Buffer.concat([Buffer.from("302e020100300506032b657004220420", "hex"), E2E_KEYPAIR_SEED]),
@@ -27,13 +34,18 @@ const privateKey = createPrivateKey({
 });
 const keySignature = new Uint8Array(ed25519Sign(null, confidentialKeysMessage(), privateKey));
 
-type TestWallet = { queueSignatures: (signatures: string[]) => void; signedTransactions: number };
+type TestWallet = {
+  queueSignatures: (signatures: string[]) => void;
+  signedTransactions: number;
+  signedMessages: string[];
+  switchAccount: () => Promise<string>;
+};
 
-const signedTransactions = (page: Page) =>
+const testWallet = <T>(page: Page, key: "signedTransactions" | "signedMessages") =>
   page.evaluate(
-    () =>
-      (window as unknown as { __sottoTestWallet: TestWallet }).__sottoTestWallet.signedTransactions,
-  );
+    (name) => (window as unknown as { __sottoTestWallet: TestWallet }).__sottoTestWallet[name],
+    key,
+  ) as Promise<T>;
 
 const value = (page: Page, card: string) => page.getByTestId(`${card}-value`);
 
@@ -48,9 +60,32 @@ async function unlock(page: Page) {
   await expect(page.getByTestId("keys-status")).toHaveText("Unlocked");
 }
 
+/** Records every status text the funding card shows, to check the steps it went through. */
+async function watchFundingStatus(page: Page) {
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as unknown as { __fundingStatus: string[] }).__fundingStatus = seen;
+    new MutationObserver(() => {
+      for (const node of document.querySelectorAll(
+        '[data-testid="funding-card"] [role="status"]',
+      )) {
+        const text = node.textContent ?? "";
+        if (!seen.includes(text)) seen.push(text);
+      }
+    }).observe(document.body, { subtree: true, childList: true, characterData: true });
+  });
+  return () =>
+    page.evaluate(() => (window as unknown as { __fundingStatus: string[] }).__fundingStatus);
+}
+
 test.describe.serial("confidential account on localnet", () => {
   test.beforeAll(async () => {
-    await fundLocalnetWallet(rpc, bootstrap, address(E2E_ADMIN_WALLET), { sol: 10n, usdc: 100n });
+    const owner = address(E2E_ADMIN_WALLET);
+    await fundLocalnetWallet(rpc, bootstrap, owner, { sol: 10n, usdc: 100n });
+    // 5 USDC already wrapped into public wUSDC before the owner uses Sotto, as tokens received
+    // publicly would be; this also creates the wUSDC account without the confidential extension.
+    const signer = await createKeyPairSignerFromBytes(new Uint8Array(e2eKeypair()));
+    await wrapLocalnetUsdcAs(rpc, bootstrap, signer, 5_000_000n);
   });
 
   test("AC-03.3 refuses to set up the account when the wallet's key signature changes, and reports the wallet", async ({
@@ -104,17 +139,21 @@ test.describe.serial("confidential account on localnet", () => {
       kind: "signature_not_deterministic",
       wallet: { name: "Sotto Test Wallet", version: "1.0.0" },
     });
-    // Nothing was configured: no transaction, and the account does not exist onchain.
-    expect(await signedTransactions(page)).toBe(0);
+    // Nothing was configured: no transaction, and the account has no confidential extension.
+    expect(await testWallet<number>(page, "signedTransactions")).toBe(0);
     const token = await associatedTokenAccount(
       address(E2E_ADMIN_WALLET),
       bootstrap.wrappedUsdcMint,
     );
-    expect((await rpc.getAccountInfo(token, { encoding: "base64" }).send()).value).toBeNull();
+    expect(await readTokenAccountState(rpc, token)).toMatchObject({
+      status: "present",
+      amount: 5_000_000n,
+      confidential: null,
+    });
     await expect(page.getByTestId("account-status")).toHaveText("Not set up");
   });
 
-  test("AC-03.1 AC-03.3 AC-03.4 AC-04.1 AC-04.2 AC-04.3 AC-04.4 sets up and funds the account with the wallet, every balance from chain", async ({
+  test("AC-03.1 AC-03.3 AC-03.4 AC-04.1 AC-04.2 AC-04.3 AC-04.4 sets up and funds the account in two signatures, every balance from chain", async ({
     page,
   }) => {
     const wallet = await signIn(page, e2eKeypair(), SETUP_URL);
@@ -124,11 +163,12 @@ test.describe.serial("confidential account on localnet", () => {
       traffic.push(request.postData() ?? "");
     });
     await unlock(page);
-    await expect(value(page, "balance-public-usdc")).toHaveText("100 USDC");
-    await expect(value(page, "balance-public-wusdc")).toHaveText("No account yet");
+    await expect(value(page, "balance-public-usdc")).toHaveText("95 USDC");
+    await expect(value(page, "balance-public-wusdc")).toHaveText("5 wUSDC");
     await expect(value(page, "balance-available")).toHaveText("Not set up yet");
 
-    // AC-03.3: the second signature matches, one transaction sets the account up, Sotto records it.
+    // AC-03.3: the second signature matches, one transaction configures the existing account, Sotto
+    // records it.
     await page.getByRole("button", { name: "Set up the account" }).click();
     await expect(page.getByTestId("account-status")).toHaveText("Set up");
     await expect(page.getByTestId("account-recorded")).toHaveText("Recorded");
@@ -137,35 +177,47 @@ test.describe.serial("confidential account on localnet", () => {
     // AC-03.4: public, pending (decrypted) and available (decrypted) after setup.
     await expect(value(page, "balance-available")).toHaveText("0 wUSDC");
     await expect(value(page, "balance-pending")).toHaveText("0 wUSDC");
-    await expect(value(page, "balance-public-wusdc")).toHaveText("0 wUSDC");
+    await expect(value(page, "balance-public-wusdc")).toHaveText("5 wUSDC");
+    expect(await testWallet<number>(page, "signedTransactions")).toBe(1);
 
+    // AC-04.1 to AC-04.3: fund 25 USDC in two signatures, step 1 wrap and deposit, step 2 apply.
     const funding = page.getByTestId("funding-card");
-    // AC-04.1: wrap 25 USDC.
-    await page.getByLabel("Amount").fill("25");
-    await funding.getByRole("button", { name: "Wrap USDC" }).click();
+    const statuses = await watchFundingStatus(page);
+    await page.getByLabel("Amount of USDC").fill("25");
+    await funding.getByRole("button", { name: "Fund account" }).click();
     await expect(funding.getByTestId("step-done")).toContainText(
-      "Wrapped 25 USDC into public wUSDC.",
+      "Funded 25 wUSDC in two steps: wrapped and deposited, then applied to your available balance.",
     );
-    await expect(value(page, "balance-public-usdc")).toHaveText("75 USDC");
-    await expect(value(page, "balance-public-wusdc")).toHaveText("25 wUSDC");
-    // AC-04.2: deposit 10 wUSDC into the pending balance.
-    await page.getByLabel("Amount").fill("10");
-    await funding.getByRole("button", { name: "Deposit to confidential" }).click();
-    await expect(funding.getByTestId("step-done")).toContainText("Deposited 10 wUSDC");
-    await expect(value(page, "balance-public-wusdc")).toHaveText("15 wUSDC");
-    await expect(value(page, "balance-pending")).toHaveText("10 wUSDC");
-    await expect(value(page, "balance-available")).toHaveText("0 wUSDC");
-    // AC-04.3: apply the pending balance.
+    const seen = await statuses();
+    expect(
+      seen.some((text) => text.startsWith("Step 1 of 2: wrapping 25 USDC and depositing it")),
+    ).toBe(true);
+    expect(seen.some((text) => text.startsWith("Step 2 of 2: applying 25 wUSDC"))).toBe(true);
+    await expect(funding.getByTestId("funding-split")).toHaveCount(0);
+    expect(await testWallet<number>(page, "signedTransactions")).toBe(3);
+    await expect(value(page, "balance-public-usdc")).toHaveText("70 USDC");
+    await expect(value(page, "balance-public-wusdc")).toHaveText("5 wUSDC");
+    await expect(value(page, "balance-pending")).toHaveText("0 wUSDC");
+    await expect(value(page, "balance-available")).toHaveText("25 wUSDC");
+
+    // AC-04.2 on its own: the public wUSDC the owner already had goes into the pending balance, then
+    // the apply moves it to the available balance.
+    await funding.getByRole("button", { name: "Deposit 5 public wUSDC" }).click();
+    await expect(funding.getByTestId("step-done")).toContainText(
+      "Deposited 5 public wUSDC into your pending balance.",
+    );
+    await expect(value(page, "balance-public-wusdc")).toHaveText("0 wUSDC");
+    await expect(value(page, "balance-pending")).toHaveText("5 wUSDC");
     await funding.getByRole("button", { name: "Apply pending balance" }).click();
     await expect(funding.getByTestId("step-done")).toContainText("Applied your pending balance");
     await expect(value(page, "balance-pending")).toHaveText("0 wUSDC");
-    await expect(value(page, "balance-available")).toHaveText("10 wUSDC");
+    await expect(value(page, "balance-available")).toHaveText("30 wUSDC");
+    expect(await testWallet<number>(page, "signedTransactions")).toBe(5);
 
     // AC-04.4: the page shows what the chain holds, decrypted here with the owner's keys.
     const keys = await deriveStandardKeys(address(wallet), keySignature);
     const chain = await readConfidentialBalance({ rpc, token, owner: address(wallet), keys });
-    expect(chain).toMatchObject({ available: 10_000_000n, pending: 0n });
-    expect(await signedTransactions(page)).toBe(4);
+    expect(chain).toMatchObject({ available: 30_000_000n, pending: 0n });
 
     // No key signature or key in any request (I-2, 10 section 3); transactions carry public data.
     const everything = traffic.join("\n");
@@ -181,7 +233,7 @@ test.describe.serial("confidential account on localnet", () => {
     }
   });
 
-  test("AC-03.5 AC-05.1 shows the confidential balance as Locked after a reload until the owner unlocks, on setup and the overview", async ({
+  test("AC-03.5 AC-05.1 keeps the keys across the tab's pages without a new signature, and ends them on reload, Lock, sign out and a wallet account change", async ({
     page,
   }) => {
     await signIn(page, e2eKeypair(), SETUP_URL);
@@ -193,24 +245,61 @@ test.describe.serial("confidential account on localnet", () => {
         await expect(value(page, card)).toHaveText("Unlock to see");
       }
       // Public balances need no keys.
-      await expect(value(page, "balance-public-wusdc")).toHaveText("15 wUSDC");
-      await expect(value(page, "balance-public-usdc")).toHaveText("75 USDC");
+      await expect(value(page, "balance-public-wusdc")).toHaveText("0 wUSDC");
+      await expect(value(page, "balance-public-usdc")).toHaveText("70 USDC");
     }
+    expect(page.workers()).toHaveLength(0);
     await unlock(page);
-    await expect(value(page, "balance-available")).toHaveText("10 wUSDC");
-    await expect(value(page, "balance-pending")).toHaveText("0 wUSDC");
+    await expect(value(page, "balance-available")).toHaveText("30 wUSDC");
+    expect(page.workers()).toHaveLength(1);
+    const signatures = (await testWallet<string[]>(page, "signedMessages")).length;
 
-    // AC-05.1: the overview's balance cards, Locked until this page unlocks too.
+    // In-app navigation keeps the keys: the overview decrypts without a new signature (AC-05.1).
     await page.getByRole("link", { name: "Overview" }).click();
-    await expect(page).toHaveURL(/\/app\/[0-9a-f-]{36}\/overview$/);
-    await expect(page.getByTestId("balance-available")).toHaveAttribute("data-state", "locked");
-    await expect(value(page, "balance-public-wusdc")).toHaveText("15 wUSDC");
-    await unlock(page);
-    await expect(value(page, "balance-available")).toHaveText("10 wUSDC");
+    await expect(page).toHaveURL(OVERVIEW_URL);
+    await expect(page.getByTestId("keys-status")).toHaveText("Unlocked");
+    await expect(value(page, "balance-available")).toHaveText("30 wUSDC");
     await expect(value(page, "balance-pending")).toHaveText("0 wUSDC");
-    await expect(value(page, "balance-public-usdc")).toHaveText("75 USDC");
+    await expect(value(page, "balance-public-usdc")).toHaveText("70 USDC");
     await expect(page.getByTestId("balance-available").getByTestId("wrap-label")).toHaveText(
       "devnet test wrap",
     );
+    await page.getByRole("link", { name: "Account setup" }).click();
+    await expect(page).toHaveURL(SETUP_URL);
+    await expect(value(page, "balance-available")).toHaveText("30 wUSDC");
+    expect((await testWallet<string[]>(page, "signedMessages")).length).toBe(signatures);
+    expect(page.workers()).toHaveLength(1);
+
+    // The Lock button ends the keys and the crypto worker.
+    await page.getByRole("button", { name: "Lock" }).click();
+    await expect(page.getByTestId("keys-status")).toHaveText("Locked");
+    await expect.poll(() => page.workers().length).toBe(0);
+
+    // Sign out ends them too, with no reload in between.
+    await unlock(page);
+    await expect.poll(() => page.workers().length).toBe(1);
+    await page.getByRole("button", { name: "Account and organizations" }).click();
+    await page.getByRole("menuitem", { name: "Sign out" }).click();
+    await expect(page).toHaveURL(/\/app\/sign-in$/);
+    await expect.poll(() => page.workers().length).toBe(0);
+    const option = page.getByTestId("wallet-option").filter({ hasText: "Sotto Test Wallet" });
+    const connect = option.getByRole("button", { name: "Connect" });
+    if (await connect.isVisible()) await connect.click();
+    await option.getByRole("button", { name: "Sign in" }).click();
+    await expect(page).toHaveURL(SETUP_URL);
+    await expect(page.getByTestId("keys-status")).toHaveText("Locked");
+
+    // A change of the wallet account ends them, and the page says why.
+    await unlock(page);
+    await expect.poll(() => page.workers().length).toBe(1);
+    await page.evaluate(() =>
+      (window as unknown as { __sottoTestWallet: TestWallet }).__sottoTestWallet.switchAccount(),
+    );
+    await expect(page.getByTestId("keys-status")).toHaveText("Locked");
+    await expect(page.getByTestId("lock-note")).toHaveText(
+      "The keys locked because your wallet switched accounts.",
+    );
+    await expect.poll(() => page.workers().length).toBe(0);
+    await expect(page.getByTestId("balance-available")).toHaveAttribute("data-state", "locked");
   });
 });

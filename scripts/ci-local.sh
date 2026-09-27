@@ -3,8 +3,14 @@
 # machine: node, program, localnet, checks. Stops at the first failure and prints a summary table.
 # Compatible with the bash 3.2 that ships with macOS.
 #
-# Usage: pnpm ci:local   (or scripts/ci-local.sh)
+# Usage: pnpm ci:local        cached: Turborepo replays results for unchanged inputs (daily use)
+#        pnpm ci:local:full   --full: Turborepo --force and a clean program build (mandatory before a merge)
 set -uo pipefail
+
+FULL=""
+if [[ "${1:-}" == "--full" ]]; then
+  FULL="yes"
+fi
 
 AGAVE_VERSION="4.2.2"
 CARGO_BUILD_SBF_VERSION="4.1.0"
@@ -62,16 +68,26 @@ stop_validator() {
 job_node() {
   require_version "node" "$(node --version | sed 's/^v//')" "$NODE_VERSION" &&
     require_version "pnpm" "$(pnpm --version)" "$PNPM_VERSION" &&
-    run pnpm install --frozen-lockfile &&
+    run pnpm install --frozen-lockfile || return 1
+  if [[ -n "$FULL" ]]; then
+    # Same tasks as the root scripts, with the Turborepo cache ignored.
+    run pnpm exec turbo run lint --force &&
+      run pnpm exec prettier --check . &&
+      run pnpm exec turbo run typecheck --force &&
+      run pnpm exec turbo run test --force &&
+      run pnpm exec turbo run build --force
+  else
     run pnpm lint &&
-    run pnpm typecheck &&
-    run pnpm test &&
-    run pnpm build
+      run pnpm typecheck &&
+      run pnpm test &&
+      run pnpm build
+  fi
 }
 
 job_program() {
   require_version "solana-cli" "$(solana --version | awk '{print $2}')" "$AGAVE_VERSION" &&
     require_version "cargo-build-sbf" "$(cargo-build-sbf --version | awk 'NR==1 {print $2}')" "$CARGO_BUILD_SBF_VERSION" &&
+    { [[ -z "$FULL" ]] || run cargo clean -p sotto_proofs; } &&
     run cargo-build-sbf --manifest-path programs/sotto_proofs/Cargo.toml -- --locked &&
     run cargo test --locked -p sotto_proofs
 }
@@ -159,7 +175,7 @@ job_checks() {
 
 print_summary() {
   echo
-  echo "ci:local summary ($(git rev-parse --short HEAD), $(date -u '+%Y-%m-%d %H:%M:%S UTC'))"
+  echo "ci:local${FULL:+:full} summary ($(git rev-parse --short HEAD), $(date -u '+%Y-%m-%d %H:%M:%S UTC'))"
   printf '%-10s %-8s %s\n' "job" "result" "seconds"
   local i
   for i in "${!JOBS[@]}"; do

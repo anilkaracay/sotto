@@ -16,8 +16,9 @@ import {
   checkSignedTransaction,
   d03Message,
   DEVNET_CHAIN,
-  DEVNET_RPC_URL,
+  LAB_RPC_DESCRIPTION,
   latestBlockhash,
+  type RetryNotice,
   sendAndConfirm,
   TEST_ADDRESS,
   toHex,
@@ -109,6 +110,15 @@ function classify(error: unknown): { outcome: string; detail: string } {
   const code = (error as { code?: unknown } | null)?.code;
   const refused = code === 4001 || /reject|denied|declin|cancel|refus|not allowed/i.test(detail);
   return { outcome: refused ? "refused" : "error", detail };
+}
+
+/** Shows "network busy, retrying" in the row's result cell while a 429 is retried. */
+function busyNotice(id: string, record: Record_): RetryNotice {
+  return (retry, maxRetries, delayMs) =>
+    record(id, {
+      outcome: "running",
+      detail: `network busy, retrying (retry ${retry} of ${maxRetries} in ${delayMs / 1000} s)`,
+    });
 }
 
 function randomNonce(): string {
@@ -349,9 +359,17 @@ function SingleTransactionRow({
   return (
     <RunButton
       onRun={async () => {
+        const onRetry = busyNotice(id, record);
+        let blockhash: Awaited<ReturnType<typeof latestBlockhash>>;
+        try {
+          blockhash = await latestBlockhash(onRetry);
+        } catch (error) {
+          record(id, classify(error));
+          return;
+        }
         let built: ReturnType<typeof buildSelfTransfer>;
         try {
-          built = buildSelfTransfer(account.address, version, await latestBlockhash(), 1n);
+          built = buildSelfTransfer(account.address, version, blockhash, 1n);
         } catch (error) {
           record(id, {
             outcome: version === 1 ? "not buildable with kit 8.3.0" : "error",
@@ -374,7 +392,7 @@ function SingleTransactionRow({
             });
             return;
           }
-          const signature = await sendAndConfirm(transaction);
+          const signature = await sendAndConfirm(transaction, onRetry);
           record(id, {
             outcome: "pass",
             detail: `confirmed ${signature}`,
@@ -398,9 +416,15 @@ function BatchRow({
   return (
     <RunButton
       onRun={async () => {
+        let blockhash: Awaited<ReturnType<typeof latestBlockhash>>;
+        try {
+          blockhash = await latestBlockhash(busyNotice(id, record));
+        } catch (error) {
+          record(id, classify(error));
+          return;
+        }
         let built: ReturnType<typeof buildSelfTransfer>[];
         try {
-          const blockhash = await latestBlockhash();
           built = [1n, 2n, 3n].map((amount) =>
             buildSelfTransfer(account.address, version, blockhash, amount),
           );
@@ -621,7 +645,7 @@ function WalletLabInner() {
     const payload = {
       lab: "Sotto wallet lab, Gate G2",
       testAddress: TEST_ADDRESS,
-      rpc: DEVNET_RPC_URL,
+      rpc: LAB_RPC_DESCRIPTION,
       wallet: connected
         ? {
             label: connected.entry.label,
@@ -650,8 +674,8 @@ function WalletLabInner() {
     <main style={{ fontFamily: "system-ui, sans-serif", padding: 24, maxWidth: 1200 }}>
       <h1>Wallet lab (Gate G2, development only)</h1>
       <p>
-        Test address: <code>{TEST_ADDRESS}</code>. Cluster: devnet ({DEVNET_RPC_URL}). Switch the
-        wallet to devnet before connecting.
+        Test address: <code>{TEST_ADDRESS}</code>. RPC: {LAB_RPC_DESCRIPTION}. Switch the wallet to
+        devnet before connecting.
       </p>
       <h2>Connectable wallets ({connectable.length})</h2>
       <ul>

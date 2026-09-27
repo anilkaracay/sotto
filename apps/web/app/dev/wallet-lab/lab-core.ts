@@ -1,30 +1,40 @@
-// Transaction and signature helpers for the dev only wallet lab. This module calls the public devnet
-// RPC directly, which is allowed only here (step 0.6); production code goes through /api/rpc.
+// Transaction and signature helpers for the dev only wallet lab. RPC calls go to the dev only proxy
+// /dev/wallet-lab/rpc, which forwards allow listed methods to HELIUS_DEVNET_URL. Production code
+// goes through /api/rpc.
 import {
   address,
   appendTransactionMessageInstruction,
   compileTransaction,
   createNoopSigner,
-  createSolanaRpc,
+  createDefaultRpcTransport,
+  createSolanaRpcFromTransport,
   createTransactionMessage,
   getBase16Decoder,
   getBase64EncodedWireTransaction,
   getPublicKeyFromAddress,
   getTransactionDecoder,
   getTransactionEncoder,
+  isSolanaError,
   lamports,
   pipe,
   setTransactionMessageConfig,
   setTransactionMessageFeePayer,
   setTransactionMessageLifetimeUsingBlockhash,
   signatureBytes,
+  SOLANA_ERROR__RPC__TRANSPORT_HTTP_ERROR,
   verifySignature,
   type Address,
+  type RpcTransport,
   type Transaction,
 } from "@solana/kit";
 import { getTransferSolInstruction } from "@solana-program/system";
 
-export const DEVNET_RPC_URL = "https://api.devnet.solana.com";
+/** Dev only proxy route (app/dev/wallet-lab/rpc/route.ts). */
+export const LAB_RPC_PATH = "/dev/wallet-lab/rpc";
+export const LAB_RPC_DESCRIPTION = `devnet through ${LAB_RPC_PATH} (HELIUS_DEVNET_URL)`;
+/** 429 handling: up to 3 retries with exponential backoff (1 s, 2 s, 4 s). */
+export const MAX_RPC_RETRIES = 3;
+export const RETRY_BASE_DELAY_MS = 1000;
 export const DEVNET_CHAIN = "solana:devnet";
 /** Test wallet funded for Gate G2 (same seed phrase in Phantom, Solflare and Backpack). */
 export const TEST_ADDRESS = "71GuHKz8HqEKvGbMwQQTiNpqQbMvEu89pSvUcv71QbLh";
@@ -32,7 +42,42 @@ export const TEST_ADDRESS = "71GuHKz8HqEKvGbMwQQTiNpqQbMvEu89pSvUcv71QbLh";
 export const V1_COMPUTE_UNIT_LIMIT = 10_000;
 export const V1_LOADED_ACCOUNTS_DATA_SIZE_LIMIT = 65_536;
 
-const rpc = createSolanaRpc(DEVNET_RPC_URL);
+export type RetryNotice = (retry: number, maxRetries: number, delayMs: number) => void;
+
+export function isRateLimited(error: unknown): boolean {
+  return (
+    isSolanaError(error, SOLANA_ERROR__RPC__TRANSPORT_HTTP_ERROR) &&
+    error.context.statusCode === 429
+  );
+}
+
+/** Wraps a transport so HTTP 429 responses are retried with exponential backoff. */
+export function retryingTransport(
+  inner: RpcTransport,
+  onRetry?: RetryNotice,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+): RpcTransport {
+  const transport = async (config: Parameters<RpcTransport>[0]) => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await inner(config);
+      } catch (error) {
+        if (!isRateLimited(error) || attempt >= MAX_RPC_RETRIES) throw error;
+        const delay = RETRY_BASE_DELAY_MS * 2 ** attempt;
+        onRetry?.(attempt + 1, MAX_RPC_RETRIES, delay);
+        await sleep(delay);
+      }
+    }
+  };
+  return transport as RpcTransport;
+}
+
+function labRpc(onRetry?: RetryNotice) {
+  const origin = typeof window === "undefined" ? "http://localhost:3000" : window.location.origin;
+  return createSolanaRpcFromTransport(
+    retryingTransport(createDefaultRpcTransport({ url: `${origin}${LAB_RPC_PATH}` }), onRetry),
+  );
+}
 
 export function utf8(text: string): Uint8Array {
   return new TextEncoder().encode(text);
@@ -60,8 +105,8 @@ export async function verifyEd25519(
   return verifySignature(key, signatureBytes(signature), data);
 }
 
-export async function latestBlockhash() {
-  const { value } = await rpc.getLatestBlockhash({ commitment: "confirmed" }).send();
+export async function latestBlockhash(onRetry?: RetryNotice) {
+  const { value } = await labRpc(onRetry).getLatestBlockhash({ commitment: "confirmed" }).send();
   return value;
 }
 
@@ -141,22 +186,26 @@ export async function checkSignedTransaction(
   };
 }
 
-/** Sends a signed transaction to devnet and waits until it is confirmed (polling, 60 seconds). */
-export async function sendAndConfirm(transaction: Transaction): Promise<string> {
+/** Sends a signed transaction to devnet and waits until it is confirmed (polling, 90 seconds). */
+export async function sendAndConfirm(
+  transaction: Transaction,
+  onRetry?: RetryNotice,
+): Promise<string> {
+  const rpc = labRpc(onRetry);
   const signature = await rpc
     .sendTransaction(getBase64EncodedWireTransaction(transaction), {
       encoding: "base64",
       preflightCommitment: "confirmed",
     })
     .send();
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 45; i++) {
     const { value } = await rpc.getSignatureStatuses([signature]).send();
     const status = value[0];
     if (status?.err) throw new Error(`transaction failed: ${JSON.stringify(status.err)}`);
     if (status?.confirmationStatus === "confirmed" || status?.confirmationStatus === "finalized") {
       return signature;
     }
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
   }
-  throw new Error(`not confirmed within 60 seconds: ${signature}`);
+  throw new Error(`not confirmed within 90 seconds: ${signature}`);
 }

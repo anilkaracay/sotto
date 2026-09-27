@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./cluster": "./src/cluster/config.ts",
-    "./tx": "./src/tx/index.ts"
+    "./tx": "./src/tx/index.ts",
+    "./wallet": "./src/wallet/index.ts"
   },
   "scripts": {
     "lint": "eslint .",

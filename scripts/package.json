@@ -10,6 +10,8 @@
     "test:localnet": "vitest run localnet"
   },
   "dependencies": {
+    "@solana-program/system": "catalog:",
+    "@solana-program/token": "catalog:",
     "@solana/kit": "catalog:",
     "@sotto/sdk": "workspace:*",
     "typescript": "catalog:"

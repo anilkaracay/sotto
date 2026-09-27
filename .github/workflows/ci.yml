@@ -41,6 +41,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      - name: The build output holds no env file or server only value
+        run: python3 scripts/checks/build-output.py
 
   program:
     runs-on: ubuntu-24.04
@@ -141,6 +143,8 @@ jobs:
         run: python3 scripts/checks/ac-manifest.py
       - name: Invariant I-4 (no ZK Token Proof program ID)
         run: scripts/checks/no-zk-token-proof.sh
+      - name: No env file is tracked or in the Docker build context
+        run: scripts/checks/env-files.sh
       - name: Install gitleaks (release tarball, SHA-256 verified)
         run: |
           tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"

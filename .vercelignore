@@ -1,0 +1,8 @@
+# Files the Vercel CLI must never upload (docs/14-ENVIRONMENTS-DEPLOY.md section 2). Vercel already
+# skips .env.local and .env.*.local by default, but not .env or .env.production; Git integration
+# deployments never see git ignored files. Used for the web project because apps/web has no
+# .vercelignore of its own.
+.env
+.env.*
+.envrc
+!.env.example

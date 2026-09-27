@@ -75,12 +75,14 @@ job_node() {
       run pnpm exec prettier --check . &&
       run pnpm exec turbo run typecheck --force &&
       run pnpm exec turbo run test --force &&
-      run pnpm exec turbo run build --force
+      run pnpm exec turbo run build --force &&
+      run python3 scripts/checks/build-output.py
   else
     run pnpm lint &&
       run pnpm typecheck &&
       run pnpm test &&
-      run pnpm build
+      run pnpm build &&
+      run python3 scripts/checks/build-output.py
   fi
 }
 
@@ -182,7 +184,8 @@ job_checks() {
     run python3 scripts/checks/ac-manifest.py &&
     install_gitleaks &&
     run "$GITLEAKS" git --redact --no-banner --config .gitleaks.toml --log-opts="--all" . &&
-    run scripts/checks/no-zk-token-proof.sh
+    run scripts/checks/no-zk-token-proof.sh &&
+    run scripts/checks/env-files.sh
 }
 
 print_summary() {

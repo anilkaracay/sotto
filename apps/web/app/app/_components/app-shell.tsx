@@ -2,12 +2,15 @@
 
 // The signed in app shell (09 sections 1 and 2): logo, top pill nav (only built screens, rule 6), the
 // network label (13 A25) and the org and role switcher, which lists the user's own memberships and
-// never impersonates anyone (09 section 1, 13 A9).
+// never impersonates anyone (09 section 1, 13 A9). An owned organization links to its onboarding
+// status; Sotto admins also get the business review console.
 import { Chip, TopNav, type TopNavItem } from "@sotto/ui";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { signOut } from "../../../lib/client/auth.ts";
 import { shortWallet } from "../../../lib/format.ts";
+import { orgStatusLabel } from "../../../lib/org.ts";
 import type { MeView } from "../../../lib/server/me.ts";
 import { Logo } from "./logo.tsx";
 import styles from "./shell.module.css";
@@ -109,30 +112,60 @@ export function AppShell({
             {me.memberships.length === 0 ? (
               <div className={styles.empty}>No organization yet</div>
             ) : (
-              me.memberships.map((membership) => (
-                <div
-                  key={`${membership.orgId}:${membership.role}`}
-                  className={styles.row}
-                  role="menuitem"
-                >
-                  <span className={styles.orgMark} aria-hidden="true">
-                    {membership.orgName.slice(0, 2).toUpperCase()}
-                  </span>
-                  <span>
-                    <b>{membership.orgName}</b>
-                    <small>{ROLE_LABEL[membership.role]}</small>
-                  </span>
-                  {membership.orgStatus !== "active" ? (
-                    <Chip
-                      className={styles.side}
-                      tone={membership.orgStatus === "suspended" ? "red" : "amber"}
-                    >
-                      {membership.orgStatus === "suspended" ? "Suspended" : "In review"}
-                    </Chip>
-                  ) : null}
-                </div>
-              ))
+              me.memberships.map((membership) => {
+                const content = (
+                  <>
+                    <span className={styles.orgMark} aria-hidden="true">
+                      {membership.orgName.slice(0, 2).toUpperCase()}
+                    </span>
+                    <span className={styles.text}>
+                      <b>{membership.orgName}</b>
+                      <small>{ROLE_LABEL[membership.role]}</small>
+                    </span>
+                    {membership.orgStatus !== "active" ? (
+                      <Chip
+                        className={styles.side}
+                        tone={membership.orgStatus === "suspended" ? "red" : "amber"}
+                      >
+                        {orgStatusLabel(membership.orgStatus)}
+                      </Chip>
+                    ) : null}
+                  </>
+                );
+                const key = `${membership.orgId}:${membership.role}`;
+                return membership.role === "owner" ? (
+                  <Link
+                    key={key}
+                    href="/app/onboarding"
+                    className={`${styles.row} ${styles.link}`}
+                    role="menuitem"
+                    onClick={() => setOpen(false)}
+                  >
+                    {content}
+                  </Link>
+                ) : (
+                  <div key={key} className={styles.row} role="menuitem">
+                    {content}
+                  </div>
+                );
+              })
             )}
+            {me.isAdmin ? (
+              <>
+                <div className={styles.menuHead}>Sotto admin</div>
+                <Link
+                  href="/app/admin"
+                  className={`${styles.row} ${styles.link}`}
+                  role="menuitem"
+                  onClick={() => setOpen(false)}
+                >
+                  <span className={styles.text}>
+                    <b>Business review</b>
+                    <small>Approve, reject and suspend organizations</small>
+                  </span>
+                </Link>
+              </>
+            ) : null}
             <button
               type="button"
               role="menuitem"

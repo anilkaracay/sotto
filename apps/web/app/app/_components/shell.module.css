@@ -82,6 +82,14 @@
 .row .side {
   margin-left: auto;
 }
+.link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.link:hover {
+  background: var(--soft);
+}
 .text {
   min-width: 0;
 }

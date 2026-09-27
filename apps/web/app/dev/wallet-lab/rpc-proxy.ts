@@ -1,4 +1,4 @@
-// Pure checks for the dev only wallet lab RPC proxy (app/dev/wallet-lab/rpc/route.ts).
+// Pure checks for the dev only wallet lab RPC proxy (app/dev/wallet-lab/rpc/route.dev.ts).
 // Unit tested in test/wallet-lab-rpc.test.ts.
 
 /** The only JSON-RPC methods the wallet lab needs. */

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../app/dev/wallet-lab/wallet-lab", () => ({ WalletLab: () => null }));
 
-const { default: WalletLabPage } = await import("../app/dev/wallet-lab/page");
+const { default: WalletLabPage } = await import("../app/dev/wallet-lab/page.dev");
 
 function notFoundDigest(run: () => unknown): string | undefined {
   try {

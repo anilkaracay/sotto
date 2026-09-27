@@ -74,7 +74,7 @@ Row access is enforced in the API layer with one helper `requireMembership(orgId
 
 ## 3. API
 
-All endpoints under `/api`. Errors: `{ "error": { "code": "...", "message": "..." } }` with correct HTTP status. The message is also the HTTP reason phrase (the RPC client reads only that). Codes used by the foundation (step 1.2, `apps/web/lib/server/errors.ts`): `invalid_request` (400), `unauthenticated` (401), `forbidden` and `forbidden_origin` (403), `payload_too_large` (413), `unsupported_media_type` (415), `rate_limited` (429 with `Retry-After`), `internal_error` and `server_misconfigured` (500). Every response carries `x-request-id`.
+All endpoints under `/api`. Errors: `{ "error": { "code": "...", "message": "..." } }` with correct HTTP status. The message is also the HTTP reason phrase (the RPC client reads only that). Codes used by the foundation (step 1.2, `apps/web/lib/server/errors.ts`): `invalid_request` (400), `unauthenticated` (401), `forbidden` and `forbidden_origin` (403), `payload_too_large` (413), `unsupported_media_type` (415), `rate_limited` (429 with `Retry-After`), `internal_error` and `server_misconfigured` (500), and `approval_policy_not_available` (422, Q-12). Every response carries `x-request-id`.
 
 Auth
 - `POST /auth/nonce { wallet }` returns a sign in message (domain, statement, nonce, issued at, expiration 5 minutes).
@@ -84,6 +84,7 @@ Auth
 Organizations and people
 - `POST /orgs`, `GET /orgs/:id`, `PATCH /orgs/:id` (owner).
 - `POST /orgs/:id/invites { role }`, `POST /invites/:token/accept`.
+- `PUT /orgs/:id/policy { paymentApprovalsRequired, payrollApprovalsRequired }` (owner, step 1.2.1): integers of at least 1; the hackathon build accepts only 1 and refuses higher values with 422 `approval_policy_not_available`, "Approval policies above 1 are not available in this build" (Q-12, D-04). Membership is checked before the body.
 - Admin: `GET /admin/orgs?status=`, `POST /admin/orgs/:id/approve`, `/reject`, `/suspend`.
 
 Keys and accounts

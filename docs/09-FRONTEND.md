@@ -12,9 +12,9 @@
 | `/app/[org]/overview` | Owner overview; withdraw (F-09) opens as a drawer here | Owner |
 | `/app/[org]/setup` | Confidential account setup and funding (F-03, F-04) | Owner |
 | `/app/[org]/recipients` | Recipients (F-07) | Owner |
-| `/app/[org]/settings` | Approval policy, budgets | Owner |
+| `/app/[org]/settings` | Approval policy (1 approval, not changeable in the hackathon build, Q-12, 13 A32), budgets | Owner |
 | `/app/[org]/board` | Board view: read only totals (Post-hackathon, D-27) | Board viewer |
-| `/app/[org]/payroll` and `/app/[org]/payroll/[run]` | Payroll; approvers use the "Approve" action on the run page and see the contents hash they sign | Owner, approver |
+| `/app/[org]/payroll` and `/app/[org]/payroll/[run]` | Payroll; the run page's approvals block shows the initiator's approval only (Q-12, 13 A31); the approvers' "Approve" action is Post-hackathon | Owner |
 | `/app/[org]/payments/new` | Single payment | Owner |
 | `/app/[org]/keys` | Viewing keys (grants) | Owner |
 | `/app/[org]/proofs` | Proofs of funds | Owner |
@@ -49,7 +49,7 @@ Every element either maps to real data below or is removed per `13-COPY-CORRECTI
 | Recent activity table | `chain_activity` joined with owner self disclosures for amounts (decrypted in browser); "Can read amount" avatars from active grants covering each payment |
 
 ### Payroll
-Run total by team: decrypted from the run private blob in the browser. Settlement gauge: as many ticks as lines, clamped to 12 minimum and 48 maximum; above 48, each tick represents ceil(lines/48) lines; fill from payment statuses. Approvals: from `approvals`; approvers approve on the run page and see the contents hash they sign (whether this action is in the hackathon build is Q-12, D-27). Recipients table: recipients plus line status. "Last 12 runs": counts and settled state only (amount bars are relative heights computed in the browser from self disclosures).
+Run total by team: decrypted from the run private blob in the browser. Settlement gauge: as many ticks as lines, clamped to 12 minimum and 48 maximum; above 48, each tick represents ceil(lines/48) lines; fill from payment statuses. Approvals: from `approvals`; in the hackathon build only the initiator's approval, recorded with the execution signature (Q-12, 13 A31). The approvers' Approve action with the contents hash is Post-hackathon (AC-08.3). Recipients table: recipients plus line status. "Last 12 runs": counts and settled state only (amount bars are relative heights computed in the browser from self disclosures).
 
 ### Viewing keys
 Coverage bars: share of disclosure items per viewer out of all owner self items in the last 12 months (counts, computed in browser from metadata). Keys table: `grants`. Access log: `access_log`.

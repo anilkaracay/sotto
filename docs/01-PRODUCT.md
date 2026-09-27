@@ -9,7 +9,7 @@ Sotto is the business account for companies that pay in stablecoins: every payme
 | Role | Who | Can do | Can read |
 |------|-----|--------|----------|
 | Owner | Company founder or finance lead. Holds the owner wallet. | Everything, including signing all money operations | Everything of the org |
-| Approver | Another company member | Approve payroll runs and payments (D-04) on `/app/[org]/payroll/[run]`, seeing the contents hash they sign | What their grant allows |
+| Approver | Another company member | Approve payroll runs and payments (D-04) on `/app/[org]/payroll/[run]`, seeing the contents hash they sign. With the default policy of 1, the initiator's execution is the approval (Q-11); the approver screen is Post-hackathon (D-27, Q-12) | What their grant allows |
 | Accountant | Internal or external | Read, reconcile, annotate, export within grant scope | Grant scope |
 | Board viewer (Post-hackathon, D-27) | Board member or investor | Read totals and treasury balance within grant scope on the board screen `/app/[org]/board` | Totals only |
 | Recipient | Employee, contractor, supplier | Configure their confidential account, read their own payslips, withdraw | Their own payments |
@@ -60,7 +60,7 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 ### F-06 Single confidential payment
 - AC-06.1 Owner picks a recipient whose confidential account is configured, enters amount and memo.
 - AC-06.2 The recipient address is screened (D-10). A hit blocks the payment and logs the event.
-- AC-06.3 Approval policy (D-04) is enforced before a plan is issued.
+- AC-06.3 Approval policy (D-04) is enforced before a plan is issued. The default policy is 1 approval, and the initiator's own execution counts as it, recorded with the execution signature; with a policy of 2 or more, the other approvers' signed approval messages are required before authorization (Q-11).
 - AC-06.4 The client builds and executes the confidential transfer (v1 single transaction when available, else the multi transaction plan). On success, the client creates disclosures for every active grant whose scope covers the payment, plus a self disclosure for the owner and a recipient disclosure. Self and recipient disclosures are scheduled for Phase 1; the grant part of this criterion is scheduled for Phase 2 (`12-MILESTONES.md`).
 - AC-06.5 If any transaction in the plan fails, the app shows exactly which step failed, closes any proof context accounts it created, and lets the owner retry safely. Tokens are never lost: a failed transfer leaves balances unchanged.
 
@@ -73,7 +73,7 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 ### F-08 Payroll run
 - AC-08.1 Owner uploads a CSV with header `wallet,amount,memo,name,team,country`. Amounts are decimal strings with at most 6 decimals. The app validates every row and shows errors per row. Rows match existing recipients by wallet; an unknown wallet is a row error with the message "Add this recipient first".
 - AC-08.2 A run has statuses: `draft`, `awaiting_approval`, `approved`, `executing`, `settled`, `partially_settled`, `failed`.
-- AC-08.3 Approvers approve with a signed message (D-04) using the "Approve" action on `/app/[org]/payroll/[run]`, and see the contents hash they sign; the required count comes from org policy.
+- AC-08.3 Approvers approve with a signed message (D-04) using the "Approve" action on `/app/[org]/payroll/[run]`, and see the contents hash they sign; the required count comes from org policy, and the initiator's execution counts as one approval (Q-11). Whether this Approve action is in the hackathon build is Q-12 (D-27).
 - AC-08.4 Execution follows D-21. Each line gets its own status and signature(s). Progress is shown live on the payroll gauge: it has as many ticks as lines, clamped to 12 minimum and 48 maximum; above 48, each tick represents ceil(lines/48) lines. Ticks fill as lines settle.
 - AC-08.5 A partially settled run can be resumed; already settled lines are never paid twice (idempotency key per line stored before signing, and chain check before retry).
 - AC-08.6 Disclosures for each line are created after that line settles.

@@ -43,7 +43,10 @@ payroll_runs(id uuid pk, org_id fk, title, period char(7), status enum(draft, aw
              executing, settled, partially_settled, failed), line_count int, created_by fk, created_at,
              executed_at null, private_blob bytea)   -- encrypted to owner: amounts per line
 approvals(id uuid pk, org_id fk, subject_type enum(payment, payroll_run), subject_id uuid,
-          approver_user_id fk, message text, signature bytea, created_at, unique(subject_type, subject_id, approver_user_id))
+          approver_user_id fk, kind enum(message, execution) default message,
+          message text null, signature bytea null, execution_signature text null,
+          created_at, unique(subject_type, subject_id, approver_user_id))
+          -- kind execution: the initiator's approval, recorded with the execution signature (Q-11)
 
 grants(id uuid pk, org_id fk, viewer_user_id fk null, invite_token text fk, scope enum(all_payments, period, payroll_only, own_payslips),
        period_from date null, period_to date null, expires_at null,
@@ -94,8 +97,8 @@ Payments and payroll
 - `POST /orgs/:id/payments { recipientId, idempotencyKey }` creates a draft.
 - `POST /orgs/:id/payroll-runs { title, period, lines:[{ recipientId, idempotencyKey }], privateBlob }`.
 - `POST /approvals { subjectType, subjectId, message, signature }`. The message must include org ID, cluster, subject type and ID, and `contents_hash` = lowercase hex SHA-256 of the canonical JSON list of `{ line_id, recipient_wallet, idempotency_key, private_blob_sha256 }` (D-04). Any change to the run after approval invalidates approvals.
-- `POST /orgs/:id/payments/:pid/authorize` returns `{ authorized: true }` only if: org active, recipient ready, screening clear within 24 hours, approvals satisfied, proof program available. Otherwise a precise error code.
-- `POST /orgs/:id/payments/:pid/executions { signatures[] }` records attempt signatures before and after sending.
+- `POST /orgs/:id/payments/:pid/authorize` returns `{ authorized: true }` only if: org active, recipient ready, screening clear within 24 hours, approvals satisfied, proof program available. Approvals (D-04, Q-11): the initiator counts as one approval; a policy of N (2 or more) needs N minus 1 approval messages signed by other members. Otherwise a precise error code.
+- `POST /orgs/:id/payments/:pid/executions { signatures[] }` records attempt signatures before and after sending. With the first execution signature it records the initiator's approval (`approvals.kind = execution`, `execution_signature` set; Q-11).
 - The worker moves payments to `settled` after finality.
 
 Disclosure

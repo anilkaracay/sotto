@@ -435,8 +435,11 @@ function RecipientRows(props: {
           <ReadinessCell readiness={row.readiness} />
           {row.joined ? (
             <small className={styles.muted}>Joined</small>
-          ) : row.invite.status === "pending" && !props.link ? (
-            <small className={styles.muted}>Invite link sent</small>
+          ) : row.invite.status === "pending" && row.invite.expiresAt && !props.link ? (
+            // Sotto cannot know whether the owner sent the link, only until when it works.
+            <small className={styles.muted}>
+              Invite open until {formatDate(row.invite.expiresAt)}
+            </small>
           ) : null}
         </Td>
         <Td align="right">

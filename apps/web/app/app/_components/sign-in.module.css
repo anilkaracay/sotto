@@ -1,0 +1,97 @@
+/* The sign in screen, built on the app tokens (no design exists for it). */
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 92px;
+  padding: 0 32px;
+}
+.center {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 16px 64px;
+}
+.card {
+  width: 100%;
+  max-width: 460px;
+  animation: pg-in 0.45s var(--ease-out) both;
+}
+.title {
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+.lead {
+  margin-top: 8px;
+  font-size: 14.5px;
+  color: var(--muted);
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.wallet {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  box-shadow: 0 0 0 1px var(--line);
+}
+.icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  flex: none;
+}
+.name {
+  font-size: 14.5px;
+  font-weight: 500;
+}
+.detail {
+  display: block;
+  font-size: 12px;
+  color: var(--faint);
+}
+.action {
+  margin-left: auto;
+}
+.error {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #ffecec;
+  color: #b4232a;
+  font-size: 13px;
+}
+.empty {
+  margin-top: 22px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.note {
+  margin-top: 18px;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+@keyframes pg-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

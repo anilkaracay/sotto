@@ -5,138 +5,77 @@
 // from chain (AC-04.4), and the 80 percent credit counter rule (AC-04.3). Needs the bootstrapped
 // localnet (.localnet/bootstrap.json from scripts/bootstrap-localnet.ts). Skipped unless
 // SOTTO_LOCALNET_RPC_URL is set; scripts/ci-local.sh runs it in the localnet job after the bootstrap.
-import { readFileSync } from "node:fs";
 import { getCreateAccountInstruction } from "@solana-program/system";
 import {
-  getCreateAssociatedTokenIdempotentInstruction as getCreateSplAssociatedTokenInstruction,
   getInitializeMint2Instruction,
   getMintSize,
-  getMintToInstruction,
   TOKEN_PROGRAM_ADDRESS,
 } from "@solana-program/token";
 import { fetchToken } from "@solana-program/token-2022";
 import {
-  createKeyPairSignerFromBytes,
   createNoopSigner,
   generateKeyPairSigner,
-  lamports,
   setTransactionMessageComputeUnitPrice,
-  signBytes,
-  type Address,
-  type Instruction,
-  type KeyPairSigner,
   type TransactionMessage,
-  type TransactionModifyingSigner,
 } from "@solana/kit";
 import { beforeAll, describe, expect, it } from "vitest";
 import { getClusterConfig, type AvailableClusterConfig } from "../src/cluster/config.ts";
 import { verifyCluster } from "../src/cluster/verify.ts";
 import {
   accountSetupStatus,
-  applyPendingBalanceInstruction,
-  associatedTokenAccount,
-  confidentialAccountSetupInstructions,
-  confidentialDepositInstruction,
   creditCounterNeedsApply,
   decryptTokenAccount,
   readPublicTokenBalance,
   readTokenAccountState,
 } from "../src/confidential/index.ts";
-import {
-  confidentialKeysMessage,
-  deriveStandardKeys,
-  type ConfidentialKeyMaterial,
-} from "../src/keys/index.ts";
 import { keypairWallet } from "../src/testing/index.ts";
+import {
+  applyLocalnetPending,
+  localnetDeposit,
+  newLocalnetOwner,
+  readLocalnetBootstrap,
+  sendAsOwner,
+  setUpLocalnetAccount,
+  wrapLocalnetUsdc,
+  type LocalnetBootstrap,
+  type LocalnetOwner,
+} from "../src/testing/localnet.ts";
 import {
   createRetryingRpc,
   sendWithKeypairSigners,
   sendWithWallet,
-  waitForConfirmation,
   WalletChangedTransactionError,
   type SolanaRpc,
 } from "../src/tx/index.ts";
-import {
-  createWrappedMintInstructions,
-  wrappedMintAddress,
-  wrapInstructions,
-} from "../src/wrap/index.ts";
+import { createWrappedMintInstructions, wrappedMintAddress } from "../src/wrap/index.ts";
 
 const RPC_URL = process.env.SOTTO_LOCALNET_RPC_URL;
-const BOOTSTRAP = new URL("../../../.localnet/bootstrap.json", import.meta.url);
 const USDC = 1_000_000n;
-
-type Bootstrap = {
-  payer: { address: Address; keypair: string };
-  usdcMint: Address;
-  usdcDecimals: number;
-  wrappedUsdcMint: Address;
-  escrow: Address;
-};
-
-type Owner = {
-  signer: KeyPairSigner;
-  wallet: TransactionModifyingSigner;
-  keys: ConfidentialKeyMaterial;
-  usdc: Address;
-  wusdc: Address;
-};
 
 describe.skipIf(!RPC_URL)("confidential account setup and funding on localnet", () => {
   let rpc: SolanaRpc;
-  let bootstrap: Bootstrap;
+  let bootstrap: LocalnetBootstrap;
   let config: AvailableClusterConfig;
-  let mintAuthority: KeyPairSigner;
-  let owner: Owner;
+  let owner: LocalnetOwner;
 
-  /** A new owner with SOL, `usdc` whole USDC and the standard_v1 keys of its wallet. */
-  async function newOwner(usdc: bigint): Promise<Owner> {
-    const signer = await generateKeyPairSigner();
-    await waitForConfirmation(
-      rpc,
-      await rpc.requestAirdrop(signer.address, lamports(10_000_000_000n)).send(),
-    );
-    const signature = new Uint8Array(
-      await signBytes(signer.keyPair.privateKey, confidentialKeysMessage()),
-    );
-    const keys = await deriveStandardKeys(signer.address, signature);
-    const usdcAccount = await associatedTokenAccount(
-      signer.address,
-      bootstrap.usdcMint,
-      TOKEN_PROGRAM_ADDRESS,
-    );
-    await sendWithKeypairSigners({
-      rpc,
-      feePayer: mintAuthority,
-      instructions: [
-        getCreateSplAssociatedTokenInstruction({
-          payer: mintAuthority,
-          ata: usdcAccount,
-          owner: signer.address,
-          mint: bootstrap.usdcMint,
-        }),
-        getMintToInstruction({
-          mint: bootstrap.usdcMint,
-          token: usdcAccount,
-          mintAuthority,
-          amount: usdc * USDC,
-        }),
-      ],
-    });
-    return {
-      signer,
-      wallet: keypairWallet(signer),
-      keys,
-      usdc: usdcAccount,
-      wusdc: await associatedTokenAccount(signer.address, bootstrap.wrappedUsdcMint),
-    };
-  }
-
-  const send = (who: Owner, instructions: readonly Instruction[], version: 0 | 1 = 0) =>
-    sendWithWallet({ rpc, wallet: who.wallet, instructions, version });
+  const send = (
+    who: LocalnetOwner,
+    instructions: Parameters<typeof sendAsOwner>[2],
+    version: 0 | 1 = 0,
+  ) => sendAsOwner(rpc, who, instructions, version);
+  const deposit = (who: LocalnetOwner, amount: bigint) => localnetDeposit(who, bootstrap, amount);
+  const setUp = (who: LocalnetOwner, maximum?: bigint) =>
+    setUpLocalnetAccount(rpc, who, bootstrap, maximum);
+  const wrap = async (who: LocalnetOwner, amount: bigint, version: 0 | 1 = 0) => {
+    const { built, sent } = await wrapLocalnetUsdc(rpc, who, bootstrap, amount, version);
+    expect(built.wrappedTokenAccount).toBe(who.wusdc);
+    expect(built.escrow).toBe(bootstrap.escrow);
+    return sent;
+  };
+  const apply = (who: LocalnetOwner) => applyLocalnetPending(rpc, who);
 
   /** Every balance of an owner, read from chain and decrypted with the owner's keys. */
-  async function balances(who: Owner) {
+  async function balances(who: LocalnetOwner) {
     const [usdc, wusdc, token] = await Promise.all([
       readPublicTokenBalance(rpc, who.usdc),
       readPublicTokenBalance(rpc, who.wusdc),
@@ -152,61 +91,11 @@ describe.skipIf(!RPC_URL)("confidential account setup and funding on localnet", 
     };
   }
 
-  async function setUp(who: Owner, maximumPendingBalanceCreditCounter?: bigint) {
-    const setup = await confidentialAccountSetupInstructions({
-      owner: createNoopSigner(who.signer.address),
-      mint: bootstrap.wrappedUsdcMint,
-      keys: who.keys,
-      ...(maximumPendingBalanceCreditCounter === undefined
-        ? {}
-        : { maximumPendingBalanceCreditCounter }),
-    });
-    expect(setup.token).toBe(who.wusdc);
-    return send(who, setup.instructions, 1);
-  }
-
-  async function wrap(who: Owner, amount: bigint, version: 0 | 1 = 0) {
-    const built = await wrapInstructions({
-      owner: createNoopSigner(who.signer.address),
-      unwrappedMint: bootstrap.usdcMint,
-      unwrappedTokenProgram: TOKEN_PROGRAM_ADDRESS,
-      programAddress: config.programs.tokenWrap,
-      amount,
-    });
-    expect(built.wrappedTokenAccount).toBe(who.wusdc);
-    expect(built.escrow).toBe(bootstrap.escrow);
-    return send(who, built.instructions, version);
-  }
-
-  const deposit = (who: Owner, amount: bigint) =>
-    confidentialDepositInstruction({
-      token: who.wusdc,
-      mint: bootstrap.wrappedUsdcMint,
-      owner: createNoopSigner(who.signer.address),
-      amount,
-      decimals: bootstrap.usdcDecimals,
-    });
-
-  async function apply(who: Owner) {
-    const fresh = await fetchToken(rpc, who.wusdc, { commitment: "confirmed" });
-    return send(who, [
-      applyPendingBalanceInstruction({
-        token: who.wusdc,
-        tokenAccount: fresh.data,
-        owner: createNoopSigner(who.signer.address),
-        keys: who.keys,
-      }),
-    ]);
-  }
-
   beforeAll(async () => {
     rpc = createRetryingRpc(RPC_URL as string);
-    bootstrap = JSON.parse(readFileSync(BOOTSTRAP, "utf8")) as Bootstrap;
+    bootstrap = readLocalnetBootstrap();
     config = getClusterConfig("localnet") as AvailableClusterConfig;
-    mintAuthority = await createKeyPairSignerFromBytes(
-      new Uint8Array(JSON.parse(readFileSync(bootstrap.payer.keypair, "utf8")) as number[]),
-    );
-    owner = await newOwner(100n);
+    owner = await newLocalnetOwner(rpc, bootstrap, 100n);
   }, 120_000);
 
   it(
@@ -293,7 +182,7 @@ describe.skipIf(!RPC_URL)("confidential account setup and funding on localnet", 
       });
       // Idempotent: a configured account needs nothing more, and another key stops setup.
       expect(accountSetupStatus(state, expected)).toMatchObject({ kind: "configured" });
-      const otherKey = (await newOwner(0n)).keys.elgamalPubkey;
+      const otherKey = (await newLocalnetOwner(rpc, bootstrap, 0n)).keys.elgamalPubkey;
       expect(accountSetupStatus(state, { ...expected, elgamalPubkey: otherKey })).toEqual({
         kind: "other_key",
         onchain: owner.keys.elgamalPubkey,
@@ -354,7 +243,7 @@ describe.skipIf(!RPC_URL)("confidential account setup and funding on localnet", 
     "AC-04.3 counts credits toward the 80 percent flag, and apply clears it",
     { timeout: 180_000 },
     async () => {
-      const small = await newOwner(1n);
+      const small = await newLocalnetOwner(rpc, bootstrap, 1n);
       await setUp(small, 5n);
       await wrap(small, 1n * USDC, 1);
       const flagged = async () => {

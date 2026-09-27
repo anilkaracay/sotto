@@ -8,14 +8,7 @@ import {
   type Token,
 } from "@solana-program/token-2022";
 import { getTokenEncoder, TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
-import {
-  address,
-  getBase64Decoder,
-  none,
-  some,
-  type Address,
-  type MaybeAccount,
-} from "@solana/kit";
+import { address, getBase64Decoder, lamports, none, some, type Address } from "@solana/kit";
 import { describe, expect, it } from "vitest";
 import {
   accountSetupStatus,
@@ -70,23 +63,29 @@ function token(extension: Partial<ConfidentialState> | null, overrides: Partial<
 }
 
 function present(data: Token, programAddress: Address = TOKEN_2022_PROGRAM_ADDRESS) {
+  const bytes = new Uint8Array(getToken2022Encoder().encode(data));
   return tokenAccountState({
     exists: true,
     address: TOKEN,
     programAddress,
-    data,
+    data: bytes,
     executable: false,
-    lamports: 1n,
-    space: 0n,
-  } as unknown as MaybeAccount<Token>);
+    lamports: lamports(1n),
+    space: BigInt(bytes.length),
+  });
 }
 
-const missing = tokenAccountState({ exists: false, address: TOKEN } as MaybeAccount<Token>);
+const missing = tokenAccountState({ exists: false, address: TOKEN });
 const expected = { owner: OWNER, mint: MINT };
 
 describe("token account state and checks (06 section 3)", () => {
   it("reads the public state, with the confidential extension when it exists", () => {
     expect(missing).toEqual({ status: "missing", address: TOKEN });
+    expect(present(token(null), TOKEN_PROGRAM_ADDRESS)).toEqual({
+      status: "other_program",
+      address: TOKEN,
+      programAddress: TOKEN_PROGRAM_ADDRESS,
+    });
     expect(present(token(null))).toMatchObject({
       status: "present",
       owner: OWNER,

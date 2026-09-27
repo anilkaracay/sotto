@@ -4,10 +4,8 @@
 // matches (I-5). The keys come from the step 1.5 CLI check keypair (test data).
 import { createHash } from "node:crypto";
 import {
-  AccountState,
   ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
   TOKEN_2022_PROGRAM_ADDRESS,
-  type Token,
 } from "@solana-program/token-2022";
 import { ZK_ELGAMAL_PROOF_PROGRAM_ADDRESS } from "@solana-program/zk-elgamal-proof";
 import {
@@ -19,10 +17,8 @@ import {
   getAddressFromPublicKey,
   none,
   signBytes,
-  some,
   type Address,
 } from "@solana/kit";
-import { AeKey, ElGamalPubkey } from "@solana/zk-sdk/bundler";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   applyPendingBalanceInstruction,
@@ -36,6 +32,7 @@ import {
   deriveStandardKeys,
   type ConfidentialKeyMaterial,
 } from "../src/keys/index.ts";
+import { encryptedTokenAccount } from "../src/testing/index.ts";
 
 const MINT = address("AhJfP4JJBaHWRtXRiaScZUC7SMm4RqUPSb3g9H5RT8Bd");
 
@@ -50,44 +47,15 @@ async function keysOf(
 }
 
 /** A token account whose balances are encrypted to `keys`: available 42, pending 5 in 2 credits. */
-function encryptedAccount(owner: Address, keys: ConfidentialKeyMaterial): Token {
-  const pubkey = ElGamalPubkey.fromBytes(
-    new Uint8Array(getAddressEncoder().encode(keys.elgamalPubkey)),
-  );
-  const aesKey = AeKey.fromBytes(keys.aeKey);
-  try {
-    return {
-      mint: MINT,
-      owner,
-      amount: 0n,
-      delegate: none(),
-      state: AccountState.Initialized,
-      isNative: none(),
-      delegatedAmount: 0n,
-      closeAuthority: none(),
-      extensions: some([
-        {
-          __kind: "ConfidentialTransferAccount",
-          approved: true,
-          elgamalPubkey: keys.elgamalPubkey,
-          pendingBalanceLow: pubkey.encryptU64(5n).toBytes(),
-          pendingBalanceHigh: pubkey.encryptU64(0n).toBytes(),
-          availableBalance: pubkey.encryptU64(42n).toBytes(),
-          decryptableAvailableBalance: aesKey.encrypt(42n).toBytes(),
-          allowConfidentialCredits: true,
-          allowNonConfidentialCredits: true,
-          pendingBalanceCreditCounter: 2n,
-          maximumPendingBalanceCreditCounter: 65_536n,
-          expectedPendingBalanceCreditCounter: 0n,
-          actualPendingBalanceCreditCounter: 0n,
-        },
-      ]),
-    } as Token;
-  } finally {
-    pubkey.free();
-    aesKey.free();
-  }
-}
+const encryptedAccount = (owner: Address, keys: ConfidentialKeyMaterial) =>
+  encryptedTokenAccount({
+    owner,
+    mint: MINT,
+    keys,
+    available: 42n,
+    pending: 5n,
+    pendingBalanceCreditCounter: 2n,
+  });
 
 describe("confidential account with the keys", () => {
   let owner: { wallet: Address; keys: ConfidentialKeyMaterial };

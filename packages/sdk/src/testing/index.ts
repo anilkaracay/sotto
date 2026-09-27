@@ -5,11 +5,18 @@
 // - a valid Ed25519 signature made with a random nonce instead of the deterministic one (RFC 8032
 //   section 5.1.6 derives the nonce from the key and the message). A wallet that signs like this gives a
 //   different valid signature each time, which the determinism check before account setup refuses
-//   (step 1.7): keys derived from its signature could not be derived again.
+//   (step 1.7): keys derived from its signature could not be derived again;
+// - Token-2022 accounts with a confidential extension: balances encrypted to given keys, or zero
+//   ciphertexts for checks of public fields, and their account data.
+import { AccountState, getTokenEncoder, type Token } from "@solana-program/token-2022";
 import {
   compileTransaction,
   decompileTransactionMessage,
   getCompiledTransactionMessageDecoder,
+  getAddressEncoder,
+  none,
+  some,
+  type Address,
   type KeyPairSigner,
   type Transaction,
   type TransactionMessage,
@@ -18,7 +25,9 @@ import {
   type TransactionWithinSizeLimit,
   type TransactionWithLifetime,
 } from "@solana/kit";
+import { AeKey, ElGamalPubkey } from "@solana/zk-sdk/bundler";
 import sodium from "libsodium-wrappers-sumo";
+import type { ConfidentialKeyMaterial } from "../keys/confidential.ts";
 
 type SignedTransaction = Transaction & TransactionWithinSizeLimit & TransactionWithLifetime;
 
@@ -75,4 +84,107 @@ export async function randomizedEd25519Signature(
   );
   const S = sodium.crypto_core_ed25519_scalar_add(r, sodium.crypto_core_ed25519_scalar_mul(k, a));
   return new Uint8Array([...R, ...S]);
+}
+
+/** A token account with confidential balances encrypted to `keys` (amounts in base units). */
+export function encryptedTokenAccount(input: {
+  owner: Address;
+  mint: Address;
+  keys: ConfidentialKeyMaterial;
+  available: bigint;
+  pending: bigint;
+  pendingBalanceCreditCounter?: bigint;
+  maximumPendingBalanceCreditCounter?: bigint;
+  publicAmount?: bigint;
+}): Token {
+  const pubkey = ElGamalPubkey.fromBytes(
+    new Uint8Array(getAddressEncoder().encode(input.keys.elgamalPubkey)),
+  );
+  const aesKey = AeKey.fromBytes(input.keys.aeKey);
+  const low = input.pending & 0xffffn;
+  const high = input.pending >> 16n;
+  try {
+    return {
+      mint: input.mint,
+      owner: input.owner,
+      amount: input.publicAmount ?? 0n,
+      delegate: none(),
+      state: AccountState.Initialized,
+      isNative: none(),
+      delegatedAmount: 0n,
+      closeAuthority: none(),
+      extensions: some([
+        {
+          __kind: "ConfidentialTransferAccount",
+          approved: true,
+          elgamalPubkey: input.keys.elgamalPubkey,
+          pendingBalanceLow: pubkey.encryptU64(low).toBytes(),
+          pendingBalanceHigh: pubkey.encryptU64(high).toBytes(),
+          availableBalance: pubkey.encryptU64(input.available).toBytes(),
+          decryptableAvailableBalance: aesKey.encrypt(input.available).toBytes(),
+          allowConfidentialCredits: true,
+          allowNonConfidentialCredits: true,
+          pendingBalanceCreditCounter: input.pendingBalanceCreditCounter ?? 0n,
+          maximumPendingBalanceCreditCounter: input.maximumPendingBalanceCreditCounter ?? 65_536n,
+          expectedPendingBalanceCreditCounter: 0n,
+          actualPendingBalanceCreditCounter: 0n,
+        },
+      ]),
+    };
+  } finally {
+    pubkey.free();
+    aesKey.free();
+  }
+}
+
+/**
+ * A token account with a ConfidentialTransferAccount extension and zero ciphertexts, for checks that
+ * read only its public fields (no keys needed); `null` leaves the extension out.
+ */
+export function confidentialTokenAccount(input: {
+  owner: Address;
+  mint: Address;
+  elgamalPubkey: Address;
+  approved?: boolean;
+  pendingBalanceCreditCounter?: bigint;
+  maximumPendingBalanceCreditCounter?: bigint;
+  confidential?: boolean;
+}): Token {
+  const zero = new Uint8Array(64);
+  return {
+    mint: input.mint,
+    owner: input.owner,
+    amount: 0n,
+    delegate: none(),
+    state: AccountState.Initialized,
+    isNative: none(),
+    delegatedAmount: 0n,
+    closeAuthority: none(),
+    extensions:
+      input.confidential === false
+        ? none()
+        : some([
+            {
+              __kind: "ConfidentialTransferAccount",
+              approved: input.approved ?? true,
+              elgamalPubkey: input.elgamalPubkey,
+              pendingBalanceLow: zero,
+              pendingBalanceHigh: zero,
+              availableBalance: zero,
+              decryptableAvailableBalance: new Uint8Array(36),
+              allowConfidentialCredits: true,
+              allowNonConfidentialCredits: true,
+              pendingBalanceCreditCounter: input.pendingBalanceCreditCounter ?? 0n,
+              maximumPendingBalanceCreditCounter:
+                input.maximumPendingBalanceCreditCounter ?? 65_536n,
+              expectedPendingBalanceCreditCounter: 0n,
+              actualPendingBalanceCreditCounter: 0n,
+            },
+          ]),
+  };
+}
+
+/** A Token-2022 account as the bytes an RPC returns for it. */
+export function encodeToken2022Account(token: Token): Uint8Array {
+  return new Uint8Array(getTokenEncoder().encode(token));
 }

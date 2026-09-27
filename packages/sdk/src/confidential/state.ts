@@ -3,7 +3,6 @@
 // counter flag use it. Also the confidential deposit, which needs no keys (the deposited amount is
 // public, facts A2). No zk-sdk here: this module loads without the WASM.
 import {
-  fetchMaybeToken,
   findAssociatedTokenPda,
   getConfidentialDepositInstruction,
   getTokenDecoder as getToken2022Decoder,
@@ -13,10 +12,11 @@ import {
 import { getTokenDecoder, TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
 import {
   fetchEncodedAccount,
+  parseBase64RpcAccount,
   type Address,
   type GetAccountInfoApi,
   type Instruction,
-  type MaybeAccount,
+  type MaybeEncodedAccount,
   type Rpc,
   type TransactionSigner,
 } from "@solana/kit";
@@ -32,11 +32,11 @@ export type ConfidentialState = {
 
 export type TokenAccountState =
   | { status: "missing"; address: Address }
+  /** The account exists but belongs to a program other than Token-2022. */
+  | { status: "other_program"; address: Address; programAddress: Address }
   | {
       status: "present";
       address: Address;
-      /** The program that owns the account; Token-2022 for wUSDC. */
-      programAddress: Address;
       owner: Address;
       mint: Address;
       /** The public balance in base units. */
@@ -62,17 +62,35 @@ export function confidentialExtension(token: Token) {
   return null;
 }
 
-/** The public state of a decoded Token-2022 account (or of a missing one). */
-export function tokenAccountState(account: MaybeAccount<Token>): TokenAccountState {
+/**
+ * A Token-2022 account's data, decoded. The crypto worker gets the bytes from the page, which reads
+ * the chain; the worker itself makes no network calls.
+ */
+export function decodeToken2022Account(data: Uint8Array): Token {
+  return getToken2022Decoder().decode(data);
+}
+
+/**
+ * The public state of an account as the RPC returned it: missing, owned by another program, or a
+ * decoded Token-2022 account. Only Token-2022 data is decoded.
+ */
+export function tokenAccountState(account: MaybeEncodedAccount): TokenAccountState {
   if (!account.exists) return { status: "missing", address: account.address };
-  const extension = confidentialExtension(account.data);
+  if (account.programAddress !== TOKEN_2022_PROGRAM_ADDRESS) {
+    return {
+      status: "other_program",
+      address: account.address,
+      programAddress: account.programAddress,
+    };
+  }
+  const token = decodeToken2022Account(new Uint8Array(account.data));
+  const extension = confidentialExtension(token);
   return {
     status: "present",
     address: account.address,
-    programAddress: account.programAddress,
-    owner: account.data.owner,
-    mint: account.data.mint,
-    amount: account.data.amount,
+    owner: token.owner,
+    mint: token.mint,
+    amount: token.amount,
     confidential: extension
       ? {
           elgamalPubkey: extension.elgamalPubkey,
@@ -86,12 +104,26 @@ export function tokenAccountState(account: MaybeAccount<Token>): TokenAccountSta
   };
 }
 
-/** Reads a Token-2022 account's public state. It only reads; it needs no keys. */
+/** Reads an account's public state. It only reads; it needs no keys. */
 export async function readTokenAccountState(
   rpc: Rpc<GetAccountInfoApi>,
   address: Address,
 ): Promise<TokenAccountState> {
-  return tokenAccountState(await fetchMaybeToken(rpc, address, { commitment: "confirmed" }));
+  return tokenAccountState(await fetchEncodedAccount(rpc, address, { commitment: "confirmed" }));
+}
+
+/**
+ * The same with the slot of the read (08 POST /token-accounts records it: the account was configured
+ * at or before that slot).
+ */
+export async function readTokenAccountStateWithSlot(
+  rpc: Rpc<GetAccountInfoApi>,
+  address: Address,
+): Promise<{ state: TokenAccountState; slot: bigint }> {
+  const { context, value } = await rpc
+    .getAccountInfo(address, { encoding: "base64", commitment: "confirmed" })
+    .send();
+  return { state: tokenAccountState(parseBase64RpcAccount(address, value)), slot: context.slot };
 }
 
 export type PublicTokenBalance =
@@ -156,9 +188,7 @@ export function checkConfidentialAccount(
   expected: { owner: Address; mint: Address },
 ): AccountCheck {
   if (state.status === "missing") return { ok: false, reason: "missing" };
-  if (state.programAddress !== TOKEN_2022_PROGRAM_ADDRESS) {
-    return { ok: false, reason: "not_token_2022" };
-  }
+  if (state.status === "other_program") return { ok: false, reason: "not_token_2022" };
   if (state.owner !== expected.owner) return { ok: false, reason: "wrong_owner" };
   if (state.mint !== expected.mint) return { ok: false, reason: "wrong_mint" };
   if (!state.confidential) return { ok: false, reason: "not_confidential" };

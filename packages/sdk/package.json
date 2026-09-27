@@ -14,7 +14,8 @@
     "./tx": "./src/tx/index.ts",
     "./wallet": "./src/wallet/index.ts",
     "./wrap": "./src/wrap/index.ts",
-    "./testing": "./src/testing/index.ts"
+    "./testing": "./src/testing/index.ts",
+    "./testing/localnet": "./src/testing/localnet.ts"
   },
   "scripts": {
     "lint": "eslint .",

@@ -45,10 +45,10 @@ payroll_runs(id uuid pk, org_id fk, title, period char(7), status enum(draft, aw
 approvals(id uuid pk, org_id fk, subject_type enum(payment, payroll_run), subject_id uuid,
           approver_user_id fk, message text, signature bytea, created_at, unique(subject_type, subject_id, approver_user_id))
 
-grants(id uuid pk, org_id fk, viewer_user_id fk null, invite_token text fk, scope enum(all_payments, period, payroll_only, totals_only, own_payslips),
+grants(id uuid pk, org_id fk, viewer_user_id fk null, invite_token text fk, scope enum(all_payments, period, payroll_only, own_payslips),
        period_from date null, period_to date null, expires_at null,
        status enum(pending_viewer_key, active, revoked, expired), created_by fk, created_at, revoked_at null,
-       last_used_at null)          -- always created through an invite; viewer_user_id is null until the invite is accepted
+       last_used_at null)          -- always created through an invite; viewer_user_id is null until the invite is accepted; totals_only is Post-hackathon (D-27)
 manifests(id uuid pk, org_id fk, signer_wallet text, manifest jsonb, signature bytea, created_at)
 disclosures(id uuid pk, org_id fk, grant_id fk null, viewer_user_id fk, kind enum(payment, payroll_line, month_total, balance_snapshot),
             subject text, ciphertext bytea, manifest_id fk, created_at)
@@ -56,6 +56,7 @@ disclosures(id uuid pk, org_id fk, grant_id fk null, viewer_user_id fk, kind enu
 proof_records(id uuid pk, org_id fk, cluster, record_address text unique, threshold_base_units bigint,
               counterparty_label text, counterparty_salt bytea(16), expiry timestamptz, created_at)
 reconciliations(payment_id pk fk, org_id fk, status enum(matched, needs_receipt), updated_by fk, updated_at)
+-- reconciliation_notes and close_items are Post-hackathon (D-27) and are not built in the hackathon build
 reconciliation_notes(id uuid pk, payment_id fk, org_id fk, viewer_user_id fk, ciphertext bytea, manifest_id fk, created_at,
                      unique(payment_id, viewer_user_id))   -- one sealed box per reader (owner plus each accountant with a covering grant), created and signed exactly like disclosures
 close_items(org_id fk, month char(7), item_key text, done bool, done_by fk null, done_at null, primary key(org_id, month, item_key))
@@ -110,7 +111,7 @@ RPC proxy
 - `POST /rpc`: all browser Solana RPC goes through this server proxy, with a JSON-RPC method allow list, a per session rate limit and a body size limit.
 
 Other
-- `GET /orgs/:id/access-log`, reconciliation and close checklist endpoints, `POST /waitlist`, `GET /waitlist/confirm/:token`, `GET /health`.
+- `GET /orgs/:id/access-log`, reconciliation status endpoints (the close checklist is Post-hackathon, D-27), `POST /waitlist`, `GET /waitlist/confirm/:token`, `GET /health`.
 
 ## 4. Worker jobs
 

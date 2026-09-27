@@ -11,7 +11,7 @@ Sotto is the business account for companies that pay in stablecoins: every payme
 | Owner | Company founder or finance lead. Holds the owner wallet. | Everything, including signing all money operations | Everything of the org |
 | Approver | Another company member | Approve payroll runs and payments (D-04) on `/app/[org]/payroll/[run]`, seeing the contents hash they sign | What their grant allows |
 | Accountant | Internal or external | Read, reconcile, annotate, export within grant scope | Grant scope |
-| Board viewer | Board member or investor | Read totals and treasury balance within grant scope on the board screen `/app/[org]/board` | Totals only |
+| Board viewer (Post-hackathon, D-27) | Board member or investor | Read totals and treasury balance within grant scope on the board screen `/app/[org]/board` | Totals only |
 | Recipient | Employee, contractor, supplier | Configure their confidential account, read their own payslips, withdraw | Their own payments |
 | Counterparty | Supplier, lender, landlord | Open a proof link and see the result | The proven statement only |
 | Sotto admin | Sotto team | Review KYB, issue or revoke the verified business attestation | No customer amounts, ever |
@@ -20,8 +20,8 @@ A person can hold several roles in several orgs. Roles live on memberships, not 
 
 ## 3. Scope
 
-**MVP (everything built for the hackathon, devnet only; mainnet is Post-hackathon per D-01):** F-01 to F-19, except where marked.
-**Post-hackathon:** income proof (D-07), email claim (D-08), Squads (D-04), KYB provider (D-09).
+**MVP (the hackathon build, devnet only; mainnet is Post-hackathon per D-01):** the scope of D-27: F-01 to F-15, F-17 and F-19, except where marked.
+**Post-hackathon:** income proof (D-07), email claim (D-08), Squads (D-04), KYB provider (D-09), and per D-27: F-16 command palette, F-18 privacy score, AC-11.5 close checklist and the Close and export page, the board viewer role and route and the `totals_only` scope, reconciliation notes, the approver screen.
 "Phase 0 to 4" means only the schedule in `12-MILESTONES.md`.
 
 ## 4. Features and acceptance criteria
@@ -82,7 +82,7 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 - AC-09.1 Owner or recipient withdraws from confidential available to public wUSDC, then unwraps to USDC.
 
 ### F-10 Viewing grants
-- AC-10.1 Owner grants a viewer a scope: `all_payments`, `period` (from, to), `payroll_only`, `totals_only`, `own_payslips` (recipient), with optional expiry.
+- AC-10.1 Owner grants a viewer a scope: `all_payments`, `period` (from, to), `payroll_only`, `own_payslips` (recipient), with optional expiry. The `totals_only` scope is Post-hackathon (D-27).
 - AC-10.2 Grants are always created through an invite: the viewer accepts, becomes a user, registers a viewing public key (see `07-SELECTIVE-DISCLOSURE.md`), and the grant activates. Until then the grant is `pending_viewer_key`.
 - AC-10.3 On grant creation, the owner's browser back fills disclosures for past payments inside the scope.
 - AC-10.4 Revoke deletes stored disclosures for that grant and stops future ones. UI states that already viewed data cannot be unseen.
@@ -91,9 +91,9 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 ### F-11 Accountant books
 - AC-11.1 The accountant sees orgs where they hold an active grant, chooses one, and sees the scope banner (who granted it, scope, expiry).
 - AC-11.2 The ledger decrypts disclosures in the browser. Filters: month, category (the disclosure payload `category`: `payroll`, `supplier`, `revenue`, `payouts`, `software`, `other`), needs receipt. Attaching receipts is out of MVP. Search runs on decrypted data in memory.
-- AC-11.3 Reconciliation status and notes per payment. Notes are stored in `reconciliation_notes`: one sealed box per reader (the owner and each accountant with a covering grant), created and signed exactly like disclosures (`08-BACKEND.md`).
+- AC-11.3 Reconciliation status per payment. Reconciliation notes (`reconciliation_notes`: one sealed box per reader, created and signed like disclosures) are Post-hackathon (D-27).
 - AC-11.4 CSV export is generated in the browser. The server records an export event (who, when, scope, row count) visible to the owner in the access log.
-- AC-11.5 Month close checklist items persist per org and month.
+- AC-11.5 (Post-hackathon, D-27) Month close checklist items persist per org and month.
 
 ### F-12 Recipient: My pay
 - AC-12.1 Shows the recipient's payslips from recipient disclosures (gross, tax withheld, net if provided by the payroll CSV extension columns `gross,tax`; otherwise net only).
@@ -112,14 +112,14 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 ### F-15 Privacy screen
 - AC-15.1 Toggle blurs every amount in the UI; hovering one amount reveals it. Preference stored per device.
 
-### F-16 Command palette
+### F-16 Command palette (Post-hackathon, D-27)
 - AC-16.1 Cmd or Ctrl plus K opens it; commands are role aware and only include implemented actions.
 
 ### F-17 Marketing site
 - AC-17.1 The landing page matches `design/sotto-landing.html` with the copy corrections applied.
 - AC-17.2 The "Request access" form has "Work email" and "Company" fields and stores both in the waitlist table with double opt in. Confirmation emails are sent through Resend (DEFAULT).
 
-### F-18 Privacy score (if kept, D-20)
+### F-18 Privacy score (Post-hackathon, D-27)
 Computed per org per quarter, 0 to 100, compared with the previous quarter, shown with its breakdown:
 - 40 points times the share of outgoing payments in the quarter that were confidential transfers, counted by number of payments (the server does not know values).
 - 25 points if every active grant has an expiry at most 400 days away.

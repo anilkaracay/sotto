@@ -1,7 +1,8 @@
-// Dev only JSON-RPC proxy for the wallet lab: forwards allow listed methods to HELIUS_DEVNET_URL.
+// Dev only JSON-RPC proxy for the wallet lab: forwards allow listed methods to RPC_URL from
+// apps/web/.env.local (Next.js env loading).
 // Guarded like the lab page. The upstream URL is never returned or logged.
 import { notFound } from "next/navigation";
-import { checkLabRpcRequest, validateHeliusUrl } from "../rpc-proxy";
+import { checkLabRpcRequest, validateRpcUrl } from "../rpc-proxy";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export async function POST(request: Request): Promise<Response> {
   if (process.env.NODE_ENV !== "development") {
     notFound();
   }
-  const upstream = validateHeliusUrl(process.env.HELIUS_DEVNET_URL);
+  const upstream = validateRpcUrl(process.env.RPC_URL);
   if (!upstream.ok) return jsonRpcError(500, upstream.error);
 
   const text = await request.text();

@@ -131,3 +131,34 @@ docker run -d --name sotto-postgres --restart unless-stopped \
 ```
 
 `DATABASE_URL=postgresql://sotto:<password>@127.0.0.1:56432/sotto` in `apps/web/.env.local` and `apps/worker/.env.local`. Step 1.2 wraps this in `scripts/db-local.sh`.
+
+## Step 1.1 (2026-09-27): SAS, worker configuration, transaction helpers
+
+No new third party package versions. Changes:
+
+| Item | Version | Resolved on | Source | Notes |
+|---|---|---|---|---|
+| `@solana/kit` in `apps/worker` | 8.3.0 (catalog) | 2026-09-27 | `pnpm-workspace.yaml` catalog, lockfile `apps/worker` importer | Added as a direct worker dependency for RPC, signing and the SAS client; `sas-lib` 1.0.10 keeps its nested `@solana/kit` 5.5.1 (`node_modules/.pnpm/@solana+kit@5.5.1_typescript@6.0.3`), used only inside `sas-lib` (D-24, facts E6) |
+| SAS program on localnet | devnet program, cloned at validator start | 2026-09-27 | `--clone-upgradeable-program 22zoJMtdu4tQc2PzL74ZUT7FrwgB1Udec8DdW4yw4BdG --url https://api.devnet.solana.com` | Dump SHA-256 `afacc7215d6ab6759bcf5edb958a1ad1d9de7559d53ac807c6aa4775a1a5a357` (135680 bytes), equal on localnet and devnet (facts E8). The clone follows devnet upgrades |
+| Node built ins used by the worker | Node 24.21.0 | 2026-09-27 | `node:util` `parseEnv` and `parseArgs` | `parseEnv` is the parser behind `node --env-file`; it returns keys in sorted order, not file order |
+
+Localnet validator command as run by `scripts/localnet.sh` from step 1.1 (the G1 command above plus the SAS clone):
+
+```sh
+solana-test-validator --reset --quiet \
+  --ledger .localnet/ledger \
+  --url https://api.devnet.solana.com \
+  --clone-upgradeable-program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb \
+  --clone-upgradeable-program 22zoJMtdu4tQc2PzL74ZUT7FrwgB1Udec8DdW4yw4BdG \
+  --upgradeable-program EEvqpjNRQkNRwXzVziuTGGi1wYDiPv7haYVVu3XZCoQn \
+    .cache/token-wrap/spl_token_wrap.so \
+    7SSpLJh516AbWiV5GM7ooZFTHoQN64pdohYxbDs3Gq4L
+```
+
+New commands:
+
+```sh
+pnpm --filter @sotto/worker bootstrap:sas --cluster devnet [--test-attestation <owner>]    # reads apps/worker/.env.local
+pnpm --filter @sotto/worker bootstrap:sas --cluster localnet [--test-attestation <owner>]  # http://127.0.0.1:8899
+SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/worker test:localnet   # run by the ci:local localnet job
+```

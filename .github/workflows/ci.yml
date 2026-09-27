@@ -73,6 +73,21 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Enable pnpm through corepack (version from packageManager)
+        run: |
+          corepack enable
+          pnpm --version | grep -qx "12.6.0"
+          echo "PNPM_STORE=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+      - name: Cache pnpm store
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.PNPM_STORE }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm install --frozen-lockfile
       - uses: ./.github/actions/setup-agave
         with:
           version: ${{ env.AGAVE_VERSION }}
@@ -96,6 +111,10 @@ jobs:
           echo "validator did not become healthy"; exit 1
       - name: Confidential smoke test
         run: scripts/localnet-smoke.sh
+      - name: SAS flow on localnet (worker, throwaway signer)
+        run: pnpm --filter @sotto/worker test:localnet
+        env:
+          SOTTO_LOCALNET_RPC_URL: http://127.0.0.1:8899
       - name: Upload validator logs
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

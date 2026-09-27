@@ -11,6 +11,7 @@ set -euo pipefail
 REQUIRED_SPL_TOKEN_VERSION="5.6.1"
 TOKEN_2022_PROGRAM="TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
 TOKEN_WRAP_PROGRAM="EEvqpjNRQkNRwXzVziuTGGi1wYDiPv7haYVVu3XZCoQn"
+SAS_PROGRAM="22zoJMtdu4tQc2PzL74ZUT7FrwgB1Udec8DdW4yw4BdG"
 ZK_GATES=(
   zkhiy5oLowR7HY4zogXjCjeMXyruLqBwSWH21qcFtnv # zk_elgamal_proof_program_enabled
   zkdoVwnSFnSLtGJG7irJPEYUpmb4i7sGMGcnN6T9rnC # disable_zk_elgamal_proof_program
@@ -54,6 +55,7 @@ for gate in "${ZK_GATES[@]}"; do
 done
 solana program show "$TOKEN_WRAP_PROGRAM" --url "$URL" >/dev/null
 solana program show "$TOKEN_2022_PROGRAM" --url "$URL" >/dev/null
+solana program show "$SAS_PROGRAM" --url "$URL" >/dev/null
 
 step "create throwaway keypairs and fund them"
 rm -rf "$KEYS"

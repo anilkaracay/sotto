@@ -1,8 +1,13 @@
 // The page side of the crypto Web Worker. Wallet signatures are copied into a buffer that is
 // transferred to the worker (so it is detached here), and the wallet's own copy is zeroed (10 section
 // 3). Locking terminates the worker, which ends every key in it.
+import type { PortableInstruction } from "@sotto/sdk/tx";
 import type {
+  ApplyInstructionResult,
   CheckAccountResult,
+  ConfirmSignatureResult,
+  DecryptResult,
+  SetupInstructionsResult,
   StatusResult,
   UnlockResult,
   ViewingResult,
@@ -121,6 +126,40 @@ export class CryptoWorkerClient {
 
   async status(): Promise<StatusResult> {
     return (await this.request({ type: "status" })) as StatusResult;
+  }
+
+  /**
+   * The determinism check before account setup: whether a second signature of the key message equals
+   * the one the keys came from. The signature is handed over like the unlock signature.
+   */
+  async confirmSignature(wallet: string, signature: Uint8Array): Promise<ConfirmSignatureResult> {
+    const buffer = CryptoWorkerClient.handOver(signature);
+    return (await this.request({ type: "confirmSignature", wallet, signature: buffer }, [
+      buffer,
+    ])) as ConfirmSignatureResult;
+  }
+
+  /** The instructions that create and configure the unlocked wallet's account for `mint`. */
+  async setupInstructions(mint: string): Promise<SetupInstructionsResult> {
+    return (await this.request({ type: "setupInstructions", mint })) as SetupInstructionsResult;
+  }
+
+  /** Decrypts a token account the page read from chain, for display on this page. */
+  async decrypt(account: Uint8Array): Promise<DecryptResult> {
+    return (await this.request({
+      type: "decrypt",
+      account: new Uint8Array(account).buffer,
+    })) as DecryptResult;
+  }
+
+  /** The apply instruction for a token account's fresh state (read just before). */
+  async applyInstruction(token: string, account: Uint8Array): Promise<PortableInstruction> {
+    const result = (await this.request({
+      type: "applyInstruction",
+      token,
+      account: new Uint8Array(account).buffer,
+    })) as ApplyInstructionResult;
+    return result.instruction;
   }
 
   /** Locks: terminates the worker, so every key in it is gone. */

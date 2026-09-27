@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./cluster": "./src/cluster/config.ts",
+    "./confidential": "./src/confidential/index.ts",
     "./keys": "./src/keys/index.ts",
     "./keys/public": "./src/keys/public.ts",
     "./tx": "./src/tx/index.ts",

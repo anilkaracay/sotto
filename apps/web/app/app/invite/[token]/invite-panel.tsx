@@ -122,8 +122,8 @@ function InviteState({
       <>
         <p className={cards.lead}>
           Sign in with the wallet {expected ? shortWallet(expected) : "the invite names"} to accept.
-          Accepting lets {org} pay you in confidential wUSDC: amounts stay private onchain, and only
-          you and the people you allow can read them.
+          Accepting lets {org} pay you in confidential wUSDC: amounts are encrypted onchain, so only
+          you, {org} and the people {org} shares them with can read them.
         </p>
         <div className={cards.actions}>
           <Link

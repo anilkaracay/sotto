@@ -1,13 +1,15 @@
 // POST /api/token-accounts (08 section 3, 06 section 3 step 5): records the owner's configured wUSDC
-// account after checking it onchain with the server's RPC: it exists, is a Token-2022 account of the
-// caller's wallet for the cluster's wUSDC mint, and has an approved confidential extension. It is a
+// account, or since step 1.8 a recipient's own account, after checking it onchain with the server's
+// RPC: it exists, is a Token-2022 account of the caller's wallet for the cluster's wUSDC mint, and has
+// an approved confidential extension; a recipient's readiness follows from the same read. It is a
 // money endpoint (AC-02.2), so it authorizes with requireMoneyAccess. The key scheme cannot be read
 // from chain (the ElGamal key is public, the scheme that derived it is not), so the browser states
 // it; the hackathon build has only standard_v1 (D-03). Reads and a row, no keys and no amounts.
-import { tokenAccounts, type Database } from "@sotto/db";
+import { recipients, tokenAccounts, type Database } from "@sotto/db";
 import {
   checkConfidentialAccount,
   readTokenAccountStateWithSlot,
+  recipientReadiness,
   type AccountCheck,
 } from "@sotto/sdk/confidential/public";
 import type { SolanaRpc } from "@sotto/sdk/tx";
@@ -84,7 +86,8 @@ export async function registerTokenAccount(
   cluster: ServerCluster | null,
   input: TokenAccountRegistration,
 ): Promise<{ tokenAccount: TokenAccountView; created: boolean }> {
-  await requireMoneyAccess(db, session, input.orgId, ["owner"]);
+  // The owner's account (step 1.7) or, since step 1.8, a recipient's own account.
+  await requireMoneyAccess(db, session, input.orgId, ["owner", "recipient"]);
   if (!session) throw new Error("requireMoneyAccess returns only with a session");
   if (!cluster?.wrappedUsdcMint) throw tokenAccountErrors.unavailable();
   const { state, slot } = await readTokenAccountStateWithSlot(rpc, address(input.address));
@@ -93,6 +96,17 @@ export async function registerTokenAccount(
     mint: cluster.wrappedUsdcMint,
   });
   if (!check.ok) throw tokenAccountErrors.invalid(check.reason);
+  // A recipient of this org who records their account is ready from this read on (AC-07.3).
+  await db
+    .update(recipients)
+    .set({
+      readiness: recipientReadiness(state, {
+        owner: address(session.wallet),
+        mint: cluster.wrappedUsdcMint,
+      }),
+      readinessCheckedAt: new Date(),
+    })
+    .where(and(eq(recipients.orgId, input.orgId), eq(recipients.userId, session.userId)));
 
   const inserted = await db
     .insert(tokenAccounts)

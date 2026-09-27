@@ -83,3 +83,66 @@ export function apiRequest(
     ...(init.body === undefined ? {} : { body: init.body }),
   });
 }
+
+let keySeed = 100;
+
+/** A user whose wallet is a real Ed25519 keypair (so it can sign messages), with a session. */
+export async function createKeyUser(test: TestDatabase): Promise<{
+  userId: string;
+  wallet: string;
+  cookie: string;
+  sign: (message: Uint8Array) => Promise<Uint8Array>;
+}> {
+  keySeed += 1;
+  const { createKeyPairFromPrivateKeyBytes, getAddressFromPublicKey, signBytes } =
+    await import("@solana/kit");
+  const keys = await createKeyPairFromPrivateKeyBytes(new Uint8Array(32).fill(keySeed % 256));
+  const wallet = await getAddressFromPublicKey(keys.publicKey);
+  const [row] = await test.db.insert(users).values({ wallet }).returning({ id: users.id });
+  if (!row) throw new Error("user not created");
+  const { token } = await createSession(test.db, row.id, SESSION_SECRET);
+  return {
+    userId: row.id,
+    wallet,
+    cookie: `${SESSION_COOKIE}=${token}`,
+    sign: async (message) => new Uint8Array(await signBytes(keys.privateKey, message)),
+  };
+}
+
+/** An org of the owner in the given status. */
+export async function createOrgWithStatus(
+  test: TestDatabase,
+  ownerUserId: string,
+  status: "pending_review" | "active" | "suspended",
+): Promise<string> {
+  const orgId = await createOrg(test, ownerUserId);
+  const { eq } = await import("drizzle-orm");
+  await test.db.update(orgs).set({ status }).where(eq(orgs.id, orgId));
+  return orgId;
+}
+
+let ipCounter = 0;
+
+/** A JSON request with the app Origin, a session cookie and a fresh client IP. */
+export function jsonRequest(
+  path: string,
+  method: string,
+  cookie: string | null,
+  body?: unknown,
+): Request {
+  ipCounter += 1;
+  return apiRequest(path, {
+    method,
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    headers: {
+      origin: APP_ORIGIN,
+      ...(body === undefined ? {} : { "content-type": "application/json" }),
+      "x-forwarded-for": `198.21.${Math.floor(ipCounter / 250) % 250}.${ipCounter % 250}`,
+      ...(cookie ? { cookie } : {}),
+    },
+  });
+}
+
+export async function errorOf(response: Response): Promise<{ code: string; message: string }> {
+  return ((await response.json()) as { error: { code: string; message: string } }).error;
+}

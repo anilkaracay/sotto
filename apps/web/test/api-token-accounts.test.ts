@@ -1,7 +1,7 @@
 // POST /api/token-accounts (08 section 3, 06 section 3 step 5): the onchain checks before the owner's
 // wUSDC account is recorded, idempotence, and the money gate of AC-02.2. The chain is a stand in for
 // the server's RPC that serves encoded Token-2022 accounts.
-import { memberships, orgs, tokenAccounts, users } from "@sotto/db";
+import { memberships, orgs, recipients, tokenAccounts, users } from "@sotto/db";
 import type { TestDatabase } from "@sotto/db/testing";
 import { getClusterConfig } from "@sotto/sdk/cluster";
 import { confidentialTokenAccount, encodeToken2022Account } from "@sotto/sdk/testing";
@@ -160,6 +160,37 @@ describe("POST /api/token-accounts", () => {
       .where(eq(tokenAccounts.address, account));
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ userId: user.userId, applyFlaggedAt: null });
+  });
+
+  it("AC-07.3 lets a recipient record its own account, which makes the recipient ready", async () => {
+    const org = await owner();
+    const person = await createUserWithSession(test);
+    await test.db
+      .insert(memberships)
+      .values({ orgId: org.orgId, userId: person.userId, role: "recipient" });
+    const [row] = await test.db
+      .insert(recipients)
+      .values({
+        orgId: org.orgId,
+        displayName: "Maya",
+        wallet: person.wallet,
+        userId: person.userId,
+      })
+      .returning({ id: recipients.id, readiness: recipients.readiness });
+    expect(row?.readiness).toBe("no_account");
+    const account = onchain({ owner: address(person.wallet), mint: WUSDC, elgamalPubkey: ELGAMAL });
+    const recorded = await post(person.cookie, {
+      orgId: org.orgId,
+      address: account,
+      keyScheme: "standard_v1",
+    });
+    expect(recorded.status).toBe(201);
+    const [after] = await test.db
+      .select({ readiness: recipients.readiness, checkedAt: recipients.readinessCheckedAt })
+      .from(recipients)
+      .where(eq(recipients.id, row?.id ?? ""));
+    expect(after?.readiness).toBe("ready");
+    expect(after?.checkedAt).toBeInstanceOf(Date);
   });
 
   it("refuses accounts that fail an onchain check and stores nothing", async () => {

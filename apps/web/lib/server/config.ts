@@ -57,9 +57,21 @@ export function sessionSecret(env: Env = process.env): string {
   return value;
 }
 
-/** Origin of NEXT_PUBLIC_APP_URL, or null when it is not set. */
-export function appOrigin(env: Env = process.env): string | null {
-  const value = env.NEXT_PUBLIC_APP_URL?.trim();
+/**
+ * The build time app URL: next.config.ts sets it from an explicit NEXT_PUBLIC_APP_URL or, on Vercel
+ * preview deployments only, from VERCEL_URL (lib/app-url.ts). Next.js inlines this literal at build time.
+ */
+const BUILD_APP_URL: string | undefined = process.env.NEXT_PUBLIC_APP_URL;
+
+/**
+ * Origin of the app: NEXT_PUBLIC_APP_URL from the runtime environment, else the build time value, or
+ * null when neither exists. Never derived from a request (D-15).
+ */
+export function appOrigin(
+  env: Env = process.env,
+  built: string | undefined = BUILD_APP_URL,
+): string | null {
+  const value = env.NEXT_PUBLIC_APP_URL?.trim() || built?.trim();
   if (!value) return null;
   return url("NEXT_PUBLIC_APP_URL", value).origin;
 }

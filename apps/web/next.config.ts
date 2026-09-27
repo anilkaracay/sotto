@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { buildAppUrl } from "./lib/app-url.ts";
 
 // Dev only routes (the Gate G2 wallet lab, app/dev/wallet-lab) are named page.dev.tsx and route.dev.ts.
 // Those extensions are page extensions only under next dev: the Next.js CLI sets NODE_ENV to
@@ -8,6 +9,9 @@ import type { NextConfig } from "next";
 const DEFAULT_EXTENSIONS = ["tsx", "ts", "jsx", "js"];
 const DEV_ONLY_EXTENSIONS = ["dev.tsx", "dev.ts"];
 
+// The app origin sign in messages name, fixed at build time (lib/app-url.ts, 14 section 2).
+const appUrl = buildAppUrl(process.env);
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@sotto/ui"],
@@ -15,6 +19,7 @@ const nextConfig: NextConfig = {
     process.env.NODE_ENV === "development"
       ? [...DEV_ONLY_EXTENSIONS, ...DEFAULT_EXTENSIONS]
       : DEFAULT_EXTENSIONS,
+  ...(appUrl ? { env: { NEXT_PUBLIC_APP_URL: appUrl } } : {}),
 };
 
 export default nextConfig;

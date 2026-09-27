@@ -131,9 +131,10 @@ Public activity table (add to schema): `chain_activity(id, org_id, signature, sl
 
 ## 5. SAS setup
 
-- One Sotto credential per cluster with the worker's attestation signer as authorized signer. Created by `scripts/bootstrap-sas.ts`.
-- Schema `sotto.business.v1` fields: `org_id` (string), `legal_name` (string), `country` (string), `verified_at` (i64), `level` (u8). Encode the layout exactly as `sas-lib` requires for the pinned version (Gate G5).
-- Attestation nonce: the org owner's wallet address, so the attestation is discoverable from `ProofRecord.owner`. Verify in G5 that SAS derives the attestation address from credential, schema and nonce; if not, stop and ask. Expiry: 365 days.
+- One Sotto credential per cluster with the worker's attestation signer as authorized signer. Created by the worker's `bootstrap:sas` (`14-ENVIRONMENTS-DEPLOY.md` section 4; in `apps/worker` because of D-24). Credential name `sotto`. On devnet and localnet the SAS signer is the credential authority, its only authorized signer and the payer of every SAS transaction; mainnet uses the KMS backed signer (section 5 of 14).
+- Schema `sotto.business.v1` fields: `org_id` (string), `legal_name` (string), `country` (string), `verified_at` (i64), `level` (u8). Encode the layout exactly as `sas-lib` requires for the pinned version (Gate G5). Verified in G5: layout `[12, 12, 12, 8, 0]` (SAS schema data types String, String, String, I64, U8), field names in that order, version 1 (the program creates every schema at version 1), attestation data encoded as Borsh (facts E5). `verified_at` is Unix seconds; `country` is the ISO 3166-1 alpha-2 code from `orgs.country`. `level` 1 means manual review by a Sotto admin (D-09); other values are reserved for a KYB provider (Post-hackathon).
+- Attestation nonce: the org owner's wallet address, so the attestation is discoverable from `ProofRecord.owner`. Verify in G5 that SAS derives the attestation address from credential, schema and nonce; if not, stop and ask. Expiry: 365 days. **VERIFIED** in G5 (2026-09-27, devnet and localnet, facts E4): the address is the PDA of `["attestation", credential, schema, nonce]` under the SAS program, and the program rejects any other address with `InvalidAttestation` (custom error 2). Closing an attestation needs an authorized signer and returns its rent to the payer.
+- Devnet addresses (facts E7): credential `4KX4P7he62x5x8X35vubNNhJRhV4vJXPGNsc8skPyKFT`, schema `A4PX8yuPQYeZFqtPomd5E3Jce7dTuWktcnpzb9YCM4z3`. They are in the cluster config (`packages/sdk/src/cluster/config.ts`) and in `apps/worker/.env.local` (`SAS_CREDENTIAL_ADDRESS`, `SAS_SCHEMA_ADDRESS`).
 
 ## 6. Cross cutting
 

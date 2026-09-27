@@ -93,8 +93,8 @@ If the balance changes between step 1 and step 7, the program rejects the proof 
 ## 9. Transaction building rules
 
 - Blockhash freshness: refetch per transaction; for batches, refetch per chunk.
-- Priority fees: read recent prioritization fees for the involved accounts and set the 75th percentile, capped by config.
-- Compute budget (Q-08): every v0 transaction the app builds includes SetComputeUnitLimit (simulated units plus 20 percent, at most 1.4 million) and SetComputeUnitPrice (the priority fee rule above). v1 transactions carry the same values in the config mask (facts D3). A wallet then has no reason to add its own; Phantom documents that it does not (`VERIFICATION-LOG.md` step 0.6).
+- Priority fees: read recent prioritization fees for the involved accounts and set the 75th percentile, capped by config. Implementation (`packages/sdk/src/tx/compute-budget.ts`): the writable accounts of the transaction, the nearest rank 75th percentile, a default cap of 1,000,000 micro-lamports per compute unit, and a price of 0 when the RPC returns no samples.
+- Compute budget (Q-08): every v0 transaction the app builds includes SetComputeUnitLimit (simulated units plus 20 percent rounded up, at most 1.4 million; the simulation runs with the 1.4 million limit) and SetComputeUnitPrice (the priority fee rule above). v1 transactions carry the same values in the config mask (facts D3). A wallet then has no reason to add its own; Phantom documents that it does not (`VERIFICATION-LOG.md` step 0.6).
 - Signed message check (Q-08): after every `signTransaction`, compare the signed message with the message the app built:
   - Identical: proceed.
   - Different only in ComputeBudget instructions (and the ComputeBudget program key): log a warning, record the wallet name and the difference (the changed ComputeBudget instructions and their values, never amounts), and proceed.

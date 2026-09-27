@@ -72,7 +72,6 @@
         "AC-07.4",
         "AC-08.1",
         "AC-08.2",
-        "AC-08.3",
         "AC-08.4",
         "AC-08.5",
         "AC-08.6",
@@ -98,7 +97,7 @@
         "AC-19.1"
       ],
       "visual": false,
-      "note": "Hackathon scope (D-27) except F-17 (landing, built in Phase 3). AC-11.5 and AC-16.1 are Post-hackathon. AC-08.3 stays until Q-12 is answered."
+      "note": "Hackathon scope (D-27) except F-17 (landing, built in Phase 3). AC-11.5 and AC-16.1 are Post-hackathon, and so is AC-08.3 (Q-12, founder 2026-09-27)."
     },
     "3": {
       "required": [
@@ -132,7 +131,6 @@
         "AC-07.4",
         "AC-08.1",
         "AC-08.2",
-        "AC-08.3",
         "AC-08.4",
         "AC-08.5",
         "AC-08.6",
@@ -160,7 +158,7 @@
         "AC-19.1"
       ],
       "visual": true,
-      "note": "Hackathon scope (D-27); visual tests required from Phase 3 (X-46)."
+      "note": "Hackathon scope (D-27, Q-12: without AC-08.3); visual tests required from Phase 3 (X-46)."
     },
     "4": {
       "required": [
@@ -194,7 +192,6 @@
         "AC-07.4",
         "AC-08.1",
         "AC-08.2",
-        "AC-08.3",
         "AC-08.4",
         "AC-08.5",
         "AC-08.6",

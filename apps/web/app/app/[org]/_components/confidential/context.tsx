@@ -1,10 +1,11 @@
 "use client";
 
 // The confidential session of an org page (setup, overview; 04 section 5, 10 section 3):
-// - the signed in wallet, connected again in this tab, with its message signer (the signed message is
-//   checked before use) and, when it can sign for this network, its transaction signer (the modifying
-//   signer of @solana/react, D-26);
-// - the crypto Web Worker, which holds the keys, with its auto lock and holds during executions;
+// - the signed in wallet, connected in this tab, with its message signer (the signed message is checked
+//   before use) and, when it can sign for this network, its transaction signer (the modifying signer of
+//   @solana/react, D-26);
+// - the tab's key session (the /app layout's KeySessionProvider): the crypto Web Worker that holds the
+//   keys across in-app navigation, its auto lock and holds during executions;
 // - the account data read from chain through /api/rpc: the public USDC and wUSDC balances, the wUSDC
 //   account's state, and the confidential balances the worker decrypts for display. Locked keys show
 //   as Locked, never as zero (AC-03.5), and every refresh reads chain state again (AC-04.4).
@@ -39,12 +40,14 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { createAutoLock } from "../../../../../lib/crypto-worker/auto-lock.ts";
 import { CryptoWorkerClient, CryptoWorkerError } from "../../../../../lib/crypto-worker/client.ts";
+import type { LockReason } from "../../../../../lib/crypto-worker/key-session.ts";
+import type { UnlockResult } from "../../../../../lib/crypto-worker/protocol.ts";
 import { browserRpc } from "../../../../../lib/client/rpc.ts";
 import { isWalletCancel } from "../../../../../lib/client/transactions.ts";
 import { walletInfo, type WalletInfo } from "../../../../../lib/client/wallet-report.ts";
 import type { NetworkView } from "../../../../../lib/server/network-view.ts";
+import { useKeySession } from "../../../_components/key-session.tsx";
 
 export type AvailableNetwork = Extract<NetworkView, { available: true }>;
 
@@ -52,11 +55,15 @@ export type SignProblem = "cancelled" | "refused" | "message_changed" | "bad_sig
 
 export type Vault = {
   worker: () => CryptoWorkerClient;
+  /** The keys of this page's signed in wallet, when unlocked in this tab. */
   unlocked: { elgamalPubkey: string } | null;
-  setUnlocked: (value: { elgamalPubkey: string } | null) => void;
+  unlock: (wallet: string, signature: Uint8Array) => Promise<UnlockResult>;
+  /** The Lock button. */
   lock: () => void;
   /** Keeps the keys open during an execution; call the returned function when done. */
   hold: () => () => void;
+  /** Why the keys last locked in this tab, until the next unlock. */
+  lockReason: LockReason | null;
 };
 
 export type Connected = {
@@ -118,42 +125,24 @@ export function useConfidential(): ContextValue {
   return value;
 }
 
-function useVault(): Vault {
-  const client = useRef<CryptoWorkerClient | null>(null);
-  const autoLock = useRef<ReturnType<typeof createAutoLock> | null>(null);
-  const [unlocked, setUnlocked] = useState<{ elgamalPubkey: string } | null>(null);
-
-  const lock = useCallback(() => {
-    client.current?.terminate();
-    client.current = null;
-    setUnlocked(null);
-  }, []);
-
-  useEffect(() => () => client.current?.terminate(), []);
-
+/** The tab's key session as this page's vault, for the page's signed in wallet only. */
+function useVault(wallet: string): Vault {
+  const { session, unlocked, lockReason } = useKeySession();
+  // A page of another signed in wallet (or none) ends the keys (key-session.ts).
   useEffect(() => {
-    if (!unlocked) return;
-    const auto = createAutoLock({ onLock: lock });
-    autoLock.current = auto;
-    const onActivity = () => auto.activity();
-    const onVisibility = () => auto.visibility(document.visibilityState === "hidden");
-    window.addEventListener("pointerdown", onActivity);
-    window.addEventListener("keydown", onActivity);
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      auto.stop();
-      autoLock.current = null;
-      window.removeEventListener("pointerdown", onActivity);
-      window.removeEventListener("keydown", onActivity);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [unlocked, lock]);
-
-  const worker = useCallback(() => (client.current ??= new CryptoWorkerClient()), []);
-  const hold = useCallback(() => autoLock.current?.hold() ?? (() => {}), []);
+    session.signedIn(wallet);
+  }, [session, wallet]);
+  const mine = unlocked?.wallet === wallet ? unlocked : null;
   return useMemo(
-    () => ({ worker, unlocked, setUnlocked, lock, hold }),
-    [worker, unlocked, lock, hold],
+    () => ({
+      worker: () => session.worker(),
+      unlocked: mine ? { elgamalPubkey: mine.elgamalPubkey } : null,
+      unlock: (owner: string, signature: Uint8Array) => session.unlock(owner, signature),
+      lock: () => session.lock("button"),
+      hold: () => session.hold(),
+      lockReason,
+    }),
+    [session, mine, lockReason],
   );
 }
 
@@ -252,10 +241,10 @@ export function ConfidentialProvider({
   children: ReactNode;
 }) {
   const wallets = useWallets().filter((w) => canHoldConfidentialBalances(walletCapabilities(w)));
-  const [shared, setShared] = useState<{ account: UiWalletAccount; wallet: UiWallet } | null>(null);
+  const { shared, setShared } = useKeySession();
   const setAccount = useCallback(
     (account: UiWalletAccount, from: UiWallet) => setShared({ account, wallet: from }),
-    [],
+    [setShared],
   );
   // The signed in wallet's account: shared on connect in this tab, or already authorized.
   const authorizedWallet =
@@ -265,7 +254,7 @@ export function ConfidentialProvider({
     authorizedWallet?.accounts.find((a) => a.address === wallet) ??
     null;
   const uiWallet = (shared?.account.address === wallet ? shared.wallet : null) ?? authorizedWallet;
-  const vault = useVault();
+  const vault = useVault(wallet);
   const ready = network.check.status === "ok" && network.wrappedMint !== null;
   const [data, setData] = useState<AccountData>(EMPTY);
   const request = useRef(0);

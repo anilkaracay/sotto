@@ -10,6 +10,7 @@ import { address, createNoopSigner, getBase64Decoder } from "@solana/kit";
 import type {
   ApplyInstructionResult,
   CheckAccountResult,
+  ClearResult,
   ConfirmSignatureResult,
   DecryptResult,
   SetupInstructionsResult,
@@ -190,6 +191,13 @@ export function createVault(load: () => Promise<VaultModules>) {
     }
   }
 
+  /** Zeroes and drops every key; the worker is terminated right after (key-session.ts). */
+  async function clearAll(): Promise<ClearResult> {
+    if (modules) clear(await sdk());
+    wallet = null;
+    return { cleared: true };
+  }
+
   function status(): StatusResult {
     return { wallet, unlocked: confidential !== null, viewing: viewing !== null };
   }
@@ -212,6 +220,8 @@ export function createVault(load: () => Promise<VaultModules>) {
         return decrypt(new Uint8Array(request.account));
       case "applyInstruction":
         return applyInstruction(request.token, new Uint8Array(request.account));
+      case "clear":
+        return clearAll();
     }
   }
 

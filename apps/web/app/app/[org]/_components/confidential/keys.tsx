@@ -17,6 +17,7 @@ import { useState, useTransition, type ReactNode } from "react";
 import { ApiCallError, callApi } from "../../../../../lib/client/api.ts";
 import { isWalletCancel } from "../../../../../lib/client/transactions.ts";
 import { CryptoWorkerClient, CryptoWorkerError } from "../../../../../lib/crypto-worker/client.ts";
+import type { LockReason } from "../../../../../lib/crypto-worker/key-session.ts";
 import { formatDate, shortWallet } from "../../../../../lib/format.ts";
 import styles from "./cards.module.css";
 import { useConfidential, type SignProblem } from "./context.tsx";
@@ -60,6 +61,14 @@ export function problemText(problem: Problem, detail?: string): ReactNode {
       return detail ?? "The viewing key could not be registered. Try again.";
   }
 }
+
+/** Why the keys locked on their own; Lock, sign out and reload need no words. */
+const LOCK_NOTE: Partial<Record<LockReason, string>> = {
+  idle: "The keys locked after 15 minutes without activity.",
+  hidden: "The keys locked after 5 minutes in another tab.",
+  wallet_change: "The keys locked because your wallet switched accounts.",
+  org_switch: "The keys locked because you switched organizations.",
+};
 
 const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
 const fromBase64 = (text: string) => Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
@@ -183,7 +192,7 @@ export function KeysCard({ className }: { className?: string }) {
         setProblem(signature);
         return;
       }
-      vault.setUnlocked(await vault.worker().unlock(wallet, signature));
+      await vault.unlock(wallet, signature);
     } catch (error) {
       setProblem(
         error instanceof CryptoWorkerError && error.code === "bad_signature"
@@ -213,8 +222,9 @@ export function KeysCard({ className }: { className?: string }) {
             </dd>
           </dl>
           <p className={styles.lead}>
-            The keys stay in this tab. They lock when you choose Lock, after 15 minutes without
-            activity, after 5 minutes in another tab, and when you reload or leave this page.
+            The keys stay in this tab, across its pages. They lock when you choose Lock, after 15
+            minutes without activity, after 5 minutes in another tab, when you reload, sign out or
+            switch organizations, and when your wallet switches accounts.
           </p>
           <div className={styles.actions}>
             <Button variant="line" onClick={vault.lock}>
@@ -224,6 +234,11 @@ export function KeysCard({ className }: { className?: string }) {
         </>
       ) : (
         <>
+          {vault.lockReason && LOCK_NOTE[vault.lockReason] ? (
+            <p className={styles.lead} data-testid="lock-note">
+              {LOCK_NOTE[vault.lockReason]}
+            </p>
+          ) : null}
           <Explainer />
           <div className={styles.actions}>
             <Button variant="blue" disabled={!connected || busy} onClick={unlock}>

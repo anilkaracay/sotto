@@ -52,6 +52,7 @@ export class CryptoWorkerClient {
   >();
   private nextId = 1;
   private terminated = false;
+  private closing = false;
 
   constructor(worker: WorkerLike = createCryptoWorker()) {
     this.worker = worker;
@@ -89,8 +90,12 @@ export class CryptoWorkerClient {
     message: DistributiveOmit<WorkerRequest, "id">,
     transfer: Transferable[] = [],
   ): Promise<WorkerResult> {
+    const clearing = message.type === "clear";
+    if (this.closing && !clearing) throw new CryptoWorkerError("locked", "The keys are locked");
     await this.ready;
-    if (this.terminated) throw new CryptoWorkerError("locked", "The keys are locked");
+    if (this.terminated || (this.closing && !clearing)) {
+      throw new CryptoWorkerError("locked", "The keys are locked");
+    }
     const id = this.nextId++;
     return new Promise<WorkerResult>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
@@ -162,7 +167,20 @@ export class CryptoWorkerClient {
     return result.instruction;
   }
 
-  /** Locks: terminates the worker, so every key in it is gone. */
+  /**
+   * Locks: asks the vault to zero every key it holds, then terminates the worker, so the keys and the
+   * WASM memory go with it. The worker is terminated after at most `timeoutMs` even if the vault does
+   * not answer; nothing else can be requested once closing started.
+   */
+  async close(timeoutMs = 500): Promise<void> {
+    if (this.terminated || this.closing) return;
+    const clearing = this.request({ type: "clear" }).catch(() => undefined);
+    this.closing = true;
+    await Promise.race([clearing, new Promise((resolve) => setTimeout(resolve, timeoutMs))]);
+    this.terminate();
+  }
+
+  /** Terminates the worker at once, so every key in it is gone. */
   terminate(): void {
     if (this.terminated) return;
     this.terminated = true;

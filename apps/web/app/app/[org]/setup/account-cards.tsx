@@ -8,17 +8,20 @@
 //   whose signatures differ is refused and reported with its name and version. Then one transaction
 //   from getCreateConfidentialTransferAccountInstructionPlan (built in the worker), the read back of
 //   06 section 3 step 4 and the record of POST /api/token-accounts.
-// - Fund your account (AC-04.1 to AC-04.3): wrap, deposit and apply, each followed by balances read
-//   from chain (AC-04.4), and the apply prompt of the worker's flag.
+// - Fund your account (AC-04.1 to AC-04.3): two signatures (step 1.7.1): wrap and deposit in one
+//   transaction when it fits the wallet's transaction version, then apply after a fresh read; a
+//   deposit of public wUSDC on its own; balances read from chain after each (AC-04.4); the apply
+//   prompt of the worker's flag.
 import {
   accountSetupStatus,
   confidentialDepositInstruction,
   formatTokenAmount,
   parseTokenAmount,
   readTokenAccountState,
+  wrapAndDepositTransactions,
 } from "@sotto/sdk/confidential/public";
 import { confidentialKeysMessage } from "@sotto/sdk/keys/public";
-import { createWrappedMintInstructions, wrapInstructions } from "@sotto/sdk/wrap";
+import { createWrappedMintInstructions } from "@sotto/sdk/wrap";
 import { Button, Card, Chip } from "@sotto/ui";
 import { address, createNoopSigner, fetchEncodedAccount } from "@solana/kit";
 import { useRouter } from "next/navigation";
@@ -376,9 +379,10 @@ export function AccountCard({ recorded }: { recorded: RecordedAccount | null }) 
 }
 
 export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) {
-  const { wallet, network, ready, vault, data } = useConfidential();
+  const { wallet, network, ready, vault, data, connected } = useConfidential();
   const sending = useSend();
   const [text, setText] = useState("");
+  const [split, setSplit] = useState<string | null>(null);
   const inputId = useId();
   const decimals = network.decimals ?? 6;
   const amount = parseTokenAmount(text, decimals);
@@ -390,53 +394,14 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
   const owner = createNoopSigner(address(wallet));
   const shown = amount === null ? "" : formatTokenAmount(amount, decimals);
 
-  function wrap() {
-    if (amount === null || !network.usdcMint || !network.usdcTokenProgram) return;
-    const usdcMint = network.usdcMint;
-    const usdcTokenProgram = network.usdcTokenProgram;
-    void sending.send({
-      busy: "Wrapping USDC…",
-      done: `Wrapped ${shown} USDC into public wUSDC.`,
-      build: async () =>
-        (
-          await wrapInstructions({
-            owner,
-            unwrappedMint: address(usdcMint),
-            unwrappedTokenProgram: address(usdcTokenProgram),
-            programAddress: address(network.tokenWrapProgram),
-            amount,
-          })
-        ).instructions,
-    });
-  }
-
-  function deposit() {
-    if (amount === null || !data.wusdcAccount || !network.wrappedMint) return;
+  /** 06 section 4, step 3: the apply instruction is built from fresh account state. */
+  function applyStep(busy: string, done: string) {
+    if (!data.wusdcAccount) return Promise.resolve(false);
     const token = data.wusdcAccount;
-    const mint = network.wrappedMint;
-    void sending.send({
-      busy: "Depositing into your confidential balance…",
-      done: `Deposited ${shown} wUSDC into your pending balance.`,
-      build: async () => [
-        confidentialDepositInstruction({
-          token: address(token),
-          mint: address(mint),
-          owner,
-          amount,
-          decimals,
-        }),
-      ],
-    });
-  }
-
-  function apply() {
-    if (!data.wusdcAccount) return;
-    const token = data.wusdcAccount;
-    void sending.send({
-      busy: "Applying your pending balance…",
-      done: "Applied your pending balance to your available balance.",
+    return sending.send({
+      busy,
+      done,
       build: async () => {
-        // 06 section 4: the apply instruction is built from fresh account state.
         const account = await fetchEncodedAccount(browserRpc(), address(token), {
           commitment: "confirmed",
         });
@@ -446,14 +411,82 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
     });
   }
 
-  const limits = [
-    amount !== null && publicUsdc !== null && amount > publicUsdc
-      ? "more than your public USDC, so it cannot be wrapped"
-      : null,
-    amount !== null && publicWusdc !== null && amount > publicWusdc
-      ? "more than your public wUSDC, so it cannot be deposited"
-      : null,
-  ].filter((limit): limit is string => limit !== null);
+  /**
+   * Funding in two signatures (step 1.7.1): step 1 wraps and deposits in one transaction when it fits
+   * the wallet's transaction version, otherwise in two, and the reason is shown and reported; step 2
+   * applies after a fresh read.
+   */
+  async function fund() {
+    if (amount === null || !connected || !network.usdcMint || !network.usdcTokenProgram) return;
+    setSplit(null);
+    const plan = await wrapAndDepositTransactions({
+      owner,
+      unwrappedMint: address(network.usdcMint),
+      unwrappedTokenProgram: address(network.usdcTokenProgram),
+      programAddress: address(network.tokenWrapProgram),
+      amount,
+      decimals,
+      version: connected.version,
+    });
+    if (plan.split) {
+      setSplit(
+        `Wrap and deposit did not fit in one version ${connected.version} transaction (${plan.split.size} bytes, the limit is ${plan.split.limit}), so your wallet signs them one after the other.`,
+      );
+      reportWallet(connected.info, {
+        kind: "funding_split",
+        version: connected.version,
+        size: plan.split.size,
+        limit: plan.split.limit,
+      });
+    }
+    const parts = plan.transactions.length;
+    for (const [index, instructions] of plan.transactions.entries()) {
+      const what =
+        parts === 1
+          ? `wrapping ${shown} USDC and depositing it`
+          : index === 0
+            ? `wrapping ${shown} USDC (transaction 1 of 2)`
+            : `depositing ${shown} wUSDC (transaction 2 of 2)`;
+      const landed = await sending.send({
+        busy: `Step 1 of 2: ${what}…`,
+        done: `Step 1 of 2 done: ${shown} wUSDC is in your pending balance.`,
+        build: async () => instructions,
+      });
+      if (!landed) return;
+    }
+    await applyStep(
+      `Step 2 of 2: applying ${shown} wUSDC to your available balance…`,
+      `Funded ${shown} wUSDC in two steps: wrapped and deposited, then applied to your available balance.`,
+    );
+  }
+
+  function depositPublic() {
+    if (!publicWusdc || !data.wusdcAccount || !network.wrappedMint) return;
+    const token = data.wusdcAccount;
+    const mint = network.wrappedMint;
+    const all = publicWusdc;
+    void sending.send({
+      busy: "Depositing your public wUSDC…",
+      done: `Deposited ${formatTokenAmount(all, decimals)} public wUSDC into your pending balance.`,
+      build: async () => [
+        confidentialDepositInstruction({
+          token: address(token),
+          mint: address(mint),
+          owner,
+          amount: all,
+          decimals,
+        }),
+      ],
+    });
+  }
+
+  function apply() {
+    void applyStep(
+      "Applying your pending balance…",
+      "Applied your pending balance to your available balance.",
+    );
+  }
+
   const promptNeeded =
     decrypted !== null &&
     applyPromptNeeded({
@@ -481,12 +514,12 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
       ) : (
         <>
           <p className={styles.lead}>
-            Wrap USDC into wUSDC ({network.wrapLabel}), deposit public wUSDC into your confidential
-            pending balance, then apply it to your available balance. Wrapped and deposited amounts
-            are public onchain; your confidential balance is not.
+            Funding takes two signatures. Step 1 wraps USDC into wUSDC ({network.wrapLabel}) and
+            deposits it into your confidential pending balance; step 2 applies it to your available
+            balance. The funded amount is public onchain; your confidential balance is not.
           </p>
           <label className={extra.field} htmlFor={inputId}>
-            Amount
+            Amount of USDC
             <span className={extra.amountRow}>
               <input
                 id={inputId}
@@ -506,37 +539,46 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
           ) : null}
           <div className={extra.steps}>
             <Button
-              variant="line"
-              disabled={!idle || amount === null || publicUsdc === null || amount > publicUsdc}
-              onClick={wrap}
-            >
-              Wrap USDC
-            </Button>
-            <Button
-              variant="line"
-              disabled={!idle || amount === null || publicWusdc === null || amount > publicWusdc}
-              onClick={deposit}
-            >
-              Deposit to confidential
-            </Button>
-            <Button
               variant="blue"
-              disabled={!idle || !decrypted || decrypted.pending === 0n}
-              onClick={apply}
+              disabled={
+                !idle ||
+                !vault.unlocked ||
+                amount === null ||
+                publicUsdc === null ||
+                amount > publicUsdc
+              }
+              onClick={() => void fund()}
             >
-              Apply pending balance
+              Fund account
             </Button>
+            {publicWusdc ? (
+              <Button variant="line" disabled={!idle} onClick={depositPublic}>
+                Deposit {formatTokenAmount(publicWusdc, decimals)} public wUSDC
+              </Button>
+            ) : null}
+            {decrypted && decrypted.pending > 0n && !promptNeeded ? (
+              <Button variant="line" disabled={!idle} onClick={apply}>
+                Apply pending balance
+              </Button>
+            ) : null}
           </div>
-          {limits.length > 0 ? (
+          {amount !== null && publicUsdc !== null && amount > publicUsdc ? (
             <div className={extra.done} data-testid="amount-limits">
-              {shown} is {limits.join(", and ")}.
+              {shown} is more than your public USDC.
             </div>
           ) : null}
           {!vault.unlocked ? (
-            <div className={extra.done}>Unlock your keys to apply your pending balance.</div>
+            <div className={extra.done}>
+              Unlock your keys to fund: step 2 applies the deposit with your keys.
+            </div>
           ) : null}
         </>
       )}
+      {split ? (
+        <div className={extra.done} role="status" data-testid="funding-split">
+          {split}
+        </div>
+      ) : null}
       <Outcome state={sending} network={network.cluster} />
     </Card>
   );

@@ -1,9 +1,10 @@
 "use client";
 
-// The signed in app shell (09 sections 1 and 2): logo, top pill nav (only built screens, rule 6), the
-// network label (13 A25) and the org and role switcher, which lists the user's own memberships and
-// never impersonates anyone (09 section 1, 13 A9). An owned organization links to its onboarding
-// status; Sotto admins also get the business review console.
+// The signed in app shell (09 sections 1 and 2): logo, top pill nav (only built screens, rule 6; client
+// side links, so the tab's keys survive the navigation), the network label (13 A25) and the org and role
+// switcher, which lists the user's own memberships and never impersonates anyone (09 section 1, 13 A9).
+// An owned organization links to its onboarding status; Sotto admins also get the business review
+// console. Signing out ends the tab's keys.
 import { Chip, TopNav, type TopNavItem } from "@sotto/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -12,6 +13,7 @@ import { signOut } from "../../../lib/client/auth.ts";
 import { shortWallet } from "../../../lib/format.ts";
 import { orgStatusLabel } from "../../../lib/org.ts";
 import type { MeView } from "../../../lib/server/me.ts";
+import { useKeySession } from "./key-session.tsx";
 import { Logo } from "./logo.tsx";
 import styles from "./shell.module.css";
 
@@ -35,6 +37,7 @@ export function AppShell({
   children: ReactNode;
 }) {
   const router = useRouter();
+  const keys = useKeySession();
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const menuId = useId();
@@ -69,7 +72,7 @@ export function AppShell({
       <header className={styles.top}>
         <Logo />
         <div className={styles.middle}>
-          <TopNav items={nav} />
+          <TopNav items={nav} link={Link} />
         </div>
         <div className={styles.right}>
           <Chip tone="blue" data-testid="network-label">
@@ -173,6 +176,8 @@ export function AppShell({
               disabled={signingOut}
               onClick={async () => {
                 setSigningOut(true);
+                // Signing out ends the tab's keys first (10 section 3).
+                keys.session.signOut();
                 try {
                   await signOut();
                 } finally {

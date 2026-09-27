@@ -8,7 +8,8 @@
 // out given signatures for the next messages instead of its own, as a wallet with randomized
 // signatures would (window.__sottoTestWallet.queueSignatures, base64). Since step 1.7 it signs
 // legacy and version 0 transactions (solana:signTransaction) for localnet flows, and counts them
-// (window.__sottoTestWallet.signedTransactions). It registers through the Wallet Standard events
+// (window.__sottoTestWallet.signedTransactions); since step 1.7.1 it can switch to another account
+// (window.__sottoTestWallet.switchAccount). It registers through the Wallet Standard events
 // (wallet-standard:register-wallet and wallet-standard:app-ready).
 (() => {
   const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -77,8 +78,8 @@
   // PKCS #8 prefix of a raw Ed25519 private key (RFC 8410).
   const PKCS8_ED25519 = [48, 46, 2, 1, 0, 48, 5, 6, 3, 43, 101, 112, 4, 34, 4, 32];
 
-  async function createKeys() {
-    if (Array.isArray(fixed) && fixed.length === 64) {
+  async function createKeys(fresh = false) {
+    if (!fresh && Array.isArray(fixed) && fixed.length === 64) {
       const pkcs8 = new Uint8Array([...PKCS8_ED25519, ...fixed.slice(0, 32)]);
       const privateKey = await crypto.subtle.importKey("pkcs8", pkcs8, { name: "Ed25519" }, false, [
         "sign",
@@ -90,9 +91,9 @@
     return { privateKey: pair.privateKey, publicKey };
   }
 
-  async function ensureAccount() {
-    if (account) return account;
-    keys = await createKeys();
+  async function ensureAccount(fresh = false) {
+    if (account && !fresh) return account;
+    keys = await createKeys(fresh);
     const publicKey = keys.publicKey;
     account = Object.freeze({
       address: base58(publicKey),
@@ -257,6 +258,12 @@
     },
     queueSignatures(signatures) {
       queued = [...signatures];
+    },
+    // Switches to a new account with a random key, as a user switching accounts in a wallet does.
+    async switchAccount() {
+      const next = await ensureAccount(true);
+      emit({ accounts: [next] });
+      return next.address;
     },
   };
 })();

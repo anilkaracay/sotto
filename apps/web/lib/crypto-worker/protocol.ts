@@ -14,7 +14,9 @@ export type WorkerRequest =
   | { id: number; type: "confirmSignature"; wallet: string; signature: ArrayBuffer }
   | { id: number; type: "setupInstructions"; mint: string }
   | { id: number; type: "decrypt"; account: ArrayBuffer }
-  | { id: number; type: "applyInstruction"; token: string; account: ArrayBuffer };
+  | { id: number; type: "applyInstruction"; token: string; account: ArrayBuffer }
+  /** Before the worker is terminated: zero every key, the viewing key and the signature digest. */
+  | { id: number; type: "clear" };
 
 export type UnlockResult = { elgamalPubkey: string };
 export type CheckAccountResult = { matches: boolean };
@@ -31,6 +33,7 @@ export type DecryptResult = {
   maximumPendingBalanceCreditCounter: bigint;
 };
 export type ApplyInstructionResult = { instruction: PortableInstruction };
+export type ClearResult = { cleared: true };
 export type WorkerResult =
   | UnlockResult
   | CheckAccountResult
@@ -39,7 +42,8 @@ export type WorkerResult =
   | ConfirmSignatureResult
   | SetupInstructionsResult
   | DecryptResult
-  | ApplyInstructionResult;
+  | ApplyInstructionResult
+  | ClearResult;
 
 export type WorkerErrorCode =
   "bad_signature" | "not_unlocked" | "key_mismatch" | "not_confidential" | "wrong_owner" | "failed";

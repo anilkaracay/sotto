@@ -155,6 +155,89 @@ describe("key vault (inside the worker)", () => {
 
 const MINT = address("AhJfP4JJBaHWRtXRiaScZUC7SMm4RqUPSb3g9H5RT8Bd");
 
+describe("locking (step 1.7.1)", () => {
+  it("AC-03.5 leaves no key material in the vault after a lock: keys, viewing key and digest are zeroed", async () => {
+    const held: Uint8Array[] = [];
+    const vault = createVault(async () => {
+      const modules = await loadVaultModules();
+      return {
+        ...modules,
+        deriveStandardKeys: async (...args: Parameters<typeof modules.deriveStandardKeys>) => {
+          const keys = await modules.deriveStandardKeys(...args);
+          held.push(keys.elgamalSecretKey, keys.aeKey);
+          return keys;
+        },
+        deriveViewingKey: async (...args: Parameters<typeof modules.deriveViewingKey>) => {
+          const keys = await modules.deriveViewingKey(...args);
+          held.push(keys.secretKey);
+          return keys;
+        },
+      };
+    });
+    const wallet = await testWallet(CLI_SEED);
+    await vault.handle({
+      id: 1,
+      type: "unlock",
+      wallet: wallet.address,
+      signature: (await wallet.sign(confidentialKeysMessage())).buffer,
+    });
+    await vault.handle({
+      id: 2,
+      type: "unlockViewing",
+      wallet: wallet.address,
+      signature: (await wallet.sign(viewKeyMessage(wallet.address))).buffer,
+    });
+    expect(held).toHaveLength(3);
+    expect(held.every((bytes) => bytes.some((byte) => byte !== 0))).toBe(true);
+
+    expect(await vault.handle({ id: 3, type: "clear" })).toEqual({
+      id: 3,
+      ok: true,
+      result: { cleared: true },
+    });
+    expect(held.every((bytes) => bytes.every((byte) => byte === 0))).toBe(true);
+    expect(await vault.handle({ id: 4, type: "status" })).toEqual({
+      id: 4,
+      ok: true,
+      result: { wallet: null, unlocked: false, viewing: false },
+    });
+    // Nothing that needs the keys or the unlock signature's digest works any more.
+    expect(await vault.handle({ id: 5, type: "setupInstructions", mint: MINT })).toMatchObject({
+      error: { code: "not_unlocked" },
+    });
+    expect(
+      await vault.handle({
+        id: 6,
+        type: "confirmSignature",
+        wallet: wallet.address,
+        signature: (await wallet.sign(confidentialKeysMessage())).buffer,
+      }),
+    ).toMatchObject({ error: { code: "not_unlocked" } });
+  });
+
+  it("closes the worker after the vault cleared, or after a timeout, and refuses requests meanwhile", async () => {
+    const answered = fakeWorker();
+    const client = new CryptoWorkerClient(answered.worker);
+    answered.worker.respond({ type: "ready" });
+    const closing = client.close();
+    await vi.waitFor(() => expect(answered.posted).toHaveLength(1));
+    const [request] = answered.posted;
+    expect(request?.message.type).toBe("clear");
+    await expect(client.status()).rejects.toMatchObject({ code: "locked" });
+    expect(answered.isTerminated()).toBe(false);
+    answered.worker.respond({ id: request?.message.id ?? 0, ok: true, result: { cleared: true } });
+    await closing;
+    expect(answered.isTerminated()).toBe(true);
+
+    // A worker that never answers is terminated after the timeout.
+    const silent = fakeWorker();
+    const stuck = new CryptoWorkerClient(silent.worker);
+    silent.worker.respond({ type: "ready" });
+    await stuck.close(20);
+    expect(silent.isTerminated()).toBe(true);
+  });
+});
+
 describe("account work in the vault (step 1.7)", () => {
   it("AC-03.3 refuses account setup when the wallet's second key signature differs (determinism check)", async () => {
     const vault = createVault(loadVaultModules);

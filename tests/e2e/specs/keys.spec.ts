@@ -177,9 +177,10 @@ test("AC-03.2 unlocks only after the click, derives the CLI's key in the worker 
     expect(storage.local + storage.session + storage.cookie).not.toContain(pattern);
   }
 
-  // Locking ends the keys; a reload starts Locked again and shows no key.
+  // Locking ends the keys and the crypto worker; a reload starts Locked again and shows no key.
   await page.getByRole("button", { name: "Lock" }).click();
   await expect(page.getByTestId("keys-status")).toHaveText("Locked");
+  await expect.poll(() => page.workers().length).toBe(0);
   await page.getByRole("button", { name: "Unlock with your wallet" }).click();
   await expect(page.getByTestId("keys-status")).toHaveText("Unlocked");
   await page.reload();

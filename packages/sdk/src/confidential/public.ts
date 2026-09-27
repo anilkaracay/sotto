@@ -1,6 +1,8 @@
 // The key free part of the confidential accounts module: public state reads, the confidential
-// deposit and token amounts. No zk-sdk, so pages, servers and the worker load it without the WASM.
+// deposit, wrap and deposit in one transaction, and token amounts. No zk-sdk, so pages, servers and
+// the worker load it without the WASM.
 export { formatTokenAmount, parseTokenAmount } from "./amounts.ts";
+export { fundingTransactions, wrapAndDepositTransactions, type WrapAndDeposit } from "./funding.ts";
 export {
   accountSetupStatus,
   APPLY_FLAG_PERCENT,

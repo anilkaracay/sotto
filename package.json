@@ -14,7 +14,8 @@
     "test": "turbo run test",
     "format": "prettier --write .",
     "program:build": "cargo-build-sbf --manifest-path programs/sotto_proofs/Cargo.toml -- --locked",
-    "program:test": "cargo test --locked -p sotto_proofs"
+    "program:test": "cargo test --locked -p sotto_proofs",
+    "ci:local": "scripts/ci-local.sh"
   },
   "prettier": "@sotto/config/prettier",
   "devDependencies": {

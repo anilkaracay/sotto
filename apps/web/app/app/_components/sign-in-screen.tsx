@@ -8,9 +8,10 @@ import { Button, Card, Chip } from "@sotto/ui";
 import { useSignIn, useSignMessage } from "@solana/react";
 import { useConnect, useWallets } from "@wallet-standard/react";
 import type { UiWallet, UiWalletAccount } from "@wallet-standard/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { completeSignIn, describeWalletError, requestSignIn } from "../../../lib/client/auth.ts";
+import { safeNextPath } from "../../../lib/next-path.ts";
 import { shortWallet } from "../../../lib/format.ts";
 import { Logo } from "./logo.tsx";
 import styles from "./sign-in.module.css";
@@ -118,14 +119,18 @@ type SignerProps = {
   setStatus: (status: Status) => void;
 };
 
-/** Runs a sign in flow, then opens /app, which the new session cookie now unlocks. */
+/**
+ * Runs a sign in flow, then opens /app, which the new session cookie now unlocks, or the app page the
+ * visitor came from (`?next=`, for example an invite link; step 1.8).
+ */
 function useSignInRunner(setStatus: (status: Status) => void) {
   const router = useRouter();
+  const next = safeNextPath(useSearchParams().get("next"));
   return async (flow: () => Promise<void>) => {
     setStatus({ busy: true, error: null });
     try {
       await flow();
-      router.replace("/app");
+      router.replace(next);
       router.refresh();
     } catch (error) {
       setStatus({ busy: false, error: describeWalletError(error) });

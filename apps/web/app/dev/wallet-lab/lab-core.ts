@@ -1,5 +1,5 @@
 // Transaction and signature helpers for the dev only wallet lab. RPC calls go to the dev only proxy
-// /dev/wallet-lab/rpc, which forwards allow listed methods to HELIUS_DEVNET_URL. Production code
+// /dev/wallet-lab/rpc, which forwards allow listed methods to RPC_URL. Production code
 // goes through /api/rpc.
 import {
   address,
@@ -31,7 +31,7 @@ import { getTransferSolInstruction } from "@solana-program/system";
 
 /** Dev only proxy route (app/dev/wallet-lab/rpc/route.ts). */
 export const LAB_RPC_PATH = "/dev/wallet-lab/rpc";
-export const LAB_RPC_DESCRIPTION = `devnet through ${LAB_RPC_PATH} (HELIUS_DEVNET_URL)`;
+export const LAB_RPC_DESCRIPTION = `devnet through ${LAB_RPC_PATH} (RPC_URL)`;
 /** 429 handling: up to 3 retries with exponential backoff (1 s, 2 s, 4 s). */
 export const MAX_RPC_RETRIES = 3;
 export const RETRY_BASE_DELAY_MS = 1000;

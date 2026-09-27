@@ -10,16 +10,18 @@ export const LAB_RPC_METHODS = [
   "getTransaction",
 ] as const;
 
-export const HELIUS_URL_ERROR = "HELIUS_DEVNET_URL is not set or invalid";
+export const RPC_URL_ERROR = "RPC_URL is not set or invalid";
 
 /**
- * Valid only if the value is an https URL on a helius-rpc.com host and contains "helius-rpc.com"
- * exactly once (a doubled URL was seen in step 0.3). The value itself is never returned in errors.
+ * RPC_URL in apps/web/.env.local is the Helius devnet URL (ENGINEERING-RULES.md "Local configuration and
+ * secrets", 14 section 2). Valid only if the value is an https URL on a helius-rpc.com host and
+ * contains "helius-rpc.com" exactly once (a doubled URL was seen in step 0.3). The value itself is
+ * never returned in errors.
  */
-export function validateHeliusUrl(
+export function validateRpcUrl(
   value: string | undefined,
 ): { ok: true; url: string } | { ok: false; error: string } {
-  const fail = { ok: false as const, error: HELIUS_URL_ERROR };
+  const fail = { ok: false as const, error: RPC_URL_ERROR };
   if (!value) return fail;
   if (value.split("helius-rpc.com").length - 1 !== 1) return fail;
   let parsed: URL;

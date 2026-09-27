@@ -7,9 +7,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { MAX_RPC_RETRIES, retryingTransport } from "../app/dev/wallet-lab/lab-core";
 import {
   checkLabRpcRequest,
-  HELIUS_URL_ERROR,
   LAB_RPC_METHODS,
-  validateHeliusUrl,
+  RPC_URL_ERROR,
+  validateRpcUrl,
 } from "../app/dev/wallet-lab/rpc-proxy";
 import { POST } from "../app/dev/wallet-lab/rpc/route";
 
@@ -31,9 +31,9 @@ function notFoundDigest(run: () => Promise<unknown>): Promise<string | undefined
   );
 }
 
-describe("validateHeliusUrl", () => {
+describe("validateRpcUrl", () => {
   it("accepts an https helius-rpc.com URL that contains the host once", () => {
-    expect(validateHeliusUrl(VALID_URL)).toEqual({ ok: true, url: VALID_URL });
+    expect(validateRpcUrl(VALID_URL)).toEqual({ ok: true, url: VALID_URL });
   });
 
   it("rejects missing, doubled, non Helius and non https values without echoing them", () => {
@@ -46,8 +46,8 @@ describe("validateHeliusUrl", () => {
       "https://helius-rpc.com.example.org/?api-key=test",
       "not a url helius-rpc.com",
     ]) {
-      const result = validateHeliusUrl(value);
-      expect(result).toEqual({ ok: false, error: HELIUS_URL_ERROR });
+      const result = validateRpcUrl(value);
+      expect(result).toEqual({ ok: false, error: RPC_URL_ERROR });
     }
   });
 });
@@ -95,30 +95,42 @@ describe("POST /dev/wallet-lab/rpc", () => {
 
   it("is a 404 outside development", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("HELIUS_DEVNET_URL", VALID_URL);
+    vi.stubEnv("RPC_URL", VALID_URL);
     expect(
       await notFoundDigest(() => POST(rpcRequest({ jsonrpc: "2.0", id: 1, method: "getBalance" }))),
     ).toMatch(/404/);
   });
 
-  it("reports a missing or invalid HELIUS_DEVNET_URL", async () => {
+  it("reports a missing or invalid RPC_URL", async () => {
     vi.stubEnv("NODE_ENV", "development");
     for (const value of [
       "",
       "https://devnet.helius-rpc.com/?api-key=https://devnet.helius-rpc.com/?api-key=test",
     ]) {
-      vi.stubEnv("HELIUS_DEVNET_URL", value);
+      vi.stubEnv("RPC_URL", value);
       const response = await POST(rpcRequest({ jsonrpc: "2.0", id: 1, method: "getBalance" }));
       expect(response.status).toBe(500);
-      expect(response.statusText).toBe(HELIUS_URL_ERROR);
+      expect(response.statusText).toBe(RPC_URL_ERROR);
       const body = (await response.json()) as { error: { message: string } };
-      expect(body.error.message).toBe(HELIUS_URL_ERROR);
+      expect(body.error.message).toBe(RPC_URL_ERROR);
     }
+  });
+
+  it("no longer reads HELIUS_DEVNET_URL (step 1.1)", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("HELIUS_DEVNET_URL", VALID_URL);
+    vi.stubEnv("RPC_URL", "");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await POST(rpcRequest({ jsonrpc: "2.0", id: 1, method: "getBalance" }));
+    expect(response.status).toBe(500);
+    expect(response.statusText).toBe(RPC_URL_ERROR);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("refuses a method outside the allow list without calling upstream", async () => {
     vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("HELIUS_DEVNET_URL", VALID_URL);
+    vi.stubEnv("RPC_URL", VALID_URL);
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     const response = await POST(rpcRequest({ jsonrpc: "2.0", id: 7, method: "requestAirdrop" }));
@@ -126,9 +138,9 @@ describe("POST /dev/wallet-lab/rpc", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("forwards allowed methods to HELIUS_DEVNET_URL and never returns the URL", async () => {
+  it("forwards allowed methods to RPC_URL and never returns the URL", async () => {
     vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("HELIUS_DEVNET_URL", VALID_URL);
+    vi.stubEnv("RPC_URL", VALID_URL);
     const fetchMock = vi.fn(async () =>
       Response.json({ jsonrpc: "2.0", id: 3, result: { value: { blockhash: "x" } } }),
     );
@@ -147,7 +159,7 @@ describe("POST /dev/wallet-lab/rpc", () => {
 
   it("passes an upstream 429 through and hides upstream failures", async () => {
     vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("HELIUS_DEVNET_URL", VALID_URL);
+    vi.stubEnv("RPC_URL", VALID_URL);
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => new Response("Too Many Requests", { status: 429 })),

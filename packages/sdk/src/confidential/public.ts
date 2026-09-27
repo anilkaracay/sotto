@@ -17,10 +17,12 @@ export {
   readPublicTokenBalance,
   readTokenAccountState,
   readTokenAccountStateWithSlot,
+  recipientReadiness,
   tokenAccountState,
   type AccountCheck,
   type AccountSetupStatus,
   type ConfidentialState,
   type PublicTokenBalance,
+  type RecipientReadiness,
   type TokenAccountState,
 } from "./state.ts";

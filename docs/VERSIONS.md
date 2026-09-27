@@ -275,3 +275,21 @@ SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/sdk test:local
 SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/worker test:localnet    # includes pending-credits
 pnpm build && scripts/db-local.sh test-up && pnpm --filter @sotto/e2e e2e:localnet        # browser flows on localnet (fresh validator)
 ```
+
+## Step 1.8 (2026-09-27): recipients, invites and the disclosure engine
+
+No new package versions: sealed boxes use `libsodium-wrappers-sumo` 0.8.4 from step 1.5 (facts I6).
+
+| Item | Version | Resolved on | Source | Notes |
+|---|---|---|---|---|
+| Database migration | `0003_invite_recipient` | 2026-09-27 | `packages/db/migrations` (drizzle-kit 0.31.11 generate) | `invites.recipient_id` with its index and the checks `invites_token_sha256` and `invites_recipient_role` |
+| New SDK entries | `@sotto/sdk/disclosure`, `@sotto/sdk/disclosure/seal` | 2026-09-27 | `packages/sdk/package.json` | The first has no libsodium (servers and pages); the second holds the sealed boxes and is loaded by the crypto worker |
+
+Commands:
+
+```sh
+pnpm --filter @sotto/sdk exec vitest run disclosure                                        # canonical JSON, payload, sealed boxes, manifests
+scripts/localnet.sh &  node scripts/bootstrap-localnet.ts                                  # fresh validator and bootstrap
+SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/worker test:localnet    # includes recipient-readiness
+pnpm build && scripts/db-local.sh test-up && pnpm --filter @sotto/e2e e2e:localnet        # includes the recipients spec (fresh validator)
+```

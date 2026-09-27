@@ -231,7 +231,7 @@ H8. `solana-keygen` 4.2.2 `recover 'prompt://?key=0/0'` derives the account at m
 H6. Genesis hashes: devnet `EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG` (the Helius devnet RPC and the public devnet RPC agree), mainnet `5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d` (public mainnet RPC, read only `getGenesisHash`). Every localnet ledger has its own. Scripts that write to chain compare the endpoint's genesis hash with the cluster they were asked for and refuse mainnet (`clusterFromGenesisHash` in `packages/sdk/src/cluster/config.ts`, used by `bootstrap:sas`).
 **VERIFIED** 2026-09-27 · devnet, mainnet (read only) · step 1.1.
 
-## I. Browser runtime and wallets (verified in steps 1.5 and 1.7)
+## I. Browser runtime and wallets (verified in steps 1.5, 1.7 and 1.8)
 
 I1. `@solana/zk-sdk` 0.5.3 runs inside a module Web Worker bundled by Turbopack (next 16.3.6), in `next dev` and in the production build. `@solana-program/token-2022/confidential` imports `@solana/zk-sdk/bundler`, whose `index.js` imports `index_bg.wasm` as a module; Turbopack emits it (production: `.next/static/chunks/<hash>.wasm`, byte identical to the package file, SHA-256 `802bd267…80c8`) and serves it as `application/wasm`. Loading took about 100 ms in dev and 170 ms in production on this machine, the derivation a few milliseconds. A worker module that imports the WASM statically attaches its message handler only after the WASM has loaded, and a message the page posts when it creates the worker is lost; the Sotto worker therefore attaches its handler first, reports ready, and loads the WASM on the first request.
 **VERIFIED** 2026-09-27 · Chrome for Testing 153 · step 1.5.
@@ -247,3 +247,11 @@ I4. Wallet Standard and `@solana/react` 8.3.0: a wallet's `version` is the versi
 
 I5. An Ed25519 signature made with a random nonce instead of the RFC 8032 deterministic one verifies under WebCrypto (`@solana/kit` `verifySignature`) and libsodium like any other: a wallet that signs this way gives a different valid signature of `solana-conf-bal/v1` each time, and so different confidential keys. Sotto's test helper `randomizedEd25519Signature` makes such signatures with libsodium's scalar operations.
 **VERIFIED** 2026-09-27 · Node 24 and Chrome for Testing · step 1.7 (unit tests and the localnet E2E determinism check).
+
+I6. `libsodium-wrappers-sumo` 0.8.4 `crypto_box_seal(message, publicKey)` makes an anonymous sealed box of exactly the message length plus 48 bytes (`crypto_box_SEALBYTES` is 48: the ephemeral X25519 public key and the MAC), and `crypto_box_seal_open(ciphertext, publicKey, privateKey)` opens it only with the recipient's keypair; with another keypair it throws "incorrect key pair for the given ciphertext". Both work in the Turbopack Web Worker.
+**VERIFIED** 2026-09-27 · Node 24.21.0 and Chrome for Testing · step 1.8 (a direct check, the SDK disclosure tests and the localnet E2E default amount sealed and opened in the tab's worker).
+
+## J. Server runtime (verified in step 1.8)
+
+J1. In Node 24 (undici), `new Response(body, { statusText })` requires the status text to be a ByteString: a character above U+00FF, for example "…" (U+2026), throws `TypeError: Cannot convert argument to a ByteString`, while Latin-1 is accepted. The Sotto API error format passes the error message as the status text (`apps/web/lib/server/errors.ts`), so API error messages must stay Latin-1; Sotto keeps them ASCII.
+**VERIFIED** 2026-09-27 · Node 24.21.0 · step 1.8 (a direct check; found when the invite wrong wallet message contained a shortened address with "…").

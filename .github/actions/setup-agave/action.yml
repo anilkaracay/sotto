@@ -1,0 +1,33 @@
+name: Set up Agave
+description: Installs the pinned Agave release with the official Anza installer and caches it.
+inputs:
+  version:
+    description: Agave release version without the leading v
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Cache Agave install and platform tools
+      id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.local/share/solana/install
+          ~/.cache/solana
+        key: agave-${{ runner.os }}-${{ inputs.version }}
+    - name: Install Agave ${{ inputs.version }}
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      # Installer URL from https://docs.anza.xyz/cli/install (release tag in the path).
+      run: sh -c "$(curl -sSfL https://release.anza.xyz/v${{ inputs.version }}/install)"
+    - name: Add Agave to PATH
+      shell: bash
+      run: echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+    - name: Check versions
+      shell: bash
+      run: |
+        solana --version
+        solana --version | grep -q "solana-cli ${{ inputs.version }} "
+        cargo-build-sbf --version
+        cargo-build-sbf --version | head -1 | grep -q "cargo-build-sbf 4.1.0"
+        spl-token --version

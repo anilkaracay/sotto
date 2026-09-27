@@ -26,12 +26,36 @@ export function scrub(text: string): string {
     .replace(/(api[-_]?key|apikey|token|secret)=[^\s"'&<>]*/gi, "$1=" + REDACTED);
 }
 
+// A failed Drizzle query names its parameters in the message ("Failed query: ...\nparams: ..."),
+// and those can be what a user typed. Only the statement is kept; the database error comes from the
+// cause, without its detail (which can repeat the row).
+function redactError(error: Error): Record<string, unknown> {
+  const out: Record<string, unknown> = {
+    name: error.name,
+    message: scrub(error.message.split("\nparams:")[0] ?? ""),
+  };
+  const cause: unknown = error.cause;
+  if (cause instanceof Error) {
+    const { code, constraint_name: constraint } = cause as {
+      code?: unknown;
+      constraint_name?: unknown;
+    };
+    out.cause = {
+      name: cause.name,
+      message: scrub(cause.message),
+      ...(typeof code === "string" ? { code } : {}),
+      ...(typeof constraint === "string" ? { constraint } : {}),
+    };
+  }
+  return out;
+}
+
 export function redact(value: unknown, depth = 0): unknown {
   if (typeof value === "string") return scrub(value);
   if (typeof value === "bigint") return value.toString();
   if (value === null || typeof value !== "object") return value;
   if (depth >= 6) return REDACTED;
-  if (value instanceof Error) return { name: value.name, message: scrub(value.message) };
+  if (value instanceof Error) return redactError(value);
   if (value instanceof Uint8Array) return REDACTED;
   if (Array.isArray(value)) return value.map((item) => redact(item, depth + 1));
   const out: Record<string, unknown> = {};

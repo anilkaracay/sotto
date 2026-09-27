@@ -5,6 +5,7 @@
 import { createDb } from "@sotto/db";
 import { createRetryingRpc } from "@sotto/sdk/tx";
 import { ConfigError, loadWorkerConfig } from "./config.ts";
+import { pendingCreditsJob } from "./jobs/pending-credits.ts";
 import { runJobs } from "./jobs/runner.ts";
 import { sasIssueJob } from "./jobs/sas-issue.ts";
 import { loadKeypairSigner } from "./keypair.ts";
@@ -50,6 +51,7 @@ export async function main(
       credential: config.sasCredentialAddress,
       schemaAddress: config.sasSchemaAddress,
     }),
+    pendingCreditsJob({ db, rpc }),
   ];
   log("worker_started", { jobs: jobs.map((job) => job.name), once, signer: signer.address });
   try {

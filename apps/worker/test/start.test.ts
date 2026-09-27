@@ -54,7 +54,7 @@ describe("worker start without .env.local (hosted)", () => {
 
   function hostedEnv(): Record<string, string> {
     return {
-      // No org needs work, so the job makes no RPC call; the URL is still validated.
+      // No org or token account needs work, so the jobs make no RPC call; the URL is still validated.
       RPC_URL: `https://rpc.example.com/?api-key=${SENTINEL}`,
       DATABASE_URL: database.url,
       SAS_SIGNER_KEYPAIR: keypairFile,
@@ -70,6 +70,7 @@ describe("worker start without .env.local (hosted)", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('"event":"worker_started"');
     expect(result.stdout).toContain('"job":"sas-issue"');
+    expect(result.stdout).toContain('"job":"pending-credits"');
     expect(result.stdout).toContain('"event":"worker_stopped"');
     expect(result.stdout).not.toContain(SENTINEL);
   });

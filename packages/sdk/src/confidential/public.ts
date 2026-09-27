@@ -11,6 +11,7 @@ export {
   confidentialExtension,
   creditCounterNeedsApply,
   decodeToken2022Account,
+  readMintInfo,
   readPublicTokenBalance,
   readTokenAccountState,
   readTokenAccountStateWithSlot,

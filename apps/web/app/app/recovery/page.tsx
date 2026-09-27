@@ -7,7 +7,7 @@ import { getClusterConfig } from "@sotto/sdk/cluster";
 import { Card, Chip } from "@sotto/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { networkLabel } from "../../../lib/network.ts";
+import { currentNetworkLabel } from "../../../lib/network.ts";
 import { Logo } from "../_components/logo.tsx";
 import styles from "./recovery.module.css";
 
@@ -29,7 +29,7 @@ export default function RecoveryPage() {
     <div className={styles.page}>
       <header className={styles.top}>
         <Logo />
-        <Chip tone="blue">{networkLabel(process.env.NEXT_PUBLIC_CLUSTER)}</Chip>
+        <Chip tone="blue">{currentNetworkLabel()}</Chip>
       </header>
       <main className={styles.body}>
         <Card className={styles.card}>

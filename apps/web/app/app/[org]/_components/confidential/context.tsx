@@ -1,0 +1,378 @@
+"use client";
+
+// The confidential session of an org page (setup, overview; 04 section 5, 10 section 3):
+// - the signed in wallet, connected again in this tab, with its message signer (the signed message is
+//   checked before use) and, when it can sign for this network, its transaction signer (the modifying
+//   signer of @solana/react, D-26);
+// - the crypto Web Worker, which holds the keys, with its auto lock and holds during executions;
+// - the account data read from chain through /api/rpc: the public USDC and wUSDC balances, the wUSDC
+//   account's state, and the confidential balances the worker decrypts for display. Locked keys show
+//   as Locked, never as zero (AC-03.5), and every refresh reads chain state again (AC-04.4).
+import {
+  associatedTokenAccount,
+  readPublicTokenBalance,
+  tokenAccountState,
+  type PublicTokenBalance,
+  type TokenAccountState,
+} from "@sotto/sdk/confidential/public";
+import { checkSignedMessage } from "@sotto/sdk/keys/public";
+import {
+  canHoldConfidentialBalances,
+  transactionPath,
+  walletCapabilities,
+} from "@sotto/sdk/wallet";
+import { useSignMessage, useWalletAccountTransactionSigner } from "@solana/react";
+import { address, fetchEncodedAccount, type TransactionModifyingSigner } from "@solana/kit";
+import {
+  getWalletFeature,
+  useWallets,
+  type UiWallet,
+  type UiWalletAccount,
+} from "@wallet-standard/react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { createAutoLock } from "../../../../../lib/crypto-worker/auto-lock.ts";
+import { CryptoWorkerClient, CryptoWorkerError } from "../../../../../lib/crypto-worker/client.ts";
+import { browserRpc } from "../../../../../lib/client/rpc.ts";
+import { isWalletCancel } from "../../../../../lib/client/transactions.ts";
+import { walletInfo, type WalletInfo } from "../../../../../lib/client/wallet-report.ts";
+import type { NetworkView } from "../../../../../lib/server/network-view.ts";
+
+export type AvailableNetwork = Extract<NetworkView, { available: true }>;
+
+export type SignProblem = "cancelled" | "refused" | "message_changed" | "bad_signature";
+
+export type Vault = {
+  worker: () => CryptoWorkerClient;
+  unlocked: { elgamalPubkey: string } | null;
+  setUnlocked: (value: { elgamalPubkey: string } | null) => void;
+  lock: () => void;
+  /** Keeps the keys open during an execution; call the returned function when done. */
+  hold: () => () => void;
+};
+
+export type Connected = {
+  account: UiWalletAccount;
+  info: WalletInfo;
+  /** Signs exactly these bytes, or says why not; the signature verifies for the wallet. */
+  sign: (message: Uint8Array) => Promise<Uint8Array | SignProblem>;
+  /** Null when the wallet cannot sign transactions for this network's chain. */
+  signer: TransactionModifyingSigner | null;
+  /** The transaction version for this wallet and network (D-26). */
+  version: 0 | 1;
+};
+
+/** What the Available and Pending cards show. */
+export type ConfidentialView =
+  | { kind: "locked"; configured: boolean }
+  | { kind: "not_set_up" }
+  | { kind: "unreadable"; reason: string }
+  | {
+      kind: "decrypted";
+      available: bigint;
+      pending: bigint;
+      credits: bigint;
+      maximumCredits: bigint;
+    };
+
+export type AccountData = {
+  loading: boolean;
+  /** Set when the chain could not be read. */
+  error: string | null;
+  usdcAccount: string | null;
+  wusdcAccount: string | null;
+  usdc: PublicTokenBalance | null;
+  wusdc: TokenAccountState | null;
+  confidential: ConfidentialView;
+};
+
+type ContextValue = {
+  wallet: string;
+  orgId: string;
+  network: AvailableNetwork;
+  /** Wallets in this browser that can hold confidential balances (D-26). */
+  wallets: UiWallet[];
+  /** Records the account a wallet shared on connect. */
+  setAccount: (account: UiWalletAccount, wallet: UiWallet) => void;
+  /** Chain reads are possible: the startup verification passed. */
+  ready: boolean;
+  vault: Vault;
+  connected: Connected | null;
+  data: AccountData;
+  refresh: () => Promise<void>;
+};
+
+const ConfidentialContext = createContext<ContextValue | null>(null);
+
+export function useConfidential(): ContextValue {
+  const value = useContext(ConfidentialContext);
+  if (!value) throw new Error("useConfidential needs a ConfidentialProvider");
+  return value;
+}
+
+function useVault(): Vault {
+  const client = useRef<CryptoWorkerClient | null>(null);
+  const autoLock = useRef<ReturnType<typeof createAutoLock> | null>(null);
+  const [unlocked, setUnlocked] = useState<{ elgamalPubkey: string } | null>(null);
+
+  const lock = useCallback(() => {
+    client.current?.terminate();
+    client.current = null;
+    setUnlocked(null);
+  }, []);
+
+  useEffect(() => () => client.current?.terminate(), []);
+
+  useEffect(() => {
+    if (!unlocked) return;
+    const auto = createAutoLock({ onLock: lock });
+    autoLock.current = auto;
+    const onActivity = () => auto.activity();
+    const onVisibility = () => auto.visibility(document.visibilityState === "hidden");
+    window.addEventListener("pointerdown", onActivity);
+    window.addEventListener("keydown", onActivity);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      auto.stop();
+      autoLock.current = null;
+      window.removeEventListener("pointerdown", onActivity);
+      window.removeEventListener("keydown", onActivity);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [unlocked, lock]);
+
+  const worker = useCallback(() => (client.current ??= new CryptoWorkerClient()), []);
+  const hold = useCallback(() => autoLock.current?.hold() ?? (() => {}), []);
+  return useMemo(
+    () => ({ worker, unlocked, setUnlocked, lock, hold }),
+    [worker, unlocked, lock, hold],
+  );
+}
+
+const EMPTY: AccountData = {
+  loading: true,
+  error: null,
+  usdcAccount: null,
+  wusdcAccount: null,
+  usdc: null,
+  wusdc: null,
+  confidential: { kind: "locked", configured: false },
+};
+
+/** The version of transactions this wallet signs on this network: v1 only if both support it. */
+function versionFor(wallet: UiWallet, networkV1: boolean): 0 | 1 {
+  if (!networkV1 || !wallet.features.includes("solana:signTransaction")) return 0;
+  const feature = getWalletFeature(wallet, "solana:signTransaction");
+  const capabilities = walletCapabilities({
+    chains: wallet.chains,
+    features: { "solana:signTransaction": feature },
+  });
+  return transactionPath(capabilities) === "v1" ? 1 : 0;
+}
+
+/** The account data of the signed in wallet, read from chain and decrypted in the worker if unlocked. */
+async function readAccountData(input: {
+  wallet: string;
+  network: AvailableNetwork;
+  unlocked: boolean;
+  vault: Vault;
+}): Promise<AccountData> {
+  const { network } = input;
+  if (!network.wrappedMint) return { ...EMPTY, loading: false };
+  try {
+    const rpc = browserRpc();
+    const owner = address(input.wallet);
+    const wusdcAccount = await associatedTokenAccount(owner, address(network.wrappedMint));
+    const usdcAccount =
+      network.usdcMint && network.usdcTokenProgram
+        ? await associatedTokenAccount(
+            owner,
+            address(network.usdcMint),
+            address(network.usdcTokenProgram),
+          )
+        : null;
+    const [encoded, usdc] = await Promise.all([
+      fetchEncodedAccount(rpc, wusdcAccount, { commitment: "confirmed" }),
+      usdcAccount ? readPublicTokenBalance(rpc, usdcAccount) : Promise.resolve(null),
+    ]);
+    const wusdc = tokenAccountState(encoded);
+    const configured = wusdc.status === "present" && wusdc.confidential !== null;
+    let confidential: ConfidentialView;
+    if (!input.unlocked) {
+      confidential = { kind: "locked", configured };
+    } else if (!configured || !encoded.exists) {
+      confidential = { kind: "not_set_up" };
+    } else {
+      try {
+        const decrypted = await input.vault.worker().decrypt(new Uint8Array(encoded.data));
+        confidential = {
+          kind: "decrypted",
+          available: decrypted.available,
+          pending: decrypted.pending,
+          credits: decrypted.pendingBalanceCreditCounter,
+          maximumCredits: decrypted.maximumPendingBalanceCreditCounter,
+        };
+      } catch (error) {
+        confidential =
+          error instanceof CryptoWorkerError && error.code === "locked"
+            ? { kind: "locked", configured }
+            : {
+                kind: "unreadable",
+                reason: error instanceof CryptoWorkerError ? error.code : "failed",
+              };
+      }
+    }
+    return { loading: false, error: null, usdcAccount, wusdcAccount, usdc, wusdc, confidential };
+  } catch {
+    return {
+      ...EMPTY,
+      loading: false,
+      error: "The balances could not be read from the network. Try again.",
+    };
+  }
+}
+
+export function ConfidentialProvider({
+  wallet,
+  orgId,
+  network,
+  children,
+}: {
+  wallet: string;
+  orgId: string;
+  network: AvailableNetwork;
+  children: ReactNode;
+}) {
+  const wallets = useWallets().filter((w) => canHoldConfidentialBalances(walletCapabilities(w)));
+  const [shared, setShared] = useState<{ account: UiWalletAccount; wallet: UiWallet } | null>(null);
+  const setAccount = useCallback(
+    (account: UiWalletAccount, from: UiWallet) => setShared({ account, wallet: from }),
+    [],
+  );
+  // The signed in wallet's account: shared on connect in this tab, or already authorized.
+  const authorizedWallet =
+    wallets.find((w) => w.accounts.some((a) => a.address === wallet)) ?? null;
+  const account =
+    (shared?.account.address === wallet ? shared.account : null) ??
+    authorizedWallet?.accounts.find((a) => a.address === wallet) ??
+    null;
+  const uiWallet = (shared?.account.address === wallet ? shared.wallet : null) ?? authorizedWallet;
+  const vault = useVault();
+  const ready = network.check.status === "ok" && network.wrappedMint !== null;
+  const [data, setData] = useState<AccountData>(EMPTY);
+  const request = useRef(0);
+
+  /** Reads everything from chain once; the caller decides whether the result is still wanted. */
+  const read = useCallback(
+    () => readAccountData({ wallet, network, unlocked: vault.unlocked !== null, vault }),
+    [wallet, network, vault],
+  );
+
+  // Every change of the keys (unlock, lock) reads the chain again: Locked shows no number.
+  useEffect(() => {
+    if (!ready) return;
+    const id = ++request.current;
+    void read().then((next) => {
+      if (id === request.current) setData(next);
+    });
+  }, [ready, read]);
+
+  /** Reads chain state again after a step (AC-04.4); the last values stay while it reads. */
+  const refresh = useCallback(async () => {
+    if (!ready) return;
+    const id = ++request.current;
+    setData((current) => ({ ...current, loading: true, error: null }));
+    const next = await read();
+    if (id === request.current) setData(next);
+  }, [ready, read]);
+
+  const base = { wallet, orgId, network, wallets, setAccount, ready, vault, data, refresh };
+  if (!account || !uiWallet) {
+    return (
+      <ConfidentialContext.Provider value={{ ...base, connected: null }}>
+        {children}
+      </ConfidentialContext.Provider>
+    );
+  }
+  return (
+    <ConnectedLayer base={base} account={account} uiWallet={uiWallet}>
+      {children}
+    </ConnectedLayer>
+  );
+}
+
+function ConnectedLayer({
+  base,
+  account,
+  uiWallet,
+  children,
+}: {
+  base: Omit<ContextValue, "connected">;
+  account: UiWalletAccount;
+  uiWallet: UiWallet;
+  children: ReactNode;
+}) {
+  const signMessage = useSignMessage(account);
+  const wallet = base.wallet;
+  const sign = useCallback(
+    async (message: Uint8Array): Promise<Uint8Array | SignProblem> => {
+      let output: { signedMessage: Uint8Array; signature: Uint8Array };
+      try {
+        output = await signMessage({ message });
+      } catch (error) {
+        return isWalletCancel(error) ? "cancelled" : "refused";
+      }
+      const signature = new Uint8Array(output.signature);
+      const check = await checkSignedMessage({
+        wallet,
+        requested: message,
+        signedMessage: new Uint8Array(output.signedMessage),
+        signature,
+      });
+      if (!check.ok) {
+        signature.fill(0);
+        return check.reason;
+      }
+      return signature;
+    },
+    [signMessage, wallet],
+  );
+  const info = useMemo(() => walletInfo(uiWallet), [uiWallet]);
+  const version = versionFor(uiWallet, base.network.v1);
+  const provide = (signer: TransactionModifyingSigner | null) => (
+    <ConfidentialContext.Provider
+      value={{ ...base, connected: { account, info, sign, signer, version } }}
+    >
+      {children}
+    </ConfidentialContext.Provider>
+  );
+  // The signer hook refuses, while rendering, an account that does not offer the chain.
+  return account.chains.includes(base.network.chain) ? (
+    <TransactionSigner account={account} chain={base.network.chain}>
+      {provide}
+    </TransactionSigner>
+  ) : (
+    provide(null)
+  );
+}
+
+function TransactionSigner({
+  account,
+  chain,
+  children,
+}: {
+  account: UiWalletAccount;
+  chain: `solana:${string}`;
+  children: (signer: TransactionModifyingSigner) => ReactNode;
+}) {
+  const signer = useWalletAccountTransactionSigner(account, chain);
+  return <>{children(signer)}</>;
+}

@@ -1,4 +1,5 @@
-/* The setup page, built on the app tokens (no design exists for its keys part, 13 A36). */
+/* The cards of the org pages (setup, overview), built on the app tokens: no design exists for the keys,
+   account and funding parts (13 A36, A37). */
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);

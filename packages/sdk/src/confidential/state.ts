@@ -5,11 +5,12 @@
 import {
   findAssociatedTokenPda,
   getConfidentialDepositInstruction,
+  getMintDecoder as getMint2022Decoder,
   getTokenDecoder as getToken2022Decoder,
   TOKEN_2022_PROGRAM_ADDRESS,
   type Token,
 } from "@solana-program/token-2022";
-import { getTokenDecoder, TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
+import { getMintDecoder, getTokenDecoder, TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
 import {
   fetchEncodedAccount,
   parseBase64RpcAccount,
@@ -227,6 +228,29 @@ export function accountSetupStatus(
     default:
       return { kind: "wrong_account", reason: check.reason };
   }
+}
+
+/** A mint's token program and decimals (SPL Token or Token-2022), or null when it does not exist. */
+export async function readMintInfo(
+  rpc: Rpc<GetAccountInfoApi>,
+  mint: Address,
+): Promise<{ programAddress: Address; decimals: number } | null> {
+  const account = await fetchEncodedAccount(rpc, mint, { commitment: "confirmed" });
+  if (!account.exists) return null;
+  const data = new Uint8Array(account.data);
+  if (account.programAddress === TOKEN_PROGRAM_ADDRESS) {
+    return {
+      programAddress: account.programAddress,
+      decimals: getMintDecoder().decode(data).decimals,
+    };
+  }
+  if (account.programAddress === TOKEN_2022_PROGRAM_ADDRESS) {
+    return {
+      programAddress: account.programAddress,
+      decimals: getMint2022Decoder().decode(data).decimals,
+    };
+  }
+  return null;
 }
 
 /** AC-04.3: the worker flags accounts whose credit counter is at or above 80 percent of its maximum. */

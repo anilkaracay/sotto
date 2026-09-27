@@ -3,11 +3,12 @@
 // balances and typed amounts.
 import {
   AccountState,
+  getMintEncoder as getMint2022Encoder,
   getTokenEncoder as getToken2022Encoder,
   TOKEN_2022_PROGRAM_ADDRESS,
   type Token,
 } from "@solana-program/token-2022";
-import { getTokenEncoder, TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
+import { getMintEncoder, getTokenEncoder, TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
 import { address, getBase64Decoder, lamports, none, some, type Address } from "@solana/kit";
 import { describe, expect, it } from "vitest";
 import {
@@ -15,6 +16,7 @@ import {
   checkConfidentialAccount,
   creditCounterNeedsApply,
   parseTokenAmount,
+  readMintInfo,
   readPublicTokenBalance,
   tokenAccountState,
   type ConfidentialState,
@@ -250,5 +252,39 @@ describe("public token balances (AC-03.4, AC-05.1)", () => {
     expect(
       await readPublicTokenBalance(rpcWith({ owner: OTHER, data: new Uint8Array(165) }), TOKEN),
     ).toMatchObject({ status: "invalid" });
+  });
+
+  it("reads a mint's token program and decimals", async () => {
+    const splMint = getMintEncoder().encode({
+      mintAuthority: some(OWNER),
+      supply: 1n,
+      decimals: 6,
+      isInitialized: true,
+      freezeAuthority: none(),
+    });
+    expect(
+      await readMintInfo(
+        rpcWith({ owner: TOKEN_PROGRAM_ADDRESS, data: new Uint8Array(splMint) }),
+        MINT,
+      ),
+    ).toEqual({ programAddress: TOKEN_PROGRAM_ADDRESS, decimals: 6 });
+    const t22Mint = getMint2022Encoder().encode({
+      mintAuthority: none(),
+      supply: 0n,
+      decimals: 9,
+      isInitialized: true,
+      freezeAuthority: none(),
+      extensions: none(),
+    });
+    expect(
+      await readMintInfo(
+        rpcWith({ owner: TOKEN_2022_PROGRAM_ADDRESS, data: new Uint8Array(t22Mint) }),
+        MINT,
+      ),
+    ).toEqual({ programAddress: TOKEN_2022_PROGRAM_ADDRESS, decimals: 9 });
+    expect(await readMintInfo(rpcWith(null), MINT)).toBeNull();
+    expect(
+      await readMintInfo(rpcWith({ owner: OTHER, data: new Uint8Array(82) }), MINT),
+    ).toBeNull();
   });
 });

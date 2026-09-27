@@ -1,0 +1,136 @@
+/* The confidential account parts of the org pages (setup, overview), built on the app tokens: no
+   approved design exists for them (13 A37); the balance figures follow the design's card label and
+   figure (.lbl2, .bmv). Two classes where the theme's paragraph reset would win. */
+.balances {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+.balancesHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 2px 12px;
+}
+.sectionTitle {
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.status {
+  font-size: 13px;
+  color: var(--faint);
+}
+.balanceGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.balanceCard {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.balanceHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 26px;
+}
+.balanceLabel {
+  font-size: 15px;
+  color: var(--ink2);
+}
+.figure {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 48px;
+  margin: 10px 0 14px;
+}
+.figure b {
+  font-size: 34px;
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  overflow-wrap: anywhere;
+}
+.unit {
+  font-size: 15px;
+  color: var(--faint);
+}
+.muted {
+  font-size: 15px;
+  color: var(--muted);
+}
+.skeleton {
+  display: inline-block;
+  width: 60%;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--soft);
+}
+.balanceCard .balanceNote {
+  margin-top: auto;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--faint);
+}
+.wrapLabel {
+  color: var(--amber);
+  font-weight: 500;
+}
+.banner {
+  grid-column: 1 / -1;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: #fff4e0;
+  color: #8a5200;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+  font-size: 13.5px;
+  color: var(--ink2);
+}
+.amountRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+}
+.input:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+.done {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.prompt {
+  grid-column: 1 / -1;
+}

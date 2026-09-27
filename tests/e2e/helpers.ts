@@ -4,9 +4,19 @@ import { expect, type Page } from "@playwright/test";
 
 export const TEST_WALLET = fileURLToPath(new URL("./test-wallet.js", import.meta.url));
 
-/** Signs in with the injected test wallet and returns its address. */
-export async function signIn(page: Page): Promise<string> {
+/** Adds the test wallet to every page load, optionally with a fixed keypair (see fixtures.ts). */
+export async function addTestWallet(page: Page, keypair?: number[]): Promise<void> {
+  if (keypair) {
+    await page.addInitScript({
+      content: `window.__sottoTestWalletKeypair = ${JSON.stringify(keypair)};`,
+    });
+  }
   await page.addInitScript({ path: TEST_WALLET });
+}
+
+/** Signs in with the injected test wallet and returns its address. */
+export async function signIn(page: Page, keypair?: number[]): Promise<string> {
+  await addTestWallet(page, keypair);
   await page.goto("/app/sign-in");
   const option = page.getByTestId("wallet-option").filter({ hasText: "Sotto Test Wallet" });
   await option.getByRole("button", { name: "Connect" }).click();

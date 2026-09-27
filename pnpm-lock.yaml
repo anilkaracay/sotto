@@ -546,12 +546,18 @@ importers:
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.63.0
+      '@solana/kit':
+        specifier: 'catalog:'
+        version: 8.3.0(typescript@6.0.3)
       '@sotto/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@sotto/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@sotto/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.0

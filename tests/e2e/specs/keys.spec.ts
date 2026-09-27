@@ -1,0 +1,191 @@
+// F-03 keys in the browser (step 1.5, 10 sections 2 and 3): the owner of an active org unlocks the
+// confidential keys only with an explicit click; the crypto Web Worker derives the ElGamal key that the
+// spl-token CLI configured for the same keypair; no signature or key leaves the worker for the network
+// or storage (AC-03.2, I-2); the viewing key registers with a signature the browser can verify (I-8);
+// after a reload the keys are Locked again (the Locked state for AC-03.5; balances come in step 1.7).
+import { createPrivateKey, sign as ed25519Sign } from "node:crypto";
+import {
+  confidentialKeysMessage,
+  deriveStandardKeys,
+  deriveViewingKey,
+  viewKeyMessage,
+} from "@sotto/sdk/keys";
+import { verifyViewKeyRegistration } from "@sotto/sdk/keys/public";
+import { address, getBase58Decoder } from "@solana/kit";
+import { expect, test, type Page } from "@playwright/test";
+import {
+  E2E_ADMIN_WALLET,
+  E2E_CLI_ELGAMAL_KEY,
+  E2E_KEYPAIR_SEED,
+  e2eKeypair,
+} from "../fixtures.ts";
+import { signIn } from "../helpers.ts";
+
+const privateKey = createPrivateKey({
+  key: Buffer.concat([Buffer.from("302e020100300506032b657004220420", "hex"), E2E_KEYPAIR_SEED]),
+  format: "der",
+  type: "pkcs8",
+});
+const signWithTestKey = (message: Uint8Array) =>
+  new Uint8Array(ed25519Sign(null, message, privateKey));
+
+/** Every encoding a secret could travel in: hex, base64 and base58. */
+function encodings(bytes: Uint8Array): string[] {
+  return [
+    Buffer.from(bytes).toString("hex"),
+    Buffer.from(bytes).toString("base64"),
+    getBase58Decoder().decode(bytes),
+  ];
+}
+
+async function setRefused(page: Page, texts: string[]): Promise<void> {
+  await page.evaluate(
+    (refuse) =>
+      (
+        window as unknown as { __sottoTestWallet: { refuse: (texts: string[]) => void } }
+      ).__sottoTestWallet.refuse(refuse),
+    texts,
+  );
+}
+
+async function signedMessages(page: Page): Promise<string[]> {
+  return page.evaluate(
+    () =>
+      (window as unknown as { __sottoTestWallet: { signedMessages: string[] } }).__sottoTestWallet
+        .signedMessages,
+  );
+}
+
+test("AC-03.2 unlocks only after the click, derives the CLI's key in the worker and sends no key anywhere", async ({
+  page,
+  browser,
+}) => {
+  const wallet = await signIn(page, e2eKeypair());
+  expect(wallet).toBe(E2E_ADMIN_WALLET);
+
+  // An active org: create it, then approve it in the admin console (this wallet is an E2E admin).
+  await page.getByLabel("Legal name").fill("Keys Test Ltd");
+  await page.getByLabel("Country").selectOption("DE");
+  await page.getByLabel("Registration number").fill("HRB 1");
+  await page.getByLabel("Website").fill("keys.example");
+  await page.getByLabel("Contact email").fill("ops@keys.example");
+  await page.getByRole("button", { name: "Send for review" }).click();
+  await expect(page.getByTestId("org-status")).toHaveText("In review");
+  await page.goto("/app/admin");
+  await page.getByRole("button", { name: "Approve" }).click();
+  await page.getByRole("button", { name: "Confirm approve" }).click();
+  await expect(page.getByText("No organization is waiting for review.")).toBeVisible();
+
+  // /app opens the setup page of the active org, Locked, with the Q-09 explainer.
+  await page.goto("/app");
+  await expect(page).toHaveURL(/\/app\/[0-9a-f-]{36}\/setup$/);
+  await expect(page.getByTestId("keys-status")).toHaveText("Locked");
+  await expect(page.getByTestId("keys-card")).toContainText("solana-conf-bal/v1");
+  await expect(page.getByTestId("unlock-warning")).toContainText(
+    "can read the confidential balances of this wallet on every account, but can never move them. Only sign this in Sotto.",
+  );
+  await page.getByRole("button", { name: "Connect" }).click();
+  await expect(page.getByTestId("keys-wallet")).toContainText("EQMW…RLZC");
+  // Nothing has been signed for keys yet: the signature is requested only by the click (10 section 3).
+  expect(await signedMessages(page)).toEqual([]);
+
+  // A wallet that refuses the key message gets the clear message and the recovery guide (10 section
+  // 2, mitigation 3); the guide is public.
+  await setRefused(page, ["solana-conf-bal/v1"]);
+  await page.getByRole("button", { name: "Unlock with your wallet" }).click();
+  await expect(page.getByTestId("keys-card").getByRole("alert")).toContainText(
+    "Your wallet refused to sign the key message",
+  );
+  await expect(page.getByRole("link", { name: "Read the recovery guide" })).toHaveAttribute(
+    "href",
+    "/app/recovery",
+  );
+  await expect(page.getByTestId("keys-status")).toHaveText("Locked");
+  const baseURL = test.info().project.use.baseURL;
+  const visitor = await browser.newContext(baseURL ? { baseURL } : {});
+  const guide = await visitor.newPage();
+  await guide.goto("/app/recovery");
+  await expect(
+    guide.getByRole("heading", { name: "Reach your confidential balances without Sotto" }),
+  ).toBeVisible();
+  await expect(guide.getByText("spl-token withdraw-confidential-tokens")).toBeVisible();
+  await visitor.close();
+  await setRefused(page, []);
+
+  const traffic: string[] = [];
+  page.on("request", (request) => {
+    traffic.push(`${request.method()} ${request.url()} ${JSON.stringify(request.headers())}`);
+    traffic.push(request.postData() ?? "");
+  });
+
+  await page.getByRole("button", { name: "Unlock with your wallet" }).click();
+  await expect(page.getByTestId("keys-status")).toHaveText("Unlocked");
+  await expect(page.getByTestId("elgamal-public-key")).toHaveText(E2E_CLI_ELGAMAL_KEY);
+  expect(await signedMessages(page)).toEqual(["solana-conf-bal/v1"]);
+
+  // The viewing key: two signatures, then the registration the server stores (07 section 5).
+  await page.getByRole("button", { name: "Create viewing key" }).click();
+  await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
+  const viewSignature = signWithTestKey(viewKeyMessage(wallet));
+  const viewing = await deriveViewingKey(address(wallet), viewSignature);
+  const viewingPublic = Buffer.from(viewing.publicKey).toString("base64");
+  await expect(page.getByTestId("viewing-public-key")).toHaveText(viewingPublic);
+  expect(await signedMessages(page)).toEqual([
+    "solana-conf-bal/v1",
+    `sotto-view-key/v1\n${wallet}`,
+    `sotto-view-key-register/v1\n${viewingPublic}`,
+  ]);
+  const me = (await (await page.request.get("/api/me")).json()) as { user: { id: string } };
+  const stored = (await (await page.request.get(`/api/users/${me.user.id}/viewer-key`)).json()) as {
+    viewerKey: { wallet: string; publicKey: string; signature: string };
+  };
+  expect(stored.viewerKey.publicKey).toBe(viewingPublic);
+  expect(
+    await verifyViewKeyRegistration({
+      wallet: stored.viewerKey.wallet,
+      publicKey: new Uint8Array(Buffer.from(stored.viewerKey.publicKey, "base64")),
+      signature: new Uint8Array(Buffer.from(stored.viewerKey.signature, "base64")),
+    }),
+  ).toBe(true);
+
+  // No signature or key in any request (AC-03.2, I-2) or in browser storage (10 section 3).
+  const keySignature = signWithTestKey(confidentialKeysMessage());
+  const keys = await deriveStandardKeys(address(wallet), keySignature);
+  expect(keys.elgamalPubkey).toBe(E2E_CLI_ELGAMAL_KEY);
+  const secrets = [
+    keySignature,
+    keys.elgamalSecretKey,
+    keys.aeKey,
+    viewSignature,
+    viewing.secretKey,
+  ];
+  const patterns = secrets.flatMap(encodings);
+  const everything = traffic.join("\n");
+  // The capture sees request bodies: the registration body with the public viewing key is in it.
+  expect(everything).toContain("/api/viewer-keys");
+  expect(everything).toContain(viewingPublic);
+  for (const pattern of patterns) expect(everything).not.toContain(pattern);
+  const storage = await page.evaluate(async () => ({
+    local: JSON.stringify(Object.entries(localStorage)),
+    session: JSON.stringify(Object.entries(sessionStorage)),
+    cookie: document.cookie,
+    databases: (await indexedDB.databases()).map((db) => db.name),
+  }));
+  // Sotto opens no IndexedDB database; next dev adds its own debug channel, never present in builds.
+  expect(storage.databases.filter((name) => name !== "__next_debug_channel")).toEqual([]);
+  for (const pattern of patterns) {
+    expect(storage.local + storage.session + storage.cookie).not.toContain(pattern);
+  }
+
+  // Locking ends the keys; a reload starts Locked again and shows no key.
+  await page.getByRole("button", { name: "Lock" }).click();
+  await expect(page.getByTestId("keys-status")).toHaveText("Locked");
+  await page.getByRole("button", { name: "Unlock with your wallet" }).click();
+  await expect(page.getByTestId("keys-status")).toHaveText("Unlocked");
+  await page.reload();
+  await expect(page.getByTestId("keys-status")).toHaveText("Locked");
+  await expect(page.getByTestId("elgamal-public-key")).toHaveCount(0);
+  await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
+  // The Locked state for AC-03.5: the keys card shows Locked and the explainer, never a value.
+  await expect(page.getByTestId("keys-card")).toContainText("Unlock with your wallet");
+});

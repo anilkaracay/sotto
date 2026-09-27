@@ -145,11 +145,11 @@ jobs:
         run: scripts/localnet-smoke.sh
       - name: Bootstrap localnet (mints, escrow, SAS; .localnet/bootstrap.json)
         run: node scripts/bootstrap-localnet.ts
-      - name: SAS flow on localnet (worker, throwaway signer)
+      - name: SAS flow and pending credits on localnet (worker, throwaway signer)
         run: pnpm --filter @sotto/worker test:localnet
         env:
           SOTTO_LOCALNET_RPC_URL: http://127.0.0.1:8899
-      - name: Transaction rules and startup verification on localnet (sdk)
+      - name: Transaction rules, startup verification and confidential accounts on localnet (sdk)
         run: pnpm --filter @sotto/sdk test:localnet
         env:
           SOTTO_LOCALNET_RPC_URL: http://127.0.0.1:8899
@@ -157,6 +157,13 @@ jobs:
         run: pnpm --filter @sotto/scripts test:localnet
         env:
           SOTTO_LOCALNET_RPC_URL: http://127.0.0.1:8899
+      # The browser flows that send transactions (step 1.7) need the production build on this runner.
+      - name: Build the web app for the localnet browser flows
+        run: pnpm --filter @sotto/web build
+      - name: Install the Playwright browser
+        run: pnpm --filter @sotto/e2e exec playwright install --with-deps chromium
+      - name: Browser flows on localnet (Playwright, injected test wallet)
+        run: pnpm --filter @sotto/e2e e2e:localnet
       - name: Upload validator logs
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

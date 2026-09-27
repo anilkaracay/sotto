@@ -28,7 +28,6 @@ JOBS=(node program localnet checks)
 RESULTS=()
 DURATIONS=()
 VALIDATOR_PID=""
-TEST_DB_STARTED=""
 
 # Pinned gitleaks release tarball checksums (from gitleaks_8.30.1_checksums.txt).
 gitleaks_expected_sha() {
@@ -66,13 +65,7 @@ stop_validator() {
   VALIDATOR_PID=""
 }
 
-job_node() {
-  require_version "node" "$(node --version | sed 's/^v//')" "$NODE_VERSION" &&
-    require_version "pnpm" "$(pnpm --version)" "$PNPM_VERSION" &&
-    run pnpm install --frozen-lockfile || return 1
-  # API and database tests need the test Postgres (docs/11-TESTING.md); removed on exit.
-  TEST_DB_STARTED="yes"
-  run scripts/db-local.sh test-up || return 1
+node_steps() {
   if [[ -n "$FULL" ]]; then
     # Same tasks as the root scripts, with the Turborepo cache ignored.
     run pnpm exec turbo run lint --force &&
@@ -88,6 +81,19 @@ job_node() {
       run pnpm build &&
       run python3 scripts/checks/build-output.py
   fi
+}
+
+job_node() {
+  require_version "node" "$(node --version | sed 's/^v//')" "$NODE_VERSION" &&
+    require_version "pnpm" "$(pnpm --version)" "$PNPM_VERSION" &&
+    run pnpm install --frozen-lockfile || return 1
+  # API and database tests need the test Postgres (docs/11-TESTING.md). The job removes it when it
+  # ends; on_exit removes it too, after a failure or an interrupt (jobs run in a subshell).
+  run scripts/db-local.sh test-up || return 1
+  local status=0
+  node_steps || status=1
+  run scripts/db-local.sh test-down
+  return "$status"
 }
 
 # Full mode: remove the SBF build (cargo-build-sbf uses target/sbpf-solana-solana, which the host
@@ -203,10 +209,7 @@ print_summary() {
 }
 
 stop_test_db() {
-  if [[ -n "$TEST_DB_STARTED" ]]; then
-    scripts/db-local.sh test-down >/dev/null 2>&1
-    TEST_DB_STARTED=""
-  fi
+  "$ROOT/scripts/db-local.sh" test-down >/dev/null 2>&1 || true
 }
 
 on_exit() {

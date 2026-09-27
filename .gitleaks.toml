@@ -1,11 +1,17 @@
 # gitleaks configuration: the default rules plus a narrow allowlist of public Solana addresses.
-# Program IDs are public onchain data, not secrets. The generic-api-key rule flags them when the
-# variable name contains "token". Add an address here only if it is public (docs/02-VERIFIED-FACTS.md).
+# Addresses are public onchain data, not secrets. The generic-api-key rule flags them when the
+# variable name contains a keyword such as "token" or "credential". Add an address here only if it is
+# public and recorded in docs/02-VERIFIED-FACTS.md.
 [extend]
 useDefault = true
 
 [[allowlists]]
-description = "Public Solana program IDs (facts C8)"
+description = "Public Solana addresses (facts C8, E7)"
 regexes = [
+  # Sotto devnet test deployment of Token Wrap (C8).
   '''^EEvqpjNRQkNRwXzVziuTGGi1wYDiPv7haYVVu3XZCoQn$''',
+  # Wallet A, the Token Wrap upgrade authority (C8), used as a test address.
+  '''^7SSpLJh516AbWiV5GM7ooZFTHoQN64pdohYxbDs3Gq4L$''',
+  # Sotto SAS credential on devnet (E7).
+  '''^4KX4P7he62x5x8X35vubNNhJRhV4vJXPGNsc8skPyKFT$''',
 ]

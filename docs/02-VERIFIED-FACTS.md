@@ -130,6 +130,8 @@ C9. `Wrap` through the Sotto deployment works with `getWrapInstruction(input, { 
 D1. Transaction format v1 raises the maximum size from 1232 to 4096 bytes (SIMD-0296, SIMD-0385). Legacy and v0 keep working.
 Source: https://solana.com/de/upgrades/larger-transaction-sizes
 
+Also 2026-09-27 · step 1.7.1: `@solana/kit` 8.3 measures these limits per version (`getTransactionSize`, `getTransactionSizeLimit`: `LEGACY_TRANSACTION_SIZE_LIMIT` 1232 for legacy and v0, `V1_TRANSACTION_SIZE_LIMIT` 4096 for v1). Sotto's combined wrap and deposit transaction, with its compute budget, measures 588 bytes as v0 and 557 bytes as v1 with the devnet mints (`measureTransaction`); 40 SOL transfers do not fit v0 and fit v1 (unit test).
+
 D2. v1 was activated on mainnet at the start of epoch 1035 on 15 September 2026. RPC calls to `getBlock` and `getTransaction` must pass `maxSupportedTransactionVersion: 1` (integer) or they fail with error `-32015` on blocks containing v1 transactions.
 Source: https://www.ankr.com/docs/changelog/solana-transaction-v1-2026-09-15/
 **VERIFIED and REFINED** 2026-09-26 · mainnet, devnet · G1 part 1, task 1 and part 2, task 5: `enable_tx_v1` activated on mainnet at slot 447120000, epoch 1035, 2026-09-15 01:04:23 UTC. `getBlock` on blocks containing v1 transactions (Helius devnet and mainnet, public devnet) with `transactionDetails: "full"` succeeds with `maxSupportedTransactionVersion: 1` and fails with `-32015` "Transaction version (1) is not supported by the requesting client" with `0` or with the parameter omitted. With `transactionDetails: "signatures"` the same requests succeed: `-32015` occurs only when transactions are requested with full details. `getTransaction` was not tested for this.

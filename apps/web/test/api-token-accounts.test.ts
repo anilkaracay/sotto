@@ -4,6 +4,7 @@
 import { memberships, orgs, recipients, tokenAccounts, users } from "@sotto/db";
 import type { TestDatabase } from "@sotto/db/testing";
 import { getClusterConfig } from "@sotto/sdk/cluster";
+import { associatedTokenAccount } from "@sotto/sdk/confidential/public";
 import { confidentialTokenAccount, encodeToken2022Account } from "@sotto/sdk/testing";
 import { address, getAddressDecoder, getBase64Decoder, type Address } from "@solana/kit";
 import { eq } from "drizzle-orm";
@@ -117,12 +118,12 @@ async function owner(status: "pending_review" | "active" | "suspended" = "active
   return { ...user, orgId };
 }
 
-/** A token account onchain; returns its address. */
+/** A token account onchain, at a random address unless one is given; returns its address. */
 function onchain(
   token: Parameters<typeof confidentialTokenAccount>[0],
   program: string = TOKEN_2022,
+  at: string = randomAddress(),
 ): string {
-  const at = randomAddress();
   chain.set(at, { owner: program, data: encodeToken2022Account(confidentialTokenAccount(token)) });
   return at;
 }
@@ -162,7 +163,7 @@ describe("POST /api/token-accounts", () => {
     expect(rows[0]).toMatchObject({ userId: user.userId, applyFlaggedAt: null });
   });
 
-  it("AC-07.3 lets a recipient record its own account, which makes the recipient ready", async () => {
+  it("AC-07.3 lets a recipient record its own associated account, which makes the recipient ready", async () => {
     const org = await owner();
     const person = await createUserWithSession(test);
     await test.db
@@ -178,17 +179,36 @@ describe("POST /api/token-accounts", () => {
       })
       .returning({ id: recipients.id, readiness: recipients.readiness });
     expect(row?.readiness).toBe("no_account");
-    const account = onchain({ owner: address(person.wallet), mint: WUSDC, elgamalPubkey: ELGAMAL });
+    const readiness = async () =>
+      (
+        await test.db
+          .select({ readiness: recipients.readiness, checkedAt: recipients.readinessCheckedAt })
+          .from(recipients)
+          .where(eq(recipients.id, row?.id ?? ""))
+      )[0];
+    const token = { owner: address(person.wallet), mint: WUSDC, elgamalPubkey: ELGAMAL };
+    // Another configured account of the recipient is recorded, but readiness reads the associated
+    // account, where payments go.
+    const other = onchain(token);
+    const otherRecorded = await post(person.cookie, {
+      orgId: org.orgId,
+      address: other,
+      keyScheme: "standard_v1",
+    });
+    expect(otherRecorded.status).toBe(201);
+    expect(await readiness()).toMatchObject({ readiness: "no_account", checkedAt: null });
+    const associated = onchain(
+      token,
+      TOKEN_2022,
+      await associatedTokenAccount(address(person.wallet), WUSDC),
+    );
     const recorded = await post(person.cookie, {
       orgId: org.orgId,
-      address: account,
+      address: associated,
       keyScheme: "standard_v1",
     });
     expect(recorded.status).toBe(201);
-    const [after] = await test.db
-      .select({ readiness: recipients.readiness, checkedAt: recipients.readinessCheckedAt })
-      .from(recipients)
-      .where(eq(recipients.id, row?.id ?? ""));
+    const after = await readiness();
     expect(after?.readiness).toBe("ready");
     expect(after?.checkedAt).toBeInstanceOf(Date);
   });

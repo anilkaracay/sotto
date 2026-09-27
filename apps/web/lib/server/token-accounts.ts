@@ -7,6 +7,7 @@
 // it; the hackathon build has only standard_v1 (D-03). Reads and a row, no keys and no amounts.
 import { recipients, tokenAccounts, type Database } from "@sotto/db";
 import {
+  associatedTokenAccount,
   checkConfidentialAccount,
   readTokenAccountStateWithSlot,
   recipientReadiness,
@@ -96,17 +97,21 @@ export async function registerTokenAccount(
     mint: cluster.wrappedUsdcMint,
   });
   if (!check.ok) throw tokenAccountErrors.invalid(check.reason);
-  // A recipient of this org who records their account is ready from this read on (AC-07.3).
-  await db
-    .update(recipients)
-    .set({
-      readiness: recipientReadiness(state, {
-        owner: address(session.wallet),
-        mint: cluster.wrappedUsdcMint,
-      }),
-      readinessCheckedAt: new Date(),
-    })
-    .where(and(eq(recipients.orgId, input.orgId), eq(recipients.userId, session.userId)));
+  // A recipient of this org who records their associated wUSDC account, the account readiness reads
+  // and payments go to, is ready from this read on (AC-07.3). Another account leaves readiness as it is.
+  const associated = await associatedTokenAccount(address(session.wallet), cluster.wrappedUsdcMint);
+  if (input.address === associated) {
+    await db
+      .update(recipients)
+      .set({
+        readiness: recipientReadiness(state, {
+          owner: address(session.wallet),
+          mint: cluster.wrappedUsdcMint,
+        }),
+        readinessCheckedAt: new Date(),
+      })
+      .where(and(eq(recipients.orgId, input.orgId), eq(recipients.userId, session.userId)));
+  }
 
   const inserted = await db
     .insert(tokenAccounts)

@@ -10,7 +10,7 @@ import {
   type UiWallet,
   type UiWalletAccount,
 } from "@wallet-standard/react";
-import { Component, useCallback, useState, type ReactNode } from "react";
+import { Component, useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   buildSelfTransfer,
   checkSignedTransaction,
@@ -24,6 +24,12 @@ import {
   utf8,
   verifyEd25519,
 } from "./lab-core";
+import {
+  partitionWallets,
+  summarizeFeatures,
+  supportsDisconnect,
+  type ListedWallet,
+} from "./wallet-list";
 
 type RowResult = {
   outcome: string;
@@ -150,17 +156,32 @@ function RunButton({ onRun }: { onRun: () => Promise<void> }) {
 }
 
 function featureSummary(wallet: UiWallet) {
-  return wallet.features.map((name) => {
-    const feature = getWalletFeature(wallet, name) as {
-      version?: string;
-      supportedTransactionVersions?: readonly (string | number)[];
-    };
-    return {
-      name,
-      version: feature?.version ?? null,
-      supportedTransactionVersions: feature?.supportedTransactionVersions ?? null,
-    };
-  });
+  return summarizeFeatures(wallet.features, (name) =>
+    getWalletFeature(wallet, name as UiWallet["features"][number]),
+  );
+}
+
+/** Shows the error text instead of blanking the page when anything below throws during render. */
+class ErrorPanel extends Component<
+  { label: string; children: ReactNode },
+  { error: string | null }
+> {
+  override state: { error: string | null } = { error: null };
+  static getDerivedStateFromError(error: unknown) {
+    return { error: errorText(error) };
+  }
+  override render() {
+    if (this.state.error) {
+      return (
+        <div
+          style={{ border: "1px solid #c00", padding: 8, fontFamily: "monospace", fontSize: 12 }}
+        >
+          {this.props.label} failed: {this.state.error}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function R1Row({ wallet, account, record }: { wallet: UiWallet } & RowProps) {
@@ -498,35 +519,61 @@ function Rows({ wallet, account, record, results }: { wallet: UiWallet } & RowPr
   );
 }
 
-function WalletEntry({
+type Connected = { entry: ListedWallet<UiWallet>; account: UiWalletAccount };
+
+/** Rendered only for wallets that declare standard:disconnect, so useDisconnect never throws. */
+function DisconnectButton({
   wallet,
+  onDisconnected,
+}: {
+  wallet: UiWallet;
+  onDisconnected: () => void;
+}) {
+  const [isDisconnecting, disconnect] = useDisconnect(wallet);
+  return (
+    <button
+      disabled={isDisconnecting}
+      onClick={async () => {
+        try {
+          await disconnect();
+        } finally {
+          onDisconnected();
+        }
+      }}
+    >
+      Disconnect
+    </button>
+  );
+}
+
+/** Rendered only for connectable wallets (standard:connect and a solana: chain). */
+function WalletEntry({
+  entry,
   active,
   onConnected,
   onDisconnected,
   record,
 }: {
-  wallet: UiWallet;
+  entry: ListedWallet<UiWallet>;
   active: boolean;
-  onConnected: (wallet: UiWallet, account: UiWalletAccount) => void;
+  onConnected: (entry: ListedWallet<UiWallet>, account: UiWalletAccount) => void;
   onDisconnected: () => void;
   record: Record_;
 }) {
+  const wallet = entry.wallet;
   const [isConnecting, connect] = useConnect(wallet);
-  const [isDisconnecting, disconnect] = useDisconnect(wallet);
   return (
     <li>
-      <strong>{wallet.name}</strong> (Wallet Standard {wallet.version}; chains{" "}
+      <strong>{entry.label}</strong> (Wallet Standard {wallet.version}; chains{" "}
       {wallet.chains.join(", ")}){" "}
       {active ? (
-        <button
-          disabled={isDisconnecting}
-          onClick={async () => {
-            await disconnect();
-            onDisconnected();
-          }}
-        >
-          Disconnect
-        </button>
+        supportsDisconnect(wallet) ? (
+          <DisconnectButton wallet={wallet} onDisconnected={onDisconnected} />
+        ) : (
+          <button onClick={onDisconnected} title="The wallet does not declare standard:disconnect">
+            Forget connection
+          </button>
+        )
       ) : (
         <button
           disabled={isConnecting}
@@ -535,7 +582,7 @@ function WalletEntry({
               const accounts = await connect();
               const account = accounts[0];
               if (!account) throw new Error("the wallet returned no account");
-              onConnected(wallet, account);
+              onConnected(entry, account);
             } catch (error) {
               record("R1", classify(error));
             }
@@ -548,11 +595,21 @@ function WalletEntry({
   );
 }
 
-export function WalletLab() {
+function describeWallet(entry: ListedWallet<UiWallet>) {
+  return {
+    key: entry.key,
+    label: entry.label,
+    name: entry.wallet.name,
+    walletStandardVersion: entry.wallet.version,
+    chains: entry.wallet.chains,
+    features: featureSummary(entry.wallet),
+  };
+}
+
+function WalletLabInner() {
   const wallets = useWallets();
-  const [connected, setConnected] = useState<{ wallet: UiWallet; account: UiWalletAccount } | null>(
-    null,
-  );
+  const { connectable, other } = useMemo(() => partitionWallets(wallets), [wallets]);
+  const [connected, setConnected] = useState<Connected | null>(null);
   const [results, setResults] = useState<Record<string, RowResult>>({});
   const [exported, setExported] = useState("");
 
@@ -566,10 +623,19 @@ export function WalletLab() {
       testAddress: TEST_ADDRESS,
       rpc: DEVNET_RPC_URL,
       wallet: connected
-        ? { name: connected.wallet.name, walletStandardVersion: connected.wallet.version }
+        ? {
+            label: connected.entry.label,
+            name: connected.entry.wallet.name,
+            key: connected.entry.key,
+            walletStandardVersion: connected.entry.wallet.version,
+          }
         : null,
       account: connected?.account.address ?? null,
       rows: results,
+      detectedWallets: {
+        connectable: connectable.map(describeWallet),
+        registeredNotConnectable: other.map(describeWallet),
+      },
     };
     const text = JSON.stringify(payload, null, 2);
     setExported(text);
@@ -587,36 +653,54 @@ export function WalletLab() {
         Test address: <code>{TEST_ADDRESS}</code>. Cluster: devnet ({DEVNET_RPC_URL}). Switch the
         wallet to devnet before connecting.
       </p>
-      <h2>Detected Wallet Standard wallets ({wallets.length})</h2>
+      <h2>Connectable wallets ({connectable.length})</h2>
       <ul>
-        {wallets.map((wallet) => (
-          <WalletEntry
-            key={wallet.name}
-            wallet={wallet}
-            active={connected?.wallet.name === wallet.name}
-            onConnected={(w, a) => {
-              setResults({});
-              setExported("");
-              setConnected({ wallet: w, account: a });
-            }}
-            onDisconnected={() => setConnected(null)}
-            record={record}
-          />
+        {connectable.map((entry) => (
+          <ErrorPanel key={entry.key} label={entry.label}>
+            <WalletEntry
+              entry={entry}
+              active={connected?.entry.key === entry.key}
+              onConnected={(e, a) => {
+                setResults({});
+                setExported("");
+                setConnected({ entry: e, account: a });
+              }}
+              onDisconnected={() => setConnected(null)}
+              record={record}
+            />
+          </ErrorPanel>
+        ))}
+      </ul>
+      <h2>Registered but not connectable ({other.length})</h2>
+      <ul>
+        {other.map((entry) => (
+          <li key={entry.key}>
+            <strong>{entry.label}</strong> (Wallet Standard {entry.wallet.version}; chains{" "}
+            {entry.wallet.chains.length ? entry.wallet.chains.join(", ") : "none"}); features:{" "}
+            {featureSummary(entry.wallet)
+              .map(
+                (f) =>
+                  `${f.name}${f.version ? ` ${f.version}` : ""}${f.error ? ` (${f.error})` : ""}`,
+              )
+              .join(", ") || "none"}
+          </li>
         ))}
       </ul>
       {connected ? (
         <>
           <p>
-            Connected: <strong>{connected.wallet.name}</strong>, account{" "}
+            Connected: <strong>{connected.entry.label}</strong>, account{" "}
             <code>{connected.account.address}</code>
             {connected.account.address !== TEST_ADDRESS ? " (not the test address)" : ""}
           </p>
-          <Rows
-            wallet={connected.wallet}
-            account={connected.account}
-            record={record}
-            results={results}
-          />
+          <ErrorPanel label="Rows">
+            <Rows
+              wallet={connected.entry.wallet}
+              account={connected.account}
+              record={record}
+              results={results}
+            />
+          </ErrorPanel>
           <p>
             <button onClick={exportJson}>Copy results as JSON</button>
           </p>
@@ -628,5 +712,13 @@ export function WalletLab() {
         <p>Connect a wallet to run the rows.</p>
       )}
     </main>
+  );
+}
+
+export function WalletLab() {
+  return (
+    <ErrorPanel label="Wallet lab">
+      <WalletLabInner />
+    </ErrorPanel>
   );
 }

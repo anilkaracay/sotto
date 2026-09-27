@@ -9,7 +9,7 @@
 | Program | Rust `cargo test` of the native program (D-16), with LiteSVM or `solana-program-test` for runtime tests | Localnet program with real proofs | Yes |
 | SDK integration | Vitest | Local validator with Token-2022, Token Wrap, ZK ElGamal Proof program active | Yes |
 | API | Vitest plus a test Postgres | Route handlers, authorization matrix | Yes |
-| E2E | Playwright | Localnet (every PR), devnet (nightly and before release) | Yes (localnet) |
+| E2E | Playwright | Localnet (every PR), devnet (nightly and before release) | Yes (localnet). Temporary (founder, 2026-09-27, plan move M3): in Phase 1 only the happy path (sign in, connect wallet, see the overview) is required; the full suite is required from Phase 2 |
 | Visual | Playwright screenshots | Every screen vs baselines from our own build after founder visual sign off (app at 1440; landing at 1440 and 390) | Yes, from Phase 3 |
 | Security | Custom CI checks for I-1 to I-10 | Repo and E2E traffic (I-2 uses sentinel payment amounts that are never used for deposits or withdrawals, and exempts the cleartext amount field of deposit and withdraw instructions) | Yes |
 

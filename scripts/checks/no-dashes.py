@@ -6,7 +6,7 @@ Usage: scripts/checks/no-dashes.py [commit]   (commit message to check, default 
 import subprocess
 import sys
 
-FORBIDDEN = {"–": "en dash", "—": "em dash"}
+FORBIDDEN = {chr(0x2013): "en dash", chr(0x2014): "em dash"}
 
 
 def git(*args: str) -> bytes:

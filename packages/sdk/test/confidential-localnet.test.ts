@@ -1,8 +1,9 @@
 // The confidential account ACs on localnet (step 1.7 exit test), every transaction signed through the
 // wallet path (a keypair behind the wallet signing interface, with the signed message check): the
 // wrapped mint check and its permissionless creation (AC-03.1), account setup (AC-03.3), the balances
-// after setup (AC-03.4), wrap, deposit and apply (AC-04.1 to AC-04.3), each followed by balances read
-// from chain (AC-04.4), and the 80 percent credit counter rule (AC-04.3). Needs the bootstrapped
+// after setup (AC-03.4), wrap and deposit in one transaction and apply (AC-04.1 to AC-04.3; step 1.7.1),
+// a wrap and a deposit of public wUSDC on their own, each followed by balances read from chain (AC-04.4),
+// and the 80 percent credit counter rule (AC-04.3). Needs the bootstrapped
 // localnet (.localnet/bootstrap.json from scripts/bootstrap-localnet.ts). Skipped unless
 // SOTTO_LOCALNET_RPC_URL is set; scripts/ci-local.sh runs it in the localnet job after the bootstrap.
 import { getCreateAccountInstruction } from "@solana-program/system";
@@ -31,6 +32,7 @@ import {
 import { keypairWallet } from "../src/testing/index.ts";
 import {
   applyLocalnetPending,
+  fundLocalnetAccount,
   localnetDeposit,
   newLocalnetOwner,
   readLocalnetBootstrap,
@@ -201,23 +203,16 @@ describe.skipIf(!RPC_URL)("confidential account setup and funding on localnet", 
   });
 
   it(
-    "AC-04.1 AC-04.4 wraps USDC into public wUSDC, and both balances come from chain",
+    "AC-04.1 AC-04.2 AC-04.4 wraps and deposits in one transaction, and the balances come from chain",
     { timeout: 60_000 },
     async () => {
-      await wrap(owner, 25n * USDC);
-      expect(await balances(owner)).toMatchObject({ usdc: 75n * USDC, wusdc: 25n * USDC });
-    },
-  );
-
-  it(
-    "AC-04.2 AC-04.4 deposits public wUSDC into the pending balance",
-    { timeout: 60_000 },
-    async () => {
-      await send(owner, [deposit(owner, 10n * USDC)], 1);
+      const { plan, sent } = await fundLocalnetAccount(rpc, owner, bootstrap, 25n * USDC);
+      expect(plan.split).toBeNull();
+      expect(sent).toHaveLength(1);
       expect(await balances(owner)).toEqual({
         usdc: 75n * USDC,
-        wusdc: 15n * USDC,
-        pending: 10n * USDC,
+        wusdc: 0n,
+        pending: 25n * USDC,
         available: 0n,
         credits: 1n,
       });
@@ -231,10 +226,27 @@ describe.skipIf(!RPC_URL)("confidential account setup and funding on localnet", 
       await apply(owner);
       expect(await balances(owner)).toEqual({
         usdc: 75n * USDC,
-        wusdc: 15n * USDC,
+        wusdc: 0n,
         pending: 0n,
-        available: 10n * USDC,
+        available: 25n * USDC,
         credits: 0n,
+      });
+    },
+  );
+
+  it(
+    "AC-04.1 AC-04.2 AC-04.4 wraps alone and deposits public wUSDC on its own, as the recovery path does",
+    { timeout: 60_000 },
+    async () => {
+      await wrap(owner, 10n * USDC, 1);
+      expect(await balances(owner)).toMatchObject({ usdc: 65n * USDC, wusdc: 10n * USDC });
+      await send(owner, [deposit(owner, 10n * USDC)], 1);
+      expect(await balances(owner)).toEqual({
+        usdc: 65n * USDC,
+        wusdc: 0n,
+        pending: 10n * USDC,
+        available: 25n * USDC,
+        credits: 1n,
       });
     },
   );
@@ -271,6 +283,7 @@ describe.skipIf(!RPC_URL)("confidential account setup and funding on localnet", 
           message as Extract<TransactionMessage, { version: 0 }>,
         ),
       );
+      await wrap(owner, 2n * USDC);
       const sent = await sendWithWallet({
         rpc,
         wallet: budget,
@@ -278,7 +291,7 @@ describe.skipIf(!RPC_URL)("confidential account setup and funding on localnet", 
         version: 0,
       });
       expect(sent.comparison).toMatchObject({ kind: "compute_budget_only" });
-      expect(await balances(owner)).toMatchObject({ wusdc: 14n * USDC, pending: 1n * USDC });
+      expect(await balances(owner)).toMatchObject({ wusdc: 1n * USDC, pending: 11n * USDC });
 
       const tampering = keypairWallet(owner.signer, (message) => ({
         ...message,
@@ -296,7 +309,7 @@ describe.skipIf(!RPC_URL)("confidential account setup and funding on localnet", 
           version: 0,
         }),
       ).rejects.toBeInstanceOf(WalletChangedTransactionError);
-      expect(await balances(owner)).toMatchObject({ wusdc: 14n * USDC, pending: 1n * USDC });
+      expect(await balances(owner)).toMatchObject({ wusdc: 1n * USDC, pending: 11n * USDC });
     },
   );
 });

@@ -25,6 +25,7 @@ import {
   applyPendingBalanceInstruction,
   confidentialAccountSetupInstructions,
 } from "../confidential/account.ts";
+import { wrapAndDepositTransactions } from "../confidential/funding.ts";
 import { associatedTokenAccount, confidentialDepositInstruction } from "../confidential/state.ts";
 import { confidentialKeysMessage } from "../keys/messages.ts";
 import { deriveStandardKeys, type ConfidentialKeyMaterial } from "../keys/confidential.ts";
@@ -167,6 +168,53 @@ export async function wrapLocalnetUsdc(
     amount,
   });
   return { built, sent: await sendAsOwner(rpc, owner, built.instructions, version) };
+}
+
+/**
+ * Wraps base units of USDC into public wUSDC for a keypair outside Sotto, as tokens received publicly
+ * would be; creates the wUSDC account without the confidential extension if it is missing.
+ */
+export async function wrapLocalnetUsdcAs(
+  rpc: SolanaRpc,
+  bootstrap: LocalnetBootstrap,
+  signer: KeyPairSigner,
+  amount: bigint,
+) {
+  const built = await wrapInstructions({
+    owner: signer,
+    unwrappedMint: bootstrap.usdcMint,
+    unwrappedTokenProgram: TOKEN_PROGRAM_ADDRESS,
+    programAddress: localnet().programs.tokenWrap,
+    amount,
+  });
+  return sendWithKeypairSigners({ rpc, feePayer: signer, instructions: built.instructions });
+}
+
+/**
+ * 06 section 4, steps 1 and 2 in one signature when they fit (step 1.7.1): wraps base units of USDC and
+ * deposits them into the pending balance; returns the plan and every transaction sent.
+ */
+export async function fundLocalnetAccount(
+  rpc: SolanaRpc,
+  owner: LocalnetOwner,
+  bootstrap: LocalnetBootstrap,
+  amount: bigint,
+  version: 0 | 1 = 0,
+) {
+  const plan = await wrapAndDepositTransactions({
+    owner: createNoopSigner(owner.signer.address),
+    unwrappedMint: bootstrap.usdcMint,
+    unwrappedTokenProgram: TOKEN_PROGRAM_ADDRESS,
+    programAddress: localnet().programs.tokenWrap,
+    amount,
+    decimals: bootstrap.usdcDecimals,
+    version,
+  });
+  const sent = [];
+  for (const instructions of plan.transactions) {
+    sent.push(await sendAsOwner(rpc, owner, instructions, version));
+  }
+  return { plan, sent };
 }
 
 /** 06 section 4, step 2: the deposit instruction for base units of the owner's public wUSDC. */

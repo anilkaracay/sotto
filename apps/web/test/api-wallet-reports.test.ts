@@ -78,7 +78,7 @@ describe("POST /api/wallet-reports", () => {
     ]);
   });
 
-  it("logs the compute budget a wallet changed, and a transaction it changed otherwise", async () => {
+  it("logs the compute budget a wallet changed, a transaction it changed otherwise, and a funding split", async () => {
     const user = await createUserWithSession(test);
     const changes = [{ field: "computeUnitPrice", built: "100", signed: "500000" }];
     expect(
@@ -93,6 +93,17 @@ describe("POST /api/wallet-reports", () => {
         })
       ).status,
     ).toBe(204);
+    expect(
+      (
+        await post(user.cookie, {
+          kind: "funding_split",
+          wallet: WALLET,
+          version: 0,
+          size: 1300,
+          limit: 1232,
+        })
+      ).status,
+    ).toBe(204);
     expect(reports()).toEqual([
       expect.objectContaining({ level: "warn", kind: "compute_budget_changed", changes }),
       expect.objectContaining({
@@ -101,6 +112,7 @@ describe("POST /api/wallet-reports", () => {
         reason: "instruction 1: the data",
         walletName: "Test Wallet",
       }),
+      expect.objectContaining({ kind: "funding_split", version: 0, size: 1300, limit: 1232 }),
     ]);
   });
 
@@ -124,6 +136,8 @@ describe("POST /api/wallet-reports", () => {
       },
       { kind: "transaction_changed", wallet: WALLET, reason: "x".repeat(121) },
       { kind: "transaction_changed", wallet: WALLET, reason: "<script>" },
+      { kind: "funding_split", wallet: WALLET, version: 2, size: 1300, limit: 1232 },
+      { kind: "funding_split", wallet: WALLET, version: 0, size: 1.5, limit: 1232 },
     ];
     for (const body of bodies) {
       const response = await post(user.cookie, body);

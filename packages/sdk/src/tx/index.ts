@@ -8,4 +8,5 @@ export * from "./send-keypair.ts";
 export * from "./send-wallet.ts";
 export * from "./signed-message.ts";
 export * from "./simulate.ts";
+export * from "./size.ts";
 export * from "./writable.ts";

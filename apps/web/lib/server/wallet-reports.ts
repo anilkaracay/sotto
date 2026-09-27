@@ -4,7 +4,9 @@
 //   of the key message that differs from the first, so setup was refused;
 // - compute_budget_changed: the wallet changed only the compute budget of a transaction, which was
 //   sent (the changed fields and values);
-// - transaction_changed: the wallet changed a transaction otherwise, which was not sent (what changed).
+// - transaction_changed: the wallet changed a transaction otherwise, which was not sent (what changed);
+// - funding_split: wrap and deposit did not fit in one transaction of the wallet's version, so they
+//   went in two (the version, the combined size and the limit; step 1.7.1).
 // Each report is one structured log line with the wallet's name, the Wallet Standard version it
 // declares and the versions of the features Sotto used; the Wallet Standard gives apps no wallet app
 // version. Never keys, signatures or amounts, and nothing is stored. The check itself never looks at
@@ -60,6 +62,15 @@ export const walletReportSchema = z.discriminatedUnion("kind", [
             .strict(),
         )
         .max(5),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("funding_split"),
+      wallet: walletInfo,
+      version: z.union([z.literal(0), z.literal(1)]),
+      size: z.int().min(1).max(65_536),
+      limit: z.int().min(1).max(65_536),
     })
     .strict(),
   z

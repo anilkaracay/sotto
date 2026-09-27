@@ -34,7 +34,8 @@ type Report =
       kind: "compute_budget_changed";
       changes: { field: string; built: string | null; signed: string | null }[];
     }
-  | { kind: "transaction_changed"; reason: string };
+  | { kind: "transaction_changed"; reason: string }
+  | { kind: "funding_split"; version: 0 | 1; size: number; limit: number };
 
 export function reportWallet(wallet: WalletInfo, report: Report): void {
   void fetch("/api/wallet-reports", {

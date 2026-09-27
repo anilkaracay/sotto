@@ -1,0 +1,98 @@
+// Prepares a transaction by the 06 section 9 rules, for a keypair or a wallet to sign: a fresh
+// blockhash, the 75th percentile priority fee (capped), a simulation with the maximum limits, then the
+// compute unit limit at the simulated units plus 20 percent, as instructions for v0 or as the config of
+// v1 (with the loaded account data limit at the simulated size plus 20 percent). A failed simulation
+// throws SimulationFailedError with the decoded error; nothing is signed or sent here.
+import {
+  appendTransactionMessageInstructions,
+  compileTransaction,
+  createTransactionMessage,
+  getBase64EncodedWireTransaction,
+  pipe,
+  setTransactionMessageFeePayer,
+  setTransactionMessageFeePayerSigner,
+  setTransactionMessageLifetimeUsingBlockhash,
+  type Address,
+  type Instruction,
+  type TransactionSigner,
+} from "@solana/kit";
+import {
+  applyComputeBudget,
+  loadedAccountsDataSizeLimitFromSimulation,
+  priorityFeeLamports,
+  SIMULATION_BUDGET,
+  type ComputeBudget,
+  type TransactionVersionChoice,
+} from "./budget.ts";
+import {
+  computeUnitLimitFromSimulation,
+  DEFAULT_PRIORITY_FEE_CAP_MICRO_LAMPORTS,
+  priorityFeeFromRecentFees,
+} from "./compute-budget.ts";
+import type { SolanaRpc } from "./rpc.ts";
+import { SimulationFailedError, simulateWire } from "./simulate.ts";
+import { writableAccounts } from "./writable.ts";
+
+export type PreparedTransaction = {
+  version: TransactionVersionChoice;
+  budget: Required<Pick<ComputeBudget, "computeUnitLimit" | "computeUnitPrice">> &
+    Pick<ComputeBudget, "loadedAccountsDataSizeLimit">;
+  /** The v1 config value, or for v0 the fee the price and limit imply. */
+  priorityFeeLamports: bigint;
+  unitsConsumed: bigint;
+  loadedAccountsDataSize: number | null;
+};
+
+export async function prepareTransaction(options: {
+  rpc: SolanaRpc;
+  version: TransactionVersionChoice;
+  feePayer: Address | TransactionSigner;
+  instructions: readonly Instruction[];
+  priorityFeeCapMicroLamports?: bigint;
+}) {
+  const { rpc, instructions } = options;
+  const recentFees = await rpc.getRecentPrioritizationFees(writableAccounts(instructions)).send();
+  const computeUnitPrice = priorityFeeFromRecentFees(
+    recentFees,
+    options.priorityFeeCapMicroLamports ?? DEFAULT_PRIORITY_FEE_CAP_MICRO_LAMPORTS,
+  );
+  const { value: blockhash } = await rpc.getLatestBlockhash({ commitment: "confirmed" }).send();
+  const base = pipe(
+    createTransactionMessage({ version: options.version }),
+    (m) =>
+      typeof options.feePayer === "string"
+        ? setTransactionMessageFeePayer(options.feePayer, m)
+        : setTransactionMessageFeePayerSigner(options.feePayer, m),
+    (m) => setTransactionMessageLifetimeUsingBlockhash(blockhash, m),
+    (m) => appendTransactionMessageInstructions(instructions, m),
+  );
+  const simulated = applyComputeBudget(base, { ...SIMULATION_BUDGET, computeUnitPrice });
+  const programs = simulated.instructions.map((instruction) => instruction.programAddress);
+  const simulation = await simulateWire(
+    rpc,
+    getBase64EncodedWireTransaction(compileTransaction(simulated)),
+  );
+  if (simulation.err) throw new SimulationFailedError(simulation.err, simulation.logs, programs);
+  if (simulation.unitsConsumed === 0n) {
+    throw new Error("the RPC did not report compute units for the simulation");
+  }
+  const computeUnitLimit = computeUnitLimitFromSimulation(simulation.unitsConsumed);
+  const budget: PreparedTransaction["budget"] =
+    options.version === 1
+      ? {
+          computeUnitLimit,
+          computeUnitPrice,
+          loadedAccountsDataSizeLimit: loadedAccountsDataSizeLimitFromSimulation(
+            simulation.loadedAccountsDataSize ?? undefined,
+          ),
+        }
+      : { computeUnitLimit, computeUnitPrice };
+  const prepared: PreparedTransaction = {
+    version: options.version,
+    budget,
+    priorityFeeLamports: priorityFeeLamports(computeUnitPrice, computeUnitLimit),
+    unitsConsumed: simulation.unitsConsumed,
+    loadedAccountsDataSize: simulation.loadedAccountsDataSize,
+  };
+  return { message: applyComputeBudget(base, budget), prepared };
+}

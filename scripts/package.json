@@ -1,29 +1,25 @@
 {
-  "name": "@sotto/worker",
+  "name": "@sotto/scripts",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node src/index.ts",
-    "bootstrap:sas": "node src/bin/bootstrap-sas.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:localnet": "vitest run localnet",
-    "sas:close-attestation": "node src/bin/sas-close-attestation.ts"
+    "test:localnet": "vitest run localnet"
   },
   "dependencies": {
+    "@solana-program/system": "catalog:",
+    "@solana-program/token": "catalog:",
     "@solana/kit": "catalog:",
-    "@sotto/db": "workspace:*",
     "@sotto/sdk": "workspace:*",
-    "drizzle-orm": "catalog:",
-    "sas-lib": "catalog:"
+    "typescript": "catalog:"
   },
   "devDependencies": {
     "@sotto/config": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
-    "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
   }

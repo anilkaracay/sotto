@@ -150,17 +150,23 @@ job_localnet() {
   echo "validator healthy"
   local status=0
   run scripts/localnet-smoke.sh || status=1
+  # Mints, escrow and SAS setup for the tests below (.localnet/bootstrap.json).
+  if [[ "$status" -eq 0 ]]; then run node scripts/bootstrap-localnet.ts || status=1; fi
   if [[ "$status" -eq 0 ]]; then
     # The worker's localnet tests also need the test Postgres (the sas-issue job reads orgs).
     run scripts/db-local.sh test-up || status=1
-    echo "+ SOTTO_LOCALNET_RPC_URL=$RPC_URL_LOCAL pnpm --filter @sotto/worker test:localnet"
-    SOTTO_LOCALNET_RPC_URL="$RPC_URL_LOCAL" pnpm --filter @sotto/worker test:localnet || status=1
+    local package
+    for package in @sotto/worker @sotto/sdk @sotto/scripts; do
+      echo "+ SOTTO_LOCALNET_RPC_URL=$RPC_URL_LOCAL pnpm --filter $package test:localnet"
+      SOTTO_LOCALNET_RPC_URL="$RPC_URL_LOCAL" pnpm --filter "$package" test:localnet || status=1
+    done
     run scripts/db-local.sh test-down
   fi
   stop_validator
   if [[ "$status" -eq 0 ]]; then
-    rm -rf "$ROOT/.localnet/ledger" "$ROOT/.localnet/smoke"
-    echo "cleaned up ledger and smoke keypairs"
+    rm -rf "$ROOT/.localnet/ledger" "$ROOT/.localnet/smoke" "$ROOT/.localnet/bootstrap" \
+      "$ROOT/.localnet/bootstrap.json"
+    echo "cleaned up ledger, smoke keypairs and bootstrap files"
   else
     echo "kept .localnet/ledger and .localnet/ci-local/validator.log for inspection" >&2
   fi
@@ -203,7 +209,8 @@ install_gitleaks() {
 
 job_checks() {
   run python3 scripts/checks/no-dashes.py HEAD &&
-    run python3 scripts/checks/ac-manifest.py &&
+    run python3 -m unittest discover -s scripts/checks -p "test_*.py" &&
+    run python3 scripts/checks/ac-manifest.py --list &&
     install_gitleaks &&
     run "$GITLEAKS" git --redact --no-banner --config .gitleaks.toml --log-opts="--all" . &&
     run scripts/checks/no-zk-token-proof.sh &&

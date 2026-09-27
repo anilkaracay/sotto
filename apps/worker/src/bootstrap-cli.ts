@@ -7,11 +7,17 @@ export type BootstrapCluster = "devnet" | "localnet";
 export function parseCli(argv: readonly string[]): {
   cluster: BootstrapCluster;
   testOwner: Address | null;
+  /** Localnet only: a keypair file to use instead of SAS_SIGNER_KEYPAIR (scripts/bootstrap-localnet.ts). */
+  signer: string | null;
 } {
   const args = argv[0] === "--" ? argv.slice(1) : [...argv];
   const { values } = parseArgs({
     args,
-    options: { cluster: { type: "string" }, "test-attestation": { type: "string" } },
+    options: {
+      cluster: { type: "string" },
+      "test-attestation": { type: "string" },
+      signer: { type: "string" },
+    },
     strict: true,
     allowPositionals: false,
   });
@@ -25,5 +31,12 @@ export function parseCli(argv: readonly string[]): {
   if (owner !== undefined && !isAddress(owner)) {
     throw new Error("--test-attestation needs a wallet address");
   }
-  return { cluster: values.cluster, testOwner: owner === undefined ? null : address(owner) };
+  if (values.signer !== undefined && values.cluster !== "localnet") {
+    throw new Error("--signer is for localnet only; devnet uses SAS_SIGNER_KEYPAIR");
+  }
+  return {
+    cluster: values.cluster,
+    testOwner: owner === undefined ? null : address(owner),
+    signer: values.signer ?? null,
+  };
 }

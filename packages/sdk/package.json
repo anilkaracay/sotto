@@ -6,17 +6,22 @@
   "exports": {
     ".": "./src/index.ts",
     "./cluster": "./src/cluster/config.ts",
+    "./cluster/verify": "./src/cluster/verify.ts",
+    "./confidential": "./src/confidential/index.ts",
     "./keys": "./src/keys/index.ts",
     "./keys/public": "./src/keys/public.ts",
     "./tx": "./src/tx/index.ts",
-    "./wallet": "./src/wallet/index.ts"
+    "./wallet": "./src/wallet/index.ts",
+    "./wrap": "./src/wrap/index.ts"
   },
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:localnet": "vitest run localnet"
   },
   "dependencies": {
+    "@solana-program/system": "catalog:",
     "@solana-program/token-2022": "catalog:",
     "@solana-program/token-wrap": "catalog:",
     "@solana-program/zk-elgamal-proof": "catalog:",

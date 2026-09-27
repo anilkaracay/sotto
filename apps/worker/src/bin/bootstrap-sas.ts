@@ -6,7 +6,7 @@
 // URL.
 //
 //   pnpm --filter @sotto/worker bootstrap:sas --cluster devnet [--test-attestation <owner>]
-//   pnpm --filter @sotto/worker bootstrap:sas --cluster localnet [--test-attestation <owner>]
+//   pnpm --filter @sotto/worker bootstrap:sas --cluster localnet [--test-attestation <owner>] [--signer <keypair>]
 //
 // devnet reads RPC_URL and SAS_SIGNER_KEYPAIR from apps/worker/.env.local; localnet uses
 // http://127.0.0.1:8899 and airdrops to the signer when it is low.
@@ -88,8 +88,9 @@ async function main(): Promise<void> {
   }
   console.log(`sas program: ${SAS_PROGRAM_ADDRESS} (executable)`);
 
-  if (!sasConfig.sasSignerKeypair) throw new Error("SAS_SIGNER_KEYPAIR is not set");
-  const signer = await loadKeypairSigner(sasConfig.sasSignerKeypair);
+  const signerPath = cli.signer ?? sasConfig.sasSignerKeypair;
+  if (!signerPath) throw new Error("SAS_SIGNER_KEYPAIR is not set");
+  const signer = await loadKeypairSigner(signerPath);
   let { value: balance } = await rpc.getBalance(signer.address, { commitment: "confirmed" }).send();
   if (balance < MIN_SIGNER_LAMPORTS) {
     if (cli.cluster !== "localnet") {

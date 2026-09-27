@@ -4,9 +4,12 @@
 // in an earlier init script. Like the wallets tested in Gate G2, it signs sign in requests and any
 // message, deterministically, and it logs the text of every message it signs
 // (window.__sottoTestWallet.signedMessages). A spec can make it refuse given messages, as a wallet that
-// follows the guidance to refuse solana-conf-bal/v1 would (window.__sottoTestWallet.refuse). It
-// registers through the Wallet Standard events (wallet-standard:register-wallet and
-// wallet-standard:app-ready).
+// follows the guidance to refuse solana-conf-bal/v1 would (window.__sottoTestWallet.refuse), or hand
+// out given signatures for the next messages instead of its own, as a wallet with randomized
+// signatures would (window.__sottoTestWallet.queueSignatures, base64). Since step 1.7 it signs
+// legacy and version 0 transactions (solana:signTransaction) for localnet flows, and counts them
+// (window.__sottoTestWallet.signedTransactions). It registers through the Wallet Standard events
+// (wallet-standard:register-wallet and wallet-standard:app-ready).
 (() => {
   const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
   const CHAINS = ["solana:devnet", "solana:localnet"];
@@ -68,6 +71,8 @@
   const listeners = new Set();
   const signedMessages = [];
   let refused = new Set();
+  let queued = [];
+  let signedTransactions = 0;
   const fixed = window.__sottoTestWalletKeypair;
   // PKCS #8 prefix of a raw Ed25519 private key (RFC 8410).
   const PKCS8_ED25519 = [48, 46, 2, 1, 0, 48, 5, 6, 3, 43, 101, 112, 4, 34, 4, 32];
@@ -101,6 +106,48 @@
 
   async function sign(bytes) {
     return new Uint8Array(await crypto.subtle.sign({ name: "Ed25519" }, keys.privateKey, bytes));
+  }
+
+  // Solana's compact u16 length (shortvec).
+  function readShortVec(bytes, offset) {
+    let value = 0;
+    let size = 0;
+    for (;;) {
+      const byte = bytes[offset + size];
+      value |= (byte & 0x7f) << (7 * size);
+      size += 1;
+      if ((byte & 0x80) === 0) return [value, size];
+    }
+  }
+
+  // Signs a wire transaction (signatures, then the message) as its signer at this account's index.
+  async function signWireTransaction(wire) {
+    const [count, countSize] = readShortVec(wire, 0);
+    const messageStart = countSize + count * 64;
+    const message = wire.slice(messageStart);
+    let offset = 0;
+    if (message[0] & 0x80) {
+      if ((message[0] & 0x7f) !== 0)
+        throw new Error("This wallet signs legacy and version 0 transactions only");
+      offset = 1;
+    }
+    const required = message[offset];
+    offset += 3;
+    const [keyCount, keySize] = readShortVec(message, offset);
+    offset += keySize;
+    let index = -1;
+    for (let i = 0; i < Math.min(keyCount, required); i += 1) {
+      const key = message.slice(offset + i * 32, offset + (i + 1) * 32);
+      if (key.every((byte, j) => byte === account.publicKey[j])) {
+        index = i;
+        break;
+      }
+    }
+    if (index < 0) throw new Error("This account does not sign this transaction");
+    const signed = new Uint8Array(wire);
+    signed.set(await sign(message), countSize + index * 64);
+    signedTransactions += 1;
+    return signed;
   }
 
   function emit(properties) {
@@ -169,15 +216,24 @@
               const text = new TextDecoder().decode(message);
               if (refused.has(text)) throw new Error("This wallet does not sign this message");
               signedMessages.push(text);
-              return { signedMessage: message, signature: await sign(message) };
+              const next = queued.shift();
+              const signature = next
+                ? Uint8Array.from(atob(next), (c) => c.charCodeAt(0))
+                : await sign(message);
+              return { signedMessage: message, signature };
             }),
           ),
       },
       "solana:signTransaction": {
         version: "1.0.0",
         supportedTransactionVersions: ["legacy", 0],
-        signTransaction: async () => {
-          throw new Error("The Sotto test wallet does not sign transactions yet");
+        signTransaction: async (...inputs) => {
+          await ensureAccount();
+          return Promise.all(
+            inputs.map(async ({ transaction }) => ({
+              signedTransaction: await signWireTransaction(new Uint8Array(transaction)),
+            })),
+          );
         },
       },
     },
@@ -193,8 +249,14 @@
     get signedMessages() {
       return [...signedMessages];
     },
+    get signedTransactions() {
+      return signedTransactions;
+    },
     refuse(texts) {
       refused = new Set(texts);
+    },
+    queueSignatures(signatures) {
+      queued = [...signatures];
     },
   };
 })();

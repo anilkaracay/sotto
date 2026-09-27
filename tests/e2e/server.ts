@@ -1,9 +1,11 @@
 // E2E web server: a fresh migrated database on the test Postgres (scripts/db-local.sh test-up) with the
-// E2E admin wallet, then the production build of apps/web through next start on port 3200. Configuration comes from this
-// process's environment, which wins over apps/web/.env.local in Next.js (14 section 2).
+// E2E admin wallet, then the production build of apps/web through next start on port 3200. Configuration
+// comes from this process's environment, which wins over apps/web/.env.local in Next.js (14 section 2).
+// With --localnet (the localnet specs, step 1.7) the app runs on the bootstrapped local validator:
+// NEXT_PUBLIC_CLUSTER localnet, its RPC URL and the local USDC mint from .localnet/bootstrap.json.
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { admins } from "@sotto/db";
@@ -16,6 +18,16 @@ const WEB = fileURLToPath(new URL("../../apps/web", import.meta.url));
 if (!existsSync(join(WEB, ".next", "BUILD_ID"))) {
   console.error("error: apps/web has no production build; run pnpm build first");
   process.exit(1);
+}
+
+const chain: Record<string, string> = { RPC_URL: "http://127.0.0.1:8899" };
+if (process.argv.includes("--localnet")) {
+  const bootstrap = JSON.parse(
+    readFileSync(new URL("../../.localnet/bootstrap.json", import.meta.url), "utf8"),
+  ) as { rpcUrl: string; usdcMint: string };
+  chain.RPC_URL = bootstrap.rpcUrl;
+  chain.NEXT_PUBLIC_CLUSTER = "localnet";
+  chain.LOCALNET_USDC_MINT = bootstrap.usdcMint;
 }
 
 const database = await createTestDatabase();
@@ -33,7 +45,7 @@ const web = spawn(
       DATABASE_URL: database.url,
       SESSION_SECRET: randomBytes(32).toString("hex"),
       NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,
-      RPC_URL: "http://127.0.0.1:8899",
+      ...chain,
     },
   },
 );

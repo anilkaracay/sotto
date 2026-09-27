@@ -6,7 +6,8 @@
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "e2e:localnet": "playwright test --config playwright.localnet.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "catalog:",

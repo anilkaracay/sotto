@@ -35,6 +35,7 @@ import { wrapInstructions } from "../wrap/index.ts";
 import { keypairWallet } from "./index.ts";
 
 export type LocalnetBootstrap = {
+  rpcUrl: string;
   payer: { address: Address; keypair: string };
   usdcMint: Address;
   usdcDecimals: number;

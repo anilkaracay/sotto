@@ -16,11 +16,14 @@
     "@solana/kit": "catalog:",
     "@solana/react": "catalog:",
     "@solana/wallet-standard-features": "catalog:",
+    "@sotto/db": "workspace:*",
     "@sotto/ui": "workspace:*",
     "@wallet-standard/react": "catalog:",
+    "drizzle-orm": "catalog:",
     "next": "catalog:",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@sotto/config": "workspace:*",

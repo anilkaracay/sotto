@@ -6,6 +6,7 @@
   "exports": {
     "./eslint": "./eslint.config.js",
     "./eslint-next": "./eslint-next.config.js",
+    "./eslint-react": "./eslint-react.config.js",
     "./prettier": "./prettier.config.js",
     "./tsconfig.base.json": "./tsconfig.base.json"
   },

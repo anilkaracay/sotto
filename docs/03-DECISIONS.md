@@ -36,8 +36,8 @@ Rejected: forking Token Wrap to add an auditor (new program risk, splits liquidi
 ### D-02 · Custody model · DECIDED
 Non-custodial. Each organization's confidential wUSDC account is owned by the organization's owner wallet. Sotto has no signing authority over any token account and never receives decryption keys (ENGINEERING-RULES.md rule 4 and 5).
 
-### D-03 · Confidential key derivation scheme · GATE (G2)
-- If all target wallets (Phantom, Solflare, Backpack; list in `14-ENVIRONMENTS-DEPLOY.md`) allow a dApp to call `signMessage` on the exact bytes `solana-conf-bal/v1`, use the standard `deriveConfidentialKeys` (facts A11). Interoperable with other confidential aware wallets.
+### D-03 · Confidential key derivation scheme · DECIDED by Gate G2 on 2026-09-27: `standard_v1`
+- If all target wallets (the wallets tested in Gate G2: Phantom, Solflare, Backpack) allow a dApp to call `signMessage` on the exact bytes `solana-conf-bal/v1`, use the standard `deriveConfidentialKeys` (facts A11). Interoperable with other confidential aware wallets.
 - If any target wallet refuses (facts A12), use `ConfidentialKeys.fromIkm` where IKM is the Ed25519 signature over exactly this UTF-8 message of three lines separated by newlines:
   ```
   sotto-conf-keys/v1
@@ -47,6 +47,8 @@ Non-custodial. Each organization's confidential wUSDC account is owned by the or
   It is intentionally not bound to a domain (a domain change would lose key recovery). The residual phishing risk is accepted and documented in `10-SECURITY.md` section 2. Ed25519 signatures are deterministic, so the keys are reproducible from the wallet alone; Gate G2 checks this per wallet. If a wallet is not deterministic, it is unsupported for owners.
 - The chosen scheme is stored per token account (`key_scheme` column, values `standard_v1` or `sotto_ikm_v1`). Never mix schemes on one account. Changing scheme requires a new token account and a full move of funds.
 - Hardware wallets that cannot `signMessage` are not supported for owners in the MVP. Show a clear message.
+
+**Gate G2 result (2026-09-27, `VERIFICATION-LOG.md` step 0.6): `standard_v1`.** Phantom, Solflare and Backpack (the tested wallets, same seed phrase) all allowed `signMessage` on the exact bytes `solana-conf-bal/v1` (R4, verified signatures, byte identical across the three wallets). By the first rule Sotto uses the standard `deriveConfidentialKeys` from `@solana-program/token-2022/confidential`. R5 was deterministic in all three wallets (identical signatures on repeat and across wallets), so the `sotto_ikm_v1` fallback was not needed; it stays defined for reference and is not used. Since Sotto is wallet agnostic (D-26), the tested wallets are examples, not a list: at runtime a wallet that refuses the standard bytes, or whose derived ElGamal key does not match the onchain key (06 section 1), cannot hold confidential balances, and the app explains why. The phishing exposure of a constant derivation message is an open question (Q-09).
 
 ### D-04 · Organization signing and approvals · DECIDED
 MVP: one owner wallet signs every money operation. Approvals (for example "2 of 2" on payroll) are recorded policy, not onchain enforcement, because the owner wallet can always sign directly. Sotto's API refuses to authorize, and the Sotto client refuses to execute, until the required approvers have signed an approval message (Sign-In With Solana style signed payload, stored with signature). Approval messages must include: org ID, cluster, subject type and ID, and `contents_hash` = lowercase hex SHA-256 of the canonical JSON list of `{ line_id, recipient_wallet, idempotency_key, private_blob_sha256 }`. Any change to the run after approval invalidates approvals. The UI must describe this truthfully: "Approvals are recorded in Sotto and signed by each approver. The owner wallet executes."
@@ -86,6 +88,7 @@ Helius for devnet and mainnet, public RPC as a devnet fallback only. Gate G1 mus
 **Gate result · PASSED 2026-09-26** (`VERIFICATION-LOG.md`, G1 part 1, task 1 and part 2, task 5):
 - Helius devnet and Helius mainnet return `getBlock` with `maxSupportedTransactionVersion: 1` on blocks that contain v1 transactions (devnet slot 504428333, mainnet slot 450692590); `0` or an omitted parameter fails with `-32015` when full transactions are requested (facts D2). The public devnet RPC behaves the same.
 - The ZK ElGamal Proof program is active on devnet and mainnet: enable, disable and re-enable gates all active, which satisfies the activation rule (facts B3, B6).
+**Rule from Gate G2 (founder, 2026-09-27):** the product never depends on the public RPC. In G2 the public devnet RPC returned HTTP 429 for sends from Solflare and Backpack; through Helius all sends passed (`VERIFICATION-LOG.md` step 0.6). Rate limit errors (HTTP 429) are retried with exponential backoff and shown as "network busy, retrying", never as a wallet failure. The only code that ever called the public devnet RPC directly is the dev only wallet lab, which now also goes through Helius.
 
 ### D-15 · Authentication · DEFAULT
 Sign-In With Solana through the Wallet Standard sign in feature when available, otherwise a signed nonce message. Session: httpOnly, secure, SameSite=Lax cookie holding an opaque session ID. No JWT in localStorage.
@@ -122,6 +125,7 @@ pnpm workspaces and Turborepo. Layout in `04-ARCHITECTURE.md`.
 - Any other demo only element is listed in `13-COPY-CORRECTIONS.md` with its fate.
 
 ### D-21 · Payroll execution · GATE (G3)
+**Batch signing findings from Gate G2 (2026-09-27):** one `solana:signTransaction` call with three transactions returned three valid signatures for v0 in Phantom, Solflare and Backpack (R9) and for v1 in Solflare (R10); Phantom and Backpack do not declare v1 and refuse it. Phantom showed one popup for the three transactions; popup counts for Solflare and Backpack were not observed, so a single prompt per batch is confirmed only for Phantom. Sotto uses one `signTransaction` call per chunk and falls back to one call per transaction if the wallet fails the batch call (D-26). Phantom adds compute budget instructions to transactions without them (proposal in Q-08, pending).
 One confidential transfer per recipient. A run of N recipients is N transactions (v1: one transaction each; v0 fallback: several each). Proofs are generated sequentially because each transfer changes the sender's available balance. Gate G3 decides whether the client can compute the next available balance ciphertext locally so the plans of a chunk can be prepared before signing; otherwise lines are prepared and executed one at a time (`06-CONFIDENTIAL-FLOWS.md` section 7). Signing chunks are at most 10 lines: a 24 line run is 3 prompts when `signAllTransactions` works, otherwise one prompt per transaction. Copy must not claim "one transaction" and never promises a number of prompts.
 
 ### D-22 · Pricing · DEFAULT
@@ -140,4 +144,13 @@ Terms of service, privacy policy and a regulatory review (Turkey and target mark
 - Reason: on the private repository GitHub Actions jobs do not start ("recent account payments have failed or your spending limit needs to be increased") and branch protection requires GitHub Pro or a public repository (HTTP 403). See `VERIFICATION-LOG.md`, step 0.5.
 - Until then CI runs locally with `pnpm ci:local` (`scripts/ci-local.sh`), the same four jobs as `.github/workflows/ci.yml`; the workflow runs on `workflow_dispatch` only. Merge rules are in ENGINEERING-RULES.md (Git workflow).
 - At the public launch: restore the `push` and `pull_request` triggers, apply branch protection, and record the first green GitHub Actions run.
+
+### D-26 · Wallets: capability requirements per role, wallet agnostic · DECIDED (founder, 2026-09-27)
+Sotto is wallet agnostic. Any wallet that implements the Wallet Standard for Solana must appear and work. There is no whitelist: the app detects capabilities at runtime from the wallet's declared features.
+- **Every user:** `standard:connect` and `solana:signTransaction`, plus at least one `solana:` chain. Wallets without them are not offered for connection.
+- **Organization owners and anyone who holds confidential balances:** additionally `solana:signMessage` with deterministic signatures, because the confidential keys are derived from it (D-03, `standard_v1`). Wallets without it can sign in and receive public payments; the app explains why they cannot hold confidential balances.
+- **Transaction path per wallet:** read `supportedTransactionVersions` from `solana:signTransaction`. If it includes `1`, use v1 single transaction plans; otherwise use v0 multi transaction plans (06 section 5). Never send a version the wallet does not declare (G2: Phantom fails to parse v1 with "Reached end of buffer unexpectedly"; Backpack refuses with `UnsupportedTransactionVersionError`).
+- **Batch signing:** one `signTransaction` call with several transactions; if the wallet does not support it, fall back to one call per transaction.
+- **Wallet specific behavior** (for example, modifying the transaction message before signing) is handled by capability checks and by comparing the signed message with the built one, never by wallet name, unless no check can detect it. Such an exception is documented here with evidence. None exists today.
+- The wallets tested in Gate G2 (Phantom, Solflare, Backpack) are verified examples, not a supported list (`VERIFICATION-LOG.md` step 0.6; `14-ENVIRONMENTS-DEPLOY.md` section 3).
 

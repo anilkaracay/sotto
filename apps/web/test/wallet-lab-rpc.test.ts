@@ -11,7 +11,7 @@ import {
   RPC_URL_ERROR,
   validateRpcUrl,
 } from "../app/dev/wallet-lab/rpc-proxy";
-import { POST } from "../app/dev/wallet-lab/rpc/route";
+import { POST } from "../app/dev/wallet-lab/rpc/route.dev";
 
 // Fake, low entropy value: never a real key.
 const VALID_URL = "https://devnet.helius-rpc.com/?api-key=test";

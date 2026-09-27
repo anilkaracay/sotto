@@ -106,8 +106,9 @@ job_localnet() {
     return 1
   fi
   run scripts/fetch-token-wrap.sh || return 1
-  echo "+ scripts/localnet.sh (background, log .localnet/ci-local/localnet.log)"
-  scripts/localnet.sh >"$LOG_DIR/localnet.log" 2>&1 &
+  echo "+ scripts/localnet.sh (background, log .localnet/ci-local/validator.log)"
+  # The validator log has its own file: .localnet/ci-local/localnet.log is this job's output (tee below).
+  scripts/localnet.sh >"$LOG_DIR/validator.log" 2>&1 &
   VALIDATOR_PID=$!
   local healthy=""
   for _ in $(seq 1 120); do
@@ -120,8 +121,8 @@ job_localnet() {
     sleep 2
   done
   if [[ -z "$healthy" ]]; then
-    echo "error: validator did not become healthy; see .localnet/ci-local/localnet.log" >&2
-    tail -20 "$LOG_DIR/localnet.log" >&2
+    echo "error: validator did not become healthy; see .localnet/ci-local/validator.log" >&2
+    tail -20 "$LOG_DIR/validator.log" >&2
     stop_validator
     return 1
   fi
@@ -137,7 +138,7 @@ job_localnet() {
     rm -rf "$ROOT/.localnet/ledger" "$ROOT/.localnet/smoke"
     echo "cleaned up ledger and smoke keypairs"
   else
-    echo "kept .localnet/ledger and .localnet/ci-local/localnet.log for inspection" >&2
+    echo "kept .localnet/ledger and .localnet/ci-local/validator.log for inspection" >&2
   fi
   return "$status"
 }

@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./cluster": "./src/cluster/config.ts"
+    "./cluster": "./src/cluster/config.ts",
+    "./tx": "./src/tx/index.ts"
   },
   "scripts": {
     "lint": "eslint .",

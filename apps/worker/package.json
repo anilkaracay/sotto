@@ -5,11 +5,14 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.ts",
+    "bootstrap:sas": "node src/bin/bootstrap-sas.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:localnet": "vitest run test/sas-localnet.test.ts"
   },
   "dependencies": {
+    "@solana/kit": "catalog:",
     "@sotto/sdk": "workspace:*",
     "sas-lib": "catalog:"
   },

@@ -1,6 +1,7 @@
-// /app (09 section 1): sends a signed out visitor to the sign in screen. A signed in user who owns an
-// organization, or has none yet, goes to /app/onboarding until the owner screens exist (steps 1.7 and
-// 1.10). Members with other roles see the shell until their pages exist.
+// /app (09 section 1): sends a signed out visitor to the sign in screen. The owner of an active
+// organization goes to its setup page (the first owner screen until the overview exists, step 1.10); a
+// user who owns an organization in review or suspended, or has none yet, goes to /app/onboarding.
+// Members with other roles see the shell until their pages exist.
 import { Card, PageHeader } from "@sotto/ui";
 import { redirect } from "next/navigation";
 import { currentSession } from "../../lib/server/current-session.ts";
@@ -16,9 +17,9 @@ export default async function AppPage() {
   const session = await currentSession();
   if (!session) redirect("/app/sign-in");
   const me = await loadMe(getDb(), session);
-  if (me.memberships.length === 0 || me.memberships.some((m) => m.role === "owner")) {
-    redirect("/app/onboarding");
-  }
+  const owned = me.memberships.find((m) => m.role === "owner");
+  if (owned?.orgStatus === "active") redirect(`/app/${owned.orgId}/setup`);
+  if (me.memberships.length === 0 || owned) redirect("/app/onboarding");
   return (
     <AppShell me={me} network={networkLabel(process.env.NEXT_PUBLIC_CLUSTER)}>
       <PageHeader

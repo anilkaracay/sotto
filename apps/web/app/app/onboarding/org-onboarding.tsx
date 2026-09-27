@@ -4,6 +4,7 @@
 // the status card. The form validates with the same schema as the API (lib/org.ts). No approved
 // design exists for this screen; it is built on the app tokens (13 A35).
 import { Button, Card, Chip, PageHeader, type ChipTone } from "@sotto/ui";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { ApiCallError, callApi, invalidField } from "../../../lib/client/api.ts";
@@ -351,13 +352,25 @@ function OrgStatusView({ org, onEdit }: { org: OnboardingOrg; onEdit: () => void
                 {org.attestationAddress}
               </dd>
             </dl>
+            <div className={styles.actions}>
+              <Link className={styles.primaryLink} href={`/app/${org.id}/setup`}>
+                Set up the confidential account
+              </Link>
+            </div>
           </>
         ) : null}
         {org.status === "active" && !org.attestationAddress ? (
-          <p className={styles.lead}>
-            Verified by Sotto. The attestation is being issued to your wallet onchain; reload in a
-            moment to see its address.
-          </p>
+          <>
+            <p className={styles.lead}>
+              Verified by Sotto. The attestation is being issued to your wallet onchain; reload in a
+              moment to see its address.
+            </p>
+            <div className={styles.actions}>
+              <Link className={styles.primaryLink} href={`/app/${org.id}/setup`}>
+                Set up the confidential account
+              </Link>
+            </div>
+          </>
         ) : null}
         {org.status === "suspended" ? (
           <p className={styles.lead}>

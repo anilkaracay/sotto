@@ -1,12 +1,14 @@
-// E2E web server: a fresh migrated database on the test Postgres (scripts/db-local.sh test-up), then
-// the production build of apps/web through next start on port 3200. Configuration comes from this
+// E2E web server: a fresh migrated database on the test Postgres (scripts/db-local.sh test-up) with the
+// E2E admin wallet, then the production build of apps/web through next start on port 3200. Configuration comes from this
 // process's environment, which wins over apps/web/.env.local in Next.js (14 section 2).
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { admins } from "@sotto/db";
 import { createTestDatabase } from "@sotto/db/testing";
+import { E2E_ADMIN_WALLET } from "./fixtures.ts";
 
 const PORT = 3200;
 const WEB = fileURLToPath(new URL("../../apps/web", import.meta.url));
@@ -17,6 +19,8 @@ if (!existsSync(join(WEB, ".next", "BUILD_ID"))) {
 }
 
 const database = await createTestDatabase();
+// The fixed keypair wallet of the keys spec is a Sotto admin, so the spec approves its own org.
+await database.db.insert(admins).values({ wallet: E2E_ADMIN_WALLET });
 const web = spawn(
   process.execPath,
   [join(WEB, "node_modules", "next", "dist", "bin", "next"), "start", "-p", String(PORT)],

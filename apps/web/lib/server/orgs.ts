@@ -54,8 +54,8 @@ const STATUS_WORD: Record<OrgStatus, string> = {
 
 export type AdminAction = "approve" | "reject" | "suspend";
 
-// Reject has no status of its own in the hackathon build: a rejected org is suspended (Q-13,
-// DEFAULT).
+// Reject has no status of its own in the hackathon build: a rejected org is suspended (Q-13
+// option a, D-09).
 const TRANSITIONS: Record<
   AdminAction,
   { from: OrgStatus; to: OrgStatus; fromLabel: string; done: string }

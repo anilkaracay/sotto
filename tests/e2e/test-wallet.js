@@ -1,7 +1,12 @@
 // Injected Wallet Standard test wallet for E2E (docs/11-TESTING.md section 3), added with
-// page.addInitScript. Its Ed25519 key is generated in the page with WebCrypto. Like the wallets tested
-// in Gate G2, it signs sign in requests and any message, deterministically. It registers through the
-// Wallet Standard events (wallet-standard:register-wallet and wallet-standard:app-ready).
+// page.addInitScript. Its Ed25519 key is generated in the page with WebCrypto, or imported from a
+// 64 byte Solana keypair (seed, then public key) that a spec sets as window.__sottoTestWalletKeypair
+// in an earlier init script. Like the wallets tested in Gate G2, it signs sign in requests and any
+// message, deterministically, and it logs the text of every message it signs
+// (window.__sottoTestWallet.signedMessages). A spec can make it refuse given messages, as a wallet that
+// follows the guidance to refuse solana-conf-bal/v1 would (window.__sottoTestWallet.refuse). It
+// registers through the Wallet Standard events (wallet-standard:register-wallet and
+// wallet-standard:app-ready).
 (() => {
   const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
   const CHAINS = ["solana:devnet", "solana:localnet"];
@@ -61,11 +66,29 @@
   let keys;
   let account;
   const listeners = new Set();
+  const signedMessages = [];
+  let refused = new Set();
+  const fixed = window.__sottoTestWalletKeypair;
+  // PKCS #8 prefix of a raw Ed25519 private key (RFC 8410).
+  const PKCS8_ED25519 = [48, 46, 2, 1, 0, 48, 5, 6, 3, 43, 101, 112, 4, 34, 4, 32];
+
+  async function createKeys() {
+    if (Array.isArray(fixed) && fixed.length === 64) {
+      const pkcs8 = new Uint8Array([...PKCS8_ED25519, ...fixed.slice(0, 32)]);
+      const privateKey = await crypto.subtle.importKey("pkcs8", pkcs8, { name: "Ed25519" }, false, [
+        "sign",
+      ]);
+      return { privateKey, publicKey: new Uint8Array(fixed.slice(32)) };
+    }
+    const pair = await crypto.subtle.generateKey({ name: "Ed25519" }, false, ["sign", "verify"]);
+    const publicKey = new Uint8Array(await crypto.subtle.exportKey("raw", pair.publicKey));
+    return { privateKey: pair.privateKey, publicKey };
+  }
 
   async function ensureAccount() {
     if (account) return account;
-    keys = await crypto.subtle.generateKey({ name: "Ed25519" }, false, ["sign", "verify"]);
-    const publicKey = new Uint8Array(await crypto.subtle.exportKey("raw", keys.publicKey));
+    keys = await createKeys();
+    const publicKey = keys.publicKey;
     account = Object.freeze({
       address: base58(publicKey),
       publicKey,
@@ -142,10 +165,12 @@
         version: "1.0.0",
         signMessage: async (...inputs) =>
           Promise.all(
-            inputs.map(async ({ message }) => ({
-              signedMessage: message,
-              signature: await sign(message),
-            })),
+            inputs.map(async ({ message }) => {
+              const text = new TextDecoder().decode(message);
+              if (refused.has(text)) throw new Error("This wallet does not sign this message");
+              signedMessages.push(text);
+              return { signedMessage: message, signature: await sign(message) };
+            }),
           ),
       },
       "solana:signTransaction": {
@@ -164,6 +189,12 @@
   window.__sottoTestWallet = {
     get address() {
       return account ? account.address : undefined;
+    },
+    get signedMessages() {
+      return [...signedMessages];
+    },
+    refuse(texts) {
+      refused = new Set(texts);
     },
   };
 })();

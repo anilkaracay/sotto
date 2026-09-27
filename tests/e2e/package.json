@@ -10,8 +10,10 @@
   },
   "devDependencies": {
     "@playwright/test": "catalog:",
+    "@solana/kit": "catalog:",
     "@sotto/config": "workspace:*",
     "@sotto/db": "workspace:*",
+    "@sotto/sdk": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "globals": "catalog:",

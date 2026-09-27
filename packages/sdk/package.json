@@ -6,6 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./cluster": "./src/cluster/config.ts",
+    "./keys": "./src/keys/index.ts",
+    "./keys/public": "./src/keys/public.ts",
     "./tx": "./src/tx/index.ts",
     "./wallet": "./src/wallet/index.ts"
   },
@@ -20,7 +22,8 @@
     "@solana-program/zk-elgamal-proof": "catalog:",
     "@solana/kit": "catalog:",
     "@solana/sysvars": "catalog:",
-    "@solana/zk-sdk": "catalog:"
+    "@solana/zk-sdk": "catalog:",
+    "libsodium-wrappers-sumo": "catalog:"
   },
   "devDependencies": {
     "@sotto/config": "workspace:*",

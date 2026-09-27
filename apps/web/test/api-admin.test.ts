@@ -161,7 +161,7 @@ describe("admin review", () => {
     );
   });
 
-  it("rejects an org in review by suspending it (Q-13 DEFAULT) and never suspends one in review", async () => {
+  it("rejects an org in review by suspending it (Q-13 option a) and never suspends one in review", async () => {
     const { orgId } = await orgWithOwner();
     expect(await errorOf(await decide("suspend", orgId))).toBe(
       "409 org_status_conflict: Only active organizations can be suspended; this one is in review",

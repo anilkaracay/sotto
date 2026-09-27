@@ -7,11 +7,12 @@
 | `/` | Landing (from `design/sotto-landing.html`) | Public |
 | `/v/[address]` | Public proof verification | Public |
 | `/trust` | Trust page (D-01, `13-COPY-CORRECTIONS.md` L6 and L7, `10-SECURITY.md` section 4) | Public |
-| `/app` | Redirects to the first page of the user's role in their last used org. Without a session it sends the visitor to `/app/sign-in`. Since step 1.4 a user without an organization, or who owns one, goes to `/app/onboarding` until the owner screens exist (steps 1.7 and 1.10); members with other roles see the signed in shell until their pages exist | Session |
+| `/app` | Redirects to the first page of the user's role in their last used org. Without a session it sends the visitor to `/app/sign-in`. Since step 1.4 a user without an organization, or who owns one, goes to `/app/onboarding` until the owner screens exist; since step 1.5 the owner of an active org goes to `/app/[org]/setup` until the overview exists (step 1.10); members with other roles see the signed in shell until their pages exist | Session |
 | `/app/sign-in` | Sign in (F-01): the wallets that meet D-26, connect, then sign in (`solana:signIn` or a signed message, D-15). A signed in visitor goes to `/app` | Public |
 | `/app/onboarding` | Create org, KYB form, status (step 1.4): without an owned org, the form (legal name, optional display name, country, registration number, website, contact email) validated with the API's schema, and a note that the attestation onchain carries the org ID, legal name, country, verification date and review level for anyone to read; with one, the status card ("In review", "Verified" with the attestation address or "being issued", "Not verified", 13 A35) and the business details; "Change details" while in review | Session |
 | `/app/[org]/overview` | Owner overview; withdraw (F-09) opens as a drawer here | Owner |
-| `/app/[org]/setup` | Confidential account setup and funding (F-03, F-04) | Owner |
+| `/app/[org]/setup` | Confidential account setup and funding (F-03, F-04). Step 1.5 builds its keys part: the wallet card (the signed in wallet, connected again after a reload), the confidential keys card (Locked with the unlock explainer of 13 A36 and "Unlock with your wallet", then Unlocked with the encryption public key and Lock) and the viewing key card (Registered, or Create viewing key). Only for the owner of an active org; an org in review or suspended goes to `/app/onboarding` | Owner |
+| `/app/recovery` | Recovery guide (10 section 2, mitigation 3): moving a confidential balance back to public with the standard Solana command line tools; linked from the wallet refusal message (step 1.5) | Public |
 | `/app/[org]/recipients` | Recipients (F-07) | Owner |
 | `/app/[org]/settings` | Approval policy (1 approval, not changeable in the hackathon build, Q-12, 13 A32), budgets | Owner |
 | `/app/[org]/board` | Board view: read only totals (Post-hackathon, D-27) | Board viewer |

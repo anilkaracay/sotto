@@ -1,0 +1,101 @@
+/* The setup page, built on the app tokens (no design exists for its keys part, 13 A36). */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 16px;
+  align-items: start;
+}
+.walletCard {
+  grid-row: span 2;
+}
+.keysCard,
+.viewingCard {
+  min-width: 0;
+}
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cardTitle {
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+/* Two classes: the theme resets paragraph margins with .theme-app :is(h1, ..., p). */
+.grid .lead {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.grid .warning {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff4e0;
+  color: #8a5200;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+.grid .problem {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #ffecec;
+  color: #b4232a;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.link {
+  color: inherit;
+  font-weight: 500;
+}
+.details {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 10px 20px;
+  margin: 16px 0 0;
+  font-size: 14px;
+}
+.details dt {
+  color: var(--faint);
+}
+.details dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.wallets {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.walletRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px var(--line);
+}
+.walletName {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+}
+.icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex: none;
+}

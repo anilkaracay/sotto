@@ -70,6 +70,19 @@ export type RecipientUpdate = z.infer<typeof recipientUpdateSchema>;
 /** What the owner's private blob holds, sealed to the owner's viewing key. */
 export type RecipientPrivate = { v: 1; default_amount: string | null; notes: string | null };
 
+/**
+ * Notes in the private blob: at most 500 characters (UTF-16 code units) without control characters,
+ * so the sealed blob stays under its 2048 byte limit and opens again with parseRecipientPrivate.
+ */
+export const RECIPIENT_NOTES_MAX = 500;
+
+/** Why these notes cannot go into the private blob, or null. The page checks before sealing. */
+export function notesProblem(notes: string): string | null {
+  if (notes.length > RECIPIENT_NOTES_MAX) return `Use at most ${RECIPIENT_NOTES_MAX} characters`;
+  if (CONTROL.test(notes)) return "Remove the control characters";
+  return null;
+}
+
 export function parseRecipientPrivate(value: unknown): RecipientPrivate | null {
   if (typeof value !== "object" || value === null) return null;
   const input = value as Record<string, unknown>;
@@ -80,7 +93,7 @@ export function parseRecipientPrivate(value: unknown): RecipientPrivate | null {
   if (amount !== null && (typeof amount !== "string" || !/^(0|[1-9][0-9]{0,19})$/.test(amount))) {
     return null;
   }
-  if (notes !== null && (typeof notes !== "string" || notes.length > 500)) return null;
+  if (notes !== null && (typeof notes !== "string" || notesProblem(notes) !== null)) return null;
   return { v: 1, default_amount: amount, notes };
 }
 

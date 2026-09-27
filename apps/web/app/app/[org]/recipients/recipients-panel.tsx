@@ -14,7 +14,11 @@ import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { ApiCallError, callApi, invalidField } from "../../../../lib/client/api.ts";
 import { COUNTRIES, countryName } from "../../../../lib/countries.ts";
 import { formatDate, shortWallet } from "../../../../lib/format.ts";
-import { parseRecipientPrivate, type RecipientPrivate } from "../../../../lib/recipient.ts";
+import {
+  notesProblem,
+  parseRecipientPrivate,
+  type RecipientPrivate,
+} from "../../../../lib/recipient.ts";
 import type { RecipientView } from "../../../../lib/server/recipients.ts";
 import cards from "../../_components/confidential/cards.module.css";
 import {
@@ -100,6 +104,11 @@ function AddRecipientCard({ viewerKey }: { viewerKey: OwnerViewerKey | null }) {
         ...current,
         amount: `Enter an amount above zero with at most ${DECIMALS} decimals`,
       }));
+      throw new Error("");
+    }
+    const notes = notesProblem(fields.notes.trim());
+    if (notes) {
+      setErrors((current) => ({ ...current, notes }));
       throw new Error("");
     }
     const publicKey = fromBase64(viewerKey.publicKey);

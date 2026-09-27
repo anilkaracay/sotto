@@ -2,6 +2,7 @@
 // who can be paid confidentially and why not (AC-07.4), the field rules, and the private blob's shape.
 import { describe, expect, it } from "vitest";
 import {
+  notesProblem,
   parseRecipientPrivate,
   payability,
   READINESS_LABEL,
@@ -78,8 +79,17 @@ describe("recipient fields", () => {
       { v: 1, default_amount: "1.5", notes: null },
       { v: 1, default_amount: null },
       { v: 1, default_amount: null, notes: null, extra: 1 },
+      { v: 1, default_amount: null, notes: "x".repeat(501) },
+      { v: 1, default_amount: null, notes: "line\u0000break" },
     ]) {
       expect(parseRecipientPrivate(bad)).toBeNull();
     }
+  });
+
+  it("checks notes before sealing, so what is sealed opens again", () => {
+    expect(notesProblem("Monthly, first week")).toBeNull();
+    expect(notesProblem("ü".repeat(500))).toBeNull();
+    expect(notesProblem("x".repeat(501))).toBe("Use at most 500 characters");
+    expect(notesProblem("tab\there")).toBe("Remove the control characters");
   });
 });

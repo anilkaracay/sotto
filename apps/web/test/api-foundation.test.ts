@@ -106,6 +106,30 @@ describe("redaction list (08 section 6)", () => {
     });
   });
 
+  it("keeps the statement of a failed query but never its parameters or the row detail", () => {
+    const cause = Object.assign(new Error("duplicate key value violates unique constraint"), {
+      code: "23505",
+      constraint_name: "orgs_owner_user_id_key",
+      detail: "Key (owner_user_id)=(1) already exists.",
+    });
+    const error = new Error(
+      'Failed query: insert into "orgs" ("legal_name", "contact_email") values ($1, $2)\nparams: Northwind Labs Ltd,ops@northwind.example',
+      { cause },
+    );
+    const out = redact(error);
+    expect(out).toEqual({
+      name: "Error",
+      message: 'Failed query: insert into "orgs" ("legal_name", "contact_email") values ($1, $2)',
+      cause: {
+        name: "Error",
+        message: "duplicate key value violates unique constraint",
+        code: "23505",
+        constraint: "orgs_owner_user_id_key",
+      },
+    });
+    expect(JSON.stringify(out)).not.toMatch(/Northwind|ops@|already exists/);
+  });
+
   it("writes one JSON line whose fixed keys cannot be overwritten", () => {
     const out = vi.spyOn(console, "log").mockImplementation(() => {});
     log("info", "api_request", { event: "spoofed", level: "spoofed", status: 200, token: "t" });

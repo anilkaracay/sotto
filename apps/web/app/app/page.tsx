@@ -1,5 +1,6 @@
-// /app (09 section 1): sends a signed out visitor to the sign in screen. Signed in, it shows the shell;
-// the redirect to the first page of the user's role arrives with the org screens (1.4 and later).
+// /app (09 section 1): sends a signed out visitor to the sign in screen. A signed in user who owns an
+// organization, or has none yet, goes to /app/onboarding until the owner screens exist (steps 1.7 and
+// 1.10). Members with other roles see the shell until their pages exist.
 import { Card, PageHeader } from "@sotto/ui";
 import { redirect } from "next/navigation";
 import { currentSession } from "../../lib/server/current-session.ts";
@@ -15,19 +16,20 @@ export default async function AppPage() {
   const session = await currentSession();
   if (!session) redirect("/app/sign-in");
   const me = await loadMe(getDb(), session);
+  if (me.memberships.length === 0 || me.memberships.some((m) => m.role === "owner")) {
+    redirect("/app/onboarding");
+  }
   return (
     <AppShell me={me} network={networkLabel(process.env.NEXT_PUBLIC_CLUSTER)}>
       <PageHeader
         overline={`Signed in with ${shortWallet(me.user.wallet)}`}
         title="Welcome to Sotto"
       />
-      {me.memberships.length === 0 ? (
-        <Card>
-          <p style={{ fontSize: 14.5, color: "var(--ink2)" }}>
-            You are not a member of an organization yet.
-          </p>
-        </Card>
-      ) : null}
+      <Card>
+        <p style={{ fontSize: 14.5, color: "var(--ink2)" }}>
+          The pages for your role in this organization are not available yet.
+        </p>
+      </Card>
     </AppShell>
   );
 }

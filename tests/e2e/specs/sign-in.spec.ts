@@ -21,8 +21,9 @@ test("sign in and connect wallet", async ({ page }) => {
   );
 
   await option.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/app$/);
-  await expect(page.getByRole("heading", { name: "Welcome to Sotto" })).toBeVisible();
+  // Without an organization, /app sends the user to onboarding (F-02).
+  await expect(page).toHaveURL(/\/app\/onboarding$/);
+  await expect(page.getByRole("heading", { name: "Your organization" })).toBeVisible();
   await expect(page.getByTestId("network-label")).toHaveText("Devnet");
 
   const me = await page.request.get("/api/me");

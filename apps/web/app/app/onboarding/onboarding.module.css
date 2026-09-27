@@ -1,0 +1,107 @@
+/* The onboarding screen, built on the app tokens (no design exists for it, 13 A35). */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 16px;
+  align-items: start;
+}
+.formCard {
+  max-width: 760px;
+}
+.cardTitle {
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.lead {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.statusHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 16px;
+  margin-top: 22px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.wide {
+  grid-column: 1 / -1;
+}
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink2);
+}
+.control {
+  height: 44px;
+  width: 100%;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px var(--line);
+  font: inherit;
+  font-size: 14.5px;
+  color: var(--ink);
+  transition: box-shadow 0.15s ease;
+}
+.control:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--blue);
+}
+.control[aria-invalid="true"] {
+  box-shadow: 0 0 0 1px var(--red);
+}
+.control::placeholder {
+  color: var(--faint);
+}
+.hint {
+  font-size: 12.5px;
+  color: var(--faint);
+}
+.error {
+  font-size: 12.5px;
+  color: #b4232a;
+}
+.formError {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #ffecec;
+  color: #b4232a;
+  font-size: 13.5px;
+}
+.actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.details {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 10px 20px;
+  margin: 18px 0 0;
+  font-size: 14px;
+}
+.details dt {
+  color: var(--faint);
+}
+.details dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

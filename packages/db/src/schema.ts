@@ -156,7 +156,9 @@ export const orgs = pgTable(
       "orgs_reviewed_by_base58",
       sql`${t.reviewedBy} is null or ${t.reviewedBy} ~ ${sql.raw(`'${BASE58_ADDRESS}'`)}`,
     ),
-    index("orgs_owner_user_id_idx").on(t.ownerUserId),
+    // One org per owner wallet: the attestation nonce is the owner's wallet (08 section 5), so a wallet
+    // can carry only one verified business.
+    uniqueIndex("orgs_owner_user_id_key").on(t.ownerUserId),
     index("orgs_status_idx").on(t.status),
   ],
 );

@@ -1,12 +1,22 @@
-// Worker entry logic. Jobs (confirmations, SAS issuance, proof program health) arrive later in Phase 1.
-// Configuration comes from the environment: apps/worker/.env.local when it exists (local development,
-// src/env.ts), otherwise only the platform's environment variables (hosted, 14 section 2). A missing
-// or invalid variable stops the worker with its name; values are never printed.
+// The worker process (08 section 4). Configuration comes from the environment: apps/worker/.env.local
+// when it exists (local development, src/env.ts), otherwise only the platform's environment variables
+// (hosted, 14 section 2). A missing or invalid variable stops the worker with its name; values are
+// never printed. With --once each job runs one time and the process exits.
+import { createDb } from "@sotto/db";
+import { createRetryingRpc } from "@sotto/sdk/tx";
 import { ConfigError, loadWorkerConfig } from "./config.ts";
+import { runJobs } from "./jobs/runner.ts";
+import { sasIssueJob } from "./jobs/sas-issue.ts";
+import { loadKeypairSigner } from "./keypair.ts";
+import { log } from "./log.ts";
 
-export function main(env: Readonly<Record<string, string | undefined>> = process.env): number {
+export async function main(
+  argv: readonly string[] = process.argv.slice(2),
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): Promise<number> {
+  let config;
   try {
-    loadWorkerConfig(env);
+    config = loadWorkerConfig(env);
   } catch (error) {
     if (error instanceof ConfigError) {
       console.error(`sotto worker: configuration error: ${error.message}`);
@@ -14,6 +24,41 @@ export function main(env: Readonly<Record<string, string | undefined>> = process
     }
     throw error;
   }
-  console.log("sotto worker: started, no jobs configured, exiting");
-  return 0;
+  let signer;
+  try {
+    signer = await loadKeypairSigner(config.sasSignerKeypair);
+  } catch (error) {
+    console.error(
+      `sotto worker: configuration error: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return 1;
+  }
+  const once = argv.includes("--once");
+  const { db, close } = createDb(config.databaseUrl, { max: 3 });
+  const rpc = createRetryingRpc(config.rpcUrl, {
+    onRetry: (retry, max, delayMs) =>
+      log("rpc_busy", { message: "network busy, retrying", retry, max, delayMs }, "warn"),
+  });
+  const controller = new AbortController();
+  const stop = () => controller.abort();
+  process.once("SIGTERM", stop);
+  process.once("SIGINT", stop);
+  const jobs = [
+    sasIssueJob({
+      db,
+      sas: { rpc, signer },
+      credential: config.sasCredentialAddress,
+      schemaAddress: config.sasSchemaAddress,
+    }),
+  ];
+  log("worker_started", { jobs: jobs.map((job) => job.name), once, signer: signer.address });
+  try {
+    const { failures } = await runJobs(jobs, { signal: controller.signal, log, once });
+    return once && failures > 0 ? 1 : 0;
+  } finally {
+    process.off("SIGTERM", stop);
+    process.off("SIGINT", stop);
+    await close();
+    log("worker_stopped");
+  }
 }

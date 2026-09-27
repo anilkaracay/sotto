@@ -160,7 +160,7 @@ New commands:
 ```sh
 pnpm --filter @sotto/worker bootstrap:sas --cluster devnet [--test-attestation <owner>]    # reads apps/worker/.env.local
 pnpm --filter @sotto/worker bootstrap:sas --cluster localnet [--test-attestation <owner>]  # http://127.0.0.1:8899
-SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/worker test:localnet   # run by the ci:local localnet job
+SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/worker test:localnet   # run by the ci:local localnet job (since step 1.4 also needs the test Postgres, see below)
 ```
 
 ## Step 1.1.1 (2026-09-27): hosted configuration checks
@@ -204,4 +204,19 @@ Commands:
 
 ```sh
 pnpm build && scripts/db-local.sh test-up && pnpm --filter @sotto/e2e e2e   # E2E against the production build
+```
+
+## Step 1.4 (2026-09-27): organizations, admin review, worker job loop
+
+| Item | Version | Resolved on | Source | Notes |
+|---|---|---|---|---|
+| `@sotto/db` and `drizzle-orm` in `apps/worker` | workspace, 0.45.3 (catalog) | 2026-09-27 | `pnpm-workspace.yaml` catalog, lockfile `apps/worker` importer | New direct worker dependencies for the `sas-issue` job; no new package versions in the lockfile |
+| ISO 3166-1 country list | Debian iso-codes `data/iso_3166-1.json` at commit `d055275324963c9bce5882eaaa93024cf2bf7ed0` (2023-02-22, the latest commit touching the file on `main` when read), SHA-256 `f01b812b57fba9f31ff621bf33e7c7570a01964dbeb5be2167e94decf538c89f` | 2026-09-27 | https://salsa.debian.org/iso-codes-team/iso-codes | Generated into `apps/web/lib/countries.ts`: 249 alpha-2 codes, `common_name` where present, else `name` |
+
+Commands:
+
+```sh
+pnpm --filter @sotto/worker start                 # the job loop, reads apps/worker/.env.local
+pnpm --filter @sotto/worker start -- --once        # each job once, exit 1 if one failed
+scripts/db-local.sh test-up && SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/worker test:localnet   # every *localnet* test file of the worker; needs the validator and the test Postgres
 ```

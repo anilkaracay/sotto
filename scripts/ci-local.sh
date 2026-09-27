@@ -151,8 +151,11 @@ job_localnet() {
   local status=0
   run scripts/localnet-smoke.sh || status=1
   if [[ "$status" -eq 0 ]]; then
+    # The worker's localnet tests also need the test Postgres (the sas-issue job reads orgs).
+    run scripts/db-local.sh test-up || status=1
     echo "+ SOTTO_LOCALNET_RPC_URL=$RPC_URL_LOCAL pnpm --filter @sotto/worker test:localnet"
     SOTTO_LOCALNET_RPC_URL="$RPC_URL_LOCAL" pnpm --filter @sotto/worker test:localnet || status=1
+    run scripts/db-local.sh test-down
   fi
   stop_validator
   if [[ "$status" -eq 0 ]]; then

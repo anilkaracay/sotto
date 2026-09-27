@@ -16,6 +16,15 @@ const WALLET_B = "6xosZg2PbZuneXX4riov7GmUCJmydQc3o5MGX6p5EU2";
 
 let test: TestDatabase;
 
+function migrationCount(): number {
+  const journal = JSON.parse(
+    readFileSync(join(MIGRATIONS_FOLDER, "meta", "_journal.json"), "utf8"),
+  ) as {
+    entries: unknown[];
+  };
+  return journal.entries.length;
+}
+
 beforeAll(async () => {
   test = await createTestDatabase();
 });
@@ -58,12 +67,21 @@ describe("migrations on a fresh database", () => {
     const applied = await rows<{ count: string }>(
       sql`select count(*)::text as count from drizzle.__drizzle_migrations`,
     );
-    expect(applied[0]?.count).toBe("1");
+    expect(applied[0]?.count).toBe(String(migrationCount()));
   });
 
   it("match src/schema.ts (no drift between the schema and the migrations)", async () => {
+    const journal = JSON.parse(
+      readFileSync(join(MIGRATIONS_FOLDER, "meta", "_journal.json"), "utf8"),
+    ) as {
+      entries: { idx: number }[];
+    };
+    const last = journal.entries.at(-1)?.idx ?? 0;
     const snapshot = JSON.parse(
-      readFileSync(join(MIGRATIONS_FOLDER, "meta", "0000_snapshot.json"), "utf8"),
+      readFileSync(
+        join(MIGRATIONS_FOLDER, "meta", `${String(last).padStart(4, "0")}_snapshot.json`),
+        "utf8",
+      ),
     );
     const current = generateDrizzleJson(schema as Record<string, unknown>, snapshot.id);
     expect(await generateMigration(snapshot, current)).toEqual([]);
@@ -175,6 +193,15 @@ describe("constraints", () => {
       sql`insert into grants (org_id, invite_token, scope, period_from, period_to, created_by)
           values (${orgId}, 'invite-hash-1', 'period', '2026-01-01', '2026-03-31', ${userId})`,
     );
+  });
+
+  it("allow one org per owner wallet (the attestation nonce, 08 section 5)", async () => {
+    expect(
+      await violation(
+        sql`insert into orgs (display_name, legal_name, country, registration_no, website, contact_email, owner_user_id)
+            values ('Second', 'Second Ltd', 'TR', '2', 'https://second.example', 'a@second.example', ${userId})`,
+      ),
+    ).toBe("orgs_owner_user_id_key");
   });
 
   it("keep recipient wallets unique per org", async () => {

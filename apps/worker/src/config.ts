@@ -25,6 +25,12 @@ export type WorkerConfig = {
   sasSignerKeypair: string;
   sasCredentialAddress: Address;
   sasSchemaAddress: Address;
+  /**
+   * The local USDC-like mint of a local ledger (optional, localnet only; step 1.8): the
+   * recipient-readiness job derives the wrapped mint from it. Devnet takes its mints from the
+   * cluster config.
+   */
+  localnetUsdcMint: Address | null;
 };
 
 const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
@@ -96,5 +102,6 @@ export function loadWorkerConfig(env: Env = process.env): WorkerConfig {
     sasSignerKeypair: sas.sasSignerKeypair,
     sasCredentialAddress: sas.sasCredentialAddress,
     sasSchemaAddress: sas.sasSchemaAddress,
+    localnetUsdcMint: optionalAddress(env, "LOCALNET_USDC_MINT"),
   };
 }

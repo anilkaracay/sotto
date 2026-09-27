@@ -1,10 +1,15 @@
-/* The cards of the org pages (setup, overview), built on the app tokens: no design exists for the keys,
-   account and funding parts (13 A36, A37). */
+/* The cards of the confidential pages (setup, overview, invite), built on the app tokens: no design
+   exists for the keys, account and funding parts or the invite page (13 A36, A37, A38). */
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
   gap: 16px;
   align-items: start;
+}
+/* One column, for a page with a single card (the invite before acceptance). */
+.grid.single {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 680px;
 }
 .walletCard {
   grid-row: span 2;

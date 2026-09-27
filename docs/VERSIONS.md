@@ -162,3 +162,9 @@ pnpm --filter @sotto/worker bootstrap:sas --cluster devnet [--test-attestation <
 pnpm --filter @sotto/worker bootstrap:sas --cluster localnet [--test-attestation <owner>]  # http://127.0.0.1:8899
 SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/worker test:localnet   # run by the ci:local localnet job
 ```
+
+## Step 1.1.1 (2026-09-27): hosted configuration checks
+
+| Item | Version | Resolved on | Source | Notes |
+|---|---|---|---|---|
+| Docker (this machine) | client 29.8.1, server 29.7.2, buildx v0.36.1-desktop.1 | 2026-09-27 | `docker version`, `docker buildx version` | Runs the local Postgres container and `scripts/checks/env-files.sh`, which exports the build context with BuildKit (`docker build --output type=local`) |

@@ -220,3 +220,18 @@ pnpm --filter @sotto/worker start                 # the job loop, reads apps/wor
 pnpm --filter @sotto/worker start -- --once        # each job once, exit 1 if one failed
 scripts/db-local.sh test-up && SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/worker test:localnet   # every *localnet* test file of the worker; needs the validator and the test Postgres
 ```
+
+## Step 1.5 (2026-09-27): browser crypto, key unlock, viewing keys
+
+| Item | Version | Resolved on | Source | Notes |
+|---|---|---|---|---|
+| `libsodium-wrappers-sumo` | 0.8.4 | 2026-09-27 | https://registry.npmjs.org/libsodium-wrappers-sumo (dist-tag `latest`, published 2026-04-19) | `packages/sdk`: the viewing key (`crypto_box_seed_keypair`, 06 section 2); step 1.8 adds sealed boxes. Ships its own types (`dist/modules-sumo-esm/libsodium-wrappers.d.mts`). Brings `libsodium-sumo` 0.8.4 (published 2026-04-19) |
+| `@sotto/sdk` and `@solana/kit` in `tests/e2e` | workspace, 8.3.0 (catalog) | 2026-09-27 | lockfile `tests/e2e` importer | The keys spec derives the expected secrets in Node |
+| `spl-token-cli`, `solana-keygen`, `spl-token-wrap-cli` (this machine) | 5.6.1, 4.2.2, 2.0.0 | 2026-09-27 | `--version` | Used for the step 1.5 CLI key check and the recovery guide commands (facts A11, H7, H8) |
+
+Commands:
+
+```sh
+pnpm --filter @sotto/sdk exec vitest run keys           # derivation, key match, viewing key, registration
+pnpm build && scripts/db-local.sh test-up && pnpm --filter @sotto/e2e e2e   # includes the keys spec
+```

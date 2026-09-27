@@ -101,6 +101,7 @@ Organizations and people
 
 Keys and accounts
 - `POST /viewer-keys { publicKey, signature }`, `GET /users/:id/viewer-key`.
+- Implementation (step 1.5, `apps/web/lib/server/viewer-keys.ts`, 07 section 5): `POST /viewer-keys` (session, write limits) takes base64 of exactly 32 and 64 bytes, checks that the signature is the caller's wallet signature of `sotto-view-key-register/v1\n<base64 key>` (400 `viewer_key_signature_invalid` otherwise, nothing stored), and in one transaction marks the active key `rotated` and inserts the new one (201); the key that is already active answers 200 and changes nothing; a concurrent registration that loses the one active key per user index is 409 `viewer_key_conflict`. `GET /users/:id/viewer-key` returns `{ viewerKey: { id, userId, wallet, publicKey, signature, status, createdAt } }` with `cache-control: no-store`, to the user and to an owner of an org the user is an active member of (403 otherwise; 404 `viewer_key_not_found` without an active key). The browser verifies the signature before it encrypts to the key (I-8).
 - `POST /token-accounts { address, keyScheme }`: the server verifies onchain that the account exists, belongs to the caller's wallet, uses the configured wUSDC mint and has the confidential extension before storing.
 
 Recipients and screening

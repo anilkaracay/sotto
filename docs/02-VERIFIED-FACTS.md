@@ -46,6 +46,7 @@ Source: https://solana.com/news/solana-changelog-august-27-2026. **RE-VERIFY** w
 A11. Standard key derivation: the owner signs the constant message `solana-conf-bal/v1` once; both the ElGamal keypair and the AES key are derived from that signature. One wallet maps to one ElGamal keypair and one AES key across **all** mints and token accounts. Sharing these keys discloses every confidential account of that owner.
 Source: same as A1.
 Observation 2026-09-26 · G1 part 3, task 7 and 8: `spl-token` 5.6.1 configured wallet B with the same ElGamal public key on every mint, on localnet and devnet. This shows one key per wallet for the CLI; it does not show which derivation the CLI uses.
+**VERIFIED** 2026-09-27 · localnet, devnet (read only) · step 1.5: `spl-token` 5.6.1 derives the same keys as `deriveConfidentialKeys` of `@solana-program/token-2022` 0.19.0 for the same keypair. On localnet the CLI configured the fixed test keypair `EQMW3o1D…RLZC` with ElGamal key `BxMVLbjV…kZp6`, equal to our derivation, and our AES key decrypted the decryptable available balance the CLI wrote (40000000 base units); on devnet the CLI configured accounts of wallets A and B in G1 hold the keys our derivation gives. In token-2022 0.19.0, `deriveConfidentialKeys` asks its signer for one signature of `ConfidentialKeys.signerMessage()` (the 18 bytes `solana-conf-bal/v1`) and returns `ConfidentialKeys.fromSignature(signature)`; in `@solana/zk-sdk` 0.5.3 `signerMessage` takes no argument.
 
 A12. The official guidance says wallets **should refuse** generic `signMessage` requests for messages starting with `solana-conf-bal/v1`, because that signature is key material. A dApp may therefore be unable to derive the standard keys through a generic wallet `signMessage` call.
 Source: same as A1. This drives decision D-03.
@@ -208,5 +209,19 @@ H4. `spl-token` 5.6.1 closes the proof record and proof context accounts of a co
 H5. Devnet rent is lower than localnet rent for the same size (469 bytes: 3032760 lamports on devnet, 4155120 on localnet; `getMinimumBalanceForRentExemption`). Cost estimates must be computed per cluster with that RPC call, not from constants.
 **VERIFIED** 2026-09-26 · devnet, localnet · G1 part 3, task 7.
 
+H7. `spl-token` 5.6.1 `withdraw-confidential-tokens <mint> ALL` fails with "ALL keyword is not currently supported for withdraw", although its `--help` says the amount "accepts keyword ALL". An amount above the available balance fails with `InsufficientFunds` and costs no lamports. There is no command that prints a decrypted confidential balance.
+**VERIFIED** 2026-09-27 · localnet · step 1.5.
+
+H8. `solana-keygen` 4.2.2 `recover 'prompt://?key=0/0'` derives the account at m/44'/501'/0'/0' (compared with an independent SLIP-0010 derivation of a throwaway phrase); `prompt://` without a path derives a different key. `recover <base58 keypair string>` writes the same keypair file. The confirmation "Continue? (y/n)" is read from standard input; the phrase prompt reads the terminal.
+**VERIFIED** 2026-09-27 · host · step 1.5.
+
 H6. Genesis hashes: devnet `EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG` (the Helius devnet RPC and the public devnet RPC agree), mainnet `5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d` (public mainnet RPC, read only `getGenesisHash`). Every localnet ledger has its own. Scripts that write to chain compare the endpoint's genesis hash with the cluster they were asked for and refuse mainnet (`clusterFromGenesisHash` in `packages/sdk/src/cluster/config.ts`, used by `bootstrap:sas`).
 **VERIFIED** 2026-09-27 · devnet, mainnet (read only) · step 1.1.
+
+## I. Browser runtime (verified in step 1.5)
+
+I1. `@solana/zk-sdk` 0.5.3 runs inside a module Web Worker bundled by Turbopack (next 16.3.6), in `next dev` and in the production build. `@solana-program/token-2022/confidential` imports `@solana/zk-sdk/bundler`, whose `index.js` imports `index_bg.wasm` as a module; Turbopack emits it (production: `.next/static/chunks/<hash>.wasm`, byte identical to the package file, SHA-256 `802bd267…80c8`) and serves it as `application/wasm`. Loading took about 100 ms in dev and 170 ms in production on this machine, the derivation a few milliseconds. A worker module that imports the WASM statically attaches its message handler only after the WASM has loaded, and a message the page posts when it creates the worker is lost; the Sotto worker therefore attaches its handler first, reports ready, and loads the WASM on the first request.
+**VERIFIED** 2026-09-27 · Chrome for Testing 153 · step 1.5.
+
+I2. `libsodium-wrappers-sumo` 0.8.4 (ESM build, `crypto_box_seed_keypair`) works in Node 24 and in the same Turbopack Web Worker.
+**VERIFIED** 2026-09-27 · step 1.5 (unit tests and the E2E viewing key registration).

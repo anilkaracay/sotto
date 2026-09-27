@@ -24,6 +24,7 @@ unlockConfidentialKeys(wallet, scheme) -> { elgamalKeypair, aeKey }
   ```
   signature = wallet `signMessage(message)`, keys = `ConfidentialKeys.fromIkm(signature)` from `@solana/zk-sdk`. Rebuild WASM objects from bytes as the guide describes.
 - Before first use on an account: derive, then compare the derived ElGamal public key with the `elgamal_pubkey` stored on the configured token account. Mismatch means wrong scheme or wrong wallet: stop, never proceed.
+- Implementation (step 1.5, `packages/sdk/src/keys`): `deriveStandardKeys(wallet, signature)` checks that the signature is the wallet's Ed25519 signature of exactly `solana-conf-bal/v1`, then runs `deriveConfidentialKeys` with a signer that replays that signature and refuses any other message. The wallet's `signMessage` output is used only if the signed bytes equal the requested bytes (`checkSignedMessage`). The key match (I-5) is `elgamalKeyMatches` and `assertElGamalKeyMatches`, and the crypto worker's `checkAccount` request; step 1.7 calls it before any use of an account. The `spl-token` CLI derives the same keys (facts A11); the unit tests use its test vector.
 
 ## 2. Viewing key derivation (application level)
 
@@ -31,6 +32,7 @@ unlockConfidentialKeys(wallet, scheme) -> { elgamalKeypair, aeKey }
 unlockViewingKey(wallet) -> { x25519PublicKey, x25519SecretKey }
 ```
 message = UTF-8 `sotto-view-key/v1\n<walletBase58>`; seed = HKDF-SHA256(ikm = signature, salt = "sotto", info = "x25519", 32 bytes); keypair = `crypto_box_seed_keypair(seed)` (libsodium). Registration stores the public key server side together with a signature by the wallet over `sotto-view-key-register/v1\n<publicKeyBase64>` so the server can prove the wallet published it.
+Implementation (step 1.5): `deriveViewingKey(wallet, signature)` (HKDF with WebCrypto, `libsodium-wrappers-sumo` 0.8.4) after checking the wallet's signature of the message; a test recomputes the key independently (HKDF, SHA-512 of the seed, X25519 with `node:crypto`).
 
 ## 3. Account setup
 

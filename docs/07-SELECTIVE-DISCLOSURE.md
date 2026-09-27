@@ -6,7 +6,7 @@ Onchain confidential keys are wallet wide (facts A11) and the wrapped USDC mint 
 
 ## 2. Cryptography
 
-- Library: libsodium (`libsodium-wrappers-sumo` in the browser, pinned).
+- Library: libsodium (`libsodium-wrappers-sumo` in the browser, pinned; 0.8.4 since step 1.5, where the viewing key derivation needs it).
 - Viewer keypair: X25519, derived from a wallet signature (see `06-CONFIDENTIAL-FLOWS.md` section 2).
 - Encryption: `crypto_box_seal(plaintext, viewerPublicKey)` (anonymous sender, authenticated by the manifest in section 4).
 - Hashing: SHA-256.
@@ -50,6 +50,7 @@ A viewer must know a disclosure really came from the org owner.
 - A viewer registers `{ x25519_public_key, signature }` where the signature is by their wallet over `sotto-view-key-register/v1\n<base64 public key>`.
 - Before encrypting to a viewer, the owner's browser verifies that signature. This prevents the server from substituting a key it controls.
 - Rotation: registering a new key marks the old one `rotated`; the owner's browser re-encrypts active grant material on next open.
+- Implementation (step 1.5): `POST /api/viewer-keys` and `GET /api/users/:id/viewer-key` (08 section 3); the check is `verifyViewKeyRegistration` from `@sotto/sdk/keys/public`, which the server runs before storing and the browser runs before using a key (tested against a key swapped in the database). Owners register their viewing key on the setup page; recipients will do it in the invite flow (step 1.8).
 
 ## 6. What gets disclosed to whom
 

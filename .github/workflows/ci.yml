@@ -147,6 +147,10 @@ jobs:
         run: pnpm --filter @sotto/worker test:localnet
         env:
           SOTTO_LOCALNET_RPC_URL: http://127.0.0.1:8899
+      - name: Scripts on localnet (recover-balance)
+        run: pnpm --filter @sotto/scripts test:localnet
+        env:
+          SOTTO_LOCALNET_RPC_URL: http://127.0.0.1:8899
       - name: Upload validator logs
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

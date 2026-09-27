@@ -543,6 +543,12 @@ importers:
 
   scripts:
     dependencies:
+      '@solana/kit':
+        specifier: 'catalog:'
+        version: 8.3.0(typescript@6.0.3)
+      '@sotto/sdk':
+        specifier: workspace:*
+        version: link:../packages/sdk
       typescript:
         specifier: 'catalog:'
         version: 6.0.3

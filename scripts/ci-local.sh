@@ -155,6 +155,8 @@ job_localnet() {
     run scripts/db-local.sh test-up || status=1
     echo "+ SOTTO_LOCALNET_RPC_URL=$RPC_URL_LOCAL pnpm --filter @sotto/worker test:localnet"
     SOTTO_LOCALNET_RPC_URL="$RPC_URL_LOCAL" pnpm --filter @sotto/worker test:localnet || status=1
+    echo "+ SOTTO_LOCALNET_RPC_URL=$RPC_URL_LOCAL pnpm --filter @sotto/scripts test:localnet"
+    SOTTO_LOCALNET_RPC_URL="$RPC_URL_LOCAL" pnpm --filter @sotto/scripts test:localnet || status=1
     run scripts/db-local.sh test-down
   fi
   stop_validator

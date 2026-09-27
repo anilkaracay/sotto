@@ -4,7 +4,7 @@
 # Compatible with the bash 3.2 that ships with macOS.
 #
 # Usage: pnpm ci:local        cached: Turborepo replays results for unchanged inputs (daily use)
-#        pnpm ci:local:full   --full: Turborepo --force and a clean program build (mandatory before a merge)
+#        pnpm ci:local:full   --full: Turborepo --force and a from scratch SBF build (mandatory before a merge)
 set -uo pipefail
 
 FULL=""
@@ -84,10 +84,17 @@ job_node() {
   fi
 }
 
+# Full mode: remove the SBF build (cargo-build-sbf uses target/sbpf-solana-solana, which the host
+# cargo clean does not touch) and the host build of sotto_proofs, so the program builds from scratch.
+clean_program() {
+  run rm -rf "$ROOT/target/sbpf-solana-solana" "$ROOT/target/deploy" &&
+    run cargo clean -p sotto_proofs
+}
+
 job_program() {
   require_version "solana-cli" "$(solana --version | awk '{print $2}')" "$AGAVE_VERSION" &&
     require_version "cargo-build-sbf" "$(cargo-build-sbf --version | awk 'NR==1 {print $2}')" "$CARGO_BUILD_SBF_VERSION" &&
-    { [[ -z "$FULL" ]] || run cargo clean -p sotto_proofs; } &&
+    { [[ -z "$FULL" ]] || clean_program; } &&
     run cargo-build-sbf --manifest-path programs/sotto_proofs/Cargo.toml -- --locked &&
     run cargo test --locked -p sotto_proofs
 }

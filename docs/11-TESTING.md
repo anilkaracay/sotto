@@ -49,7 +49,7 @@ Pixel diff at most 0.5 percent per screen after masking dynamic regions (times, 
 
 **Until the public launch: local CI (D-25).** `scripts/ci-local.sh` runs the same four jobs as `.github/workflows/ci.yml`, in the same order, on the development machine, stops at the first failure and prints a summary table. Two modes:
 - `pnpm ci:local`: cached. Turborepo replays lint, typecheck, test and build results for unchanged inputs. For daily use.
-- `pnpm ci:local:full`: every job from scratch: Turborepo `--force` for lint, typecheck, test and build, and `cargo clean -p sotto_proofs` before the program build. **Mandatory before any merge into `main`**; its summary goes into the step report (ENGINEERING-RULES.md, Git workflow).
+- `pnpm ci:local:full`: every job from scratch: Turborepo `--force` for lint, typecheck, test and build, and before the program build the removal of `target/sbpf-solana-solana` and `target/deploy` (the `cargo-build-sbf` output, including dependencies) plus `cargo clean -p sotto_proofs`. **Mandatory before any merge into `main`**; its summary goes into the step report (ENGINEERING-RULES.md, Git workflow).
 1. `node`: Node 24.21.0 and pnpm 12.6.0 version checks, `pnpm install --frozen-lockfile`, `pnpm lint` (ESLint and Prettier), `pnpm typecheck`, `pnpm test`, `pnpm build`.
 2. `program`: Agave 4.2.2 and `cargo-build-sbf` 4.1.0 version checks, `cargo-build-sbf` build of `sotto_proofs`, `cargo test --locked -p sotto_proofs`.
 3. `localnet`: `scripts/fetch-token-wrap.sh` (SHA-256 checked), `scripts/localnet.sh` in the background, wait for `getHealth`, `scripts/localnet-smoke.sh`, stop the validator, remove the ledger and smoke keypairs.

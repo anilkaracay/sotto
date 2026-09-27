@@ -68,7 +68,7 @@ A viewer must know a disclosure really came from the org owner.
 | `own_payslips` | `payroll_line` items where the viewer is the recipient |
 | Owner self | every item, always (this is the owner's own history and the source for back fill and charts) |
 
-Implementation (step 1.8): `scopeAllowsKind` holds the kinds of this table, and the server stores an item without a grant only for the owner, and any other item only for an `active` grant of this org for that viewer whose scope covers the kind (08 section 3). The rest of the evaluation, a period's payments and the lines that are the viewer's own, needs payments and comes with them (step 1.9 and the grants of step 2.3).
+Implementation (step 1.8): `scopeAllowsKind` holds the kinds of this table. The server stores an item without a grant for the owner (any kind) and for a current recipient of the org when it is a `payment` or a `payroll_line`: the recipient disclosure of AC-06.4 (Phase 1, step 1.9) and the payslips of AC-12.1; any other item needs an `active` grant of this org for that viewer whose scope covers the kind (08 section 3). The rest of the evaluation, a period's payments and the lines that are the viewer's own, needs payments and comes with them (step 1.9 and the grants of step 2.3).
 
 Balance history for charts: the owner's browser writes a `balance_snapshot` self disclosure at most once per day when the owner unlocks keys. The chart combines snapshots with public deposit and withdraw amounts from chain.
 

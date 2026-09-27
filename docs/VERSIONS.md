@@ -235,3 +235,24 @@ Commands:
 pnpm --filter @sotto/sdk exec vitest run keys           # derivation, key match, viewing key, registration
 pnpm build && scripts/db-local.sh test-up && pnpm --filter @sotto/e2e e2e   # includes the keys spec
 ```
+
+## Step 1.6 (2026-09-27): transaction rules, startup verification, localnet bootstrap
+
+| Item | Version | Resolved on | Source | Notes |
+|---|---|---|---|---|
+| `@solana-program/token` | 0.16.1 | 2026-09-27 | https://registry.npmjs.org/@solana-program/token (published 2026-09-01) | The USDC-like SPL Token mint of `scripts/bootstrap-localnet.ts`. Already in the lockfile through `@solana-program/token-wrap` 2.7.1 (`^0.16.1`); 0.17.0 (2026-09-21) is newer but token-wrap does not use it |
+| `@solana-program/system` in `packages/sdk` and `scripts` | 0.15.0 (catalog) | 2026-09-27 | lockfile importers | System program errors (`getSystemErrorMessage`), transfers and account creation |
+| `@sotto/scripts` (workspace package `scripts/`) | 0.0.0 | 2026-09-27 | `pnpm-workspace.yaml` | Dependencies: `@sotto/sdk`, `@solana/kit`, `@solana-program/system`, `@solana-program/token`, `typescript` (the AC checker's title reader) |
+| Patched `spl-token-wrap-cli` 2.0.0, built by `scripts/build-token-wrap.sh --cli` | 2.0.0 | 2026-09-27 | crate SHA-256 `001a5dc00c23fad0054e58b8cfd3c05be487100779d8a596d5427321c15b13c2`, cargo 1.98.1, `--locked` | Binary `.cache/token-wrap/cli/target/release/spl-token-wrap`, SHA-256 on this machine `ff5f8174265bd6c115dfb5402efafaf87b2ab6e8bbdf34b7f0bbb060f9e3cf85` (not reproducible across machines); derives the devnet wUSDC mint |
+
+Commands:
+
+```sh
+scripts/localnet.sh &  node scripts/bootstrap-localnet.ts          # localnet mints, escrow and SAS (.localnet/bootstrap.json)
+SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/sdk test:localnet       # transaction rules, startup verification
+SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/scripts test:localnet   # recover-balance (needs spl-token)
+node scripts/recover-balance.ts --keypair <file> --mint <mint> --url devnet
+node scripts/sas-close-attestation.ts --owner <wallet>                                     # devnet only, asks for confirmation
+scripts/build-token-wrap.sh --cli                                                          # patched Token Wrap CLI
+python3 -m unittest discover -s scripts/checks -p "test_*.py"                              # AC checker tests
+```

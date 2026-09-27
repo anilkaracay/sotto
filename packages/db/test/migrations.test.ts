@@ -13,6 +13,8 @@ import { PHASE_1_TABLES } from "./golden-rule.test.ts";
 
 const WALLET_A = "7SSpLJh516AbWiV5GM7ooZFTHoQN64pdohYxbDs3Gq4L";
 const WALLET_B = "6xosZg2PbZuneXX4riov7GmUCJmydQc3o5MGX6p5EU2";
+// Invite tokens are stored as the lowercase hex SHA-256 of the link token (step 1.8).
+const INVITE_HASH = "0f".repeat(32);
 
 let test: TestDatabase;
 
@@ -182,16 +184,16 @@ describe("constraints", () => {
 
   it("require bounds for period grants", async () => {
     await test.db.execute(
-      sql`insert into invites (token, org_id, role, created_by, expires_at) values ('invite-hash-1', ${orgId}, 'accountant', ${userId}, now() + interval '1 day')`,
+      sql`insert into invites (token, org_id, role, created_by, expires_at) values (${INVITE_HASH}, ${orgId}, 'accountant', ${userId}, now() + interval '1 day')`,
     );
     expect(
       await violation(
-        sql`insert into grants (org_id, invite_token, scope, created_by) values (${orgId}, 'invite-hash-1', 'period', ${userId})`,
+        sql`insert into grants (org_id, invite_token, scope, created_by) values (${orgId}, ${INVITE_HASH}, 'period', ${userId})`,
       ),
     ).toBe("grants_period_bounds");
     await test.db.execute(
       sql`insert into grants (org_id, invite_token, scope, period_from, period_to, created_by)
-          values (${orgId}, 'invite-hash-1', 'period', '2026-01-01', '2026-03-31', ${userId})`,
+          values (${orgId}, ${INVITE_HASH}, 'period', '2026-01-01', '2026-03-31', ${userId})`,
     );
   });
 
@@ -213,5 +215,28 @@ describe("constraints", () => {
         sql`insert into recipients (org_id, display_name, wallet) values (${orgId}, 'B again', ${WALLET_B})`,
       ),
     ).toBe("recipients_org_wallet_key");
+  });
+
+  it("store invite tokens as SHA-256 hex and tie recipient invites to a recipient (step 1.8)", async () => {
+    const invite = (token: string, role: string, recipientId: string | null) =>
+      sql`insert into invites (token, org_id, role, recipient_id, created_by, expires_at)
+          values (${token}, ${orgId}, ${role}, ${recipientId}, ${userId}, now() + interval '1 day')`;
+    expect(await violation(invite("plain-link-token", "accountant", null))).toBe(
+      "invites_token_sha256",
+    );
+    expect(await violation(invite("1a".repeat(32), "recipient", null))).toBe(
+      "invites_recipient_role",
+    );
+    const [recipient] = await rows<{ id: string }>(
+      sql`insert into recipients (org_id, display_name, wallet) values (${orgId}, 'A', ${WALLET_A}) returning id`,
+    );
+    if (!recipient) throw new Error("recipient not inserted");
+    expect(await violation(invite("2b".repeat(32), "accountant", recipient.id))).toBe(
+      "invites_recipient_role",
+    );
+    await test.db.execute(invite("3c".repeat(32), "recipient", recipient.id));
+    // Removing the recipient removes its invites.
+    await test.db.execute(sql`delete from recipients where id = ${recipient.id}`);
+    expect(await rows(sql`select token from invites where token = ${"3c".repeat(32)}`)).toEqual([]);
   });
 });

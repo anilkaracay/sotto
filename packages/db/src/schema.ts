@@ -18,6 +18,7 @@ import {
   unique,
   uniqueIndex,
   uuid,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { bytea, timestamptz } from "./columns.ts";
 
@@ -186,6 +187,7 @@ export const memberships = pgTable(
 export const invites = pgTable(
   "invites",
   {
+    /** The SHA-256 of the invite token in lowercase hex; the token itself is only in the link. */
     token: text("token").primaryKey(),
     orgId: uuid("org_id")
       .notNull()
@@ -197,8 +199,23 @@ export const invites = pgTable(
     expiresAt: timestamptz("expires_at").notNull(),
     acceptedBy: uuid("accepted_by").references(() => users.id),
     acceptedAt: timestamptz("accepted_at"),
+    /**
+     * Step 1.8: the recipient a recipient invite is for; the accepting wallet must be the recipient's
+     * wallet. Null for other roles.
+     */
+    recipientId: uuid("recipient_id").references((): AnyPgColumn => recipients.id, {
+      onDelete: "cascade",
+    }),
   },
-  (t) => [index("invites_org_id_idx").on(t.orgId)],
+  (t) => [
+    index("invites_org_id_idx").on(t.orgId),
+    index("invites_recipient_id_idx").on(t.recipientId),
+    check("invites_token_sha256", sql`${t.token} ~ '^[0-9a-f]{64}$'`),
+    check(
+      "invites_recipient_role",
+      sql`(${t.role} = 'recipient') = (${t.recipientId} is not null)`,
+    ),
+  ],
 );
 
 export const orgPolicy = pgTable(

@@ -22,6 +22,13 @@
       "when": 1790529246047,
       "tag": "0002_token_account_apply_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790536426021,
+      "tag": "0003_invite_recipient",
+      "breakpoints": true
     }
   ]
 }

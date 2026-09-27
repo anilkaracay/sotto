@@ -168,3 +168,26 @@ SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/worker test:lo
 | Item | Version | Resolved on | Source | Notes |
 |---|---|---|---|---|
 | Docker (this machine) | client 29.8.1, server 29.7.2, buildx v0.36.1-desktop.1 | 2026-09-27 | `docker version`, `docker buildx version` | Runs the local Postgres container and `scripts/checks/env-files.sh`, which exports the build context with BuildKit (`docker build --output type=local`) |
+
+## Step 1.2 (2026-09-27): database and API foundation
+
+| Item | Version | Resolved on | Source | Notes |
+|---|---|---|---|---|
+| `drizzle-orm` | 0.45.3 | 2026-09-27 | https://registry.npmjs.org/drizzle-orm (dist-tag `latest`, published 2026-09-21) | 1.0.0 is a release candidate (dist-tag `rc`), not stable. `pg-core` has no `bytea` column in this version; `packages/db/src/columns.ts` defines one with `customType` |
+| `drizzle-kit` | 0.31.11 | 2026-09-27 | https://registry.npmjs.org/drizzle-kit (dist-tag `latest`, published 2026-09-21) | devDependency of `packages/db` (migration generation, drift test through `drizzle-kit/api`). It brings the deprecated `@esbuild-kit/core-utils` 3.3.2 and `@esbuild-kit/esm-loader` 2.6.5, `esbuild` 0.18.20 and 0.25.12, and `tsx` 4.23.15 with `esbuild` 0.28.2 (which Vite now also links as its optional `tsx` peer) |
+| `postgres` (postgres.js) | 3.4.9 | 2026-09-27 | https://registry.npmjs.org/postgres (dist-tag `latest`, published 2026-04-05) | Driver for `drizzle-orm/postgres-js`, with `prepare: false` for transaction pooling (Neon pooler, D-12). Next 16.3.6's default server external list names `pg`, not `postgres`; Turbopack bundles it without configuration |
+| `zod` | 4.6.5 | 2026-09-27 | https://registry.npmjs.org/zod (dist-tag `latest`, published 2026-09-13) | Request validation in `apps/web`; issue messages do not echo input values |
+| `dotenv` | 18.0.4 | 2026-09-27 | https://registry.npmjs.org/dotenv (dist-tag `latest`, published 2026-09-25) | `packages/db` scripts: `config({ path, override: true, quiet: true })`. Version 18 also reads `DOTENV_*` variables as defaults; options passed directly take precedence |
+| pnpm `allowBuilds` | `esbuild: false` | 2026-09-27 | https://pnpm.io/settings/build (`strictDepBuilds` default true since pnpm 10.3.0) | Reviewed denial of esbuild's postinstall, which only checks and links the platform binary; pnpm installs the binary as the optional `@esbuild/<platform>` package and `drizzle-kit generate` works without the script. A failed install had written a placeholder `allowBuilds` entry into `pnpm-workspace.yaml`, removed |
+| Test Postgres | `postgres:16.15` at the digest above | 2026-09-27 | the image of the local Postgres row | Throwaway container for tests, command below |
+
+Test Postgres (`scripts/db-local.sh test-up`; the workflow uses a `postgres` service container with the same image and port):
+
+```sh
+docker run -d --rm --name sotto-postgres-test -e POSTGRES_HOST_AUTH_METHOD=trust \
+  -p 127.0.0.1:56433:5432 --tmpfs /var/lib/postgresql/data:rw \
+  postgres:16.15@sha256:1a6ab3f5345eb6dbe04a1349529caabdb0ab09293a09590fad07b2246bfa4b54 \
+  -c fsync=off -c synchronous_commit=off -c full_page_writes=off
+```
+
+Tests connect to `postgresql://postgres@127.0.0.1:56433/postgres` (no secret; override with `TEST_DATABASE_URL`) and create one database per test file.

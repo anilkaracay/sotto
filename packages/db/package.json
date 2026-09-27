@@ -4,16 +4,29 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./migrate": "./src/migrate.ts",
+    "./schema": "./src/schema.ts",
+    "./testing": "./src/testing.ts"
   },
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "generate": "drizzle-kit generate",
+    "migrate": "node src/bin/migrate.ts",
+    "seed:admins": "node src/bin/seed-admins.ts"
+  },
+  "dependencies": {
+    "@solana/kit": "catalog:",
+    "dotenv": "catalog:",
+    "drizzle-orm": "catalog:",
+    "postgres": "catalog:"
   },
   "devDependencies": {
     "@sotto/config": "workspace:*",
     "@types/node": "catalog:",
+    "drizzle-kit": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

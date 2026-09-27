@@ -1,6 +1,7 @@
 packages:
   - apps/*
   - packages/*
+  - scripts
   - tests/e2e
 
 # Exact versions, resolved at scaffold time (docs/VERSIONS.md). Packages reference them with "catalog:".

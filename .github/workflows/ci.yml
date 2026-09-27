@@ -169,8 +169,26 @@ jobs:
           fetch-depth: 0
       - name: No en or em dash in tracked files or the commit message
         run: python3 scripts/checks/no-dashes.py "${{ github.event.pull_request.head.sha || github.sha }}"
-      - name: AC manifest for the current phase
-        run: python3 scripts/checks/ac-manifest.py
+      # The AC checker reads test titles with the TypeScript compiler (scripts/checks/test-titles.ts).
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Enable pnpm through corepack (version from packageManager)
+        run: |
+          corepack enable
+          pnpm --version | grep -qx "12.6.0"
+          echo "PNPM_STORE=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+      - name: Cache pnpm store
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.PNPM_STORE }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm install --frozen-lockfile
+      - name: Tests of the AC checker
+        run: python3 -m unittest discover -s scripts/checks -p "test_*.py"
+      - name: AC manifest for the current phase (test titles only)
+        run: python3 scripts/checks/ac-manifest.py --list
       - name: Invariant I-4 (no ZK Token Proof program ID)
         run: scripts/checks/no-zk-token-proof.sh
       - name: No env file is tracked or in the Docker build context

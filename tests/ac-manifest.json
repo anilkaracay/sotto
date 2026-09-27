@@ -26,7 +26,6 @@
         "AC-04.3",
         "AC-04.4",
         "AC-05.1",
-        "AC-05.3",
         "AC-06.1",
         "AC-06.2",
         "AC-06.3",
@@ -39,7 +38,7 @@
         "AC-09.1"
       ],
       "visual": false,
-      "note": "F-01 to F-07 and F-09 except AC-05.2 (Phase 2). AC-06.4 is required for its non grant part; its grant part is Phase 2 (12 Phase 1 exit)."
+      "note": "F-01 to F-07 and F-09 except AC-05.2 and AC-05.3 (Phase 2, plan moves). AC-06.4 is required for its non grant part; its grant part is Phase 2 (12 Phase 1 exit)."
     },
     "2": {
       "required": [
@@ -87,7 +86,6 @@
         "AC-11.2",
         "AC-11.3",
         "AC-11.4",
-        "AC-11.5",
         "AC-12.1",
         "AC-12.2",
         "AC-12.3",
@@ -97,11 +95,10 @@
         "AC-13.4",
         "AC-14.1",
         "AC-15.1",
-        "AC-16.1",
         "AC-19.1"
       ],
       "visual": false,
-      "note": "All ACs except F-17 (landing, built in Phase 3)."
+      "note": "Hackathon scope (D-27) except F-17 (landing, built in Phase 3). AC-11.5 and AC-16.1 are Post-hackathon. AC-08.3 stays until Q-12 is answered."
     },
     "3": {
       "required": [
@@ -149,7 +146,6 @@
         "AC-11.2",
         "AC-11.3",
         "AC-11.4",
-        "AC-11.5",
         "AC-12.1",
         "AC-12.2",
         "AC-12.3",
@@ -159,13 +155,12 @@
         "AC-13.4",
         "AC-14.1",
         "AC-15.1",
-        "AC-16.1",
         "AC-17.1",
         "AC-17.2",
         "AC-19.1"
       ],
       "visual": true,
-      "note": "All ACs; visual tests required from Phase 3 (X-46)."
+      "note": "Hackathon scope (D-27); visual tests required from Phase 3 (X-46)."
     },
     "4": {
       "required": [
@@ -213,7 +208,6 @@
         "AC-11.2",
         "AC-11.3",
         "AC-11.4",
-        "AC-11.5",
         "AC-12.1",
         "AC-12.2",
         "AC-12.3",
@@ -223,7 +217,6 @@
         "AC-13.4",
         "AC-14.1",
         "AC-15.1",
-        "AC-16.1",
         "AC-17.1",
         "AC-17.2",
         "AC-19.1"

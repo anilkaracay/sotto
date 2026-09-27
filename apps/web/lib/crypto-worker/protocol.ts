@@ -16,7 +16,11 @@ export type WorkerRequest =
   | { id: number; type: "decrypt"; account: ArrayBuffer }
   | { id: number; type: "applyInstruction"; token: string; account: ArrayBuffer }
   /** Before the worker is terminated: zero every key, the viewing key and the signature digest. */
-  | { id: number; type: "clear" };
+  | { id: number; type: "clear" }
+  /** Step 1.8: canonical JSON sealed to a viewer's public key (no key of this tab needed). */
+  | { id: number; type: "seal"; publicKey: ArrayBuffer; value: unknown }
+  /** Step 1.8: a sealed box opened with this tab's viewing key. */
+  | { id: number; type: "openSealed"; ciphertext: ArrayBuffer };
 
 export type UnlockResult = { elgamalPubkey: string };
 export type CheckAccountResult = { matches: boolean };
@@ -34,6 +38,9 @@ export type DecryptResult = {
 };
 export type ApplyInstructionResult = { instruction: PortableInstruction };
 export type ClearResult = { cleared: true };
+export type SealResult = { ciphertext: Uint8Array };
+/** Opened for display on this page (for example a recipient's default amount). */
+export type OpenSealedResult = { value: unknown };
 export type WorkerResult =
   | UnlockResult
   | CheckAccountResult
@@ -43,10 +50,19 @@ export type WorkerResult =
   | SetupInstructionsResult
   | DecryptResult
   | ApplyInstructionResult
-  | ClearResult;
+  | ClearResult
+  | SealResult
+  | OpenSealedResult;
 
 export type WorkerErrorCode =
-  "bad_signature" | "not_unlocked" | "key_mismatch" | "not_confidential" | "wrong_owner" | "failed";
+  | "bad_signature"
+  | "not_unlocked"
+  | "key_mismatch"
+  | "not_confidential"
+  | "wrong_owner"
+  | "not_viewing"
+  | "cannot_open"
+  | "failed";
 
 export type WorkerResponse =
   | { type: "ready" }

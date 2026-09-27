@@ -7,6 +7,8 @@ import type {
   CheckAccountResult,
   ConfirmSignatureResult,
   DecryptResult,
+  OpenSealedResult,
+  SealResult,
   SetupInstructionsResult,
   StatusResult,
   UnlockResult,
@@ -165,6 +167,25 @@ export class CryptoWorkerClient {
       account: new Uint8Array(account).buffer,
     })) as ApplyInstructionResult;
     return result.instruction;
+  }
+
+  /** Seals canonical JSON to a viewer's public key (step 1.8). */
+  async seal(publicKey: Uint8Array, value: unknown): Promise<Uint8Array> {
+    const result = (await this.request({
+      type: "seal",
+      publicKey: new Uint8Array(publicKey).buffer,
+      value,
+    })) as SealResult;
+    return result.ciphertext;
+  }
+
+  /** Opens a sealed box with the viewing key unlocked in this tab (step 1.8). */
+  async openSealed(ciphertext: Uint8Array): Promise<unknown> {
+    const result = (await this.request({
+      type: "openSealed",
+      ciphertext: new Uint8Array(ciphertext).buffer,
+    })) as OpenSealedResult;
+    return result.value;
   }
 
   /**

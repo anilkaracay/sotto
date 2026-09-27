@@ -18,6 +18,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@solana-program/system": "catalog:",
     "@solana-program/token-2022": "catalog:",
     "@solana-program/token-wrap": "catalog:",
     "@solana-program/zk-elgamal-proof": "catalog:",

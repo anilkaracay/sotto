@@ -1,3 +1,83 @@
-/* App theme (X-42), scoped to .theme-app. Tokens from design/sotto-app.html are added with the app screens. */
+/* App theme (X-42, 09 section 2), scoped to .theme-app: the tokens and base styles of
+   design/sotto-app.html (its .dsh.ve2 layout). Fonts come from next/font (Geist, Geist Mono) through
+   --font-geist and --font-geist-mono. Components style themselves with CSS Modules on these tokens
+   (D-11). Pixel level polish comes with the visual baselines (plan move M2). */
 .theme-app {
+  --ink: #0b1830;
+  --ink2: #2a3852;
+  --muted: #5c6980;
+  --faint: #6b7689;
+  --line: #e7ecf2;
+  --soft: #f5f7fa;
+  --blue: #1f5be8;
+  --green: #0e9a64;
+  --amber: #b26a00;
+  --red: #e5484d;
+  --bg: #eef0f3;
+  --surface: #ffffff;
+  --dark: #1c2130;
+  --shadow-pop: 0 0 0 1px rgba(11, 24, 48, 0.08), 0 30px 60px -20px rgba(12, 42, 92, 0.45);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --font-sans: var(--font-geist), "Geist", "Helvetica Neue", Helvetica, sans-serif;
+  --font-mono: var(--font-geist-mono), "Geist Mono", ui-monospace, Menlo, monospace;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.theme-app *,
+.theme-app *::before,
+.theme-app *::after {
+  box-sizing: border-box;
+}
+
+.theme-app :is(h1, h2, h3, h4, p) {
+  margin: 0;
+}
+
+.theme-app :where(a) {
+  color: inherit;
+}
+
+.theme-app :where(button) {
+  font: inherit;
+  color: inherit;
+}
+
+.theme-app :focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.theme-app .mono {
+  font-family: var(--font-mono);
+}
+
+.theme-app .num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.theme-app .sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* 09 section 2: keep the entrance animations, but respect prefers-reduced-motion. */
+@media (prefers-reduced-motion: reduce) {
+  .theme-app *,
+  .theme-app *::before,
+  .theme-app *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

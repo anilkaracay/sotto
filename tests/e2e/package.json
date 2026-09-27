@@ -1,0 +1,20 @@
+{
+  "name": "@sotto/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "catalog:",
+    "@sotto/config": "workspace:*",
+    "@sotto/db": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "globals": "catalog:",
+    "typescript": "catalog:"
+  }
+}

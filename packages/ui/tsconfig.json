@@ -2,6 +2,8 @@
   "extends": "@sotto/config/tsconfig.base.json",
   "compilerOptions": {
     "allowImportingTsExtensions": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["node"]
   },
   "include": ["src", "test"]

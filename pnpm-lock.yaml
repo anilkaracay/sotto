@@ -170,6 +170,9 @@ catalogs:
     '@next/eslint-plugin-next':
       specifier: 16.3.6
       version: 16.3.6
+    '@playwright/test':
+      specifier: 1.63.0
+      version: 1.63.0
     '@solana-program/system':
       specifier: 0.15.0
       version: 0.15.0
@@ -194,6 +197,9 @@ catalogs:
     '@solana/wallet-standard-features':
       specifier: 1.5.0
       version: 1.5.0
+    '@solana/wallet-standard-util':
+      specifier: 1.1.4
+      version: 1.1.4
     '@solana/zk-sdk':
       specifier: 0.5.3
       version: 0.5.3
@@ -292,9 +298,15 @@ importers:
       '@solana/wallet-standard-features':
         specifier: 'catalog:'
         version: 1.5.0
+      '@solana/wallet-standard-util':
+        specifier: 'catalog:'
+        version: 1.1.4
       '@sotto/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@sotto/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       '@sotto/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -306,7 +318,7 @@ importers:
         version: 0.45.3(postgres@3.4.9)
       next:
         specifier: 'catalog:'
-        version: 16.3.6(@babel/core@7.29.7)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        version: 16.3.6(@babel/core@7.29.7)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react:
         specifier: 'catalog:'
         version: 19.3.0
@@ -340,7 +352,7 @@ importers:
         version: 8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))
+        version: 5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15))
 
   apps/worker:
     dependencies:
@@ -371,7 +383,7 @@ importers:
         version: 8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))
+        version: 5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15))
 
   packages/config:
     dependencies:
@@ -405,7 +417,7 @@ importers:
         version: 8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))
+        version: 5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15))
 
   packages/db:
     dependencies:
@@ -442,7 +454,7 @@ importers:
         version: 8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))
+        version: 5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15))
 
   packages/sdk:
     dependencies:
@@ -482,7 +494,7 @@ importers:
         version: 8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))
+        version: 5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15))
 
   packages/ui:
     devDependencies:
@@ -492,9 +504,21 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.0
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.3.0(@types/react@19.3.0)
       eslint:
         specifier: 'catalog:'
         version: 10.11.0
+      react:
+        specifier: 'catalog:'
+        version: 19.3.0
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.3.0(react@19.3.0)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -503,7 +527,31 @@ importers:
         version: 8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))
+        version: 5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15))
+
+  tests/e2e:
+    devDependencies:
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.63.0
+      '@sotto/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@sotto/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.0
+      eslint:
+        specifier: 'catalog:'
+        version: 10.11.0
+      globals:
+        specifier: 'catalog:'
+        version: 17.12.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
 
 packages:
 
@@ -1348,9 +1396,17 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@noble/curves@1.9.7':
+    resolution: {integrity: sha512-gbKGcRUYIjA3/zCCNaWDciTMFI0dCkvou3TL8Zmy5Nc7sJ47a0jtOeZoTaMxkuqRo9cRhjOdZJXegxYE5FN/xw==}
+    engines: {node: ^14.21.3 || >=16}
+
   '@noble/curves@2.4.0':
     resolution: {integrity: sha512-P4/62zrgfH33CneE3Dn4WhJVA22YUU0eR51wKIan4NVRvwsA0YnPTwWGpNbpuacSujmSFLvyzpyuR30+fbq2Ew==}
     engines: {node: '>= 20.19.0'}
+
+  '@noble/hashes@1.8.0':
+    resolution: {integrity: sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A==}
+    engines: {node: ^14.21.3 || >=16}
 
   '@noble/hashes@2.4.0':
     resolution: {integrity: sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA==}
@@ -1370,6 +1426,11 @@ packages:
 
   '@oxc-project/types@0.151.0':
     resolution: {integrity: sha512-J1yXrIlNDZVzE3ada310xeAw7nH8yCAyLPuUIsjKatFPmfn5bS1oW+cM+QsGOtVWd5nhSpbwZWx/rue+r5Z+PA==}
+
+  '@playwright/test@1.63.0':
+    resolution: {integrity: sha512-oxMK4vllB9RK5NQ2l1pq1IfOf2AvnEuj/vYGDj0H2nMtmtZpKtCwt/l00GEO6xjGfpBNAvjovvYdCm50dRQkpQ==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@rolldown/binding-android-arm-eabi@1.2.11':
     resolution: {integrity: sha512-A5kXfGKvKWWZE0TtPrfsvT+q4Y5d1QG8gGUzpYjGydM+fARM9MuX90PrXYXe0XbsDVgyxxNzHo6giCj90bsFNw==}
@@ -2287,8 +2348,16 @@ packages:
       typescript:
         optional: true
 
+  '@solana/wallet-standard-chains@1.1.2':
+    resolution: {integrity: sha512-EZobEGclDBAFplpJC5F3d/s8Xnlqc5isNKuPrd5o9ZPZ7tWN84O0e68yIZ8MAOj9V7ieRadNiHtql7uIXCTyXg==}
+    engines: {node: '>=22'}
+
   '@solana/wallet-standard-features@1.5.0':
     resolution: {integrity: sha512-gxlLaEfPAqbhd3LNkK0Ks2pbVvDm1SDGqBK/ynDQy13Gu+qiURLpRCfSPjbtrw5bmqQsZ6rS2YJHL31bY/Koag==}
+    engines: {node: '>=22'}
+
+  '@solana/wallet-standard-util@1.1.4':
+    resolution: {integrity: sha512-vkXUXmpYAFYK3xlaAM3dYbCOtsZLeJxq4Ygxl3rfh3z0cUsxpkONkmwCNop05HdES9+IOzofZlMXF40J00LNRg==}
     engines: {node: '>=22'}
 
   '@solana/zk-sdk@0.5.3':
@@ -3079,6 +3148,16 @@ packages:
   picomatch@4.0.7:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
+
+  playwright-core@1.63.0:
+    resolution: {integrity: sha512-rYCsBF/M5HjUch52bbtVONEFjv6Xu8sm8h72dNlR5bzIE1fvC/bxgspzkjSfU+MweEMmPM8KJebG6nnyxo5mCg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright@1.63.0:
+    resolution: {integrity: sha512-+7ziBLidS4NaNCdt57SUDT+wYmmd5fmiQejUic/kb+YsYSCPyOOE9sebzMjNmQrsnNpDJqd4WHvV/8lfKfUDUg==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   postcss@8.5.23:
     resolution: {integrity: sha512-g50586zr4bZmwFiTlflMu8E0bDTb5I5gertgwAKmsdUlTQIhZtunzUlD1WSzwcVWPoAVpsrA6vlfCD7oXvRwgg==}
@@ -3964,9 +4043,15 @@ snapshots:
   '@next/swc-win32-x64-msvc@16.3.6':
     optional: true
 
+  '@noble/curves@1.9.7':
+    dependencies:
+      '@noble/hashes': 1.8.0
+
   '@noble/curves@2.4.0':
     dependencies:
       '@noble/hashes': 2.4.0
+
+  '@noble/hashes@1.8.0': {}
 
   '@noble/hashes@2.4.0': {}
 
@@ -3983,6 +4068,10 @@ snapshots:
       fastq: 1.20.3
 
   '@oxc-project/types@0.151.0': {}
+
+  '@playwright/test@1.63.0':
+    dependencies:
+      playwright: 1.63.0
 
   '@rolldown/binding-android-arm-eabi@1.2.11':
     optional: true
@@ -5031,10 +5120,20 @@ snapshots:
     transitivePeerDependencies:
       - fastestsmallesttextencoderdecoder
 
+  '@solana/wallet-standard-chains@1.1.2':
+    dependencies:
+      '@wallet-standard/base': 1.1.1
+
   '@solana/wallet-standard-features@1.5.0':
     dependencies:
       '@wallet-standard/base': 1.1.1
       '@wallet-standard/features': 1.1.1
+
+  '@solana/wallet-standard-util@1.1.4':
+    dependencies:
+      '@noble/curves': 1.9.7
+      '@solana/wallet-standard-chains': 1.1.2
+      '@solana/wallet-standard-features': 1.5.0
 
   '@solana/zk-sdk@0.5.3': {}
 
@@ -5176,7 +5275,7 @@ snapshots:
       '@typescript-eslint/types': 8.70.1
       eslint-visitor-keys: 5.0.1
 
-  '@vitest/mocker@5.0.2(vite@8.3.1(@types/node@24.19.0))':
+  '@vitest/mocker@5.0.2(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@vitest/spy': 5.0.2
@@ -5721,7 +5820,7 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  next@16.3.6(@babel/core@7.29.7)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
+  next@16.3.6(@babel/core@7.29.7)(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
     dependencies:
       '@next/env': 16.3.6
       '@swc/helpers': 0.5.23
@@ -5740,6 +5839,7 @@ snapshots:
       '@next/swc-linux-x64-musl': 16.3.6
       '@next/swc-win32-arm64-msvc': 16.3.6
       '@next/swc-win32-x64-msvc': 16.3.6
+      '@playwright/test': 1.63.0
       sharp: 0.35.4(@types/node@24.19.0)
     transitivePeerDependencies:
       - '@babel/core'
@@ -5776,6 +5876,12 @@ snapshots:
   picomatch@2.3.2: {}
 
   picomatch@4.0.7: {}
+
+  playwright-core@1.63.0: {}
+
+  playwright@1.63.0:
+    dependencies:
+      playwright-core: 1.63.0
 
   postcss@8.5.23:
     dependencies:
@@ -5994,10 +6100,10 @@ snapshots:
       fsevents: 2.3.3
       tsx: 4.23.15
 
-  vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0)):
+  vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15)):
     dependencies:
       '@types/chai': 5.2.3
-      '@vitest/mocker': 5.0.2(vite@8.3.1(@types/node@24.19.0))
+      '@vitest/mocker': 5.0.2(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(tsx@4.23.15))
       chai: 6.2.2
       es-module-lexer: 2.3.2
       expect-type: 1.4.0

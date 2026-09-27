@@ -191,3 +191,17 @@ docker run -d --rm --name sotto-postgres-test -e POSTGRES_HOST_AUTH_METHOD=trust
 ```
 
 Tests connect to `postgresql://postgres@127.0.0.1:56433/postgres` (no secret; override with `TEST_DATABASE_URL`) and create one database per test file.
+
+## Step 1.3 (2026-09-27): sign in, app shell, E2E harness
+
+| Item | Version | Resolved on | Source | Notes |
+|---|---|---|---|---|
+| `@solana/wallet-standard-util` | 1.1.4 | 2026-09-27 | https://registry.npmjs.org/@solana/wallet-standard-util (dist-tag `latest`, published 2026-09-10) | Sign-In With Solana text (`createSignInMessageText`) and parser (`parseSignInMessage`) in `apps/web`; brings `@noble/curves` 1.9.7. Signatures are verified with `@solana/kit` (WebCrypto) |
+| `@playwright/test` | 1.63.0 | 2026-09-27 | https://registry.npmjs.org/@playwright/test (dist-tag `latest`, published 2026-09-04) | `tests/e2e`. Browser: Chrome for Testing 153.0.8010.12 (playwright chromium v1243) and its headless shell, installed with `playwright install chromium` into `~/Library/Caches/ms-playwright` |
+| Geist, Geist Mono | variable fonts from Google Fonts through `next/font/google` | 2026-09-27 | next 16.3.6 `dist/compiled/@next/font/dist/google/font-data.json` (both listed, weights 100 to 900 and variable) | Downloaded at build time; the design loads Geist 300 to 700 and Geist Mono 400 and 500 |
+
+Commands:
+
+```sh
+pnpm build && scripts/db-local.sh test-up && pnpm --filter @sotto/e2e e2e   # E2E against the production build
+```

@@ -73,14 +73,23 @@ node_steps() {
       run pnpm exec turbo run typecheck --force &&
       run pnpm exec turbo run test --force &&
       run pnpm exec turbo run build --force &&
-      run python3 scripts/checks/build-output.py
+      run python3 scripts/checks/build-output.py &&
+      e2e_steps
   else
     run pnpm lint &&
       run pnpm typecheck &&
       run pnpm test &&
       run pnpm build &&
-      run python3 scripts/checks/build-output.py
+      run python3 scripts/checks/build-output.py &&
+      e2e_steps
   fi
+}
+
+# Playwright against the production build just made (docs/11-TESTING.md); the browser download is
+# cached after the first run.
+e2e_steps() {
+  run pnpm --filter @sotto/e2e exec playwright install chromium &&
+    run pnpm --filter @sotto/e2e e2e
 }
 
 job_node() {

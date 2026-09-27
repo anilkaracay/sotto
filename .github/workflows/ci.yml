@@ -56,6 +56,10 @@ jobs:
       - run: pnpm build
       - name: The build output holds no env file or server only value
         run: python3 scripts/checks/build-output.py
+      - name: Install the Playwright browser
+        run: pnpm --filter @sotto/e2e exec playwright install --with-deps chromium
+      - name: End to end tests (Playwright)
+        run: pnpm --filter @sotto/e2e e2e
 
   program:
     runs-on: ubuntu-24.04

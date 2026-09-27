@@ -63,3 +63,10 @@ export function appOrigin(env: Env = process.env): string | null {
   if (!value) return null;
   return url("NEXT_PUBLIC_APP_URL", value).origin;
 }
+
+/** The app origin sign in messages name (D-15). Required: never derived from the request's Host. */
+export function appOriginRequired(env: Env = process.env): string {
+  const origin = appOrigin(env);
+  if (!origin) throw new ConfigError("NEXT_PUBLIC_APP_URL is not set");
+  return origin;
+}

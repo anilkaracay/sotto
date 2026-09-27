@@ -58,6 +58,11 @@ export async function createSession(
   return { token, expiresAt };
 }
 
+/** Clears the session cookie in the browser (sign out). */
+export function clearedSessionCookie(): string {
+  return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure`;
+}
+
 /** The session of the request's cookie, or null when it is missing, revoked, expired or idle. */
 export async function readSession(
   request: Request,
@@ -66,7 +71,17 @@ export async function readSession(
   now: Date = new Date(),
 ): Promise<Session | null> {
   const token = readCookie(request, SESSION_COOKIE);
-  if (!token || token.length > 128) return null;
+  return token ? readSessionToken(token, db, secret, now) : null;
+}
+
+/** The session of a cookie token (server components read the cookie through next/headers). */
+export async function readSessionToken(
+  token: string,
+  db: Database,
+  secret: string,
+  now: Date = new Date(),
+): Promise<Session | null> {
+  if (token.length === 0 || token.length > 128) return null;
   const id = sessionIdFromToken(token, secret);
   const [row] = await db
     .select({

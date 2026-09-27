@@ -1,0 +1,42 @@
+/* design/sotto-app.html .tbl */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.table th {
+  height: 38px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--faint);
+  text-align: left;
+  white-space: nowrap;
+}
+.table td {
+  height: 58px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+.table tr:last-child td {
+  border-bottom: 0;
+}
+.table tbody tr {
+  transition: background-color 0.15s ease;
+}
+.table tbody tr:hover {
+  background: #fafbfd;
+}
+.table th:first-child,
+.table td:first-child {
+  padding-left: 0;
+}
+.table th:last-child,
+.table td:last-child {
+  padding-right: 0;
+}
+.right {
+  text-align: right;
+}

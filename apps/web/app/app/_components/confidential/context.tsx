@@ -233,11 +233,14 @@ export function ConfidentialProvider({
   wallet,
   orgId,
   network,
+  readAccount = true,
   children,
 }: {
   wallet: string;
   orgId: string;
   network: AvailableNetwork;
+  /** False on pages that show no balances or account (the recipients page): no chain reads. */
+  readAccount?: boolean;
   children: ReactNode;
 }) {
   const wallets = useWallets().filter((w) => canHoldConfidentialBalances(walletCapabilities(w)));
@@ -267,21 +270,21 @@ export function ConfidentialProvider({
 
   // Every change of the keys (unlock, lock) reads the chain again: Locked shows no number.
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !readAccount) return;
     const id = ++request.current;
     void read().then((next) => {
       if (id === request.current) setData(next);
     });
-  }, [ready, read]);
+  }, [ready, readAccount, read]);
 
   /** Reads chain state again after a step (AC-04.4); the last values stay while it reads. */
   const refresh = useCallback(async () => {
-    if (!ready) return;
+    if (!ready || !readAccount) return;
     const id = ++request.current;
     setData((current) => ({ ...current, loading: true, error: null }));
     const next = await read();
     if (id === request.current) setData(next);
-  }, [ready, read]);
+  }, [ready, readAccount, read]);
 
   const base = { wallet, orgId, network, wallets, setAccount, ready, vault, data, refresh };
   if (!account || !uiWallet) {

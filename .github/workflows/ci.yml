@@ -143,8 +143,14 @@ jobs:
           echo "validator did not become healthy"; exit 1
       - name: Confidential smoke test
         run: scripts/localnet-smoke.sh
+      - name: Bootstrap localnet (mints, escrow, SAS; .localnet/bootstrap.json)
+        run: node scripts/bootstrap-localnet.ts
       - name: SAS flow on localnet (worker, throwaway signer)
         run: pnpm --filter @sotto/worker test:localnet
+        env:
+          SOTTO_LOCALNET_RPC_URL: http://127.0.0.1:8899
+      - name: Transaction rules and startup verification on localnet (sdk)
+        run: pnpm --filter @sotto/sdk test:localnet
         env:
           SOTTO_LOCALNET_RPC_URL: http://127.0.0.1:8899
       - name: Scripts on localnet (recover-balance)

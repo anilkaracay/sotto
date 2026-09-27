@@ -17,7 +17,8 @@
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:localnet": "vitest run localnet"
   },
   "dependencies": {
     "@solana-program/system": "catalog:",

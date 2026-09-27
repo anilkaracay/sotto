@@ -240,6 +240,10 @@ describe("server configuration (14 section 2)", () => {
       expect(error.message).not.toMatch(/hidden/);
     }
     expect(rpcUrl({ RPC_URL: "http://127.0.0.1:8899" })).toBe("http://127.0.0.1:8899");
-    expect(appOrigin({})).toBeNull();
+    expect(appOrigin({}, undefined)).toBeNull();
+    expect(appOrigin({}, "https://preview-abc.vercel.app")).toBe("https://preview-abc.vercel.app");
+    expect(
+      appOrigin({ NEXT_PUBLIC_APP_URL: "http://localhost:3200" }, "http://localhost:3000"),
+    ).toBe("http://localhost:3200");
   });
 });

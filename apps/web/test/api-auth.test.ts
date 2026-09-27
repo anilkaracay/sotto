@@ -198,6 +198,55 @@ describe("F-01 sign in", () => {
     expect(statuses[20]).toBe(429);
   });
 
+  it("AC-01.2 takes the sign in domain from configuration, never from request headers", async () => {
+    const wallet = await newWallet();
+    // Every part of the request claims another site: URL, Host, X-Forwarded-Host and a matching Origin.
+    const spoofed = new Request("https://evil.example/api/auth/nonce", {
+      method: "POST",
+      body: JSON.stringify({ wallet: wallet.address }),
+      headers: {
+        "content-type": "application/json",
+        origin: "https://evil.example",
+        host: "evil.example",
+        "x-forwarded-host": "evil.example",
+        "x-forwarded-proto": "https",
+        "x-forwarded-for": "198.51.100.251",
+      },
+    });
+    const response = await nonce(spoofed);
+    expect(response.status).toBe(200);
+    const issued = (await response.json()) as { input: SignInInput; message: string };
+    expect(issued.input.domain).toBe("localhost:3000");
+    expect(issued.input.uri).toBe(APP_ORIGIN);
+    expect(issued.message.startsWith("localhost:3000 wants you to sign in")).toBe(true);
+    // A message signed for the claimed site is refused, even when the request claims that site too.
+    const phished = createSignInMessageText({
+      ...issued.input,
+      domain: "evil.example",
+      uri: "https://evil.example",
+    });
+    const bytes = new TextEncoder().encode(phished);
+    const signature = await wallet.sign(bytes);
+    const attempt = await verify(
+      new Request("https://evil.example/api/auth/verify", {
+        method: "POST",
+        body: JSON.stringify({
+          wallet: wallet.address,
+          message: base64.decode(bytes),
+          signature: base64.decode(signature),
+        }),
+        headers: {
+          "content-type": "application/json",
+          origin: "https://evil.example",
+          host: "evil.example",
+          "x-forwarded-host": "evil.example",
+          "x-forwarded-for": "198.51.100.252",
+        },
+      }),
+    );
+    expect(await errorCode(attempt)).toBe("401 sign_in_invalid");
+  });
+
   it("AC-01.3 signing out invalidates the session server side", async () => {
     const wallet = await newWallet();
     const { message } = await issue(wallet);

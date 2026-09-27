@@ -2,25 +2,25 @@
 
 // The setup page's client part (F-03, F-04): the wallet, the keys, the wrapped mint, the confidential
 // account, the balances, funding and the viewing key, in one confidential session.
-import styles from "../_components/confidential/cards.module.css";
-import { BalancesSection } from "../_components/confidential/balances-section.tsx";
+import styles from "../../_components/confidential/cards.module.css";
+import { BalancesSection } from "../../_components/confidential/balances-section.tsx";
 import {
   ConfidentialProvider,
   type AvailableNetwork,
-} from "../_components/confidential/context.tsx";
+} from "../../_components/confidential/context.tsx";
 import {
   KeysCard,
   ViewingKeyCard,
   WalletCard,
   type ViewerKey,
-} from "../_components/confidential/keys.tsx";
-import { NetworkBanner } from "../_components/confidential/network-banner.tsx";
+} from "../../_components/confidential/keys.tsx";
+import { NetworkBanner } from "../../_components/confidential/network-banner.tsx";
 import {
   AccountCard,
   FundingCard,
   WrappedMintCard,
   type RecordedAccount,
-} from "./account-cards.tsx";
+} from "../../_components/confidential/account-cards.tsx";
 
 export function SetupPanel({
   wallet,

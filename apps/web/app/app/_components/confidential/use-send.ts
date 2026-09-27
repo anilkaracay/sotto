@@ -7,9 +7,9 @@
 import { sendWithWallet } from "@sotto/sdk/tx";
 import type { Instruction } from "@solana/kit";
 import { useCallback, useState } from "react";
-import { browserRpc } from "../../../../../lib/client/rpc.ts";
-import { describeTransactionError } from "../../../../../lib/client/transactions.ts";
-import { reportComparison } from "../../../../../lib/client/wallet-report.ts";
+import { browserRpc } from "../../../../lib/client/rpc.ts";
+import { describeTransactionError } from "../../../../lib/client/transactions.ts";
+import { reportComparison } from "../../../../lib/client/wallet-report.ts";
 import { useConfidential } from "./context.tsx";
 
 /** A step that failed after or around the transaction, with the words the page shows. */

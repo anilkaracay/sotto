@@ -14,11 +14,11 @@ import { useConnect, type UiWallet } from "@wallet-standard/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type ReactNode } from "react";
-import { ApiCallError, callApi } from "../../../../../lib/client/api.ts";
-import { isWalletCancel } from "../../../../../lib/client/transactions.ts";
-import { CryptoWorkerClient, CryptoWorkerError } from "../../../../../lib/crypto-worker/client.ts";
-import type { LockReason } from "../../../../../lib/crypto-worker/key-session.ts";
-import { formatDate, shortWallet } from "../../../../../lib/format.ts";
+import { ApiCallError, callApi } from "../../../../lib/client/api.ts";
+import { isWalletCancel } from "../../../../lib/client/transactions.ts";
+import { CryptoWorkerClient, CryptoWorkerError } from "../../../../lib/crypto-worker/client.ts";
+import type { LockReason } from "../../../../lib/crypto-worker/key-session.ts";
+import { formatDate, shortWallet } from "../../../../lib/format.ts";
 import styles from "./cards.module.css";
 import { useConfidential, type SignProblem } from "./context.tsx";
 

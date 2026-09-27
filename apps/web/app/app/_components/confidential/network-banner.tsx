@@ -1,7 +1,7 @@
 // The startup verification result as a banner (06 section 0, 09 section 4): when a program or the
 // wrapped mint is unusable, or the network cannot be reached, confidential features are off and the
 // page says why. A missing wrapped mint is offered for creation on the setup page instead.
-import type { NetworkCheck } from "../../../../../lib/server/network-view.ts";
+import type { NetworkCheck } from "../../../../lib/server/network-view.ts";
 import styles from "./confidential.module.css";
 
 export function networkProblem(check: NetworkCheck, label: string): string | null {

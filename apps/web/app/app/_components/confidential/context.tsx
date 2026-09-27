@@ -40,14 +40,14 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { CryptoWorkerClient, CryptoWorkerError } from "../../../../../lib/crypto-worker/client.ts";
-import type { LockReason } from "../../../../../lib/crypto-worker/key-session.ts";
-import type { UnlockResult } from "../../../../../lib/crypto-worker/protocol.ts";
-import { browserRpc } from "../../../../../lib/client/rpc.ts";
-import { isWalletCancel } from "../../../../../lib/client/transactions.ts";
-import { walletInfo, type WalletInfo } from "../../../../../lib/client/wallet-report.ts";
-import type { NetworkView } from "../../../../../lib/server/network-view.ts";
-import { useKeySession } from "../../../_components/key-session.tsx";
+import { CryptoWorkerClient, CryptoWorkerError } from "../../../../lib/crypto-worker/client.ts";
+import type { LockReason } from "../../../../lib/crypto-worker/key-session.ts";
+import type { UnlockResult } from "../../../../lib/crypto-worker/protocol.ts";
+import { browserRpc } from "../../../../lib/client/rpc.ts";
+import { isWalletCancel } from "../../../../lib/client/transactions.ts";
+import { walletInfo, type WalletInfo } from "../../../../lib/client/wallet-report.ts";
+import type { NetworkView } from "../../../../lib/server/network-view.ts";
+import { useKeySession } from "../key-session.tsx";
 
 export type AvailableNetwork = Extract<NetworkView, { available: true }>;
 

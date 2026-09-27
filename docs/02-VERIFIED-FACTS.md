@@ -55,6 +55,12 @@ Source: same as A1. This drives decision D-03.
 A13. Confidential keys can instead be derived from independent key material with `ConfidentialKeys.fromIkm` or `ConfidentialKeys.fromPrf` (WebAuthn PRF).
 Source: same as A1.
 
+A14. Account setup with the token-2022 client: `getCreateConfidentialTransferAccountInstructionPlan` (0.19.0) returns one non divisible sequential plan of four instructions: `CreateAssociatedTokenIdempotent`, `Reallocate` for `ConfidentialTransferAccount`, `ConfigureConfidentialTransferAccount` (the AES encrypted zero balance, `maximumPendingBalanceCreditCounter` defaulting to 65536, the proof one instruction later) and `VerifyPubkeyValidity`. Its `rpc` parameter is read only when a proof context account is created (`@solana-program/zk-elgamal-proof` 0.4.0 `verifyPubkeyValidity`), which this plan does not do. The four fit one version 1 transaction.
+**VERIFIED** 2026-09-27 · source (`dist/src/confidential.mjs`) and localnet · step 1.7 (`packages/sdk/test/confidential-localnet.test.ts`).
+
+A15. A confidential deposit adds one to the account's `pendingBalanceCreditCounter`; applying the pending balance sets it back to 0 (`getApplyConfidentialPendingBalanceInstructionFromToken` sends the counter it read as the expected counter). With a maximum of 5, four deposits put the counter at 4, 80 percent.
+**VERIFIED** 2026-09-27 · localnet · step 1.7 (the SDK and worker localnet tests).
+
 ## B. ZK ElGamal Proof program
 
 B1. The ZK ElGamal Proof program is a native program that verifies the zero knowledge proofs used by Confidential Balances.
@@ -115,6 +121,9 @@ C7. The crate contains a second mint customizer, `compliance` (confidential tran
 C8. **Sotto devnet test deployment (not canonical).** Program `EEvqpjNRQkNRwXzVziuTGGi1wYDiPv7haYVVu3XZCoQn`, upgrade authority wallet A `7SSpLJh516AbWiV5GM7ooZFTHoQN64pdohYxbDs3Gq4L`, ProgramData `FgxifZMddWjdh3xd4ks2T37nVhuGJNRiqYz3kqo5QNEZ`, built from `spl-token-wrap` 1.0.0 with the one line `declare_id!` patch (`VERSIONS.md`), `.so` SHA-256 `533a3023040ee2a70f7687dcb1086462c5acd5960ad805327b708a02013eb22a`. Devnet wrapped USDC: mint `AhJfP4JJBaHWRtXRiaScZUC7SMm4RqUPSb3g9H5RT8Bd`, mint authority `7ZnRqwgKPvXAM5e5owXaMM1LzpHXrUu3XQnrGfYBc2vw`, backpointer `88BAkeT6mVhiJotw9ecNSu7D4Y6Qi8s6X7yd8RpSQj4b`, escrow `hdJ9rkwLacnu7QFckNJiM6bEuduC4GU4q7W4NRDpwxW`. Wrap, confidential transfer and unwrap passed end to end. Localnet loads the same `.so` at the same ID.
 **VERIFIED** 2026-09-26 · devnet, localnet · G1 part 3, tasks D, 4, 6, 8.
 Also 2026-09-27 · step 1.6: the published `spl-token-wrap-cli` 2.0.0 derives the canonical wrapped mint for devnet USDC (`find-pdas` prints `F7mhRgYbBVhzkUNRkvJfDDQG2iQoTw8yr1snUzH2Dhgt`), while the copy `scripts/build-token-wrap.sh --cli` builds against the patched crate derives the configured `AhJfP4JJBaHWRtXRiaScZUC7SMm4RqUPSb3g9H5RT8Bd`. The JS client `@solana-program/token-wrap` 2.7.1 takes a program address in its PDA finders and instruction builders, but its `createMint` and `createEscrowAccount` helpers always use the canonical ID, so Sotto builds those steps itself (`@sotto/sdk/wrap`); the localnet bootstrap created a wrapped mint through the deployment with them, and the startup verification found it valid.
+
+C9. `Wrap` through the Sotto deployment works with `getWrapInstruction(input, { programAddress })` and the wrapped mint, mint authority and escrow derived under that program (the escrow is the associated token account of the wrapped mint authority for the unwrapped mint, under the unwrapped mint's token program). The client's `singleSignerWrap` and `singleSignerUnwrap` resolve every PDA under the canonical ID (`@solana-program/token-wrap` 2.7.1 `resolveAddrs`), so they cannot address the deployment.
+**VERIFIED** 2026-09-27 · source and localnet · step 1.7 (`wrapInstructions`, `@sotto/sdk/wrap`).
 
 ## D. Transactions
 
@@ -220,10 +229,19 @@ H8. `solana-keygen` 4.2.2 `recover 'prompt://?key=0/0'` derives the account at m
 H6. Genesis hashes: devnet `EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG` (the Helius devnet RPC and the public devnet RPC agree), mainnet `5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d` (public mainnet RPC, read only `getGenesisHash`). Every localnet ledger has its own. Scripts that write to chain compare the endpoint's genesis hash with the cluster they were asked for and refuse mainnet (`clusterFromGenesisHash` in `packages/sdk/src/cluster/config.ts`, used by `bootstrap:sas`).
 **VERIFIED** 2026-09-27 · devnet, mainnet (read only) · step 1.1.
 
-## I. Browser runtime (verified in step 1.5)
+## I. Browser runtime and wallets (verified in steps 1.5 and 1.7)
 
 I1. `@solana/zk-sdk` 0.5.3 runs inside a module Web Worker bundled by Turbopack (next 16.3.6), in `next dev` and in the production build. `@solana-program/token-2022/confidential` imports `@solana/zk-sdk/bundler`, whose `index.js` imports `index_bg.wasm` as a module; Turbopack emits it (production: `.next/static/chunks/<hash>.wasm`, byte identical to the package file, SHA-256 `802bd267…80c8`) and serves it as `application/wasm`. Loading took about 100 ms in dev and 170 ms in production on this machine, the derivation a few milliseconds. A worker module that imports the WASM statically attaches its message handler only after the WASM has loaded, and a message the page posts when it creates the worker is lost; the Sotto worker therefore attaches its handler first, reports ready, and loads the WASM on the first request.
 **VERIFIED** 2026-09-27 · Chrome for Testing 153 · step 1.5.
 
 I2. `libsodium-wrappers-sumo` 0.8.4 (ESM build, `crypto_box_seed_keypair`) works in Node 24 and in the same Turbopack Web Worker.
 **VERIFIED** 2026-09-27 · step 1.5 (unit tests and the E2E viewing key registration).
+
+I3. In `@solana/zk-sdk` 0.5.3, `ElGamalKeypair.fromSecretKey(secret)` borrows the secret key (the generated glue passes its pointer and does not take ownership), so the caller frees both objects.
+**VERIFIED** 2026-09-27 · source (`dist/bundler/index_bg.js`) · step 1.7.
+
+I4. Wallet Standard and `@solana/react` 8.3.0: a wallet's `version` is the version of the Wallet Standard it implements, "NOT a version of the Wallet" (`@wallet-standard/base` 1.1.1); apps get no wallet app version, only the wallet name and each feature's version (`getWalletFeature`). `useSignTransaction`, and with it `useWalletAccountTransactionSigner`, throws while rendering when the account does not list the chain passed to it. The modifying signer returns the transaction the wallet signed, with its own `messageBytes`, so the app can compare them with the message it built.
+**VERIFIED** 2026-09-27 · source (`dist/index.browser.mjs`, type declarations) · step 1.7.
+
+I5. An Ed25519 signature made with a random nonce instead of the RFC 8032 deterministic one verifies under WebCrypto (`@solana/kit` `verifySignature`) and libsodium like any other: a wallet that signs this way gives a different valid signature of `solana-conf-bal/v1` each time, and so different confidential keys. Sotto's test helper `randomizedEd25519Signature` makes such signatures with libsodium's scalar operations.
+**VERIFIED** 2026-09-27 · Node 24 and Chrome for Testing · step 1.7 (unit tests and the localnet E2E determinism check).

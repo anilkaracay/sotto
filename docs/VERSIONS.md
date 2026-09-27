@@ -256,3 +256,22 @@ node scripts/sas-close-attestation.ts --owner <wallet>                          
 scripts/build-token-wrap.sh --cli                                                          # patched Token Wrap CLI
 python3 -m unittest discover -s scripts/checks -p "test_*.py"                              # AC checker tests
 ```
+
+## Step 1.7 (2026-09-27): account setup, funding and balances
+
+No new package versions: every addition comes from the catalog.
+
+| Item | Version | Resolved on | Source | Notes |
+|---|---|---|---|---|
+| `@solana-program/token` in `packages/sdk` | 0.16.1 (catalog) | 2026-09-27 | lockfile importers | Decodes SPL Token accounts and mints (public USDC balance, the USDC mint's decimals) and funds localnet wallets in `@sotto/sdk/testing/localnet` |
+| Database migration | `0002_token_account_apply_flag` | 2026-09-27 | `packages/db/migrations` (drizzle-kit 0.31.11 generate) | `token_accounts.apply_flagged_at` |
+| New SDK entries | `@sotto/sdk/confidential/public`, `@sotto/sdk/testing`, `@sotto/sdk/testing/localnet` | 2026-09-27 | `packages/sdk/package.json` | The public entry loads no WASM; the testing entries are for tests only |
+
+Commands:
+
+```sh
+scripts/localnet.sh &  node scripts/bootstrap-localnet.ts                                  # fresh validator and bootstrap
+SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/sdk test:localnet       # confidential account ACs through the wallet path
+SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/worker test:localnet    # includes pending-credits
+pnpm build && scripts/db-local.sh test-up && pnpm --filter @sotto/e2e e2e:localnet        # browser flows on localnet (fresh validator)
+```

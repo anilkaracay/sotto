@@ -8,7 +8,7 @@
 | I-2 | No key material or plaintext amount leaves the browser except as ciphertext | Network test: Playwright intercepts all requests during flows and fails on any payload matching known test amounts or key bytes. It uses sentinel payment amounts that are never used for deposits or withdrawals, and exempts the cleartext amount field of deposit and withdraw instructions |
 | I-3 | `sotto_proofs` has no token CPI and no authority over token accounts | Static test over source and IDL (05 section 7) |
 | I-4 | The deprecated ZK Token Proof program is never referenced | Grep test in CI over the repo and the lockfiles' resolved sources |
-| I-5 | Confidential keys are compared with the onchain ElGamal public key before any use | SDK unit test and runtime assertion |
+| I-5 | Confidential keys are compared with the onchain ElGamal public key before any use | SDK unit test and runtime assertion; since step 1.7 `decryptTokenAccount` and `applyPendingBalanceInstruction` refuse a key mismatch (unit tests), and account setup reads the account back with the worker's key check before recording it |
 | I-6 | Sotto's API refuses to authorize, and the Sotto client refuses to execute, without screening and approvals | API tests per error code |
 | I-7 | No double payment on retry | Idempotency key tests plus chain check before resend |
 | I-8 | Viewer public keys are used only after their registration signature verifies | SDK unit test |
@@ -39,6 +39,7 @@
 - Locking (button, 15 minutes idle, tab hidden for 5 minutes) terminates the worker. Auto lock is suspended while an execution or proof is in progress, and resumes after.
 - Never write keys, decrypted amounts or disclosure plaintext to `localStorage`, `sessionStorage`, IndexedDB, cookies, URLs or logs.
 - Implementation (step 1.5): 04 section 5. The E2E keys test derives the keys with the CLI checked test keypair and fails if any request (URL, headers or body) or the page's storage holds the derivation signatures, the ElGamal secret key, the AES key or the viewing secret key in hex, base64 or base58.
+- Implementation (step 1.7): the worker also does the work that needs the keys: the determinism check before account setup (it keeps the SHA-256 of the unlock signature, not the signature, and compares a second signature with it), the account setup and apply instructions, and the decryption of token account data the page read from chain. Its answers add balances decrypted for display on that page and instruction data, which the transaction publishes onchain anyway (the encrypted zero balance, the pubkey validity proof, the new decryptable balance of an apply); still no key or signature. The worker makes no network calls. The localnet E2E spec (`tests/e2e/localnet/setup.spec.ts`) runs setup, wrap, deposit and apply and fails if any request holds the key signature, the ElGamal secret key or the AES key in hex, base64 or base58.
 
 ## 4. Program security process
 

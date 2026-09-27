@@ -128,6 +128,10 @@ job_localnet() {
   echo "validator healthy"
   local status=0
   run scripts/localnet-smoke.sh || status=1
+  if [[ "$status" -eq 0 ]]; then
+    echo "+ SOTTO_LOCALNET_RPC_URL=$RPC_URL_LOCAL pnpm --filter @sotto/worker test:localnet"
+    SOTTO_LOCALNET_RPC_URL="$RPC_URL_LOCAL" pnpm --filter @sotto/worker test:localnet || status=1
+  fi
   stop_validator
   if [[ "$status" -eq 0 ]]; then
     rm -rf "$ROOT/.localnet/ledger" "$ROOT/.localnet/smoke"

@@ -28,6 +28,7 @@ JOBS=(node program localnet checks)
 RESULTS=()
 DURATIONS=()
 VALIDATOR_PID=""
+TEST_DB_STARTED=""
 
 # Pinned gitleaks release tarball checksums (from gitleaks_8.30.1_checksums.txt).
 gitleaks_expected_sha() {
@@ -69,6 +70,9 @@ job_node() {
   require_version "node" "$(node --version | sed 's/^v//')" "$NODE_VERSION" &&
     require_version "pnpm" "$(pnpm --version)" "$PNPM_VERSION" &&
     run pnpm install --frozen-lockfile || return 1
+  # API and database tests need the test Postgres (docs/11-TESTING.md); removed on exit.
+  TEST_DB_STARTED="yes"
+  run scripts/db-local.sh test-up || return 1
   if [[ -n "$FULL" ]]; then
     # Same tasks as the root scripts, with the Turborepo cache ignored.
     run pnpm exec turbo run lint --force &&
@@ -198,8 +202,16 @@ print_summary() {
   done
 }
 
+stop_test_db() {
+  if [[ -n "$TEST_DB_STARTED" ]]; then
+    scripts/db-local.sh test-down >/dev/null 2>&1
+    TEST_DB_STARTED=""
+  fi
+}
+
 on_exit() {
   stop_validator
+  stop_test_db
   print_summary
 }
 trap on_exit EXIT

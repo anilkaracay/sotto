@@ -20,6 +20,19 @@ jobs:
   node:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    # Test Postgres for API and database tests, like scripts/db-local.sh test-up (docs/11-TESTING.md).
+    services:
+      postgres:
+        image: postgres:16.15@sha256:1a6ab3f5345eb6dbe04a1349529caabdb0ab09293a09590fad07b2246bfa4b54
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 56433:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0

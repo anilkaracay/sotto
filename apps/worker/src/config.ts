@@ -18,7 +18,14 @@ export type SasConfig = {
   sasSchemaAddress: Address | null;
 };
 
-export type WorkerConfig = SasConfig & { rpcUrl: string };
+/** The running worker needs every value (the bootstrap reads the SAS part as optional). */
+export type WorkerConfig = {
+  rpcUrl: string;
+  databaseUrl: string;
+  sasSignerKeypair: string;
+  sasCredentialAddress: Address;
+  sasSchemaAddress: Address;
+};
 
 const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 
@@ -61,6 +68,33 @@ export function readSasConfig(env: Env = process.env): SasConfig {
   };
 }
 
+export function parseDatabaseUrl(value: string | null | undefined): string {
+  const trimmed = value?.trim();
+  if (!trimmed) throw new ConfigError("DATABASE_URL is not set");
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    throw new ConfigError("DATABASE_URL is not a valid URL");
+  }
+  if (url.protocol !== "postgres:" && url.protocol !== "postgresql:") {
+    throw new ConfigError("DATABASE_URL must be a postgres URL");
+  }
+  return trimmed;
+}
+
 export function loadWorkerConfig(env: Env = process.env): WorkerConfig {
-  return { rpcUrl: parseRpcUrl(env.RPC_URL), ...readSasConfig(env) };
+  const rpcUrl = parseRpcUrl(env.RPC_URL);
+  const databaseUrl = parseDatabaseUrl(env.DATABASE_URL);
+  const sas = readSasConfig(env);
+  if (!sas.sasSignerKeypair) throw new ConfigError("SAS_SIGNER_KEYPAIR is not set");
+  if (!sas.sasCredentialAddress) throw new ConfigError("SAS_CREDENTIAL_ADDRESS is not set");
+  if (!sas.sasSchemaAddress) throw new ConfigError("SAS_SCHEMA_ADDRESS is not set");
+  return {
+    rpcUrl,
+    databaseUrl,
+    sasSignerKeypair: sas.sasSignerKeypair,
+    sasCredentialAddress: sas.sasCredentialAddress,
+    sasSchemaAddress: sas.sasSchemaAddress,
+  };
 }

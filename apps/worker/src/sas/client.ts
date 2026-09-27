@@ -194,6 +194,27 @@ export async function ensureBusinessSchema(
   return { address, account, signature };
 }
 
+/** Reads the existing sotto.business.v1 schema and checks it; the worker never creates one. */
+export async function loadBusinessSchema(
+  rpc: SolanaRpc,
+  credential: Address,
+  address: Address,
+): Promise<Ensured<SchemaAccount>> {
+  const bytes = await fetchSasAccount(rpc, address);
+  if (!bytes) throw new Error(`the SAS schema ${address} does not exist; run bootstrap:sas`);
+  const account = decodeSchemaAccount(bytes);
+  assertBusinessSchema(account, credential);
+  return { address, account, signature: null };
+}
+
+/** Whether a SAS owned account exists at the address. */
+export async function sasAccountExists(rpc: SolanaRpc, address: Address): Promise<boolean> {
+  const { value } = await rpc
+    .getAccountInfo(address, { encoding: "base64", commitment: "confirmed" })
+    .send();
+  return Boolean(value && value.owner === SAS_PROGRAM_ADDRESS);
+}
+
 export type BusinessAttestationInput = {
   credential: Address;
   schema: Ensured<SchemaAccount>;

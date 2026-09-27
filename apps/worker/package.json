@@ -9,11 +9,13 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:localnet": "vitest run test/sas-localnet.test.ts"
+    "test:localnet": "vitest run localnet"
   },
   "dependencies": {
     "@solana/kit": "catalog:",
+    "@sotto/db": "workspace:*",
     "@sotto/sdk": "workspace:*",
+    "drizzle-orm": "catalog:",
     "sas-lib": "catalog:"
   },
   "devDependencies": {

@@ -359,9 +359,15 @@ importers:
       '@solana/kit':
         specifier: 'catalog:'
         version: 8.3.0(typescript@6.0.3)
+      '@sotto/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@sotto/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.3(postgres@3.4.9)
       sas-lib:
         specifier: 'catalog:'
         version: 1.0.10(typescript@6.0.3)

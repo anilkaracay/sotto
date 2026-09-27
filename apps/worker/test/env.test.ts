@@ -55,20 +55,39 @@ describe("loadLocalEnv (ENGINEERING-RULES.md: configuration comes from files)", 
 });
 
 describe("worker config", () => {
-  it("reads RPC_URL and the SAS variables", () => {
-    expect(
-      loadWorkerConfig({
-        RPC_URL: ` ${HELIUS} `,
-        SAS_SIGNER_KEYPAIR: "~/.config/solana/sotto/sas-signer-devnet.json",
-        SAS_CREDENTIAL_ADDRESS: CREDENTIAL,
-        SAS_SCHEMA_ADDRESS: SCHEMA,
-      }),
-    ).toEqual({
+  const FULL = {
+    RPC_URL: ` ${HELIUS} `,
+    DATABASE_URL: "postgresql://sotto:hidden-pw-9@127.0.0.1:56432/sotto",
+    SAS_SIGNER_KEYPAIR: "~/.config/solana/sotto/sas-signer-devnet.json",
+    SAS_CREDENTIAL_ADDRESS: CREDENTIAL,
+    SAS_SCHEMA_ADDRESS: SCHEMA,
+  };
+
+  it("reads RPC_URL, DATABASE_URL and the SAS variables", () => {
+    expect(loadWorkerConfig(FULL)).toEqual({
       rpcUrl: HELIUS,
+      databaseUrl: "postgresql://sotto:hidden-pw-9@127.0.0.1:56432/sotto",
       sasSignerKeypair: "~/.config/solana/sotto/sas-signer-devnet.json",
       sasCredentialAddress: CREDENTIAL,
       sasSchemaAddress: SCHEMA,
     });
+  });
+
+  it("requires every variable the running worker needs, naming only the variable", () => {
+    for (const name of [
+      "DATABASE_URL",
+      "SAS_SIGNER_KEYPAIR",
+      "SAS_CREDENTIAL_ADDRESS",
+      "SAS_SCHEMA_ADDRESS",
+    ]) {
+      const error = thrown(() => loadWorkerConfig({ ...FULL, [name]: "" }));
+      expect(error.message).toBe(`${name} is not set`);
+    }
+    const bad = thrown(() =>
+      loadWorkerConfig({ ...FULL, DATABASE_URL: "mysql://u:hidden-pw-9@h/d" }),
+    );
+    expect(bad.message).toBe("DATABASE_URL must be a postgres URL");
+    expect(bad.message).not.toContain("hidden-pw-9");
   });
 
   it("treats empty SAS variables as unset", () => {

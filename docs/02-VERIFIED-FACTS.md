@@ -61,6 +61,12 @@ A14. Account setup with the token-2022 client: `getCreateConfidentialTransferAcc
 A15. A confidential deposit adds one to the account's `pendingBalanceCreditCounter`; applying the pending balance sets it back to 0 (`getApplyConfidentialPendingBalanceInstructionFromToken` sends the counter it read as the expected counter). With a maximum of 5, four deposits put the counter at 4, 80 percent.
 **VERIFIED** 2026-09-27 · localnet · step 1.7 (the SDK and worker localnet tests).
 
+A16. `getConfidentialTransferInstructionPlan` (token-2022 0.19.0) takes `{ sourceToken, mint, mintAccount?, destinationToken, sourceTokenAccount, auditorElgamalPubkey?, authority, amount, sourceElgamalKeypair, aesKey, multiSigners?, programAddress?, payer, rpc }` plus either `destinationTokenAccount` (and optionally `destinationElgamalPubkey`) or `destinationElgamalPubkey`; `rpc` needs `getMinimumBalanceForRentExemption` (rent of the proof context accounts) and `getAccountInfo` (only to fetch the mint when neither `auditorElgamalPubkey` nor `mintAccount` is given; a mint without an auditor gives the zero auditor key). The plan is a sequence of three parts: in parallel, the setup of three proof context accounts (each created from a new `generateKeyPairSigner()` keypair, which signs its creation, then verified: `CiphertextCommitmentEquality`, `BatchedGroupedCiphertext3HandlesValidity`, `BatchedRangeProofU128`); the `Transfer` instruction; in parallel, the three `CloseContextState` instructions with `destination: payer.address`, so the rent returns to the fee payer (06 section 5). The helper's own documentation says the inline range proof transaction sits close to the size limit and cannot take a compute unit limit instruction; `getConfidentialTransferWithRecordInstructionPlan` stages the range proof in an SPL Record account instead (record payer and rent receiver default to the payer, the record authority is another new keypair), with a record `Write` plan that packs its data over transactions. The context account sizes are exported by `@solana-program/zk-elgamal-proof` 0.4.0 (for example `BATCHED_RANGE_PROOF_CONTEXT_ACCOUNT_SIZE`, 297 bytes). Both close instructions name the closed account first.
+**VERIFIED** 2026-09-28 · source (`dist/src/confidential.mjs`, `dist/types/confidentialTransferHelpers.d.ts`, the zk-elgamal-proof and record packages) and localnet · step 1.9.
+
+A17. The app path of one confidential transfer on localnet (step 1.9, kit 8.3 `createTransactionPlanner`, every message measured with the compute budget of 06 section 9): version 1 with the range proof inline is **1 transaction** of 10 instructions, 2897 of 4096 bytes; version 0 with the range proof in a record account is **5 transactions** of 732, 956, 1232, 889 and 812 of 1232 bytes, the last holding the transfer and the four closes. The CLI path took 8 legacy transactions (A5).
+**VERIFIED** 2026-09-28 · localnet · step 1.9 (`packages/sdk/test/transfer-localnet.test.ts`).
+
 ## B. ZK ElGamal Proof program
 
 B1. The ZK ElGamal Proof program is a native program that verifies the zero knowledge proofs used by Confidential Balances.
@@ -143,6 +149,7 @@ Source: https://solanacompass.com/news/solana-v1-transactions-now-testable-local
 
 D4. With v1, a confidential transfer can execute in a single onchain transaction. Without v1 it spans several dependent transactions (proof accounts, transfer, cleanup).
 Source: A1 guide.
+**VERIFIED** 2026-09-28 · localnet · step 1.9: 1 transaction as v1, 5 as v0 (A17).
 
 D5. v1 activation on devnet: **VERIFIED** 2026-09-26 · G1 part 1, task 1: slot 492480000, epoch 1140, 2026-09-03 11:38:04 UTC; localnet (`solana-test-validator` 4.2.2) active from slot 0. Sotto must support both paths. Note: `spl-token` 5.6.1 sent legacy transactions in G1 tasks 7 and 8.
 **VERIFIED (wallets)** 2026-09-27 · devnet · Gate G2 (`VERIFICATION-LOG.md` step 0.6, rows R1, R8 to R10): `supportedTransactionVersions` of `solana:signTransaction` is `["legacy", 0, 1]` in Solflare (a v1 self transfer confirmed on devnet, `41vyVV2ADjfnzrJL6odXHqPaoUza67pDpRVZejNoC812RZV9R9k6UA1z8c8aZS2nqUgFVVW6REkpDXqw9xfp72j7`) and `["legacy", 0]` in Phantom (a v1 transaction fails with "Reached end of buffer unexpectedly") and Backpack (refuses v1 with `UnsupportedTransactionVersionError`). One `signTransaction` call with several transactions works for v0 in all three and for v1 in Solflare. Sotto picks the path per wallet from the declared versions (D-26).
@@ -227,6 +234,9 @@ H7. `spl-token` 5.6.1 `withdraw-confidential-tokens <mint> ALL` fails with "ALL 
 
 H8. `solana-keygen` 4.2.2 `recover 'prompt://?key=0/0'` derives the account at m/44'/501'/0'/0' (compared with an independent SLIP-0010 derivation of a throwaway phrase); `prompt://` without a path derives a different key. `recover <base58 keypair string>` writes the same keypair file. The confirmation "Continue? (y/n)" is read from standard input; the phrase prompt reads the terminal.
 **VERIFIED** 2026-09-27 · host · step 1.5.
+
+H9. The SPL Record program `recr1L3PCGKLbckBqMNcJhuuyU1zgo8nBhfLVsJNwr5` (the address in `@solana-program/record` 0.5.0) is an upgradeable program on devnet (programdata `2sCyyjQHA5Pw3xjhji51TLix8y58jG1b4CQqUW3fbhFf`, last deployed in slot 377465796, 30560 bytes); `scripts/localnet.sh` clones it, and on the local validator it is executable.
+**VERIFIED** 2026-09-28 · devnet (read only, `solana program show`) and localnet · step 1.9.
 
 H6. Genesis hashes: devnet `EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG` (the Helius devnet RPC and the public devnet RPC agree), mainnet `5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d` (public mainnet RPC, read only `getGenesisHash`). Every localnet ledger has its own. Scripts that write to chain compare the endpoint's genesis hash with the cluster they were asked for and refuse mainnet (`clusterFromGenesisHash` in `packages/sdk/src/cluster/config.ts`, used by `bootstrap:sas`).
 **VERIFIED** 2026-09-27 · devnet, mainnet (read only) · step 1.1.

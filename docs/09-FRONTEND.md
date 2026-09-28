@@ -17,7 +17,7 @@
 | `/app/[org]/settings` | Approval policy (1 approval, not changeable in the hackathon build, Q-12, 13 A32), budgets | Owner |
 | `/app/[org]/board` | Board view: read only totals (Post-hackathon, D-27) | Board viewer |
 | `/app/[org]/payroll` and `/app/[org]/payroll/[run]` | Payroll; the run page's approvals block shows the initiator's approval only (Q-12, 13 A31); the approvers' "Approve" action is Post-hackathon | Owner |
-| `/app/[org]/payments/new` | Single payment | Owner |
+| `/app/[org]/payments/new` | Single payment. Step 1.9 (F-06, AC-06.1 to AC-06.5): the Pay a recipient card (a recipient whose account is ready, others listed as not selectable with their readiness, the amount in USDC prefilled from the recipient's default amount once the tab holds the viewing key, a category, a memo; the amount, memo and category sealed in the tab to the owner's viewing key), the wallet and keys cards, and Recent payments (recipient, amount "Sealed" or opened in the tab, created, status: Draft, Authorized, Sending, Settled, Did not complete, Failed, or Blocked by screening, the transfer transaction, and Try again for a payment of which nothing landed). Pay creates the draft, asks the server to authorize it, then shows each step ("Step 3 of 5: verifying a proof…"), a failed step with what Sotto closed, and the settled result with who the payment record is encrypted for. The top nav lists it as Payments. Only for the owner of an active org | Owner |
 | `/app/[org]/keys` | Viewing keys (grants) | Owner |
 | `/app/[org]/proofs` | Proofs of funds | Owner |
 | `/app/[org]/books` | Accountant books | Accountant |

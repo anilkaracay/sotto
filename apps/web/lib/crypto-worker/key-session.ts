@@ -26,8 +26,11 @@ export type LockReason =
 
 export type Unlocked = { wallet: string; elgamalPubkey: string };
 
+/** The viewing key the tab's worker holds: its wallet and public key (base64). */
+export type Viewing = { wallet: string; publicKey: string };
+
 /** What the tab's worker holds: the confidential keys, the viewing key (step 1.8), or neither. */
-export type KeySnapshot = { unlocked: Unlocked | null; viewing: string | null };
+export type KeySnapshot = { unlocked: Unlocked | null; viewing: Viewing | null };
 
 type Timers = NonNullable<Parameters<typeof createAutoLock>[0]["timers"]>;
 
@@ -50,7 +53,7 @@ export function createKeySession(options: {
   const createClient = options.createClient ?? (() => new CryptoWorkerClient());
   let client: CryptoWorkerClient | null = null;
   let unlocked: Unlocked | null = null;
-  let viewing: string | null = null;
+  let viewing: Viewing | null = null;
   let autoLock: ReturnType<typeof createAutoLock> | null = null;
   let hidden = false;
   let org: string | null = null;
@@ -76,7 +79,9 @@ export function createKeySession(options: {
 
   /** The wallets whose keys the worker holds. */
   const wallets = (): string[] =>
-    [unlocked?.wallet, viewing].filter((wallet): wallet is string => typeof wallet === "string");
+    [unlocked?.wallet, viewing?.wallet].filter(
+      (wallet): wallet is string => typeof wallet === "string",
+    );
 
   function arm(): void {
     if (autoLock) return;
@@ -104,15 +109,16 @@ export function createKeySession(options: {
       return result;
     },
     /** Step 1.8: the viewing key, for sealed data sent to this wallet (07 section 2). */
-    async unlockViewing(wallet: string, signature: Uint8Array): Promise<void> {
+    async unlockViewing(wallet: string, signature: Uint8Array): Promise<Viewing> {
       const current = worker();
-      await current.unlockViewing(wallet, signature);
+      const { publicKey } = await current.unlockViewing(wallet, signature);
       if (client !== current) throw new Error("The keys were locked while unlocking");
-      viewing = wallet;
+      viewing = { wallet, publicKey };
       arm();
       options.onChange(snapshot(), null);
+      return viewing;
     },
-    viewing: (): string | null => viewing,
+    viewing: (): Viewing | null => viewing,
     lock,
     /** Keeps the keys open during an execution; call the returned function when done. */
     hold: (): (() => void) => autoLock?.hold() ?? (() => {}),

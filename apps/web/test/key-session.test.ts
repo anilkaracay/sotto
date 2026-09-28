@@ -1,15 +1,18 @@
 // The tab's key session (04 section 5, 10 section 3; step 1.7.1): keys unlocked once serve every page of
 // the tab, and each end condition locks them and closes the worker: the Lock button, 15 minutes idle,
 // 5 minutes hidden, sign out or another signed in wallet, an org switch, a change of the wallet account.
-// Reload ends the tab's scripts; the browser tests cover it.
+// Reload ends the tab's scripts; the browser tests cover it. Since step 1.8.1 one Unlock click asks for
+// the confidential key signature and then the viewing key signature (unlock.ts).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CryptoWorkerClient } from "../lib/crypto-worker/client.ts";
+import { CryptoWorkerError, type CryptoWorkerClient } from "../lib/crypto-worker/client.ts";
 import {
   createKeySession,
   orgOfPath,
   type LockReason,
   type Unlocked,
+  type Viewing,
 } from "../lib/crypto-worker/key-session.ts";
+import { unlockKeys, unlockViewingKey, type SignProblem } from "../lib/crypto-worker/unlock.ts";
 
 const WALLET = "EQMW3o1DVsB72Ej1RRRmHLW1XaEpbjLKrMHUbS8cRLZC";
 const OTHER = "7SSpLJh516AbWiV5GM7ooZFTHoQN64pdohYxbDs3Gq4L";
@@ -33,7 +36,7 @@ function setUp() {
   const clients: ReturnType<typeof fakeClient>[] = [];
   const changes: {
     unlocked: Unlocked | null;
-    viewing: string | null;
+    viewing: Viewing | null;
     reason: LockReason | null;
   }[] = [];
   const session = createKeySession({
@@ -168,12 +171,19 @@ describe("the tab's key session", () => {
 
   it("holds the viewing key under the same end conditions (step 1.8)", async () => {
     const { session, clients, changes, lastReason } = setUp();
-    await session.unlockViewing(WALLET, new Uint8Array(64));
-    expect(session.viewing()).toBe(WALLET);
-    expect(changes.at(-1)).toEqual({ unlocked: null, viewing: WALLET, reason: null });
+    expect(await session.unlockViewing(WALLET, new Uint8Array(64))).toEqual({
+      wallet: WALLET,
+      publicKey: "AAAA",
+    });
+    expect(session.viewing()).toEqual({ wallet: WALLET, publicKey: "AAAA" });
+    expect(changes.at(-1)).toEqual({
+      unlocked: null,
+      viewing: { wallet: WALLET, publicKey: "AAAA" },
+      reason: null,
+    });
     session.signedIn(WALLET);
     session.walletAccounts([WALLET]);
-    expect(session.viewing()).toBe(WALLET);
+    expect(session.viewing()).toMatchObject({ wallet: WALLET });
     session.walletAccounts([OTHER]);
     expect(session.viewing()).toBeNull();
     expect(lastReason()).toBe("wallet_change");
@@ -204,6 +214,93 @@ describe("the tab's key session", () => {
     session.lock("button");
     finish();
     await expect(waiting).rejects.toThrow("locked while unlocking");
+    expect(session.unlocked()).toBeNull();
+    expect(closes).toHaveLength(1);
+  });
+});
+
+describe("one Unlock click (step 1.8.1)", () => {
+  const text = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
+
+  /** A wallet stand in: answers each message with a distinct signature, or with a problem. */
+  function wallet(answers: Record<string, SignProblem> = {}) {
+    const asked: string[] = [];
+    const sign = vi.fn(async (message: Uint8Array) => {
+      const request = text(message);
+      asked.push(request);
+      return answers[request] ?? new Uint8Array(64).fill(asked.length);
+    });
+    return { asked, sign };
+  }
+
+  it("AC-03.2 asks for the confidential key signature, then the viewing key signature, and holds both keys for the tab", async () => {
+    const { session, clients } = setUp();
+    const { asked, sign } = wallet();
+    expect(await unlockKeys({ wallet: WALLET, sign, session })).toEqual({
+      keys: "unlocked",
+      viewing: "unlocked",
+    });
+    expect(asked).toEqual(["solana-conf-bal/v1", `sotto-view-key/v1\n${WALLET}`]);
+    // Two derivations from two signatures: neither key comes from the other's signature.
+    const client = clients[0];
+    const confidential = client?.unlock.mock.calls[0] as unknown as [string, Uint8Array];
+    const viewingCall = client?.unlockViewing.mock.calls[0] as unknown as [string, Uint8Array];
+    expect(confidential[1][0]).toBe(1);
+    expect(viewingCall[1][0]).toBe(2);
+    expect(session.unlocked()).toMatchObject({ wallet: WALLET });
+    expect(session.viewing()).toMatchObject({ wallet: WALLET });
+    // The same lock conditions end both, with one close of the one worker.
+    vi.advanceTimersByTime(15 * 60 * 1000);
+    expect(session.unlocked()).toBeNull();
+    expect(session.viewing()).toBeNull();
+    expect(clients).toHaveLength(1);
+    expect(clients[0]?.closed).toBe(1);
+  });
+
+  it("keeps the confidential keys when the viewing key signature is refused, and can ask for it again", async () => {
+    const { session } = setUp();
+    const refusing = wallet({ [`sotto-view-key/v1\n${WALLET}`]: "refused" });
+    expect(await unlockKeys({ wallet: WALLET, sign: refusing.sign, session })).toEqual({
+      keys: "unlocked",
+      viewing: "refused",
+    });
+    expect(session.unlocked()).toMatchObject({ wallet: WALLET });
+    expect(session.viewing()).toBeNull();
+    const willing = wallet();
+    expect(await unlockViewingKey({ wallet: WALLET, sign: willing.sign, session })).toBe(
+      "unlocked",
+    );
+    expect(willing.asked).toEqual([`sotto-view-key/v1\n${WALLET}`]);
+    expect(session.viewing()).toMatchObject({ wallet: WALLET });
+    expect(session.unlocked()).toMatchObject({ wallet: WALLET });
+  });
+
+  it("asks for no viewing key signature when the confidential keys do not unlock", async () => {
+    const cancelled = setUp();
+    const cancelling = wallet({ "solana-conf-bal/v1": "cancelled" });
+    expect(
+      await unlockKeys({ wallet: WALLET, sign: cancelling.sign, session: cancelled.session }),
+    ).toEqual({ keys: "cancelled" });
+    expect(cancelling.asked).toEqual(["solana-conf-bal/v1"]);
+    expect(cancelled.session.unlocked()).toBeNull();
+
+    // A signature the worker rejects: nothing stays unlocked and the worker is closed.
+    const closes: number[] = [];
+    const session = createKeySession({
+      onChange: () => {},
+      createClient: () =>
+        ({
+          unlock: async () => {
+            throw new CryptoWorkerError("bad_signature", "The signature does not verify");
+          },
+          close: async () => void closes.push(1),
+        }) as unknown as CryptoWorkerClient,
+    });
+    const { asked, sign } = wallet();
+    expect(await unlockKeys({ wallet: WALLET, sign, session })).toEqual({
+      keys: "bad_signature",
+    });
+    expect(asked).toEqual(["solana-conf-bal/v1"]);
     expect(session.unlocked()).toBeNull();
     expect(closes).toHaveLength(1);
   });

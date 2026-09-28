@@ -49,7 +49,10 @@ const testWallet = <T>(page: Page, key: "signedTransactions" | "signedMessages")
 
 const value = (page: Page, card: string) => page.getByTestId(`${card}-value`);
 
-/** Connects the wallet if this page load has not yet (after sign in it still has), then unlocks. */
+/**
+ * Connects the wallet if this page load has not yet (after sign in it still has), then unlocks: one
+ * click, the confidential key signature and then the viewing key signature (step 1.8.1).
+ */
 async function unlock(page: Page) {
   const connect = page.getByRole("button", { name: "Connect" });
   const signing = page.getByTestId("keys-wallet");
@@ -58,6 +61,7 @@ async function unlock(page: Page) {
   await expect(signing).toContainText("EQMW…RLZC");
   await page.getByRole("button", { name: "Unlock with your wallet" }).click();
   await expect(page.getByTestId("keys-status")).toHaveText("Unlocked");
+  await expect(page.getByTestId("viewing-unlocked")).toHaveText("Unlocked");
 }
 
 /** Records every status text the funding card shows, to check the steps it went through. */

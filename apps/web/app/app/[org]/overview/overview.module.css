@@ -1,0 +1,192 @@
+/* The owner overview (09 section 3; step 1.10) on the design's layout: the confidential account card
+   follows the design's sky card (.skyk, .skyt, .acard) and the recent activity its table (.tbl, .pp).
+   Pixel fidelity and motion get the Phase 3 design pass (M2). */
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.wide {
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow-x: auto;
+}
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.linkButton:hover {
+  background: #15284a;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* The confidential account card (design .skyk). */
+.sky {
+  position: relative;
+  overflow: hidden;
+  min-height: 390px;
+  border-radius: 24px;
+  color: #ffffff;
+}
+.skyArt {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.skyText {
+  position: relative;
+  padding: 26px;
+}
+.skyText h2 {
+  font-size: 24px;
+  font-weight: 450;
+  letter-spacing: -0.035em;
+}
+.sky .skyText p {
+  margin-top: 6px;
+  max-width: 18em;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.88);
+}
+.skyText a {
+  color: #ffffff;
+  font-weight: 500;
+}
+.account {
+  position: absolute;
+  right: -30px;
+  bottom: 34px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 320px;
+  height: 196px;
+  padding: 20px 22px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.18));
+  backdrop-filter: blur(14px) saturate(1.4);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    0 30px 50px -20px rgba(11, 40, 90, 0.5);
+  transform: rotate(-11deg);
+  color: #0b1830;
+  animation: float 7s ease-in-out infinite;
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: rotate(-11deg) translateY(0);
+  }
+  50% {
+    transform: rotate(-10deg) translateY(-8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .account {
+    animation: none;
+  }
+}
+.accountTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: #0b1830;
+}
+.kind {
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.number {
+  font-size: 19px;
+  letter-spacing: 0.06em;
+}
+.accountBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+.sealed {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(11, 24, 48, 0.08);
+  font-size: 12px;
+}
+
+/* Recent activity (design .tbl with .pp). */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.person b {
+  display: block;
+  font-weight: 500;
+}
+.person small,
+.muted {
+  color: var(--faint);
+  font-size: 12.5px;
+}
+.date {
+  color: var(--faint);
+}
+.wide .empty {
+  padding: 18px 0 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+/* The design's small line button (.btn.sm.ln.pillb) as a link. */
+.viewAll {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.viewAll:hover {
+  background: #fafbfd;
+}

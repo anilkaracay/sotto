@@ -68,6 +68,27 @@ export function isBlocked(errorCode: string | null): boolean {
   return errorCode === "screening_hit";
 }
 
+const STATUS_TONE: Record<string, "green" | "amber" | "neutral" | "red"> = {
+  settled: "green",
+  executing: "amber",
+  authorized: "neutral",
+  draft: "neutral",
+  failed_clean: "amber",
+  failed: "red",
+};
+
+/** The status chip of a payment: its words and tone, a screening block first (the payments table, the overview). */
+export function paymentStatusChip(
+  status: string,
+  errorCode: string | null,
+): { label: string; tone: "green" | "amber" | "neutral" | "red" } {
+  if (isBlocked(errorCode)) return { label: "Blocked by screening", tone: "red" };
+  return {
+    label: PAYMENT_STATUS_LABEL[status] ?? status,
+    tone: STATUS_TONE[status] ?? "neutral",
+  };
+}
+
 /** A payment the owner can send again: nothing of it landed, or it never started, and not blocked. */
 export function canRetry(status: string, errorCode: string | null): boolean {
   if (isBlocked(errorCode)) return false;

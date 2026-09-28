@@ -1,6 +1,6 @@
-// The top nav of an owner's org pages (09 section 2): only screens that exist (rule 6). Step 1.7 adds
-// the overview with the balance cards next to the setup page, step 1.8 the recipients, step 1.9 the
-// single payment page.
+// The top nav of an org's pages (09 section 2): only screens that exist (rule 6). Step 1.7 adds the
+// overview with the balance cards next to the setup page, step 1.8 the recipients, step 1.9 the
+// single payment page, step 1.10 the recipient's pay page.
 import type { TopNavItem } from "@sotto/ui";
 
 export function ownerNav(
@@ -33,4 +33,9 @@ export function ownerNav(
       active: active === "setup",
     },
   ];
+}
+
+/** A recipient's nav: the minimal pay page of step 1.10 (My pay comes in Phase 2). */
+export function recipientNav(orgId: string): TopNavItem[] {
+  return [{ key: "pay", label: "My pay", href: `/app/${orgId}/pay`, active: true }];
 }

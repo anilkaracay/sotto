@@ -20,12 +20,10 @@ import { createRetryingRpc } from "@sotto/sdk/tx";
 import { address, createKeyPairSignerFromBytes, getBase58Decoder } from "@solana/kit";
 import { expect, test, type Page } from "@playwright/test";
 import { E2E_ADMIN_WALLET, E2E_KEYPAIR_SEED, e2eKeypair } from "../fixtures.ts";
-import { signIn } from "../helpers.ts";
+import { openSetup, OVERVIEW_URL, signIn } from "../helpers.ts";
 
 const bootstrap = readLocalnetBootstrap();
 const rpc = createRetryingRpc(bootstrap.rpcUrl);
-const SETUP_URL = /\/app\/[0-9a-f-]{36}\/setup$/;
-const OVERVIEW_URL = /\/app\/[0-9a-f-]{36}\/overview$/;
 
 const privateKey = createPrivateKey({
   key: Buffer.concat([Buffer.from("302e020100300506032b657004220420", "hex"), E2E_KEYPAIR_SEED]),
@@ -111,8 +109,12 @@ test.describe.serial("confidential account on localnet", () => {
     await page.getByRole("button", { name: "Confirm approve" }).click();
     await expect(page.getByText("No organization is waiting for review.")).toBeVisible();
 
+    // /app opens the overview (step 1.10); the account card sends a new owner to Account setup.
     await page.goto("/app");
-    await expect(page).toHaveURL(SETUP_URL);
+    await expect(page).toHaveURL(OVERVIEW_URL);
+    await expect(page.getByTestId("account-sky")).toHaveAttribute("data-state", "not_set_up");
+    await expect(page.getByTestId("account-address")).toHaveText("Not set up yet");
+    await openSetup(page);
     await expect(page.getByTestId("network-label")).toHaveText("Localnet");
     // AC-03.1: the startup verification found the bootstrapped wrapped mint; D-01 label.
     await expect(page.getByTestId("wrapped-mint-status")).toHaveText("Ready");
@@ -163,7 +165,8 @@ test.describe.serial("confidential account on localnet", () => {
   test("AC-03.1 AC-03.3 AC-03.4 AC-04.1 AC-04.2 AC-04.3 AC-04.4 sets up and funds the account in two signatures, every balance from chain", async ({
     page,
   }) => {
-    const wallet = await signIn(page, e2eKeypair(), SETUP_URL);
+    const wallet = await signIn(page, e2eKeypair(), OVERVIEW_URL);
+    await openSetup(page);
     const traffic: string[] = [];
     page.on("request", (request) => {
       traffic.push(`${request.method()} ${request.url()} ${JSON.stringify(request.headers())}`);
@@ -243,7 +246,8 @@ test.describe.serial("confidential account on localnet", () => {
   test("AC-03.5 AC-05.1 keeps the keys across the tab's pages without a new signature, and ends them on reload, Lock, sign out and a wallet account change", async ({
     page,
   }) => {
-    await signIn(page, e2eKeypair(), SETUP_URL);
+    await signIn(page, e2eKeypair(), OVERVIEW_URL);
+    await openSetup(page);
     for (const pass of ["first load", "reload"]) {
       if (pass === "reload") await page.reload();
       await expect(page.getByTestId("keys-status")).toHaveText("Locked");
@@ -271,8 +275,7 @@ test.describe.serial("confidential account on localnet", () => {
     await expect(page.getByTestId("balance-available").getByTestId("wrap-label")).toHaveText(
       "devnet test wrap",
     );
-    await page.getByRole("link", { name: "Account setup" }).click();
-    await expect(page).toHaveURL(SETUP_URL);
+    await openSetup(page);
     await expect(value(page, "balance-available")).toHaveText("30 wUSDC");
     expect((await testWallet<string[]>(page, "signedMessages")).length).toBe(signatures);
     expect(page.workers()).toHaveLength(1);
@@ -293,7 +296,7 @@ test.describe.serial("confidential account on localnet", () => {
     const connect = option.getByRole("button", { name: "Connect" });
     if (await connect.isVisible()) await connect.click();
     await option.getByRole("button", { name: "Sign in" }).click();
-    await expect(page).toHaveURL(SETUP_URL);
+    await expect(page).toHaveURL(OVERVIEW_URL);
     await expect(page.getByTestId("keys-status")).toHaveText("Locked");
 
     // A change of the wallet account ends them, and the page says why.

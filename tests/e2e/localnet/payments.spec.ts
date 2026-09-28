@@ -3,11 +3,19 @@
 // worker's confirm-executions job settles it, both balances move by the amount onchain, and the self
 // and recipient disclosures open with each viewer's viewing key under a manifest the owner signed
 // (AC-06.1, AC-06.3, AC-06.4). A deny-listed wallet is blocked before anything is signed (AC-06.2).
-// The amount is a sentinel that appears in no request, and neither does the memo (I-2). The accounts
-// are prepared with the SDK; everything the owner and the recipient do runs in the browser. Runs in
-// the localnet job of scripts/ci-local.sh against the bootstrapped validator, never devnet.
+// The amount is a sentinel that appears in no request, and neither does the memo (I-2). Step 1.10:
+// the overview's recent activity opens the payment in the tab, the owner withdraws and unwraps from
+// the overview's drawer, and the recipient reads the payment on the pay page, applies the pending
+// balance, withdraws and unwraps (F-09, AC-09.1, version 0 transactions with the range proof in a
+// record account). The accounts are prepared with the SDK; everything the owner and the recipient do
+// runs in the browser. Runs in the localnet job of scripts/ci-local.sh against the bootstrapped
+// validator, never devnet.
 import { decryptTokenAccount } from "@sotto/sdk/confidential";
-import { associatedTokenAccount, decodeToken2022Account } from "@sotto/sdk/confidential/public";
+import {
+  associatedTokenAccount,
+  decodeToken2022Account,
+  readPublicTokenBalance,
+} from "@sotto/sdk/confidential/public";
 import { validateManifest, verifyManifest } from "@sotto/sdk/disclosure";
 import { openPayload } from "@sotto/sdk/disclosure/seal";
 import {
@@ -34,11 +42,11 @@ import {
 } from "@solana/kit";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { e2eKeypair, seededKeypair } from "../fixtures.ts";
-import { addTestWallet, clientAddress, signIn } from "../helpers.ts";
+import { addTestWallet, clientAddress, openSetup, OVERVIEW_URL, signIn } from "../helpers.ts";
 
 const bootstrap = readLocalnetBootstrap();
 const rpc = createRetryingRpc(bootstrap.rpcUrl);
-const SETUP_URL = /\/app\/([0-9a-f-]{36})\/setup$/;
+const PAY_URL = /\/app\/[0-9a-f-]{36}\/pay$/;
 const OWNER = seededKeypair("sotto-e2e-payments-owner/v1");
 const MAYA = seededKeypair("sotto-e2e-payments-recipient/v1");
 const DENIED = seededKeypair("sotto-e2e-denied/v1");
@@ -60,6 +68,12 @@ async function chainOwner(keypair: number[], usdc: bigint): Promise<LocalnetOwne
     usdc: funded.usdc,
     wusdc: await associatedTokenAccount(signer.address, bootstrap.wrappedUsdcMint),
   };
+}
+
+/** A wallet's public USDC balance read from chain; an account not created yet holds nothing. */
+async function publicUsdcOf(who: LocalnetOwner): Promise<bigint> {
+  const balance = await readPublicTokenBalance(rpc, who.usdc as Address);
+  return balance.status === "present" ? balance.amount : 0n;
 }
 
 /** A wUSDC account's confidential balances, read from chain and decrypted with its owner's keys. */
@@ -137,6 +151,7 @@ test.use({ extraHTTPHeaders: { "x-forwarded-for": "198.51.100.10" } });
 test.describe.serial("single confidential payment on localnet", () => {
   let owner: LocalnetOwner;
   let maya: LocalnetOwner;
+  let orgId = "";
 
   test.beforeAll(async () => {
     test.setTimeout(240_000);
@@ -177,8 +192,9 @@ test.describe.serial("single confidential payment on localnet", () => {
 
     // The owner unlocks once and registers the viewing key (one signature, the tab holds the key).
     await page.goto("/app");
-    await expect(page).toHaveURL(SETUP_URL);
-    const orgId = SETUP_URL.exec(new URL(page.url()).pathname)?.[1] ?? "";
+    await expect(page).toHaveURL(OVERVIEW_URL);
+    orgId = OVERVIEW_URL.exec(new URL(page.url()).pathname)?.[1] ?? "";
+    await openSetup(page);
     await unlock(page);
     await page.getByRole("button", { name: "Create viewing key" }).click();
     await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
@@ -309,5 +325,76 @@ test.describe.serial("single confidential payment on localnet", () => {
     expect(theirs).toHaveLength(1);
     expect(theirs[0]).toMatchObject({ amount: SENTINEL.toString(), subject: mine[0]?.subject });
     await reader.context().close();
+
+    // Step 1.10: the overview's recent activity opens the payment in this tab (the keys stay open
+    // across the tab's pages).
+    await page.getByRole("navigation").getByRole("link", { name: "Overview" }).click();
+    await expect(page).toHaveURL(OVERVIEW_URL);
+    const activity = page.getByTestId("activity-row").first();
+    await expect(activity).toHaveAttribute("data-status", "settled");
+    await expect(activity.getByTestId("activity-amount")).toHaveText("12.345678 USDC");
+    await expect(activity).toContainText(MEMO);
+    await expect(activity).toContainText("Supplier");
+  });
+
+  test("AC-09.1 withdraws and unwraps from the overview's drawer and from the recipient's pay page", async ({
+    page,
+    browser,
+  }) => {
+    test.setTimeout(480_000);
+    // The owner: the overview's Withdraw drawer, 2 wUSDC withdrawn and unwrapped to USDC.
+    await signIn(page, OWNER.keypair, OVERVIEW_URL);
+    await expect(page.getByTestId("account-sky")).toHaveAttribute("data-state", "set_up");
+    await expect(page.getByTestId("account-address")).toHaveText(
+      `${owner.wusdc.slice(0, 4)} •••• ${owner.wusdc.slice(-4)}`,
+    );
+    await unlock(page);
+    const ownerBefore = await balancesOf(owner);
+    const ownerUsdcBefore = await publicUsdcOf(owner);
+    await page.getByTestId("open-withdraw").click();
+    const drawer = page.getByRole("dialog", { name: "Withdraw" });
+    await drawer.getByLabel("Amount of wUSDC").fill("2");
+    await drawer.getByRole("button", { name: "Withdraw and unwrap" }).click();
+    await expect(drawer.getByTestId("withdraw-done")).toContainText(
+      "Withdrew 2 wUSDC and unwrapped it to 2 USDC",
+      { timeout: 180_000 },
+    );
+    const ownerAfter = await balancesOf(owner);
+    expect(ownerAfter.available).toBe(ownerBefore.available + ownerBefore.pending - 2n * USDC);
+    expect(await publicUsdcOf(owner)).toBe(ownerUsdcBefore + 2n * USDC);
+
+    // The recipient: /app opens the pay page; the payment opens with the viewing key in the tab.
+    const recipient = await newPage(browser);
+    await signIn(recipient, MAYA.keypair, PAY_URL);
+    await expect(recipient.getByTestId("received-locked")).toContainText(
+      "sealed to your viewing key",
+    );
+    await unlock(recipient);
+    const received = recipient.getByTestId("received-row").first();
+    await expect(received).toHaveAttribute("data-state", "opened");
+    await expect(received.getByTestId("received-amount")).toHaveText("12.345678 USDC");
+    await expect(received).toContainText(MEMO);
+
+    // The pending balance is applied, then 5 wUSDC withdrawn and unwrapped.
+    const mayaBefore = await balancesOf(maya);
+    const mayaUsdcBefore = await publicUsdcOf(maya);
+    expect(mayaBefore.pending).toBeGreaterThanOrEqual(SENTINEL);
+    await recipient.getByRole("button", { name: "Apply pending balance" }).click();
+    await expect(recipient.getByTestId("apply-done")).toContainText(
+      "Applied your pending balance to your available balance.",
+      { timeout: 120_000 },
+    );
+    const card = recipient.getByTestId("withdraw-card");
+    await card.getByLabel("Amount of wUSDC").fill("5");
+    await card.getByRole("button", { name: "Withdraw and unwrap" }).click();
+    await expect(card.getByTestId("withdraw-done")).toContainText(
+      "Withdrew 5 wUSDC and unwrapped it to 5 USDC",
+      { timeout: 180_000 },
+    );
+    const mayaAfter = await balancesOf(maya);
+    expect(mayaAfter.pending).toBe(0n);
+    expect(mayaAfter.available).toBe(mayaBefore.available + mayaBefore.pending - 5n * USDC);
+    expect(await publicUsdcOf(maya)).toBe(mayaUsdcBefore + 5n * USDC);
+    await recipient.context().close();
   });
 });

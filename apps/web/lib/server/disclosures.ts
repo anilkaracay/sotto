@@ -232,6 +232,20 @@ export async function createDisclosures(
   });
 }
 
+/**
+ * The wallet of the org's owner, the only valid manifest signer (I-9): the recipient's page checks
+ * every manifest against it before it opens anything. Null for an unknown org.
+ */
+export async function orgOwnerWallet(db: Database, orgId: string): Promise<string | null> {
+  const [owner] = await db
+    .select({ wallet: users.wallet })
+    .from(orgs)
+    .innerJoin(users, eq(users.id, orgs.ownerUserId))
+    .where(eq(orgs.id, orgId))
+    .limit(1);
+  return owner?.wallet ?? null;
+}
+
 export type DisclosureItemView = {
   id: string;
   grantId: string | null;

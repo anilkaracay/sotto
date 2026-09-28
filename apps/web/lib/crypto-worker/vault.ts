@@ -266,6 +266,37 @@ export function createVault(load: () => Promise<VaultModules>, options: VaultOpt
     };
   }
 
+  /** Step 1.10: a withdraw plan from the page's fresh account data (06 section 6). */
+  async function withdrawPlan(
+    request: Extract<WorkerRequest, { type: "withdrawPlan" }>,
+  ): Promise<TransferPlanResult> {
+    const loaded = await sdk();
+    const { owner, keys } = held();
+    const rent = options.rent;
+    if (!rent) throw new VaultError("failed", "The worker has no way to ask for rent");
+    const plan = await loaded.confidentialWithdrawPlan({
+      owner: address(owner),
+      token: address(request.token),
+      tokenAccount: loaded.decodeToken2022Account(new Uint8Array(request.account)),
+      mint: address(request.mint),
+      decimals: request.decimals,
+      amount: BigInt(request.amount),
+      keys,
+      version: request.version,
+      rent,
+    });
+    const planId = crypto.randomUUID();
+    plans.set(planId, plan.signers);
+    return {
+      planId,
+      variant: plan.variant,
+      transactions: plan.transactions,
+      cleanup: plan.cleanup,
+      signers: plan.signers.map((signer) => signer.address),
+      availableBefore: plan.availableBefore,
+    };
+  }
+
   /** Step 1.9: the plan's signatures over a transaction the wallet signed, for the signers it needs. */
   async function cosign(planId: string, wire: Uint8Array): Promise<CosignResult> {
     const signers = plans.get(planId);
@@ -325,6 +356,8 @@ export function createVault(load: () => Promise<VaultModules>, options: VaultOpt
         return openSealed(new Uint8Array(request.ciphertext));
       case "transferPlan":
         return transferPlan(request);
+      case "withdrawPlan":
+        return withdrawPlan(request);
       case "cosign":
         return cosign(request.planId, new Uint8Array(request.transaction));
       case "endPlan":

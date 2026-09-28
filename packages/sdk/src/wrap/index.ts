@@ -1,4 +1,4 @@
-// Wrapped USDC through Token Wrap (06 sections 0 and 4; facts C2, C4, C5, C8). The canonical Token Wrap
+// Wrapped USDC through Token Wrap (06 sections 0, 4 and 6; facts C2, C4, C5, C8). The canonical Token Wrap
 // program is not deployed; devnet and localnet use the Sotto test deployment, so every PDA and
 // instruction here takes the cluster's program address. The client's own createMint,
 // createEscrowAccount and singleSignerWrap helpers always use the canonical ID, so their steps are
@@ -17,6 +17,7 @@ import {
   findWrappedMintPda,
   getBackpointerSize,
   getCreateMintInstruction,
+  getUnwrapInstruction,
   getWrapInstruction,
 } from "@solana-program/token-wrap";
 import {
@@ -208,6 +209,82 @@ export async function wrapInstructions(input: {
           unwrappedTokenAccount,
           unwrappedMint,
           unwrappedEscrow: escrow,
+          transferAuthority: owner,
+          amount,
+        },
+        { programAddress },
+      ),
+    ],
+  };
+}
+
+/**
+ * 06 section 6, step 3 (AC-09.1; step 1.10): Token Wrap `Unwrap` burns the owner's public wUSDC and
+ * releases the same amount of USDC from the escrow into the owner's associated USDC account, which is
+ * created first if missing (idempotent, the owner pays). The client's singleSignerUnwrap resolves its
+ * PDAs under the canonical program ID only, so the instruction is built here with the cluster's.
+ */
+export async function unwrapInstructions(input: {
+  owner: TransactionSigner;
+  unwrappedMint: Address;
+  /** The unwrapped mint's token program: SPL Token for USDC. */
+  unwrappedTokenProgram: Address;
+  programAddress: Address;
+  amount: bigint;
+}): Promise<{
+  wrappedMint: Address;
+  unwrappedTokenAccount: Address;
+  wrappedTokenAccount: Address;
+  escrow: Address;
+  instructions: Instruction[];
+}> {
+  const { owner, unwrappedMint, unwrappedTokenProgram, programAddress, amount } = input;
+  if (amount <= 0n) throw new Error("the unwrap amount must be more than zero");
+  const wrappedMint = await wrappedMintAddress(unwrappedMint, programAddress);
+  const [wrappedMintAuthority] = await findWrappedMintAuthorityPda(
+    { wrappedMint },
+    { programAddress },
+  );
+  const [[unwrappedTokenAccount], [wrappedTokenAccount], [escrow]] = await Promise.all([
+    findAssociatedTokenPda({
+      owner: owner.address,
+      mint: unwrappedMint,
+      tokenProgram: unwrappedTokenProgram,
+    }),
+    findAssociatedTokenPda({
+      owner: owner.address,
+      mint: wrappedMint,
+      tokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
+    }),
+    findAssociatedTokenPda({
+      owner: wrappedMintAuthority,
+      mint: unwrappedMint,
+      tokenProgram: unwrappedTokenProgram,
+    }),
+  ]);
+  return {
+    wrappedMint,
+    unwrappedTokenAccount,
+    wrappedTokenAccount,
+    escrow,
+    instructions: [
+      getCreateAssociatedTokenIdempotentInstruction({
+        payer: owner,
+        ata: unwrappedTokenAccount,
+        owner: owner.address,
+        mint: unwrappedMint,
+        tokenProgram: unwrappedTokenProgram,
+      }),
+      getUnwrapInstruction(
+        {
+          unwrappedEscrow: escrow,
+          recipientUnwrappedToken: unwrappedTokenAccount,
+          wrappedMintAuthority,
+          unwrappedMint,
+          wrappedTokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
+          unwrappedTokenProgram,
+          wrappedTokenAccount,
+          wrappedMint,
           transferAuthority: owner,
           amount,
         },

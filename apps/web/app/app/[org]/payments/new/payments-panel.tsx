@@ -19,11 +19,10 @@ import { formatDate, shortWallet } from "../../../../../lib/format.ts";
 import {
   canRetry,
   CATEGORY_LABEL,
-  isBlocked,
   memoProblem,
   parsePaymentPrivate,
   PAYMENT_CATEGORIES,
-  PAYMENT_STATUS_LABEL,
+  paymentStatusChip,
   type PaymentCategory,
   type PaymentPrivate,
 } from "../../../../../lib/payment.ts";
@@ -416,15 +415,6 @@ function PayCard({
   );
 }
 
-const STATUS_TONE: Record<string, "green" | "amber" | "neutral" | "red"> = {
-  settled: "green",
-  executing: "amber",
-  authorized: "neutral",
-  draft: "neutral",
-  failed_clean: "amber",
-  failed: "red",
-};
-
 function PaymentsTable({
   payments,
   recipients,
@@ -517,16 +507,10 @@ function PaymentsTable({
                   <Td>{formatDate(payment.createdAt)}</Td>
                   <Td>
                     <Chip
-                      tone={
-                        isBlocked(payment.errorCode)
-                          ? "red"
-                          : (STATUS_TONE[payment.status] ?? "neutral")
-                      }
+                      tone={paymentStatusChip(payment.status, payment.errorCode).tone}
                       data-testid="payment-status"
                     >
-                      {isBlocked(payment.errorCode)
-                        ? "Blocked by screening"
-                        : (PAYMENT_STATUS_LABEL[payment.status] ?? payment.status)}
+                      {paymentStatusChip(payment.status, payment.errorCode).label}
                     </Chip>
                   </Td>
                   <Td>

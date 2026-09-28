@@ -24,9 +24,14 @@ export async function addTestWallet(page: Page, keypair?: number[]): Promise<voi
   await page.addInitScript({ path: TEST_WALLET });
 }
 
+/** An owner's org pages: the overview, where /app sends the owner of an active org (step 1.10). */
+export const OVERVIEW_URL = /\/app\/([0-9a-f-]{36})\/overview$/;
+export const SETUP_URL = /\/app\/([0-9a-f-]{36})\/setup$/;
+
 /**
  * Signs in with the injected test wallet and returns its address. Sign in opens /app, which sends a
- * user without an active org to onboarding and the owner of an active org to its setup page.
+ * user without an active org to onboarding, the owner of an active org to its overview and a
+ * recipient to the pay page.
  */
 export async function signIn(
   page: Page,
@@ -45,4 +50,10 @@ export async function signIn(
   await option.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(landing);
   return wallet;
+}
+
+/** From an owner's org page to Account setup through the top nav. */
+export async function openSetup(page: Page): Promise<void> {
+  await page.getByRole("navigation").getByRole("link", { name: "Account setup" }).click();
+  await expect(page).toHaveURL(SETUP_URL);
 }

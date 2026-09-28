@@ -10,10 +10,15 @@
 // record variant's data writes are a message packer, which cannot leave this realm. The accounts the
 // plan creates sign their own creation: their signers stay with the caller, which adds their
 // signatures after the wallet signed (the wallet may change the compute budget, 06 section 9).
+// Since step 1.10 a withdraw from the available balance to the public balance (06 section 6, AC-09.1)
+// uses the same machinery: its plan has two proofs (equality and a 64 bit range proof), the withdraw
+// instruction and the closes, and its main transaction carries the role "transfer" like a transfer's.
 import type { Mint, Token } from "@solana-program/token-2022";
 import {
   getConfidentialTransferInstructionPlan,
   getConfidentialTransferWithRecordInstructionPlan,
+  getConfidentialWithdrawInstructionPlan,
+  getConfidentialWithdrawWithRecordInstructionPlan,
 } from "@solana-program/token-2022/confidential";
 import {
   flattenInstructionPlan,
@@ -117,6 +122,77 @@ function roleOf(instructions: readonly Instruction[]): TransferTransactionRole {
   return "proof";
 }
 
+/** Packs a plan of setup, main instruction and cleanup into labeled transactions and its signers. */
+async function packPlan(
+  plan: InstructionPlan,
+  owner: Address,
+  version: TransactionVersionChoice,
+): Promise<Pick<ConfidentialTransferPlan, "transactions" | "cleanup" | "signers">> {
+  if (!isSequentialInstructionPlan(plan) || plan.plans.length !== 3) {
+    throw new Error("the plan must be the setup, the main instruction and the cleanup");
+  }
+  const cleanup = instructionsOf(plan.plans[2] as InstructionPlan);
+  const planned = await planTransactions({ plan, feePayer: owner, version });
+  const isCleanup = (instruction: Instruction) =>
+    cleanup.some((closing) => sameInstruction(closing, instruction));
+  return {
+    transactions: planned.map((instructions) => ({
+      role: instructions.every(isCleanup) ? ("cleanup" as const) : roleOf(instructions),
+      instructions: instructions.map(toPortableInstruction),
+    })),
+    cleanup: cleanup.map(toPortableInstruction),
+    signers: planSigners([...planned.flat(), ...cleanup], owner),
+  };
+}
+
+/** The owner's account holds a confidential balance under these keys (I-5) of at least the amount. */
+function checkSource(input: {
+  owner: Address;
+  tokenAccount: Token;
+  keys: ConfidentialKeyMaterial;
+  amount: bigint;
+}): bigint {
+  if (input.amount <= 0n) throw new Error("the amount must be above zero");
+  if (input.tokenAccount.owner !== input.owner) {
+    throw new ConfidentialAccountError(
+      "wrong_owner",
+      "The token account belongs to another wallet",
+    );
+  }
+  const source = confidentialExtension(input.tokenAccount);
+  if (!source) {
+    throw new ConfidentialAccountError(
+      "not_confidential",
+      "The token account has no confidential balance",
+    );
+  }
+  // I-5: the keys must be the account's before any use.
+  if (!elgamalKeyMatches(input.keys.elgamalPubkey, source.elgamalPubkey)) {
+    throw new ConfidentialAccountError(
+      "key_mismatch",
+      "The keys this wallet derives do not match the account's ElGamal key",
+    );
+  }
+  const { available } = decryptTokenAccount(input.tokenAccount, input.keys);
+  if (available < input.amount) {
+    throw new ConfidentialAccountError(
+      "insufficient_balance",
+      "The available confidential balance is below the amount",
+    );
+  }
+  return available;
+}
+
+/** The helper reads rent for the accounts it creates, nothing else; anything else fails loudly. */
+function rentRpc(rent: (space: bigint) => Promise<bigint>) {
+  return {
+    getMinimumBalanceForRentExemption: (space: bigint) => ({ send: () => rent(space) }),
+    getAccountInfo: () => {
+      throw new Error("the plan reads no accounts");
+    },
+  } as unknown as Rpc<GetMinimumBalanceForRentExemptionApi & GetAccountInfoApi>;
+}
+
 export async function confidentialTransferPlan(input: {
   owner: Address;
   sourceToken: Address;
@@ -131,45 +207,16 @@ export async function confidentialTransferPlan(input: {
   /** The rent exempt minimum for an account size; the caller asks the chain (the worker cannot). */
   rent: (space: bigint) => Promise<bigint>;
 }): Promise<ConfidentialTransferPlan> {
-  if (input.amount <= 0n) throw new Error("the amount must be above zero");
-  if (input.sourceTokenAccount.owner !== input.owner) {
-    throw new ConfidentialAccountError(
-      "wrong_owner",
-      "The token account belongs to another wallet",
-    );
-  }
-  const source = confidentialExtension(input.sourceTokenAccount);
-  if (!source) {
-    throw new ConfidentialAccountError(
-      "not_confidential",
-      "The token account has no confidential balance",
-    );
-  }
-  // I-5: the keys must be the account's before any use.
-  if (!elgamalKeyMatches(input.keys.elgamalPubkey, source.elgamalPubkey)) {
-    throw new ConfidentialAccountError(
-      "key_mismatch",
-      "The keys this wallet derives do not match the account's ElGamal key",
-    );
-  }
   assertRecipientCanReceive(input.destinationTokenAccount);
-  const { available } = decryptTokenAccount(input.sourceTokenAccount, input.keys);
-  if (available < input.amount) {
-    throw new ConfidentialAccountError(
-      "insufficient_balance",
-      "The available confidential balance is below the amount",
-    );
-  }
-
+  const available = checkSource({
+    owner: input.owner,
+    tokenAccount: input.sourceTokenAccount,
+    keys: input.keys,
+    amount: input.amount,
+  });
   const wallet: TransactionSigner = createNoopSigner(input.owner);
-  // The helper reads rent for the accounts it creates, and nothing else, because the mint account is
-  // given; anything else fails loudly instead of reaching the network from the worker.
-  const rpc = {
-    getMinimumBalanceForRentExemption: (space: bigint) => ({ send: () => input.rent(space) }),
-    getAccountInfo: () => {
-      throw new Error("the transfer plan reads no accounts");
-    },
-  } as unknown as Rpc<GetMinimumBalanceForRentExemptionApi & GetAccountInfoApi>;
+  // The mint account is given, so the helper reads only rent (through the caller).
+  const rpc = rentRpc(input.rent);
 
   const secret = ElGamalSecretKey.fromBytes(input.keys.elgamalSecretKey);
   const elgamalKeypair = ElGamalKeypair.fromSecretKey(secret);
@@ -194,22 +241,61 @@ export async function confidentialTransferPlan(input: {
       variant === "inline"
         ? await getConfidentialTransferInstructionPlan(common)
         : await getConfidentialTransferWithRecordInstructionPlan(common);
-    if (!isSequentialInstructionPlan(plan) || plan.plans.length !== 3) {
-      throw new Error("the transfer plan must be the setup, the transfer and the cleanup");
-    }
-    const cleanup = instructionsOf(plan.plans[2] as InstructionPlan);
-    const planned = await planTransactions({ plan, feePayer: input.owner, version: input.version });
-    const isCleanup = (instruction: Instruction) =>
-      cleanup.some((closing) => sameInstruction(closing, instruction));
-    const transactions = planned.map((instructions) => ({
-      role: instructions.every(isCleanup) ? ("cleanup" as const) : roleOf(instructions),
-      instructions: instructions.map(toPortableInstruction),
-    }));
     return {
       variant,
-      transactions,
-      cleanup: cleanup.map(toPortableInstruction),
-      signers: planSigners([...planned.flat(), ...cleanup], input.owner),
+      ...(await packPlan(plan, input.owner, input.version)),
+      availableBefore: available,
+    };
+  } finally {
+    elgamalKeypair.free();
+    secret.free();
+    aesKey.free();
+  }
+}
+
+/**
+ * 06 section 6, step 2 (AC-09.1; step 1.10): a withdraw of `amount` from the owner's available
+ * confidential balance to the public wUSDC balance of the same account. The amount is public by
+ * design (facts A2). Version 1 takes the range proof inline, version 0 stages it in a record account,
+ * as for a transfer.
+ */
+export async function confidentialWithdrawPlan(input: {
+  owner: Address;
+  token: Address;
+  tokenAccount: Token;
+  mint: Address;
+  decimals: number;
+  amount: bigint;
+  keys: ConfidentialKeyMaterial;
+  version: TransactionVersionChoice;
+  rent: (space: bigint) => Promise<bigint>;
+}): Promise<ConfidentialTransferPlan> {
+  const available = checkSource(input);
+  const wallet: TransactionSigner = createNoopSigner(input.owner);
+  const secret = ElGamalSecretKey.fromBytes(input.keys.elgamalSecretKey);
+  const elgamalKeypair = ElGamalKeypair.fromSecretKey(secret);
+  const aesKey = AeKey.fromBytes(input.keys.aeKey);
+  try {
+    const common = {
+      token: input.token,
+      mint: input.mint,
+      tokenAccount: input.tokenAccount,
+      authority: wallet,
+      amount: input.amount,
+      decimals: input.decimals,
+      elgamalKeypair,
+      aesKey,
+      payer: wallet,
+      rpc: rentRpc(input.rent),
+    };
+    const variant = input.version === 1 ? "inline" : "record";
+    const plan =
+      variant === "inline"
+        ? await getConfidentialWithdrawInstructionPlan(common)
+        : await getConfidentialWithdrawWithRecordInstructionPlan(common);
+    return {
+      variant,
+      ...(await packPlan(plan, input.owner, input.version)),
       availableBefore: available,
     };
   } finally {

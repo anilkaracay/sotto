@@ -3,6 +3,8 @@
 // spl-token CLI configured for the same keypair; no signature or key leaves the worker for the network
 // or storage (AC-03.2, I-2); the viewing key registers with a signature the browser can verify (I-8);
 // after a reload the keys are Locked again (the Locked state for AC-03.5; balances come in step 1.7).
+// Since step 1.10 it runs on the overview, where /app sends the owner: the Phase 1 happy path (sign in,
+// connect wallet, see the overview).
 import { createPrivateKey, sign as ed25519Sign } from "node:crypto";
 import {
   confidentialKeysMessage,
@@ -19,7 +21,7 @@ import {
   E2E_KEYPAIR_SEED,
   e2eKeypair,
 } from "../fixtures.ts";
-import { signIn } from "../helpers.ts";
+import { openSetup, signIn } from "../helpers.ts";
 
 const privateKey = createPrivateKey({
   key: Buffer.concat([Buffer.from("302e020100300506032b657004220420", "hex"), E2E_KEYPAIR_SEED]),
@@ -76,9 +78,16 @@ test("AC-03.2 unlocks only after the click, derives the CLI's key in the worker 
   await page.getByRole("button", { name: "Confirm approve" }).click();
   await expect(page.getByText("No organization is waiting for review.")).toBeVisible();
 
-  // /app opens the setup page of the active org, Locked, with the Q-09 explainer.
+  // The Phase 1 happy path (M3 as amended, step 1.10): /app opens the overview of the active org with
+  // the welcome, the confidential account card, the recent activity (none yet) and the keys, Locked,
+  // with the Q-09 explainer; the wallet connects on it.
   await page.goto("/app");
-  await expect(page).toHaveURL(/\/app\/[0-9a-f-]{36}\/setup$/);
+  await expect(page).toHaveURL(/\/app\/[0-9a-f-]{36}\/overview$/);
+  await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+  await expect(page.getByTestId("account-sky")).toContainText("Your confidential account");
+  await expect(page.getByTestId("activity-empty")).toHaveText(
+    "No payments yet. The payments you make appear here, with amounts only you can read.",
+  );
   await expect(page.getByTestId("keys-status")).toHaveText("Locked");
   await expect(page.getByTestId("keys-card")).toContainText("solana-conf-bal/v1");
   // One Unlock click, two signatures, one explainer (step 1.8.1).
@@ -145,8 +154,11 @@ test("AC-03.2 unlocks only after the click, derives the CLI's key in the worker 
     `sotto-view-key/v1\n${wallet}`,
   ]);
 
-  // The viewing key: the tab holds it, so registering takes one signature, which the server checks
-  // and stores (07 section 5).
+  // The viewing key card is on Account setup; the tab's keys stay unlocked across the navigation.
+  // The tab holds the viewing key, so registering takes one signature, which the server checks and
+  // stores (07 section 5).
+  await openSetup(page);
+  await expect(page.getByTestId("viewing-unlocked")).toHaveText("Unlocked");
   await page.getByRole("button", { name: "Create viewing key" }).click();
   await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
   const viewSignature = signWithTestKey(viewKeyMessage(wallet));

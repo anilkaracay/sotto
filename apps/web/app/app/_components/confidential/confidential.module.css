@@ -134,3 +134,12 @@
 .prompt {
   grid-column: 1 / -1;
 }
+/* Step 1.10: the unwrap choice of the withdraw form. */
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 13.5px;
+  color: var(--ink2);
+}

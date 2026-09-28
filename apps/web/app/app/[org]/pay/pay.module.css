@@ -1,0 +1,32 @@
+/* The recipient's minimal pay page (step 1.10), built on the app tokens and the overview's cards until
+   My pay gets its design in Phase 2 (13 A40). */
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.wide {
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow-x: auto;
+}
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.muted {
+  color: var(--faint);
+  font-size: 12.5px;
+}
+.wide .empty {
+  padding: 18px 0 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.apply {
+  margin-bottom: 4px;
+}

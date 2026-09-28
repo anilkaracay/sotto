@@ -12,11 +12,10 @@ import { createRetryingRpc } from "@sotto/sdk/tx";
 import { address } from "@solana/kit";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { e2eKeypair, seededKeypair } from "../fixtures.ts";
-import { addTestWallet, clientAddress, signIn } from "../helpers.ts";
+import { addTestWallet, clientAddress, openSetup, OVERVIEW_URL, signIn } from "../helpers.ts";
 
 const bootstrap = readLocalnetBootstrap();
 const rpc = createRetryingRpc(bootstrap.rpcUrl);
-const SETUP_URL = /\/app\/[0-9a-f-]{36}\/setup$/;
 const RECIPIENTS_URL = /\/app\/[0-9a-f-]{36}\/recipients$/;
 const OWNER = seededKeypair("sotto-e2e-recipients-owner/v1");
 const RECIPIENT = seededKeypair("sotto-e2e-recipients-recipient/v1");
@@ -68,7 +67,8 @@ test.describe.serial("recipients on localnet", () => {
 
     // The owner's viewing key, which default amounts are sealed to.
     await page.goto("/app");
-    await expect(page).toHaveURL(SETUP_URL);
+    await expect(page).toHaveURL(OVERVIEW_URL);
+    await openSetup(page);
     await page.getByRole("button", { name: "Connect" }).click();
     await page.getByRole("button", { name: "Create viewing key" }).click();
     await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
@@ -185,7 +185,7 @@ test.describe.serial("recipients on localnet", () => {
     await recipient.context().close();
 
     // The owner sees the recipient ready, from chain state, and the other one still without account.
-    await signIn(page, OWNER.keypair, SETUP_URL);
+    await signIn(page, OWNER.keypair, OVERVIEW_URL);
     await page.getByRole("link", { name: "Recipients" }).click();
     await expect(row(page, RECIPIENT.address).getByTestId("recipient-readiness")).toHaveAttribute(
       "data-readiness",

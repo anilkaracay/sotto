@@ -250,6 +250,34 @@ export class CryptoWorkerClient {
     }
   }
 
+  /** Step 1.10: a withdraw plan (available to public wUSDC), rent read as for a transfer. */
+  async withdrawPlan(
+    input: {
+      token: string;
+      account: Uint8Array;
+      mint: string;
+      decimals: number;
+      amount: bigint;
+      version: 0 | 1;
+    },
+    rent: (space: bigint) => Promise<bigint>,
+  ): Promise<TransferPlanResult> {
+    this.rentReader = rent;
+    try {
+      return (await this.request({
+        type: "withdrawPlan",
+        token: input.token,
+        account: new Uint8Array(input.account).buffer,
+        mint: input.mint,
+        decimals: input.decimals,
+        amount: input.amount.toString(),
+        version: input.version,
+      })) as TransferPlanResult;
+    } finally {
+      this.rentReader = null;
+    }
+  }
+
   /** Step 1.9: the plan's own signatures over a transaction the wallet signed. */
   async cosign(
     planId: string,

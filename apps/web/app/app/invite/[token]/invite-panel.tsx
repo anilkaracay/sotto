@@ -66,6 +66,13 @@ export function InvitePanel({
               <li>Create your viewing key, so {org} can share your payment details with you.</li>
               <li>Set up your confidential wUSDC account.</li>
             </ol>
+            <p className={cards.lead}>
+              The payments {org} sends you appear on{" "}
+              <Link className={cards.link} href={`/app/${invite.org.id}/pay`}>
+                your pay page
+              </Link>
+              , where you can also withdraw them to USDC.
+            </p>
           </Card>
           <WalletCard />
           <KeysCard className={cards.keysCard} />

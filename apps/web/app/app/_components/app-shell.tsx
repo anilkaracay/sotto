@@ -3,8 +3,8 @@
 // The signed in app shell (09 sections 1 and 2): logo, top pill nav (only built screens, rule 6; client
 // side links, so the tab's keys survive the navigation), the network label (13 A25) and the org and role
 // switcher, which lists the user's own memberships and never impersonates anyone (09 section 1, 13 A9).
-// An owned organization links to its onboarding status; Sotto admins also get the business review
-// console. Signing out ends the tab's keys.
+// An owned organization links to its onboarding status and a recipient membership of an active org
+// to its pay page (step 1.10); Sotto admins also get the business review console. Signing out ends the tab's keys.
 import { Chip, TopNav, type TopNavItem } from "@sotto/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -136,10 +136,16 @@ export function AppShell({
                   </>
                 );
                 const key = `${membership.orgId}:${membership.role}`;
-                return membership.role === "owner" ? (
+                const href =
+                  membership.role === "owner"
+                    ? "/app/onboarding"
+                    : membership.role === "recipient" && membership.orgStatus === "active"
+                      ? `/app/${membership.orgId}/pay`
+                      : null;
+                return href ? (
                   <Link
                     key={key}
-                    href="/app/onboarding"
+                    href={href}
                     className={`${styles.row} ${styles.link}`}
                     role="menuitem"
                     onClick={() => setOpen(false)}

@@ -34,7 +34,7 @@ import {
 } from "@solana/kit";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { e2eKeypair, seededKeypair } from "../fixtures.ts";
-import { addTestWallet, signIn } from "../helpers.ts";
+import { addTestWallet, clientAddress, signIn } from "../helpers.ts";
 
 const bootstrap = readLocalnetBootstrap();
 const rpc = createRetryingRpc(bootstrap.rpcUrl);
@@ -79,7 +79,10 @@ async function viewingKeyOf(keypair: number[]) {
 
 async function newPage(browser: Browser): Promise<Page> {
   const baseURL = test.info().project.use.baseURL;
-  const context = await browser.newContext(baseURL ? { baseURL } : {});
+  const context = await browser.newContext({
+    ...(baseURL ? { baseURL } : {}),
+    extraHTTPHeaders: clientAddress(),
+  });
   return context.newPage();
 }
 
@@ -127,6 +130,9 @@ async function readDisclosures(
   }
   return opened;
 }
+
+// This spec's own client address for its main page (helpers.ts clientAddress).
+test.use({ extraHTTPHeaders: { "x-forwarded-for": "198.51.100.10" } });
 
 test.describe.serial("single confidential payment on localnet", () => {
   let owner: LocalnetOwner;

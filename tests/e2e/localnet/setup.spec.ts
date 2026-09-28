@@ -82,6 +82,9 @@ async function watchFundingStatus(page: Page) {
     page.evaluate(() => (window as unknown as { __fundingStatus: string[] }).__fundingStatus);
 }
 
+// This spec's own client address for its main page (helpers.ts clientAddress).
+test.use({ extraHTTPHeaders: { "x-forwarded-for": "198.51.100.12" } });
+
 test.describe.serial("confidential account on localnet", () => {
   test.beforeAll(async () => {
     const owner = address(E2E_ADMIN_WALLET);

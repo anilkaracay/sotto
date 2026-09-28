@@ -12,7 +12,7 @@ import { createRetryingRpc } from "@sotto/sdk/tx";
 import { address } from "@solana/kit";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { e2eKeypair, seededKeypair } from "../fixtures.ts";
-import { addTestWallet, signIn } from "../helpers.ts";
+import { addTestWallet, clientAddress, signIn } from "../helpers.ts";
 
 const bootstrap = readLocalnetBootstrap();
 const rpc = createRetryingRpc(bootstrap.rpcUrl);
@@ -26,12 +26,18 @@ let inviteLink = "";
 
 async function newPage(browser: Browser): Promise<Page> {
   const baseURL = test.info().project.use.baseURL;
-  const context = await browser.newContext(baseURL ? { baseURL } : {});
+  const context = await browser.newContext({
+    ...(baseURL ? { baseURL } : {}),
+    extraHTTPHeaders: clientAddress(),
+  });
   return context.newPage();
 }
 
 const row = (page: Page, wallet: string) =>
   page.locator(`[data-testid="recipient-row"][data-wallet="${wallet}"]`);
+
+// This spec's own client address for its main page (helpers.ts clientAddress).
+test.use({ extraHTTPHeaders: { "x-forwarded-for": "198.51.100.11" } });
 
 test.describe.serial("recipients on localnet", () => {
   test.beforeAll(async () => {

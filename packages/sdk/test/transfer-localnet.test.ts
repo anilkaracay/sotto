@@ -26,7 +26,9 @@ import {
   checkProofProgram,
   closeProofAccounts,
   confidentialTransferPlan,
+  confidentialWithdrawPlan,
   decryptTokenAccount,
+  readPublicTokenBalance,
   sendTransferTransactions,
   TransferStepError,
   type ConfidentialTransferPlan,
@@ -41,7 +43,10 @@ import {
   type LocalnetBootstrap,
   type LocalnetOwner,
 } from "../src/testing/localnet.ts";
+import { getClusterConfig, type AvailableClusterConfig } from "../src/cluster/config.ts";
 import { createRetryingRpc, fromPortableInstruction, measureTransaction } from "../src/tx/index.ts";
+import { unwrapInstructions } from "../src/wrap/index.ts";
+import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
 import type { SolanaRpc } from "../src/tx/index.ts";
 
 const RPC_URL = process.env.SOTTO_LOCALNET_RPC_URL;
@@ -250,6 +255,65 @@ describe.skipIf(!RPC_URL)("confidential transfer on localnet", () => {
       ]);
     },
   );
+
+  for (const version of [0, 1] as const) {
+    it(
+      `AC-09.1 withdraws from the available balance to public wUSDC and unwraps it to USDC (version ${version})`,
+      { timeout: 240_000 },
+      async () => {
+        const token = await fetchToken(rpc, sender.wusdc, { commitment: "confirmed" });
+        const before = decryptTokenAccount(token.data, sender.keys);
+        const publicBefore = token.data.amount;
+        const usdc = async () => {
+          const balance = await readPublicTokenBalance(rpc, sender.usdc);
+          return balance.status === "present" ? balance.amount : 0n;
+        };
+        const usdcBefore = await usdc();
+        const built = await confidentialWithdrawPlan({
+          owner: sender.signer.address,
+          token: sender.wusdc,
+          tokenAccount: token.data,
+          mint: bootstrap.wrappedUsdcMint,
+          decimals: bootstrap.usdcDecimals,
+          amount: 3_000_000n,
+          keys: sender.keys,
+          version,
+          rent: (space) => rpc.getMinimumBalanceForRentExemption(space).send(),
+        });
+        expect(built.variant).toBe(version === 1 ? "inline" : "record");
+        const layout = shape(built, version);
+        console.log(`v${version} withdraw plan: ${layout.length} transactions ${layout.join(" ")}`);
+        await sendTransferTransactions({
+          rpc,
+          wallet: sender.wallet,
+          version,
+          transactions: built.transactions,
+          cosign: cosigner(built.signers),
+        });
+        expect(await allClosed(built)).toBe(true);
+        const after = await fetchToken(rpc, sender.wusdc, { commitment: "confirmed" });
+        expect(decryptTokenAccount(after.data, sender.keys).available).toBe(
+          before.available - 3_000_000n,
+        );
+        expect(after.data.amount).toBe(publicBefore + 3_000_000n);
+
+        // 06 section 6 step 3: the public wUSDC back to USDC through the cluster's Token Wrap.
+        const localnet = getClusterConfig("localnet") as AvailableClusterConfig;
+        const unwrap = await unwrapInstructions({
+          owner: createNoopSigner(sender.signer.address),
+          unwrappedMint: bootstrap.usdcMint,
+          unwrappedTokenProgram: TOKEN_PROGRAM_ADDRESS,
+          programAddress: localnet.programs.tokenWrap,
+          amount: 3_000_000n,
+        });
+        expect(unwrap.wrappedTokenAccount).toBe(sender.wusdc);
+        await sendAsOwner(rpc, sender, unwrap.instructions, version);
+        const unwrapped = await fetchToken(rpc, sender.wusdc, { commitment: "confirmed" });
+        expect(unwrapped.data.amount).toBe(publicBefore);
+        expect(await usdc()).toBe(usdcBefore + 3_000_000n);
+      },
+    );
+  }
 
   it("F-19 finds the proof program verifying proofs", { timeout: 60_000 }, async () => {
     expect(await checkProofProgram(rpc, sender.signer.address)).toEqual({ ok: true });

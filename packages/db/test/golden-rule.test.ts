@@ -8,6 +8,7 @@ export const PHASE_1_TABLES = [
   "admins",
   "approvals",
   "auth_nonces",
+  "cluster_health",
   "disclosures",
   "grants",
   "invites",

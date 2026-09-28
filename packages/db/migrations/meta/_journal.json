@@ -29,6 +29,13 @@
       "when": 1790536426021,
       "tag": "0003_invite_recipient",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790571100928,
+      "tag": "0004_payment_execution",
+      "breakpoints": true
     }
   ]
 }

@@ -1,16 +1,26 @@
 // The page side of the crypto Web Worker. Wallet signatures are copied into a buffer that is
 // transferred to the worker (so it is detached here), and the wallet's own copy is zeroed (10 section
-// 3). Locking terminates the worker, which ends every key in it.
+// 3). Locking terminates the worker, which ends every key in it. Since step 1.9 the page answers the
+// worker's rent questions while a transfer plan is built, with the reader the caller gives.
 import type { PortableInstruction } from "@sotto/sdk/tx";
+import {
+  getTransactionEncoder,
+  type Address,
+  type SignatureBytes,
+  type Transaction,
+} from "@solana/kit";
 import type {
   ApplyInstructionResult,
   CheckAccountResult,
   ConfirmSignatureResult,
+  CosignResult,
   DecryptResult,
   OpenSealedResult,
+  RentReply,
   SealResult,
   SetupInstructionsResult,
   StatusResult,
+  TransferPlanResult,
   UnlockResult,
   ViewingResult,
   WorkerErrorCode,
@@ -29,7 +39,7 @@ export class CryptoWorkerError extends Error {
 }
 
 export type WorkerLike = {
-  postMessage(message: WorkerRequest, transfer: Transferable[]): void;
+  postMessage(message: WorkerRequest | RentReply, transfer: Transferable[]): void;
   terminate(): void;
   onmessage: ((event: MessageEvent<WorkerResponse>) => void) | null;
   onerror: ((event: ErrorEvent) => void) | null;
@@ -55,6 +65,8 @@ export class CryptoWorkerClient {
   private nextId = 1;
   private terminated = false;
   private closing = false;
+  /** Answers the worker's rent questions while a transfer plan is built (step 1.9). */
+  private rentReader: ((space: bigint) => Promise<bigint>) | null = null;
 
   constructor(worker: WorkerLike = createCryptoWorker()) {
     this.worker = worker;
@@ -67,7 +79,8 @@ export class CryptoWorkerClient {
     worker.onmessage = (event) => {
       const message = event.data;
       if ("type" in message) {
-        markReady();
+        if (message.type === "rent") this.answerRent(message.callId, message.space);
+        else markReady();
         return;
       }
       const waiting = this.pending.get(message.id);
@@ -81,6 +94,20 @@ export class CryptoWorkerClient {
       failReady(error);
       this.rejectAll(error);
     };
+  }
+
+  private answerRent(callId: number, space: string): void {
+    const reader = this.rentReader;
+    const reply = (answer: Omit<RentReply, "type" | "callId">) =>
+      this.worker.postMessage({ type: "rentReply", callId, ...answer }, []);
+    if (!reader) {
+      reply({ error: "no transfer plan is being built" });
+      return;
+    }
+    reader(BigInt(space)).then(
+      (lamports) => reply({ lamports: lamports.toString() }),
+      () => reply({ error: "the rent could not be read from the network" }),
+    );
   }
 
   private rejectAll(error: Error): void {
@@ -186,6 +213,60 @@ export class CryptoWorkerClient {
       ciphertext: new Uint8Array(ciphertext).buffer,
     })) as OpenSealedResult;
     return result.value;
+  }
+
+  /**
+   * Step 1.9: a confidential transfer plan built with the keys, from account data the page just read;
+   * `rent` reads the rent exempt minimum of an account size from chain.
+   */
+  async transferPlan(
+    input: {
+      sourceToken: string;
+      sourceAccount: Uint8Array;
+      destinationToken: string;
+      destinationAccount: Uint8Array;
+      mint: string;
+      mintAccount: Uint8Array;
+      amount: bigint;
+      version: 0 | 1;
+    },
+    rent: (space: bigint) => Promise<bigint>,
+  ): Promise<TransferPlanResult> {
+    this.rentReader = rent;
+    try {
+      return (await this.request({
+        type: "transferPlan",
+        sourceToken: input.sourceToken,
+        sourceAccount: new Uint8Array(input.sourceAccount).buffer,
+        destinationToken: input.destinationToken,
+        destinationAccount: new Uint8Array(input.destinationAccount).buffer,
+        mint: input.mint,
+        mintAccount: new Uint8Array(input.mintAccount).buffer,
+        amount: input.amount.toString(),
+        version: input.version,
+      })) as TransferPlanResult;
+    } finally {
+      this.rentReader = null;
+    }
+  }
+
+  /** Step 1.9: the plan's own signatures over a transaction the wallet signed. */
+  async cosign(
+    planId: string,
+    transaction: Transaction,
+  ): Promise<Readonly<Record<Address, SignatureBytes>>> {
+    const wire = new Uint8Array(getTransactionEncoder().encode(transaction));
+    const result = (await this.request({
+      type: "cosign",
+      planId,
+      transaction: wire.buffer,
+    })) as CosignResult;
+    return result.signatures as unknown as Record<Address, SignatureBytes>;
+  }
+
+  /** Step 1.9: the plan is done; its keypairs are dropped. */
+  async endPlan(planId: string): Promise<void> {
+    await this.request({ type: "endPlan", planId });
   }
 
   /**

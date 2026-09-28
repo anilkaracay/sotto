@@ -9,15 +9,26 @@ import {
   viewKeyMessage,
 } from "@sotto/sdk/keys";
 import {
+  confidentialTokenAccount,
+  encodeConfidentialMint,
   encodeToken2022Account,
   encryptedTokenAccount,
   randomizedEd25519Signature,
 } from "@sotto/sdk/testing";
+import { fromPortableInstruction } from "@sotto/sdk/tx";
 import {
   address,
+  appendTransactionMessageInstructions,
+  compileTransaction,
   createKeyPairFromPrivateKeyBytes,
+  createTransactionMessage,
   getAddressFromPublicKey,
+  getTransactionEncoder,
+  pipe,
+  setTransactionMessageFeePayer,
+  setTransactionMessageLifetimeUsingBlockhash,
   signBytes,
+  type Blockhash,
 } from "@solana/kit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createAutoLock, HIDDEN_LOCK_MS, IDLE_LOCK_MS } from "../lib/crypto-worker/auto-lock.ts";
@@ -26,7 +37,7 @@ import {
   CryptoWorkerError,
   type WorkerLike,
 } from "../lib/crypto-worker/client.ts";
-import type { WorkerRequest, WorkerResponse } from "../lib/crypto-worker/protocol.ts";
+import type { RentReply, WorkerRequest, WorkerResponse } from "../lib/crypto-worker/protocol.ts";
 import { createVault, loadVaultModules } from "../lib/crypto-worker/vault.ts";
 
 // The spl-token CLI check keypair (VERIFICATION-LOG step 1.5).
@@ -225,7 +236,7 @@ describe("locking (step 1.7.1)", () => {
     expect(request?.message.type).toBe("clear");
     await expect(client.status()).rejects.toMatchObject({ code: "locked" });
     expect(answered.isTerminated()).toBe(false);
-    answered.worker.respond({ id: request?.message.id ?? 0, ok: true, result: { cleared: true } });
+    answered.worker.respond({ id: idOf(request?.message), ok: true, result: { cleared: true } });
     await closing;
     expect(answered.isTerminated()).toBe(true);
 
@@ -406,9 +417,13 @@ describe("account work in the vault (step 1.7)", () => {
   });
 });
 
+/** The id of a posted request (rent replies have none). */
+const idOf = (message: WorkerRequest | RentReply | undefined) =>
+  message && "id" in message ? message.id : 0;
+
 /** A worker stand in: records posted messages and lets the test answer. */
 function fakeWorker() {
-  const posted: { message: WorkerRequest; transfer: Transferable[] }[] = [];
+  const posted: { message: WorkerRequest | RentReply; transfer: Transferable[] }[] = [];
   let terminated = false;
   const worker: WorkerLike & { respond: (message: WorkerResponse) => void } = {
     onmessage: null,
@@ -449,7 +464,7 @@ describe("crypto worker client (the page side)", () => {
     const failing = client.checkAccount(CLI_ELGAMAL_KEY);
     await vi.waitFor(() => expect(posted).toHaveLength(1));
     worker.respond({
-      id: posted[0]?.message.id ?? 0,
+      id: idOf(posted[0]?.message),
       ok: false,
       error: { code: "not_unlocked", message: "Unlock the confidential keys first" },
     });
@@ -513,5 +528,206 @@ describe("auto lock (10 section 3)", () => {
     createAutoLock({ onLock }).stop();
     vi.advanceTimersByTime(IDLE_LOCK_MS * 2);
     expect(onLock).not.toHaveBeenCalled();
+  });
+});
+
+describe("confidential transfers in the vault (step 1.9)", () => {
+  it("AC-06.4 builds a transfer plan with the held keys, asks the page for rent, and co-signs only its own accounts", async () => {
+    const asked: bigint[] = [];
+    const vault = createVault(loadVaultModules, {
+      rent: async (space) => {
+        asked.push(space);
+        return 1_000_000n;
+      },
+    });
+    const sender = await testWallet(CLI_SEED);
+    const signature = await sender.sign(confidentialKeysMessage());
+    const keys = await deriveStandardKeys(sender.address, signature);
+    const recipient = await testWallet(new Uint8Array(32).fill(9));
+    const recipientKeys = await deriveStandardKeys(
+      recipient.address,
+      await recipient.sign(confidentialKeysMessage()),
+    );
+    const source = encodeToken2022Account(
+      encryptedTokenAccount({
+        owner: sender.address,
+        mint: MINT,
+        keys,
+        available: 50_000_000n,
+        pending: 0n,
+      }),
+    );
+    const destination = encodeToken2022Account(
+      encryptedTokenAccount({
+        owner: recipient.address,
+        mint: MINT,
+        keys: recipientKeys,
+        available: 0n,
+        pending: 0n,
+      }),
+    );
+    const mint = encodeConfidentialMint({ decimals: 6 });
+    const request = (id: number, amount: string, to = destination) =>
+      vault.handle({
+        id,
+        type: "transferPlan",
+        sourceToken: address("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"),
+        sourceAccount: source.slice().buffer,
+        destinationToken: address("EQMW3o1DVsB72Ej1RRRmHLW1XaEpbjLKrMHUbS8cRLZC"),
+        destinationAccount: to.slice().buffer,
+        mint: MINT,
+        mintAccount: mint.slice().buffer,
+        amount,
+        version: 0,
+      });
+    expect(await request(1, "7500000")).toMatchObject({ error: { code: "not_unlocked" } });
+    await vault.handle({
+      id: 2,
+      type: "unlock",
+      wallet: sender.address,
+      signature: new Uint8Array(signature).buffer,
+    });
+
+    const planned = await request(3, "7500000");
+    if (!("ok" in planned) || !planned.ok || !("planId" in planned.result)) {
+      throw new Error("no transfer plan");
+    }
+    const plan = planned.result;
+    expect(plan.variant).toBe("record");
+    expect(plan.availableBefore).toBe(50_000_000n);
+    expect(plan.transactions.filter((t) => t.role === "transfer")).toHaveLength(1);
+    expect(plan.signers.length).toBeGreaterThanOrEqual(3);
+    expect(plan.signers).not.toContain(sender.address);
+    expect(asked.length).toBeGreaterThanOrEqual(3);
+    // Plain data only, and no key in it.
+    expect(structuredClone(plan)).toEqual(plan);
+    const serialized = JSON.stringify(plan, (_, value: unknown) =>
+      typeof value === "bigint" ? value.toString() : value,
+    );
+    for (const secret of [signature, keys.elgamalSecretKey, keys.aeKey]) {
+      expect(serialized).not.toContain(hex(secret));
+      expect(serialized).not.toContain(b64(secret));
+    }
+
+    // The worker signs a transaction the wallet would sign, for the plan's accounts it names only.
+    const [first] = plan.transactions;
+    if (!first) throw new Error("no transaction");
+    const compiled = compileTransaction(
+      pipe(
+        createTransactionMessage({ version: 0 }),
+        (m) => setTransactionMessageFeePayer(address(sender.address), m),
+        (m) =>
+          setTransactionMessageLifetimeUsingBlockhash(
+            {
+              blockhash: "11111111111111111111111111111111" as Blockhash,
+              lastValidBlockHeight: 0n,
+            },
+            m,
+          ),
+        (m) =>
+          appendTransactionMessageInstructions(first.instructions.map(fromPortableInstruction), m),
+      ),
+    );
+    const cosigned = await vault.handle({
+      id: 4,
+      type: "cosign",
+      planId: plan.planId,
+      transaction: new Uint8Array(getTransactionEncoder().encode(compiled)).buffer,
+    });
+    if (!("ok" in cosigned) || !cosigned.ok || !("signatures" in cosigned.result)) {
+      throw new Error("not co-signed");
+    }
+    const signed = Object.entries(cosigned.result.signatures);
+    expect(signed.length).toBeGreaterThan(0);
+    for (const [signer, bytes] of signed) {
+      expect(plan.signers).toContain(signer);
+      expect(Object.keys(compiled.signatures)).toContain(signer);
+      expect(
+        await verifyWalletSignature(signer, new Uint8Array(compiled.messageBytes), bytes),
+      ).toBe(true);
+    }
+    expect(Object.keys(cosigned.result.signatures)).not.toContain(sender.address);
+
+    // Refusals: more than the available balance, a recipient that cannot receive now.
+    expect(await request(5, "60000000")).toMatchObject({ error: { code: "insufficient_balance" } });
+    const closed = encodeToken2022Account(
+      confidentialTokenAccount({
+        owner: address(recipient.address),
+        mint: MINT,
+        elgamalPubkey: recipientKeys.elgamalPubkey,
+        approved: false,
+      }),
+    );
+    expect(await request(6, "1000000", closed)).toMatchObject({
+      error: { code: "recipient_not_ready" },
+    });
+
+    // An ended plan signs nothing more, and a lock drops every plan.
+    await vault.handle({ id: 7, type: "endPlan", planId: plan.planId });
+    expect(
+      await vault.handle({
+        id: 8,
+        type: "cosign",
+        planId: plan.planId,
+        transaction: new ArrayBuffer(0),
+      }),
+    ).toMatchObject({ error: { code: "no_plan" } });
+    const again = await request(9, "1000000");
+    if (!("ok" in again) || !again.ok || !("planId" in again.result)) throw new Error("no plan");
+    await vault.handle({ id: 10, type: "clear" });
+    expect(
+      await vault.handle({
+        id: 11,
+        type: "cosign",
+        planId: again.result.planId,
+        transaction: new ArrayBuffer(0),
+      }),
+    ).toMatchObject({ error: { code: "no_plan" } });
+  });
+
+  it("answers the worker's rent question with the page's reader while a plan is built", async () => {
+    const { worker, posted } = fakeWorker();
+    const client = new CryptoWorkerClient(worker);
+    worker.respond({ type: "ready" });
+    const reader = vi.fn(async (space: bigint) => space * 10n);
+    const planning = client.transferPlan(
+      {
+        sourceToken: "a",
+        sourceAccount: new Uint8Array(1),
+        destinationToken: "b",
+        destinationAccount: new Uint8Array(1),
+        mint: "c",
+        mintAccount: new Uint8Array(1),
+        amount: 5n,
+        version: 0,
+      },
+      reader,
+    );
+    await vi.waitFor(() => expect(posted).toHaveLength(1));
+    worker.respond({ type: "rent", callId: 3, space: "161" });
+    await vi.waitFor(() => expect(posted).toHaveLength(2));
+    expect(posted[1]?.message).toEqual({ type: "rentReply", callId: 3, lamports: "1610" });
+    expect(reader).toHaveBeenCalledWith(161n);
+    worker.respond({
+      id: idOf(posted[0]?.message),
+      ok: true,
+      result: {
+        planId: "p",
+        variant: "record",
+        transactions: [],
+        cleanup: [],
+        signers: [],
+        availableBefore: 0n,
+      },
+    });
+    expect(await planning).toMatchObject({ planId: "p" });
+    // After the plan, a rent question gets an error answer.
+    worker.respond({ type: "rent", callId: 4, space: "1" });
+    await vi.waitFor(() => expect(posted).toHaveLength(3));
+    expect(posted[2]?.message).toMatchObject({
+      type: "rentReply",
+      callId: 4,
+      error: expect.any(String),
+    });
   });
 });

@@ -51,6 +51,7 @@ async function setUp() {
   const created = await addRecipient(
     jsonRequest(`/api/orgs/${orgId}/recipients`, "POST", owner.cookie, {
       displayName: "Maya Chen",
+      roleTitle: "Design lead",
       wallet: person.wallet,
     }),
     { params: Promise.resolve({ id: orgId }) },
@@ -78,7 +79,7 @@ const acceptAs = (cookie: string | null, token: string) =>
   });
 
 describe("recipient invites", () => {
-  it("AC-07.3 lets the recipient's wallet accept the link: membership, link and own_payslips grant", async () => {
+  it("AC-07.3 lets the recipient's wallet accept the link: membership, link and own_payslips grant; the recipient's details only for that wallet", async () => {
     const { owner, orgId, person, recipientId } = await setUp();
     const created = await invite(owner.cookie, orgId, recipientId);
     expect(created.status).toBe(201);
@@ -96,13 +97,36 @@ describe("recipient invites", () => {
     expect(JSON.stringify(stored)).not.toContain(token);
     expect(new Date(link.expiresAt).getTime() - Date.now()).toBeGreaterThan(6.9 * 24 * 3600 * 1000);
 
+    // Before sign in: the organization and the status only (founder, step 1.8.1).
     const before = (await (await view(token)).json()) as { invite: Record<string, unknown> };
-    expect(before.invite).toMatchObject({
+    expect(before.invite).toEqual({
       org: { id: orgId, displayName: "Northwind Labs" },
-      role: "recipient",
-      recipient: { displayName: "Maya Chen", wallet: person.wallet },
       status: "open",
+      details: null,
+      expectedWallet: null,
       acceptedByYou: false,
+    });
+    expect(JSON.stringify(before)).not.toContain("Maya Chen");
+    expect(JSON.stringify(before)).not.toContain(person.wallet);
+    // Another signed in wallet: only the wallet the invite is for.
+    const stranger = await createKeyUser(test);
+    const theirs = (await (await view(token, stranger.cookie)).json()) as {
+      invite: Record<string, unknown>;
+    };
+    expect(theirs.invite).toMatchObject({ details: null, expectedWallet: person.wallet });
+    expect(JSON.stringify(theirs)).not.toContain("Maya Chen");
+    // The invited wallet: the recipient's name, role and wallet, and the link's expiry.
+    const mine = (await (await view(token, person.cookie)).json()) as {
+      invite: Record<string, unknown>;
+    };
+    expect(mine.invite).toMatchObject({
+      status: "open",
+      expectedWallet: null,
+      details: {
+        role: "recipient",
+        recipient: { displayName: "Maya Chen", roleTitle: "Design lead", wallet: person.wallet },
+        expiresAt: link.expiresAt,
+      },
     });
 
     const accepted = await acceptAs(person.cookie, token);

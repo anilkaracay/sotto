@@ -90,10 +90,18 @@ export async function createRecipientInvite(
 
 export type InviteView = {
   org: { id: string; displayName: string };
-  role: string;
-  recipient: { displayName: string; wallet: string } | null;
-  expiresAt: string;
   status: "open" | "expired" | "accepted" | "unavailable";
+  /**
+   * Only for a session with the invited wallet (founder, step 1.8.1): the recipient's name, role and
+   * wallet and the link's expiry. Before sign in the page shows only the organization.
+   */
+  details: {
+    role: string;
+    recipient: { displayName: string; roleTitle: string | null; wallet: string };
+    expiresAt: string;
+  } | null;
+  /** For a session with another wallet: the wallet the invite is for, and nothing else about it. */
+  expectedWallet: string | null;
   /** The signed in user accepted it (the invite page then continues with setup). */
   acceptedByYou: boolean;
 };
@@ -115,6 +123,7 @@ export async function readInvite(
       orgName: orgs.displayName,
       orgStatus: orgs.status,
       recipientName: recipients.displayName,
+      recipientRole: recipients.roleTitle,
       recipientWallet: recipients.wallet,
     })
     .from(invites)
@@ -131,15 +140,24 @@ export async function readInvite(
         : row.orgStatus !== "active"
           ? "unavailable"
           : "open";
+  const invited = session !== null && row.recipientWallet !== null;
+  const yours = invited && session.wallet === row.recipientWallet;
   return {
     org: { id: row.orgId, displayName: row.orgName },
-    role: row.role,
-    recipient:
-      row.recipientName !== null && row.recipientWallet !== null
-        ? { displayName: row.recipientName, wallet: row.recipientWallet }
-        : null,
-    expiresAt: row.expiresAt.toISOString(),
     status,
+    details:
+      yours && row.recipientName !== null && row.recipientWallet !== null
+        ? {
+            role: row.role,
+            recipient: {
+              displayName: row.recipientName,
+              roleTitle: row.recipientRole,
+              wallet: row.recipientWallet,
+            },
+            expiresAt: row.expiresAt.toISOString(),
+          }
+        : null,
+    expectedWallet: invited && !yours ? row.recipientWallet : null,
     acceptedByYou: session !== null && row.acceptedBy === session.userId,
   };
 }

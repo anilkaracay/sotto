@@ -72,6 +72,10 @@ describe("worker start without .env.local (hosted)", () => {
     expect(result.stdout).toContain('"job":"sas-issue"');
     expect(result.stdout).toContain('"job":"pending-credits"');
     expect(result.stdout).toContain('"job":"recipient-readiness"');
+    expect(result.stdout).toContain('"job":"confirm-executions"');
+    // An RPC that cannot be reached is no verdict on the proof program: logged, nothing stored.
+    expect(result.stdout).toContain('"job":"proof-program-health"');
+    expect(result.stdout).toContain('"event":"proof_program_check_unreachable"');
     expect(result.stdout).toContain('"event":"worker_stopped"');
     expect(result.stdout).not.toContain(SENTINEL);
   });

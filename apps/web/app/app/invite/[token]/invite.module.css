@@ -1,0 +1,38 @@
+/* The invite page, built on the app tokens: no approved design exists for it (13 A38). */
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+}
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 40px;
+}
+.body {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 8px 40px 64px;
+}
+.primaryLink {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: var(--blue);
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.primaryLink:hover {
+  background: #1a4fd0;
+}
+.steps {
+  margin: 14px 0 0;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ink2);
+}

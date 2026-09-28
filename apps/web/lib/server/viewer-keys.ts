@@ -3,7 +3,7 @@
 // checks the signature before storing, so it can prove the wallet published the key, and returns the
 // signature with the key, so browsers check it again before encrypting to it (I-8). Registering a new
 // key marks the previous one `rotated`.
-import { memberships, users, viewerKeys, type Database } from "@sotto/db";
+import { grants, memberships, users, viewerKeys, type Database } from "@sotto/db";
 import { verifyViewKeyRegistration } from "@sotto/sdk/keys/public";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -115,6 +115,13 @@ export async function registerViewerKey(
         })
         .returning();
       if (!row) throw new Error("viewer key insert returned no row");
+      // 07 section 5: grants waiting for this user's viewing key become active (step 1.8).
+      await tx
+        .update(grants)
+        .set({ status: "active" })
+        .where(
+          and(eq(grants.viewerUserId, session.userId), eq(grants.status, "pending_viewer_key")),
+        );
       return { viewerKey: view(row), created: true };
     });
   } catch (error) {

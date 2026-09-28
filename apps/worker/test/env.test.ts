@@ -63,14 +63,21 @@ describe("worker config", () => {
     SAS_SCHEMA_ADDRESS: SCHEMA,
   };
 
-  it("reads RPC_URL, DATABASE_URL and the SAS variables", () => {
+  it("reads RPC_URL, DATABASE_URL, the SAS variables and the optional LOCALNET_USDC_MINT", () => {
     expect(loadWorkerConfig(FULL)).toEqual({
       rpcUrl: HELIUS,
       databaseUrl: "postgresql://sotto:hidden-pw-9@127.0.0.1:56432/sotto",
       sasSignerKeypair: "~/.config/solana/sotto/sas-signer-devnet.json",
       sasCredentialAddress: CREDENTIAL,
       sasSchemaAddress: SCHEMA,
+      localnetUsdcMint: null,
     });
+    expect(loadWorkerConfig({ ...FULL, LOCALNET_USDC_MINT: CREDENTIAL }).localnetUsdcMint).toBe(
+      CREDENTIAL,
+    );
+    expect(thrown(() => loadWorkerConfig({ ...FULL, LOCALNET_USDC_MINT: "nope" })).message).toBe(
+      "LOCALNET_USDC_MINT is not a valid address",
+    );
   });
 
   it("requires every variable the running worker needs, naming only the variable", () => {

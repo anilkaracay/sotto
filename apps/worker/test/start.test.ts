@@ -71,6 +71,7 @@ describe("worker start without .env.local (hosted)", () => {
     expect(result.stdout).toContain('"event":"worker_started"');
     expect(result.stdout).toContain('"job":"sas-issue"');
     expect(result.stdout).toContain('"job":"pending-credits"');
+    expect(result.stdout).toContain('"job":"recipient-readiness"');
     expect(result.stdout).toContain('"event":"worker_stopped"');
     expect(result.stdout).not.toContain(SENTINEL);
   });

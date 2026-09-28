@@ -8,11 +8,11 @@ import { describe, expect, it } from "vitest";
 import {
   ApplyPromptNotice,
   applyPromptNeeded,
-} from "../app/app/[org]/_components/confidential/apply-prompt.tsx";
+} from "../app/app/_components/confidential/apply-prompt.tsx";
 import {
   BalanceCards,
   type BalanceCardsProps,
-} from "../app/app/[org]/_components/confidential/balances.tsx";
+} from "../app/app/_components/confidential/balances.tsx";
 
 const OWNER = address("EQMW3o1DVsB72Ej1RRRmHLW1XaEpbjLKrMHUbS8cRLZC");
 const MINT = address("AhJfP4JJBaHWRtXRiaScZUC7SMm4RqUPSb3g9H5RT8Bd");

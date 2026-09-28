@@ -11,8 +11,8 @@
 | I-5 | Confidential keys are compared with the onchain ElGamal public key before any use | SDK unit test and runtime assertion; since step 1.7 `decryptTokenAccount` and `applyPendingBalanceInstruction` refuse a key mismatch (unit tests), and account setup reads the account back with the worker's key check before recording it |
 | I-6 | Sotto's API refuses to authorize, and the Sotto client refuses to execute, without screening and approvals | API tests per error code |
 | I-7 | No double payment on retry | Idempotency key tests plus chain check before resend |
-| I-8 | Viewer public keys are used only after their registration signature verifies | SDK unit test |
-| I-9 | Disclosures are trusted only with a valid owner manifest signature | SDK unit test |
+| I-8 | Viewer public keys are used only after their registration signature verifies | SDK unit test; since step 1.8 the recipients page verifies the owner's own viewing key registration before it seals a default amount to it |
+| I-9 | Disclosures are trusted only with a valid owner manifest signature | SDK unit test; since step 1.8 the server verifies the manifest (this org, the owner wallet's signature, every item's hash) before it stores a batch, and the viewer's client verifies again what it reads (`verifyManifest`, `itemInManifest`; SDK and API tests: tampered item, wrong signer, manifest for another org) |
 | I-10 | Revocation deletes all disclosures of the grant atomically | API test |
 
 ## 2. Threats and mitigations

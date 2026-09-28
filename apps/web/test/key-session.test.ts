@@ -21,6 +21,7 @@ function fakeClient() {
   const client = {
     closed: 0,
     unlock: vi.fn(async () => ({ elgamalPubkey: "BxMVLbjVntF9DJtDjfpQLrgw4hopedMgNkZZKGcVkZp6" })),
+    unlockViewing: vi.fn(async () => ({ publicKey: "AAAA" })),
     close: vi.fn(async () => {
       client.closed += 1;
     }),
@@ -30,9 +31,13 @@ function fakeClient() {
 
 function setUp() {
   const clients: ReturnType<typeof fakeClient>[] = [];
-  const changes: { unlocked: Unlocked | null; reason: LockReason | null }[] = [];
+  const changes: {
+    unlocked: Unlocked | null;
+    viewing: string | null;
+    reason: LockReason | null;
+  }[] = [];
   const session = createKeySession({
-    onChange: (unlocked, reason) => changes.push({ unlocked, reason }),
+    onChange: (snapshot, reason) => changes.push({ ...snapshot, reason }),
     createClient: () => {
       const client = fakeClient();
       clients.push(client);
@@ -159,6 +164,25 @@ describe("the tab's key session", () => {
     await unlock();
     session.walletAccounts([]);
     expect(lastReason()).toBe("wallet_change");
+  });
+
+  it("holds the viewing key under the same end conditions (step 1.8)", async () => {
+    const { session, clients, changes, lastReason } = setUp();
+    await session.unlockViewing(WALLET, new Uint8Array(64));
+    expect(session.viewing()).toBe(WALLET);
+    expect(changes.at(-1)).toEqual({ unlocked: null, viewing: WALLET, reason: null });
+    session.signedIn(WALLET);
+    session.walletAccounts([WALLET]);
+    expect(session.viewing()).toBe(WALLET);
+    session.walletAccounts([OTHER]);
+    expect(session.viewing()).toBeNull();
+    expect(lastReason()).toBe("wallet_change");
+    expect(clients[0]?.closed).toBe(1);
+
+    await session.unlockViewing(WALLET, new Uint8Array(64));
+    vi.advanceTimersByTime(15 * 60 * 1000);
+    expect(session.viewing()).toBeNull();
+    expect(lastReason()).toBe("idle");
   });
 
   it("discards an unlock that a lock overtook", async () => {

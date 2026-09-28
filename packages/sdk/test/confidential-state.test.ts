@@ -18,6 +18,7 @@ import {
   parseTokenAmount,
   readMintInfo,
   readPublicTokenBalance,
+  recipientReadiness,
   tokenAccountState,
   type ConfidentialState,
 } from "../src/confidential/public.ts";
@@ -149,6 +150,24 @@ describe("token account state and checks (06 section 3)", () => {
       kind: "wrong_account",
       reason: "wrong_owner",
     });
+  });
+
+  it("AC-07.2 derives a recipient's readiness from their wUSDC account", () => {
+    expect(recipientReadiness(missing, expected)).toBe("no_account");
+    expect(recipientReadiness(present(token({})), expected)).toBe("ready");
+    expect(recipientReadiness(present(token(null)), expected)).toBe("not_configured");
+    expect(recipientReadiness(present(token({ approved: false })), expected)).toBe(
+      "not_configured",
+    );
+    expect(recipientReadiness(present(token({ allowConfidentialCredits: false })), expected)).toBe(
+      "not_configured",
+    );
+    expect(recipientReadiness(present(token({}, { owner: OTHER })), expected)).toBe(
+      "not_configured",
+    );
+    expect(recipientReadiness(present(token({}), TOKEN_PROGRAM_ADDRESS), expected)).toBe(
+      "not_configured",
+    );
   });
 
   it("AC-04.3 flags a credit counter at or above 80 percent of its maximum", () => {

@@ -238,6 +238,40 @@ describe("locking (step 1.7.1)", () => {
   });
 });
 
+describe("sealed data in the vault (step 1.8)", () => {
+  it("seals to a viewer key with no key of the tab, and opens only with the unlocked viewing key", async () => {
+    const vault = createVault(loadVaultModules);
+    const wallet = await testWallet(CLI_SEED);
+    const viewSignature = await wallet.sign(viewKeyMessage(wallet.address));
+    const viewing = await deriveViewingKey(wallet.address, viewSignature);
+    const value = { v: 1, default_amount: "9400000000", notes: "Monthly" };
+    const sealed = await vault.handle({
+      id: 1,
+      type: "seal",
+      publicKey: viewing.publicKey.slice().buffer,
+      value,
+    });
+    if (!("ok" in sealed) || !sealed.ok || !("ciphertext" in sealed.result)) {
+      throw new Error("not sealed");
+    }
+    const ciphertext = sealed.result.ciphertext;
+    expect(ciphertext.length).toBeGreaterThan(48);
+    const open = (id: number, bytes: Uint8Array) =>
+      vault.handle({ id, type: "openSealed", ciphertext: bytes.slice().buffer });
+    expect(await open(2, ciphertext)).toMatchObject({ ok: false, error: { code: "not_viewing" } });
+    await vault.handle({
+      id: 3,
+      type: "unlockViewing",
+      wallet: wallet.address,
+      signature: new Uint8Array(viewSignature).buffer,
+    });
+    expect(await open(4, ciphertext)).toEqual({ id: 4, ok: true, result: { value } });
+    const tampered = ciphertext.slice();
+    tampered[0] = (tampered[0] ?? 0) ^ 1;
+    expect(await open(5, tampered)).toMatchObject({ ok: false, error: { code: "cannot_open" } });
+  });
+});
+
 describe("account work in the vault (step 1.7)", () => {
   it("AC-03.3 refuses account setup when the wallet's second key signature differs (determinism check)", async () => {
     const vault = createVault(loadVaultModules);

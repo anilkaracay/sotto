@@ -1,9 +1,10 @@
 // POST /api/token-accounts (08 section 3, 06 section 3 step 5): the onchain checks before the owner's
 // wUSDC account is recorded, idempotence, and the money gate of AC-02.2. The chain is a stand in for
 // the server's RPC that serves encoded Token-2022 accounts.
-import { memberships, orgs, tokenAccounts, users } from "@sotto/db";
+import { memberships, orgs, recipients, tokenAccounts, users } from "@sotto/db";
 import type { TestDatabase } from "@sotto/db/testing";
 import { getClusterConfig } from "@sotto/sdk/cluster";
+import { associatedTokenAccount } from "@sotto/sdk/confidential/public";
 import { confidentialTokenAccount, encodeToken2022Account } from "@sotto/sdk/testing";
 import { address, getAddressDecoder, getBase64Decoder, type Address } from "@solana/kit";
 import { eq } from "drizzle-orm";
@@ -117,12 +118,12 @@ async function owner(status: "pending_review" | "active" | "suspended" = "active
   return { ...user, orgId };
 }
 
-/** A token account onchain; returns its address. */
+/** A token account onchain, at a random address unless one is given; returns its address. */
 function onchain(
   token: Parameters<typeof confidentialTokenAccount>[0],
   program: string = TOKEN_2022,
+  at: string = randomAddress(),
 ): string {
-  const at = randomAddress();
   chain.set(at, { owner: program, data: encodeToken2022Account(confidentialTokenAccount(token)) });
   return at;
 }
@@ -160,6 +161,56 @@ describe("POST /api/token-accounts", () => {
       .where(eq(tokenAccounts.address, account));
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ userId: user.userId, applyFlaggedAt: null });
+  });
+
+  it("AC-07.3 lets a recipient record its own associated account, which makes the recipient ready", async () => {
+    const org = await owner();
+    const person = await createUserWithSession(test);
+    await test.db
+      .insert(memberships)
+      .values({ orgId: org.orgId, userId: person.userId, role: "recipient" });
+    const [row] = await test.db
+      .insert(recipients)
+      .values({
+        orgId: org.orgId,
+        displayName: "Maya",
+        wallet: person.wallet,
+        userId: person.userId,
+      })
+      .returning({ id: recipients.id, readiness: recipients.readiness });
+    expect(row?.readiness).toBe("no_account");
+    const readiness = async () =>
+      (
+        await test.db
+          .select({ readiness: recipients.readiness, checkedAt: recipients.readinessCheckedAt })
+          .from(recipients)
+          .where(eq(recipients.id, row?.id ?? ""))
+      )[0];
+    const token = { owner: address(person.wallet), mint: WUSDC, elgamalPubkey: ELGAMAL };
+    // Another configured account of the recipient is recorded, but readiness reads the associated
+    // account, where payments go.
+    const other = onchain(token);
+    const otherRecorded = await post(person.cookie, {
+      orgId: org.orgId,
+      address: other,
+      keyScheme: "standard_v1",
+    });
+    expect(otherRecorded.status).toBe(201);
+    expect(await readiness()).toMatchObject({ readiness: "no_account", checkedAt: null });
+    const associated = onchain(
+      token,
+      TOKEN_2022,
+      await associatedTokenAccount(address(person.wallet), WUSDC),
+    );
+    const recorded = await post(person.cookie, {
+      orgId: org.orgId,
+      address: associated,
+      keyScheme: "standard_v1",
+    });
+    expect(recorded.status).toBe(201);
+    const after = await readiness();
+    expect(after?.readiness).toBe("ready");
+    expect(after?.checkedAt).toBeInstanceOf(Date);
   });
 
   it("refuses accounts that fail an onchain check and stores nothing", async () => {

@@ -19,6 +19,8 @@ export type SharedAccount = { account: UiWalletAccount; wallet: UiWallet };
 type KeySessionValue = {
   session: KeySession;
   unlocked: Unlocked | null;
+  /** The wallet whose viewing key is unlocked in this tab (step 1.8). */
+  viewing: string | null;
   /** Why the keys last locked, until the next unlock. */
   lockReason: LockReason | null;
   /** The account a wallet shared on connect in this tab. */
@@ -39,12 +41,14 @@ const FORGET_ACCOUNT: readonly LockReason[] = ["wallet_change", "sign_out", "oth
 
 export function KeySessionProvider({ children }: { children: ReactNode }) {
   const [unlocked, setUnlocked] = useState<Unlocked | null>(null);
+  const [viewing, setViewing] = useState<string | null>(null);
   const [lockReason, setLockReason] = useState<LockReason | null>(null);
   const [shared, setShared] = useState<SharedAccount | null>(null);
   const [session] = useState(() =>
     createKeySession({
       onChange: (next, reason) => {
-        setUnlocked(next);
+        setUnlocked(next.unlocked);
+        setViewing(next.viewing);
         setLockReason(reason);
         if (reason && FORGET_ACCOUNT.includes(reason)) setShared(null);
       },
@@ -74,12 +78,14 @@ export function KeySessionProvider({ children }: { children: ReactNode }) {
   }, [session]);
 
   useEffect(() => {
-    if (!unlocked) return;
+    if (!unlocked && !viewing) return;
     session.walletAccounts(wallets.flatMap((w) => w.accounts.map((a) => a.address)));
-  }, [session, wallets, unlocked]);
+  }, [session, wallets, unlocked, viewing]);
 
   return (
-    <KeySessionContext.Provider value={{ session, unlocked, lockReason, shared, setShared }}>
+    <KeySessionContext.Provider
+      value={{ session, unlocked, viewing, lockReason, shared, setShared }}
+    >
       {children}
     </KeySessionContext.Provider>
   );

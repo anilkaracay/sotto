@@ -253,6 +253,25 @@ export async function readMintInfo(
   return null;
 }
 
+export type RecipientReadiness = "no_account" | "not_configured" | "ready";
+
+/**
+ * AC-07.2: a recipient's readiness from the public state of their associated wUSDC account (06
+ * section 5 preconditions): no account, an account that cannot receive confidential payments (no
+ * approved extension, confidential credits off, or not the recipient's wUSDC account), or ready.
+ */
+export function recipientReadiness(
+  state: TokenAccountState,
+  expected: { owner: Address; mint: Address },
+): RecipientReadiness {
+  if (state.status === "missing") return "no_account";
+  if (state.status === "other_program") return "not_configured";
+  if (state.owner !== expected.owner || state.mint !== expected.mint) return "not_configured";
+  const confidential = state.confidential;
+  if (!confidential?.approved || !confidential.allowConfidentialCredits) return "not_configured";
+  return "ready";
+}
+
 /** AC-04.3: the worker flags accounts whose credit counter is at or above 80 percent of its maximum. */
 export const APPLY_FLAG_PERCENT = 80n;
 

@@ -26,6 +26,9 @@ export type LockReason =
 
 export type Unlocked = { wallet: string; elgamalPubkey: string };
 
+/** What the tab's worker holds: the confidential keys, the viewing key (step 1.8), or neither. */
+export type KeySnapshot = { unlocked: Unlocked | null; viewing: string | null };
+
 type Timers = NonNullable<Parameters<typeof createAutoLock>[0]["timers"]>;
 
 /** The org of an org page address (/app/<org id>/...), or null for any other page. */
@@ -38,7 +41,7 @@ export function orgOfPath(pathname: string): string | null {
 }
 
 export function createKeySession(options: {
-  onChange: (unlocked: Unlocked | null, reason: LockReason | null) => void;
+  onChange: (snapshot: KeySnapshot, reason: LockReason | null) => void;
   createClient?: () => CryptoWorkerClient;
   timers?: Timers;
   idleMs?: number;
@@ -47,6 +50,7 @@ export function createKeySession(options: {
   const createClient = options.createClient ?? (() => new CryptoWorkerClient());
   let client: CryptoWorkerClient | null = null;
   let unlocked: Unlocked | null = null;
+  let viewing: string | null = null;
   let autoLock: ReturnType<typeof createAutoLock> | null = null;
   let hidden = false;
   let org: string | null = null;
@@ -55,20 +59,27 @@ export function createKeySession(options: {
     return (client ??= createClient());
   }
 
+  const snapshot = (): KeySnapshot => ({ unlocked, viewing });
+
   function lock(reason: LockReason): void {
-    if (!client && !unlocked) return;
+    if (!client && !unlocked && !viewing) return;
     const ending = client;
-    const wasUnlocked = unlocked !== null;
+    const held = unlocked !== null || viewing !== null;
     client = null;
     unlocked = null;
+    viewing = null;
     autoLock?.stop();
     autoLock = null;
     void ending?.close();
-    if (wasUnlocked) options.onChange(null, reason);
+    if (held) options.onChange(snapshot(), reason);
   }
 
+  /** The wallets whose keys the worker holds. */
+  const wallets = (): string[] =>
+    [unlocked?.wallet, viewing].filter((wallet): wallet is string => typeof wallet === "string");
+
   function arm(): void {
-    autoLock?.stop();
+    if (autoLock) return;
     autoLock = createAutoLock({
       // The timer that fired: hidden when the tab is hidden, idle otherwise.
       onLock: () => lock(hidden ? "hidden" : "idle"),
@@ -89,9 +100,19 @@ export function createKeySession(options: {
       if (client !== current) throw new Error("The keys were locked while unlocking");
       unlocked = { wallet, elgamalPubkey: result.elgamalPubkey };
       arm();
-      options.onChange(unlocked, null);
+      options.onChange(snapshot(), null);
       return result;
     },
+    /** Step 1.8: the viewing key, for sealed data sent to this wallet (07 section 2). */
+    async unlockViewing(wallet: string, signature: Uint8Array): Promise<void> {
+      const current = worker();
+      await current.unlockViewing(wallet, signature);
+      if (client !== current) throw new Error("The keys were locked while unlocking");
+      viewing = wallet;
+      arm();
+      options.onChange(snapshot(), null);
+    },
+    viewing: (): string | null => viewing,
     lock,
     /** Keeps the keys open during an execution; call the returned function when done. */
     hold: (): (() => void) => autoLock?.hold() ?? (() => {}),
@@ -113,11 +134,11 @@ export function createKeySession(options: {
     },
     /** The accounts the tab's wallets offer; the unlocked wallet's account must stay among them. */
     walletAccounts(addresses: readonly string[]): void {
-      if (unlocked && !addresses.includes(unlocked.wallet)) lock("wallet_change");
+      if (wallets().some((wallet) => !addresses.includes(wallet))) lock("wallet_change");
     },
     /** The signed in wallet a page was rendered for; another wallet, or none, locks. */
     signedIn(wallet: string | null): void {
-      if (unlocked && unlocked.wallet !== wallet) lock(wallet ? "other_wallet" : "sign_out");
+      if (wallets().some((held) => held !== wallet)) lock(wallet ? "other_wallet" : "sign_out");
     },
     signOut: (): void => lock("sign_out"),
   };

@@ -1,0 +1,523 @@
+"use client";
+
+// The recipients page's client part (F-07, AC-07.1 to AC-07.4; step 1.8): add recipients, see their
+// readiness and why a recipient who is not ready cannot be paid confidentially, create invite links,
+// check readiness again and remove recipients who have not joined. A default amount and notes are
+// sealed in the tab's crypto worker to the owner's own viewing key, after its registration signature
+// verifies (I-8, 07 section 5); the server stores only the sealed box. Showing them asks the wallet
+// for the viewing key signature, and the worker opens them for this page.
+import { formatTokenAmount, parseTokenAmount } from "@sotto/sdk/confidential/public";
+import { verifyViewKeyRegistration, viewKeyMessage } from "@sotto/sdk/keys/public";
+import { Button, Card, Table, Td, Th } from "@sotto/ui";
+import { useRouter } from "next/navigation";
+import { useId, useState, type FormEvent, type ReactNode } from "react";
+import { ApiCallError, callApi, invalidField } from "../../../../lib/client/api.ts";
+import { COUNTRIES, countryName } from "../../../../lib/countries.ts";
+import { formatDate, shortWallet } from "../../../../lib/format.ts";
+import {
+  notesProblem,
+  parseRecipientPrivate,
+  type RecipientPrivate,
+} from "../../../../lib/recipient.ts";
+import type { RecipientView } from "../../../../lib/server/recipients.ts";
+import cards from "../../_components/confidential/cards.module.css";
+import {
+  ConfidentialProvider,
+  useConfidential,
+  type AvailableNetwork,
+} from "../../_components/confidential/context.tsx";
+import { WalletCard } from "../../_components/confidential/keys.tsx";
+import { useKeySession } from "../../_components/key-session.tsx";
+import { ReadinessCell } from "./readiness-cell.tsx";
+import styles from "./recipients.module.css";
+
+export type OwnerViewerKey = { publicKey: string; signature: string };
+
+const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
+const fromBase64 = (text: string) => Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
+const DECIMALS = 6;
+
+export function RecipientsPanel(props: {
+  wallet: string;
+  orgId: string;
+  network: AvailableNetwork;
+  recipients: RecipientView[];
+  viewerKey: OwnerViewerKey | null;
+}) {
+  return (
+    <ConfidentialProvider
+      wallet={props.wallet}
+      orgId={props.orgId}
+      network={props.network}
+      readAccount={false}
+    >
+      <div className={cards.grid}>
+        <AddRecipientCard viewerKey={props.viewerKey} />
+        <WalletCard />
+        <RecipientsTable recipients={props.recipients} />
+      </div>
+    </ConfidentialProvider>
+  );
+}
+
+type Fields = {
+  displayName: string;
+  roleTitle: string;
+  team: string;
+  country: string;
+  wallet: string;
+  amount: string;
+  notes: string;
+};
+
+const EMPTY: Fields = {
+  displayName: "",
+  roleTitle: "",
+  team: "",
+  country: "",
+  wallet: "",
+  amount: "",
+  notes: "",
+};
+
+function AddRecipientCard({ viewerKey }: { viewerKey: OwnerViewerKey | null }) {
+  const { wallet, orgId } = useConfidential();
+  const { session } = useKeySession();
+  const router = useRouter();
+  const id = useId();
+  const [fields, setFields] = useState<Fields>(EMPTY);
+  const [errors, setErrors] = useState<Partial<Record<keyof Fields, string>>>({});
+  const [problem, setProblem] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const set = (name: keyof Fields) => (value: string) =>
+    setFields((current) => ({ ...current, [name]: value }));
+
+  /** The default amount and notes, sealed to the owner's verified viewing key, or null. */
+  async function privateBlob(): Promise<string | null> {
+    if (!fields.amount.trim() && !fields.notes.trim()) return null;
+    if (!viewerKey) {
+      throw new Error("Create your viewing key on the Account setup page first.");
+    }
+    const amount = fields.amount.trim() ? parseTokenAmount(fields.amount, DECIMALS) : null;
+    if (fields.amount.trim() && amount === null) {
+      setErrors((current) => ({
+        ...current,
+        amount: `Enter an amount above zero with at most ${DECIMALS} decimals`,
+      }));
+      throw new Error("");
+    }
+    const notes = notesProblem(fields.notes.trim());
+    if (notes) {
+      setErrors((current) => ({ ...current, notes }));
+      throw new Error("");
+    }
+    const publicKey = fromBase64(viewerKey.publicKey);
+    const verified = await verifyViewKeyRegistration({
+      wallet,
+      publicKey,
+      signature: fromBase64(viewerKey.signature),
+    });
+    if (!verified) {
+      throw new Error(
+        "Your viewing key's registration does not verify for your wallet, so Sotto does not encrypt to it.",
+      );
+    }
+    const value: RecipientPrivate = {
+      v: 1,
+      default_amount: amount === null ? null : amount.toString(),
+      notes: fields.notes.trim() || null,
+    };
+    return toBase64(await session.worker().seal(publicKey, value));
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setErrors({});
+    setProblem(null);
+    try {
+      const blob = await privateBlob();
+      await callApi(`/api/orgs/${orgId}/recipients`, {
+        method: "POST",
+        body: {
+          displayName: fields.displayName,
+          roleTitle: fields.roleTitle,
+          team: fields.team,
+          country: fields.country || null,
+          wallet: fields.wallet,
+          ...(blob ? { privateBlob: blob } : {}),
+        },
+      });
+      setFields(EMPTY);
+      router.refresh();
+    } catch (error) {
+      if (error instanceof ApiCallError) {
+        const field = invalidField(error);
+        if (field && field.field in EMPTY) {
+          setErrors({ [field.field]: field.message });
+        } else {
+          setProblem(error.message);
+        }
+      } else if (error instanceof Error && error.message) {
+        setProblem(error.message);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const input = (
+    name: keyof Fields,
+    label: string,
+    options: { wide?: boolean; hint?: string } = {},
+  ) => (
+    <div className={`${styles.field} ${options.wide ? styles.wide : ""}`}>
+      <label className={styles.label} htmlFor={`${id}-${name}`}>
+        {label}
+      </label>
+      <input
+        id={`${id}-${name}`}
+        className={styles.control}
+        value={fields[name]}
+        onChange={(event) => set(name)(event.target.value)}
+        aria-invalid={errors[name] ? true : undefined}
+        disabled={(name === "amount" || name === "notes") && !viewerKey}
+      />
+      {options.hint ? <small className={styles.hint}>{options.hint}</small> : null}
+      {errors[name] ? <small className={styles.error}>{errors[name]}</small> : null}
+    </div>
+  );
+
+  return (
+    <Card data-testid="add-recipient-card">
+      <h2 className={cards.cardTitle}>Add a recipient</h2>
+      <p className={cards.lead}>
+        A person or company you pay in wUSDC. The default amount and notes are encrypted in this tab
+        to your viewing key, so only you can read them; Sotto stores them sealed.
+      </p>
+      <form className={styles.form} onSubmit={submit} noValidate>
+        {input("displayName", "Name", { wide: true })}
+        {input("roleTitle", "Role")}
+        {input("team", "Team")}
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor={`${id}-country`}>
+            Country
+          </label>
+          <select
+            id={`${id}-country`}
+            className={styles.control}
+            value={fields.country}
+            onChange={(event) => set("country")(event.target.value)}
+          >
+            <option value="">Not set</option>
+            {COUNTRIES.map(([code, name]) => (
+              <option key={code} value={code}>
+                {name}
+              </option>
+            ))}
+          </select>
+          {errors.country ? <small className={styles.error}>{errors.country}</small> : null}
+        </div>
+        {input("amount", "Default amount (USDC)", {
+          hint: viewerKey ? "Optional, encrypted to you" : "Needs your viewing key",
+        })}
+        {input("wallet", "Solana wallet address", { wide: true })}
+        {input("notes", "Notes", {
+          wide: true,
+          hint: viewerKey
+            ? "Optional, encrypted to you"
+            : "Create your viewing key on the Account setup page to keep a default amount and notes, encrypted to you.",
+        })}
+        {problem ? (
+          <p className={`${styles.error} ${styles.wide}`} role="alert">
+            {problem}
+          </p>
+        ) : null}
+        <div className={styles.formActions}>
+          <Button type="submit" variant="blue" disabled={busy}>
+            {busy ? "Adding…" : "Add recipient"}
+          </Button>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+function RecipientsTable({ recipients }: { recipients: RecipientView[] }) {
+  const { wallet, orgId, connected } = useConfidential();
+  const { session, viewing } = useKeySession();
+  const router = useRouter();
+  const [opened, setOpened] = useState<Record<string, RecipientPrivate | "unreadable">>({});
+  const [links, setLinks] = useState<Record<string, { url: string; expiresAt: string }>>({});
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  const unlocked = viewing === wallet;
+  const sealed = recipients.filter((row) => row.privateBlob !== null);
+
+  async function showAmounts() {
+    if (!connected) return;
+    setProblem(null);
+    setBusy("amounts");
+    try {
+      if (!unlocked) {
+        const signature = await connected.sign(viewKeyMessage(wallet));
+        if (typeof signature === "string") {
+          setProblem(
+            "Your wallet did not sign the viewing key message, so the amounts stay sealed.",
+          );
+          return;
+        }
+        await session.unlockViewing(wallet, signature);
+      }
+      const next: Record<string, RecipientPrivate | "unreadable"> = {};
+      for (const row of sealed) {
+        try {
+          const value = await session.worker().openSealed(fromBase64(row.privateBlob ?? ""));
+          next[row.id] = parseRecipientPrivate(value) ?? "unreadable";
+        } catch {
+          next[row.id] = "unreadable";
+        }
+      }
+      setOpened(next);
+    } catch {
+      setProblem("The amounts could not be opened in this tab. Try again.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function act(key: string, run: () => Promise<void>) {
+    setBusy(key);
+    setProblem(null);
+    try {
+      await run();
+    } catch (error) {
+      setProblem(error instanceof ApiCallError ? error.message : "That did not work. Try again.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const invite = (row: RecipientView) =>
+    act(`invite:${row.id}`, async () => {
+      const { invite: created } = await callApi<{ invite: { url: string; expiresAt: string } }>(
+        `/api/orgs/${orgId}/invites`,
+        { method: "POST", body: { role: "recipient", recipientId: row.id } },
+      );
+      setLinks((current) => ({ ...current, [row.id]: created }));
+      router.refresh();
+    });
+  const check = (row: RecipientView) =>
+    act(`check:${row.id}`, async () => {
+      await callApi(`/api/orgs/${orgId}/recipients/${row.id}/readiness`, { method: "POST" });
+      router.refresh();
+    });
+  const remove = (row: RecipientView) =>
+    act(`remove:${row.id}`, async () => {
+      const response = await fetch(`/api/orgs/${orgId}/recipients/${row.id}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as {
+          error?: { code?: string; message?: string };
+        };
+        throw new ApiCallError(
+          response.status,
+          body.error?.code ?? "request_failed",
+          body.error?.message ?? "Request failed",
+        );
+      }
+      setConfirming(null);
+      router.refresh();
+    });
+
+  const amountCell = (row: RecipientView) => {
+    if (row.privateBlob === null) return <span className={styles.muted}>None</span>;
+    const value = opened[row.id];
+    if (!unlocked || value === undefined) return <span className={styles.muted}>Sealed</span>;
+    if (value === "unreadable")
+      return <span className={styles.muted}>Not readable with this key</span>;
+    return (
+      <span>
+        {value.default_amount === null ? (
+          <span className={styles.muted}>No amount</span>
+        ) : (
+          <span className="num" data-testid="default-amount">
+            {formatTokenAmount(BigInt(value.default_amount), DECIMALS)} USDC
+          </span>
+        )}
+        {value.notes ? <small className={styles.muted}> · {value.notes}</small> : null}
+      </span>
+    );
+  };
+
+  return (
+    <Card className={styles.tableCard} data-testid="recipients-card">
+      <div className={styles.head}>
+        <h2 className={cards.cardTitle}>Recipients</h2>
+        {sealed.length > 0 ? (
+          <Button
+            variant="line"
+            size="sm"
+            disabled={!connected || busy !== null}
+            onClick={() => void showAmounts()}
+          >
+            {busy === "amounts" ? "Waiting for your wallet…" : "Show default amounts"}
+          </Button>
+        ) : null}
+      </div>
+      {problem ? (
+        <p className={cards.problem} role="alert">
+          {problem}
+        </p>
+      ) : null}
+      {recipients.length === 0 ? (
+        <p className={styles.empty}>No recipients yet. Add the people and companies you pay.</p>
+      ) : (
+        <Table>
+          <thead>
+            <tr>
+              <Th>Recipient</Th>
+              <Th>Team</Th>
+              <Th>Country</Th>
+              <Th>Wallet</Th>
+              <Th>Default amount</Th>
+              <Th>Status</Th>
+              <Th align="right">Actions</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {recipients.map((row) => (
+              <RecipientRows
+                key={row.id}
+                row={row}
+                amount={amountCell(row)}
+                link={links[row.id] ?? null}
+                busy={busy}
+                confirming={confirming === row.id}
+                onInvite={() => void invite(row)}
+                onCheck={() => void check(row)}
+                onRemove={() => (confirming === row.id ? void remove(row) : setConfirming(row.id))}
+              />
+            ))}
+          </tbody>
+        </Table>
+      )}
+    </Card>
+  );
+}
+
+function RecipientRows(props: {
+  row: RecipientView;
+  amount: ReactNode;
+  link: { url: string; expiresAt: string } | null;
+  busy: string | null;
+  confirming: boolean;
+  onInvite: () => void;
+  onCheck: () => void;
+  onRemove: () => void;
+}) {
+  const { row } = props;
+  const [copied, setCopied] = useState(false);
+  return (
+    <>
+      <tr data-testid="recipient-row" data-wallet={row.wallet}>
+        <Td>
+          <div className={styles.person}>
+            <b>{row.displayName}</b>
+            {row.roleTitle ? <small>{row.roleTitle}</small> : null}
+          </div>
+        </Td>
+        <Td>{row.team ?? <span className={styles.muted}>None</span>}</Td>
+        <Td>
+          {row.country ? countryName(row.country) : <span className={styles.muted}>None</span>}
+        </Td>
+        <Td>
+          <span className="mono" title={row.wallet}>
+            {shortWallet(row.wallet)}
+          </span>
+        </Td>
+        <Td>{props.amount}</Td>
+        <Td>
+          <ReadinessCell readiness={row.readiness} />
+          {row.joined ? (
+            <small className={styles.muted}>Joined</small>
+          ) : row.invite.status === "pending" && row.invite.expiresAt && !props.link ? (
+            // Sotto cannot know whether the owner sent the link, only until when it works.
+            <small className={styles.muted}>
+              Invite open until {formatDate(row.invite.expiresAt)}
+            </small>
+          ) : null}
+        </Td>
+        <Td align="right">
+          <div className={styles.rowActions}>
+            {!row.joined ? (
+              <Button
+                variant="line"
+                size="sm"
+                disabled={props.busy !== null}
+                onClick={props.onInvite}
+              >
+                {row.invite.status === "pending" ? "New invite link" : "Invite link"}
+              </Button>
+            ) : null}
+            {row.readiness !== "ready" ? (
+              <Button
+                variant="line"
+                size="sm"
+                disabled={props.busy !== null}
+                onClick={props.onCheck}
+              >
+                {props.busy === `check:${row.id}` ? "Checking…" : "Check again"}
+              </Button>
+            ) : null}
+            {!row.joined ? (
+              <Button
+                variant="line"
+                size="sm"
+                disabled={props.busy !== null}
+                onClick={props.onRemove}
+              >
+                {props.confirming ? "Confirm remove" : "Remove"}
+              </Button>
+            ) : null}
+          </div>
+        </Td>
+      </tr>
+      {props.link ? (
+        <tr className={styles.linkRow}>
+          <Td colSpan={7}>
+            <div className={styles.link}>
+              <span className={styles.muted}>Send this link to {row.displayName}:</span>
+              <input
+                className={styles.linkInput}
+                readOnly
+                value={props.link.url}
+                aria-label={`Invite link for ${row.displayName}`}
+                data-testid="invite-link"
+                onFocus={(event) => event.currentTarget.select()}
+              />
+              <Button
+                variant="line"
+                size="sm"
+                onClick={() => {
+                  void navigator.clipboard
+                    ?.writeText(props.link?.url ?? "")
+                    .then(() => setCopied(true));
+                }}
+              >
+                {copied ? "Copied" : "Copy"}
+              </Button>
+            </div>
+            <small className={styles.muted}>
+              It works once, only with {shortWallet(row.wallet)}, until{" "}
+              {formatDate(props.link.expiresAt)}. Sotto shows it only now.
+            </small>
+          </Td>
+        </tr>
+      ) : null}
+    </>
+  );
+}

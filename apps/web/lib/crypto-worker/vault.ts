@@ -13,6 +13,8 @@ import type {
   ClearResult,
   ConfirmSignatureResult,
   DecryptResult,
+  OpenSealedResult,
+  SealResult,
   SetupInstructionsResult,
   StatusResult,
   UnlockResult,
@@ -24,15 +26,17 @@ import type {
 } from "./protocol.ts";
 
 export type VaultModules = typeof import("@sotto/sdk/keys") &
-  typeof import("@sotto/sdk/confidential");
+  typeof import("@sotto/sdk/confidential") &
+  typeof import("@sotto/sdk/disclosure/seal");
 
 /** The SDK modules the vault needs, loaded together (the worker calls this on the first request). */
 export async function loadVaultModules(): Promise<VaultModules> {
-  const [keys, confidential] = await Promise.all([
+  const [keys, confidential, seal] = await Promise.all([
     import("@sotto/sdk/keys"),
     import("@sotto/sdk/confidential"),
+    import("@sotto/sdk/disclosure/seal"),
   ]);
-  return { ...keys, ...confidential };
+  return { ...keys, ...confidential, ...seal };
 }
 
 export class VaultError extends Error {
@@ -191,6 +195,23 @@ export function createVault(load: () => Promise<VaultModules>) {
     }
   }
 
+  /** Step 1.8: seals canonical JSON to a viewer's public key; needs no key of this tab. */
+  async function seal(publicKey: Uint8Array, value: unknown): Promise<SealResult> {
+    const loaded = await sdk();
+    return { ciphertext: await loaded.sealJson(value, publicKey) };
+  }
+
+  /** Step 1.8: opens a sealed box with the viewing key unlocked in this tab. */
+  async function openSealed(ciphertext: Uint8Array): Promise<OpenSealedResult> {
+    const loaded = await sdk();
+    if (!viewing) throw new VaultError("not_viewing", "Unlock the viewing key first");
+    try {
+      return { value: await loaded.openJson(ciphertext, viewing) };
+    } catch {
+      throw new VaultError("cannot_open", "This viewing key cannot open the sealed data");
+    }
+  }
+
   /** Zeroes and drops every key; the worker is terminated right after (key-session.ts). */
   async function clearAll(): Promise<ClearResult> {
     if (modules) clear(await sdk());
@@ -222,6 +243,10 @@ export function createVault(load: () => Promise<VaultModules>) {
         return applyInstruction(request.token, new Uint8Array(request.account));
       case "clear":
         return clearAll();
+      case "seal":
+        return seal(new Uint8Array(request.publicKey), request.value);
+      case "openSealed":
+        return openSealed(new Uint8Array(request.ciphertext));
     }
   }
 

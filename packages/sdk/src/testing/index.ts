@@ -64,6 +64,13 @@ export function keypairWallet(
   };
 }
 
+/** A random X25519 viewer keypair (07 section 2), as a viewing key would be. */
+export async function viewerKeypair(): Promise<{ publicKey: Uint8Array; secretKey: Uint8Array }> {
+  await sodium.ready;
+  const pair = sodium.crypto_box_keypair();
+  return { publicKey: pair.publicKey, secretKey: pair.privateKey };
+}
+
 /** A valid Ed25519 signature of `message` by the key of `seed`, with a random nonce. */
 export async function randomizedEd25519Signature(
   seed: Uint8Array,

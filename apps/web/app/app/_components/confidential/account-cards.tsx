@@ -29,11 +29,11 @@ import { useEffect, useId, useRef, useState } from "react";
 import { ApiCallError, callApi } from "../../../../lib/client/api.ts";
 import { browserRpc } from "../../../../lib/client/rpc.ts";
 import { reportWallet } from "../../../../lib/client/wallet-report.ts";
-import { ApplyPromptNotice, applyPromptNeeded } from "../_components/confidential/apply-prompt.tsx";
-import styles from "../_components/confidential/cards.module.css";
-import extra from "../_components/confidential/confidential.module.css";
-import { useConfidential, type SignProblem } from "../_components/confidential/context.tsx";
-import { StepError, useSend, type SendState } from "../_components/confidential/use-send.ts";
+import { ApplyPromptNotice, applyPromptNeeded } from "./apply-prompt.tsx";
+import styles from "./cards.module.css";
+import extra from "./confidential.module.css";
+import { useConfidential, type SignProblem } from "./context.tsx";
+import { StepError, useSend, type SendState } from "./use-send.ts";
 
 export type RecordedAccount = { address: string; applyFlagged: boolean };
 

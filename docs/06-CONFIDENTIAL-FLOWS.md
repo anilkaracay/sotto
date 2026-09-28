@@ -86,6 +86,13 @@ Implementation (step 1.9; the real signature and plan of step 2 are facts A16, v
 2. `getConfidentialWithdrawInstructionPlan(...)` (import from `@solana-program/token-2022/confidential`) for the amount, then execute (v1 or v0 as above).
 3. Token Wrap `Unwrap` from wUSDC to USDC.
 
+Implementation (step 1.10, AC-09.1; facts A18):
+- The withdrawn amount is public onchain by design (facts A2); the remaining balance stays confidential. Nothing about a withdraw is stored by Sotto.
+- `confidentialWithdrawPlan` (`packages/sdk/src/confidential/transfer.ts`) checks the source like a transfer (the wallet owns the account, it has a confidential balance, the keys derive its ElGamal key, I-5, and the available balance covers the amount), then builds the plan of step 2: as version 1 with the range proof inline (1 transaction), as version 0 with the range proof in an SPL Record account (4 transactions, facts A18, H9). It is packed and sent exactly like a transfer (section 5): the crypto worker builds it from account data the page just read (`withdrawPlan`), keeps the keypairs of the accounts it creates and adds their signatures after the wallet's, and a failed step is named and its proof accounts are closed with their rent to the fee payer.
+- Step 1 runs in the page first: the account is read from chain, and a pending balance is applied (one wallet signature) and the account read again before the plan is built.
+- Step 3 is `unwrapInstructions` (`packages/sdk/src/wrap`): the USDC associated account is created idempotently, then `Unwrap` of the same amount, signed by the wallet. Unwrapping is a choice in the form, on by default.
+- The owner withdraws from a drawer on the overview; a recipient from the pay page (`/app/[org]/pay`, 09). Balances are read from chain after every step (AC-04.4).
+
 ## 7. Payroll batch (D-21)
 
 Input: validated lines, each with a stable `line_id` and idempotency key.

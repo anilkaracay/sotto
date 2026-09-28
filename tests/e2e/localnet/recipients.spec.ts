@@ -2,8 +2,11 @@
 // recipient who is not ready cannot be paid, keeps a default amount sealed to the owner's own viewing
 // key, and creates an invite link; the recipient opens it, signs in with the recipient's wallet,
 // accepts, registers a viewing key and sets up the wUSDC account with the injected test wallet; the
-// owner then sees the recipient ready, from chain state (AC-07.1 to AC-07.4). Runs in the localnet job
-// of scripts/ci-local.sh against the bootstrapped validator, never devnet.
+// owner then sees the recipient ready, from chain state (AC-07.1 to AC-07.4). Since step 1.8.1 the
+// default amounts open after one Unlock click on the recipients page, and the invite shows only the
+// organization before sign in, the recipient's details only to the invited wallet and only the refusal
+// with the expected address to another wallet. Runs in the localnet job of scripts/ci-local.sh against
+// the bootstrapped validator, never devnet.
 import { fundLocalnetWallet, readLocalnetBootstrap } from "@sotto/sdk/testing/localnet";
 import { createRetryingRpc } from "@sotto/sdk/tx";
 import { address } from "@solana/kit";
@@ -92,11 +95,15 @@ test.describe.serial("recipients on localnet", () => {
     await expect(row(page, NOT_READY.address)).toContainText("No account");
     await expect(row(page, NOT_READY.address)).toContainText("None");
 
-    // The default amount opens only in this tab, with the owner's viewing key.
-    await page.getByRole("button", { name: "Show default amounts" }).click();
+    // The default amount opens only in this tab, with the owner's viewing key: one Unlock click signs
+    // the confidential key message and then the viewing key message (step 1.8.1).
+    await expect(page.getByTestId("amounts-sealed-note")).toBeVisible();
+    await page.getByRole("button", { name: "Unlock with your wallet" }).click();
+    await expect(page.getByTestId("viewing-unlocked")).toHaveText("Unlocked");
     await expect(row(page, RECIPIENT.address).getByTestId("default-amount")).toHaveText(
       "1500 USDC",
     );
+    await expect(page.getByTestId("amounts-sealed-note")).toHaveCount(0);
     await expect(row(page, RECIPIENT.address)).toContainText("Monthly, first week");
 
     await row(page, RECIPIENT.address).getByRole("button", { name: "Invite link" }).click();
@@ -109,27 +116,63 @@ test.describe.serial("recipients on localnet", () => {
     page,
     browser,
   }) => {
+    const invitePath = new URL(inviteLink).pathname;
+
+    // Another signed in wallet sees only the refusal with the expected address.
+    const other = await newPage(browser);
+    await signIn(other, NOT_READY.keypair);
+    await other.goto(invitePath);
+    await expect(other.getByTestId("invite-wrong-wallet")).toContainText(RECIPIENT.address);
+    await expect(other.getByTestId("invite-card")).not.toContainText("Maya Chen");
+    await expect(other.getByTestId("invite-details")).toHaveCount(0);
+    await other.context().close();
+
+    // Before sign in: the organization and the sign in button only.
     const recipient = await newPage(browser);
     await addTestWallet(recipient, RECIPIENT.keypair);
-    await recipient.goto(new URL(inviteLink).pathname);
-    await expect(recipient.getByTestId("invite-card")).toContainText(
+    await recipient.goto(invitePath);
+    const card = recipient.getByTestId("invite-card");
+    await expect(card).toContainText(
       "Recipients Test Ltd invites you to receive payments in Sotto",
     );
+    await expect(card.getByTestId("invite-sign-in")).toBeVisible();
+    await expect(card).not.toContainText("Maya Chen");
+    await expect(card).not.toContainText("Design lead");
+    await expect(card).not.toContainText(RECIPIENT.address);
     await recipient.getByTestId("invite-sign-in").click();
     await expect(recipient).toHaveURL(/\/app\/sign-in\?next=/);
     const option = recipient.getByTestId("wallet-option").filter({ hasText: "Sotto Test Wallet" });
     await option.getByRole("button", { name: "Connect" }).click();
     await option.getByRole("button", { name: "Sign in" }).click();
     await expect(recipient).toHaveURL(/\/app\/invite\/[A-Za-z0-9_-]{43}$/);
+    // The invited wallet sees the recipient's name, role and wallet.
+    const details = recipient.getByTestId("invite-details");
+    await expect(details).toContainText("Maya Chen");
+    await expect(details).toContainText("Design lead");
+    await expect(details).toContainText(RECIPIENT.address);
     await recipient.getByRole("button", { name: "Accept invite" }).click();
     await expect(recipient.getByTestId("invite-joined")).toContainText(
       "You joined Recipients Test Ltd",
     );
 
-    await recipient.getByRole("button", { name: "Create viewing key" }).click();
-    await expect(recipient.getByTestId("viewing-key-status")).toHaveText("Registered");
+    // One Unlock click gives both keys; registering the viewing key then takes one signature.
     await recipient.getByRole("button", { name: "Unlock with your wallet" }).click();
     await expect(recipient.getByTestId("keys-status")).toHaveText("Unlocked");
+    await expect(recipient.getByTestId("viewing-unlocked")).toHaveText("Unlocked");
+    await recipient.getByRole("button", { name: "Create viewing key" }).click();
+    await expect(recipient.getByTestId("viewing-key-status")).toHaveText("Registered");
+    const keyMessages = (
+      await recipient.evaluate(
+        () =>
+          (window as unknown as { __sottoTestWallet: { signedMessages: string[] } })
+            .__sottoTestWallet.signedMessages,
+      )
+    ).filter((text) => text.startsWith("solana-conf-bal") || text.startsWith("sotto-view-key"));
+    expect(keyMessages).toEqual([
+      "solana-conf-bal/v1",
+      `sotto-view-key/v1\n${RECIPIENT.address}`,
+      expect.stringMatching(/^sotto-view-key-register\/v1\n/),
+    ]);
     await recipient.getByRole("button", { name: "Set up the account" }).click();
     await expect(recipient.getByTestId("account-status")).toHaveText("Set up");
     await expect(recipient.getByTestId("account-recorded")).toHaveText("Recorded");

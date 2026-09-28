@@ -43,6 +43,7 @@ import {
 import { CryptoWorkerClient, CryptoWorkerError } from "../../../../lib/crypto-worker/client.ts";
 import type { LockReason } from "../../../../lib/crypto-worker/key-session.ts";
 import type { UnlockResult } from "../../../../lib/crypto-worker/protocol.ts";
+import type { SignProblem } from "../../../../lib/crypto-worker/unlock.ts";
 import { browserRpc } from "../../../../lib/client/rpc.ts";
 import { isWalletCancel } from "../../../../lib/client/transactions.ts";
 import { walletInfo, type WalletInfo } from "../../../../lib/client/wallet-report.ts";
@@ -51,7 +52,7 @@ import { useKeySession } from "../key-session.tsx";
 
 export type AvailableNetwork = Extract<NetworkView, { available: true }>;
 
-export type SignProblem = "cancelled" | "refused" | "message_changed" | "bad_signature";
+export type { SignProblem };
 
 export type Vault = {
   worker: () => CryptoWorkerClient;

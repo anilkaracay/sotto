@@ -81,6 +81,10 @@ test("AC-03.2 unlocks only after the click, derives the CLI's key in the worker 
   await expect(page).toHaveURL(/\/app\/[0-9a-f-]{36}\/setup$/);
   await expect(page.getByTestId("keys-status")).toHaveText("Locked");
   await expect(page.getByTestId("keys-card")).toContainText("solana-conf-bal/v1");
+  // One Unlock click, two signatures, one explainer (step 1.8.1).
+  await expect(page.getByTestId("unlock-explainer")).toContainText(
+    "Unlocking asks your wallet for two signatures, one after the other, so two wallet popups follow.",
+  );
   await expect(page.getByTestId("unlock-warning")).toContainText(
     "can read the confidential balances of this wallet on every account, but can never move them. Only sign this in Sotto.",
   );
@@ -118,12 +122,31 @@ test("AC-03.2 unlocks only after the click, derives the CLI's key in the worker 
     traffic.push(request.postData() ?? "");
   });
 
+  // A wallet that refuses the viewing key message: the confidential keys unlock, the viewing key does
+  // not, and the card says what is not available (step 1.8.1).
+  await setRefused(page, [`sotto-view-key/v1\n${wallet}`]);
   await page.getByRole("button", { name: "Unlock with your wallet" }).click();
   await expect(page.getByTestId("keys-status")).toHaveText("Unlocked");
   await expect(page.getByTestId("elgamal-public-key")).toHaveText(E2E_CLI_ELGAMAL_KEY);
+  await expect(page.getByTestId("viewing-unlocked")).toHaveText("Not unlocked");
+  await expect(page.getByTestId("viewing-missing")).toContainText(
+    "Your wallet refused to sign the viewing key message.",
+  );
+  await expect(page.getByTestId("viewing-missing")).toContainText(
+    "the amounts you keep sealed and the payment details shared with you stay closed in this tab",
+  );
   expect(await signedMessages(page)).toEqual(["solana-conf-bal/v1"]);
+  await setRefused(page, []);
+  await page.getByRole("button", { name: "Sign the viewing key message" }).click();
+  await expect(page.getByTestId("viewing-unlocked")).toHaveText("Unlocked");
+  await expect(page.getByTestId("keys-status")).toHaveText("Unlocked");
+  expect(await signedMessages(page)).toEqual([
+    "solana-conf-bal/v1",
+    `sotto-view-key/v1\n${wallet}`,
+  ]);
 
-  // The viewing key: two signatures, then the registration the server stores (07 section 5).
+  // The viewing key: the tab holds it, so registering takes one signature, which the server checks
+  // and stores (07 section 5).
   await page.getByRole("button", { name: "Create viewing key" }).click();
   await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
   const viewSignature = signWithTestKey(viewKeyMessage(wallet));
@@ -183,6 +206,7 @@ test("AC-03.2 unlocks only after the click, derives the CLI's key in the worker 
   await expect.poll(() => page.workers().length).toBe(0);
   await page.getByRole("button", { name: "Unlock with your wallet" }).click();
   await expect(page.getByTestId("keys-status")).toHaveText("Unlocked");
+  await expect(page.getByTestId("viewing-unlocked")).toHaveText("Unlocked");
   await page.reload();
   await expect(page.getByTestId("keys-status")).toHaveText("Locked");
   await expect(page.getByTestId("elgamal-public-key")).toHaveCount(0);

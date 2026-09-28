@@ -4,13 +4,14 @@
 // readiness and why a recipient who is not ready cannot be paid confidentially, create invite links,
 // check readiness again and remove recipients who have not joined. A default amount and notes are
 // sealed in the tab's crypto worker to the owner's own viewing key, after its registration signature
-// verifies (I-8, 07 section 5); the server stores only the sealed box. Showing them asks the wallet
-// for the viewing key signature, and the worker opens them for this page.
+// verifies (I-8, 07 section 5); the server stores only the sealed box. Since step 1.8.1 the page has
+// the keys card: one Unlock click also unlocks the viewing key, and while the tab holds it the worker
+// opens the default amounts for this page on its own.
 import { formatTokenAmount, parseTokenAmount } from "@sotto/sdk/confidential/public";
-import { verifyViewKeyRegistration, viewKeyMessage } from "@sotto/sdk/keys/public";
+import { verifyViewKeyRegistration } from "@sotto/sdk/keys/public";
 import { Button, Card, Table, Td, Th } from "@sotto/ui";
 import { useRouter } from "next/navigation";
-import { useId, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { ApiCallError, callApi, invalidField } from "../../../../lib/client/api.ts";
 import { COUNTRIES, countryName } from "../../../../lib/countries.ts";
 import { formatDate, shortWallet } from "../../../../lib/format.ts";
@@ -26,7 +27,7 @@ import {
   useConfidential,
   type AvailableNetwork,
 } from "../../_components/confidential/context.tsx";
-import { WalletCard } from "../../_components/confidential/keys.tsx";
+import { KeysCard, WalletCard } from "../../_components/confidential/keys.tsx";
 import { useKeySession } from "../../_components/key-session.tsx";
 import { ReadinessCell } from "./readiness-cell.tsx";
 import styles from "./recipients.module.css";
@@ -53,7 +54,10 @@ export function RecipientsPanel(props: {
     >
       <div className={cards.grid}>
         <AddRecipientCard viewerKey={props.viewerKey} />
-        <WalletCard />
+        <div className={styles.side}>
+          <WalletCard />
+          <KeysCard />
+        </div>
         <RecipientsTable recipients={props.recipients} />
       </div>
     </ConfidentialProvider>
@@ -244,7 +248,7 @@ function AddRecipientCard({ viewerKey }: { viewerKey: OwnerViewerKey | null }) {
 }
 
 function RecipientsTable({ recipients }: { recipients: RecipientView[] }) {
-  const { wallet, orgId, connected } = useConfidential();
+  const { wallet, orgId } = useConfidential();
   const { session, viewing } = useKeySession();
   const router = useRouter();
   const [opened, setOpened] = useState<Record<string, RecipientPrivate | "unreadable">>({});
@@ -252,40 +256,32 @@ function RecipientsTable({ recipients }: { recipients: RecipientView[] }) {
   const [confirming, setConfirming] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
-  const unlocked = viewing === wallet;
+  const unlocked = viewing?.wallet === wallet;
   const sealed = recipients.filter((row) => row.privateBlob !== null);
 
-  async function showAmounts() {
-    if (!connected) return;
-    setProblem(null);
-    setBusy("amounts");
-    try {
-      if (!unlocked) {
-        const signature = await connected.sign(viewKeyMessage(wallet));
-        if (typeof signature === "string") {
-          setProblem(
-            "Your wallet did not sign the viewing key message, so the amounts stay sealed.",
-          );
-          return;
-        }
-        await session.unlockViewing(wallet, signature);
-      }
+  // While the tab holds the viewing key (one Unlock click), the worker opens the default amounts for
+  // this page; after a lock nothing stays opened.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
       const next: Record<string, RecipientPrivate | "unreadable"> = {};
-      for (const row of sealed) {
-        try {
-          const value = await session.worker().openSealed(fromBase64(row.privateBlob ?? ""));
-          next[row.id] = parseRecipientPrivate(value) ?? "unreadable";
-        } catch {
-          next[row.id] = "unreadable";
+      if (unlocked) {
+        for (const row of recipients) {
+          if (row.privateBlob === null) continue;
+          try {
+            const value = await session.worker().openSealed(fromBase64(row.privateBlob));
+            next[row.id] = parseRecipientPrivate(value) ?? "unreadable";
+          } catch {
+            next[row.id] = "unreadable";
+          }
         }
       }
-      setOpened(next);
-    } catch {
-      setProblem("The amounts could not be opened in this tab. Try again.");
-    } finally {
-      setBusy(null);
-    }
-  }
+      if (!cancelled) setOpened(next);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [unlocked, recipients, session]);
 
   async function act(key: string, run: () => Promise<void>) {
     setBusy(key);
@@ -357,15 +353,10 @@ function RecipientsTable({ recipients }: { recipients: RecipientView[] }) {
     <Card className={styles.tableCard} data-testid="recipients-card">
       <div className={styles.head}>
         <h2 className={cards.cardTitle}>Recipients</h2>
-        {sealed.length > 0 ? (
-          <Button
-            variant="line"
-            size="sm"
-            disabled={!connected || busy !== null}
-            onClick={() => void showAmounts()}
-          >
-            {busy === "amounts" ? "Waiting for your wallet…" : "Show default amounts"}
-          </Button>
+        {sealed.length > 0 && !unlocked ? (
+          <small className={styles.muted} data-testid="amounts-sealed-note">
+            Default amounts open in this tab once you unlock your keys.
+          </small>
         ) : null}
       </div>
       {problem ? (

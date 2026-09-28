@@ -2,8 +2,11 @@
 
 // The invite page's client part (AC-07.3; step 1.8): the invite before sign in, the check that the
 // signed in wallet is the recipient's, the acceptance, and then the recipient's own setup in one
-// confidential session: the viewing key (it activates the own_payslips grant), the confidential keys
-// and the wUSDC account, which Sotto records so the recipient shows as ready (readiness from chain).
+// confidential session: the confidential keys and the viewing key (one Unlock click, step 1.8.1), the
+// viewing key's registration (it activates the own_payslips grant) and the wUSDC account, which Sotto
+// records so the recipient shows as ready (readiness from chain). Since step 1.8.1 (founder) the page
+// shows only the organization before sign in; the recipient's name, role and wallet appear only to the
+// invited wallet, and another wallet sees only the refusal with the expected address.
 import { Button, Card } from "@sotto/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -46,7 +49,7 @@ export function InvitePanel({
   recorded: RecordedAccount | null;
 }) {
   const org = invite.org.displayName;
-  const recipient = invite.recipient;
+  const details = invite.details;
 
   if (invite.acceptedByYou && wallet && network) {
     return (
@@ -59,14 +62,14 @@ export function InvitePanel({
               To receive confidential payments from {org}, finish three steps in this tab:
             </p>
             <ol className={styles.steps}>
+              <li>Unlock your keys with your wallet: two signatures, one after the other.</li>
               <li>Create your viewing key, so {org} can share your payment details with you.</li>
-              <li>Unlock your confidential keys with your wallet.</li>
               <li>Set up your confidential wUSDC account.</li>
             </ol>
           </Card>
           <WalletCard />
-          <ViewingKeyCard viewerKey={viewerKey} />
           <KeysCard className={cards.keysCard} />
+          <ViewingKeyCard viewerKey={viewerKey} />
           <AccountCard recorded={recorded} />
         </div>
       </ConfidentialProvider>
@@ -78,14 +81,20 @@ export function InvitePanel({
       <Card data-testid="invite-card">
         <h2 className={cards.cardTitle}>{org} invites you to receive payments in Sotto</h2>
         <InviteState token={token} invite={invite} wallet={wallet} />
-        {recipient ? (
-          <dl className={cards.details}>
+        {details && invite.status === "open" ? (
+          <dl className={cards.details} data-testid="invite-details">
             <dt>Recipient</dt>
-            <dd>{recipient.displayName}</dd>
+            <dd>{details.recipient.displayName}</dd>
+            {details.recipient.roleTitle ? (
+              <>
+                <dt>Role</dt>
+                <dd>{details.recipient.roleTitle}</dd>
+              </>
+            ) : null}
             <dt>Wallet</dt>
-            <dd className="mono">{recipient.wallet}</dd>
+            <dd className="mono">{details.recipient.wallet}</dd>
             <dt>Link valid until</dt>
-            <dd>{formatDate(invite.expiresAt)}</dd>
+            <dd>{formatDate(details.expiresAt)}</dd>
           </dl>
         ) : null}
       </Card>
@@ -106,7 +115,6 @@ function InviteState({
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const org = invite.org.displayName;
-  const expected = invite.recipient?.wallet ?? null;
 
   if (invite.status === "expired") {
     return <p className={cards.lead}>This invite has expired. Ask {org} for a new link.</p>;
@@ -118,13 +126,9 @@ function InviteState({
     return <p className={cards.lead}>This invite has already been accepted.</p>;
   }
   if (!wallet) {
+    // Before sign in: the organization (the card title) and the sign in button, nothing else.
     return (
       <>
-        <p className={cards.lead}>
-          Sign in with the wallet {expected ? shortWallet(expected) : "the invite names"} to accept.
-          Accepting lets {org} pay you in confidential wUSDC: amounts are encrypted onchain, so only
-          you, {org} and the people {org} shares them with can read them.
-        </p>
         <div className={cards.actions}>
           <Link
             className={styles.primaryLink}
@@ -137,19 +141,20 @@ function InviteState({
       </>
     );
   }
-  if (expected && wallet !== expected) {
+  if (invite.expectedWallet) {
     return (
-      <p className={cards.problem} role="alert">
-        This invite is for the wallet {shortWallet(expected)}, and you are signed in with{" "}
-        {shortWallet(wallet)}. Sign out, then sign in with that wallet.
+      <p className={cards.problem} role="alert" data-testid="invite-wrong-wallet">
+        This invite is for the wallet <span className="mono">{invite.expectedWallet}</span>, and you
+        are signed in with {shortWallet(wallet)}. Sign out, then sign in with that wallet.
       </p>
     );
   }
   return (
     <>
       <p className={cards.lead}>
-        Accepting adds you to {org} as a recipient and lets {org} share your payment details with
-        you. Then you set up your confidential wUSDC account in this tab.
+        Accepting adds you to {org} as a recipient and lets {org} pay you in confidential wUSDC:
+        amounts are encrypted onchain, so only you, {org} and the people {org} shares them with can
+        read them. Then you set up your confidential wUSDC account in this tab.
       </p>
       <div className={cards.actions}>
         <Button

@@ -12,6 +12,7 @@ import {
   type KeySession,
   type LockReason,
   type Unlocked,
+  type Viewing,
 } from "../../../lib/crypto-worker/key-session.ts";
 
 export type SharedAccount = { account: UiWalletAccount; wallet: UiWallet };
@@ -19,8 +20,8 @@ export type SharedAccount = { account: UiWalletAccount; wallet: UiWallet };
 type KeySessionValue = {
   session: KeySession;
   unlocked: Unlocked | null;
-  /** The wallet whose viewing key is unlocked in this tab (step 1.8). */
-  viewing: string | null;
+  /** The viewing key unlocked in this tab (step 1.8): its wallet and public key. */
+  viewing: Viewing | null;
   /** Why the keys last locked, until the next unlock. */
   lockReason: LockReason | null;
   /** The account a wallet shared on connect in this tab. */
@@ -41,7 +42,7 @@ const FORGET_ACCOUNT: readonly LockReason[] = ["wallet_change", "sign_out", "oth
 
 export function KeySessionProvider({ children }: { children: ReactNode }) {
   const [unlocked, setUnlocked] = useState<Unlocked | null>(null);
-  const [viewing, setViewing] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<Viewing | null>(null);
   const [lockReason, setLockReason] = useState<LockReason | null>(null);
   const [shared, setShared] = useState<SharedAccount | null>(null);
   const [session] = useState(() =>

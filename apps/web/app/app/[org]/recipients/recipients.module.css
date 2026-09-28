@@ -1,5 +1,12 @@
 /* The recipients page, built on the app tokens: no approved design exists for it (13 A38); the table
    follows the design's recipients table in the payroll page. */
+/* The wallet and keys cards, one above the other in the right column. */
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
 .tableCard {
   grid-column: 1 / -1;
   min-width: 0;

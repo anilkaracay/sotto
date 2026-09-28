@@ -8,7 +8,12 @@
 //   (step 1.7): keys derived from its signature could not be derived again;
 // - Token-2022 accounts with a confidential extension: balances encrypted to given keys, or zero
 //   ciphertexts for checks of public fields, and their account data.
-import { AccountState, getTokenEncoder, type Token } from "@solana-program/token-2022";
+import {
+  AccountState,
+  getMintEncoder,
+  getTokenEncoder,
+  type Token,
+} from "@solana-program/token-2022";
 import {
   compileTransaction,
   decompileTransactionMessage,
@@ -194,4 +199,25 @@ export function confidentialTokenAccount(input: {
 /** A Token-2022 account as the bytes an RPC returns for it. */
 export function encodeToken2022Account(token: Token): Uint8Array {
   return new Uint8Array(getTokenEncoder().encode(token));
+}
+
+/** A Token-2022 mint with confidential transfers and no auditor (D-01), as the bytes an RPC returns. */
+export function encodeConfidentialMint(input: { decimals: number }): Uint8Array {
+  return new Uint8Array(
+    getMintEncoder().encode({
+      mintAuthority: none(),
+      supply: 0n,
+      decimals: input.decimals,
+      isInitialized: true,
+      freezeAuthority: none(),
+      extensions: some([
+        {
+          __kind: "ConfidentialTransferMint",
+          authority: none(),
+          autoApproveNewAccounts: true,
+          auditorElgamalPubkey: none(),
+        },
+      ]),
+    }),
+  );
 }

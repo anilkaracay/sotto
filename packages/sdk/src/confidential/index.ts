@@ -9,4 +9,6 @@ export {
   type DecryptedBalance,
 } from "./account.ts";
 export { readConfidentialBalance, type ConfidentialBalance } from "./balance.ts";
+export { checkProofProgram, type ProofProgramCheck } from "./health.ts";
+export { confidentialTransferPlan, type ConfidentialTransferPlan } from "./transfer.ts";
 export * from "./public.ts";

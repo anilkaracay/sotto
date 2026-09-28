@@ -685,6 +685,66 @@ describe("confidential transfers in the vault (step 1.9)", () => {
     ).toMatchObject({ error: { code: "no_plan" } });
   });
 
+  it("AC-09.1 builds a withdraw plan with the held keys in both versions, and refuses more than the available balance", async () => {
+    const vault = createVault(loadVaultModules, { rent: async () => 1_000_000n });
+    const owner = await testWallet(CLI_SEED);
+    const signature = await owner.sign(confidentialKeysMessage());
+    const keys = await deriveStandardKeys(owner.address, signature);
+    const account = encodeToken2022Account(
+      encryptedTokenAccount({
+        owner: owner.address,
+        mint: MINT,
+        keys,
+        available: 20_000_000n,
+        pending: 0n,
+      }),
+    );
+    const request = (id: number, amount: string, version: 0 | 1) =>
+      vault.handle({
+        id,
+        type: "withdrawPlan",
+        token: address("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"),
+        account: account.slice().buffer,
+        mint: MINT,
+        decimals: 6,
+        amount,
+        version,
+      });
+    expect(await request(1, "3000000", 1)).toMatchObject({ error: { code: "not_unlocked" } });
+    await vault.handle({
+      id: 2,
+      type: "unlock",
+      wallet: owner.address,
+      signature: new Uint8Array(signature).buffer,
+    });
+    for (const [version, variant] of [
+      [1, "inline"],
+      [0, "record"],
+    ] as const) {
+      const planned = await request(3 + version, "3000000", version);
+      if (!("ok" in planned) || !planned.ok || !("planId" in planned.result)) {
+        throw new Error("no withdraw plan");
+      }
+      const plan = planned.result;
+      expect(plan.variant).toBe(variant);
+      expect(plan.availableBefore).toBe(20_000_000n);
+      expect(plan.transactions.filter((t) => t.role === "transfer")).toHaveLength(1);
+      expect(plan.signers.length).toBeGreaterThanOrEqual(2);
+      expect(plan.signers).not.toContain(owner.address);
+      const serialized = JSON.stringify(plan, (_, value: unknown) =>
+        typeof value === "bigint" ? value.toString() : value,
+      );
+      for (const secret of [signature, keys.elgamalSecretKey, keys.aeKey]) {
+        expect(serialized).not.toContain(hex(secret));
+        expect(serialized).not.toContain(b64(secret));
+      }
+      await vault.handle({ id: 10 + version, type: "endPlan", planId: plan.planId });
+    }
+    expect(await request(20, "20000001", 1)).toMatchObject({
+      error: { code: "insufficient_balance" },
+    });
+  });
+
   it("answers the worker's rent question with the page's reader while a plan is built", async () => {
     const { worker, posted } = fakeWorker();
     const client = new CryptoWorkerClient(worker);

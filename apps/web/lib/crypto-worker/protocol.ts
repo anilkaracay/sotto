@@ -40,6 +40,18 @@ export type WorkerRequest =
       amount: string;
       version: 0 | 1;
     }
+  /** Step 1.10: a withdraw plan (available to public wUSDC) from the account data just read. */
+  | {
+      id: number;
+      type: "withdrawPlan";
+      token: string;
+      account: ArrayBuffer;
+      mint: string;
+      decimals: number;
+      /** Base units, as a decimal string. */
+      amount: string;
+      version: 0 | 1;
+    }
   /** Step 1.9: the plan's own signatures over a transaction the wallet signed (wire bytes). */
   | { id: number; type: "cosign"; planId: string; transaction: ArrayBuffer }
   /** Step 1.9: drops the plan's keypairs once it is done. */

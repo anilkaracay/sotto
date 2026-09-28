@@ -3,9 +3,22 @@
 // comes from this process's environment, which wins over apps/web/.env.local in Next.js (14 section 2).
 // With --localnet (the localnet specs, step 1.7) the app runs on the bootstrapped local validator:
 // NEXT_PUBLIC_CLUSTER localnet, its RPC URL and the local USDC mint from .localnet/bootstrap.json.
-import { spawn } from "node:child_process";
+// Since step 1.9 --localnet also runs the worker's job loop on that validator and database (payment
+// settlement, the proof program check, readiness, attestations with the bootstrap's SAS signer). The
+// worker runs from a copy without apps/worker/.env.local, whose values would win over this
+// environment (14 section 2), as the worker's start test does.
+import { spawn, type ChildProcess } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import {
+  cpSync,
+  copyFileSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { admins } from "@sotto/db";
@@ -14,17 +27,26 @@ import { E2E_ADMIN_WALLET } from "./fixtures.ts";
 
 const PORT = 3200;
 const WEB = fileURLToPath(new URL("../../apps/web", import.meta.url));
+const WORKER = fileURLToPath(new URL("../../apps/worker", import.meta.url));
 
 if (!existsSync(join(WEB, ".next", "BUILD_ID"))) {
   console.error("error: apps/web has no production build; run pnpm build first");
   process.exit(1);
 }
 
+type Bootstrap = {
+  rpcUrl: string;
+  usdcMint: string;
+  sas: { signerKeypair: string; credential: string; schema: string };
+};
+
+const localnet = process.argv.includes("--localnet");
 const chain: Record<string, string> = { RPC_URL: "http://127.0.0.1:8899" };
-if (process.argv.includes("--localnet")) {
-  const bootstrap = JSON.parse(
+let bootstrap: Bootstrap | null = null;
+if (localnet) {
+  bootstrap = JSON.parse(
     readFileSync(new URL("../../.localnet/bootstrap.json", import.meta.url), "utf8"),
-  ) as { rpcUrl: string; usdcMint: string };
+  ) as Bootstrap;
   chain.RPC_URL = bootstrap.rpcUrl;
   chain.NEXT_PUBLIC_CLUSTER = "localnet";
   chain.LOCALNET_USDC_MINT = bootstrap.usdcMint;
@@ -50,11 +72,34 @@ const web = spawn(
   },
 );
 
+let worker: ChildProcess | null = null;
+let workerDir: string | null = null;
+if (bootstrap) {
+  workerDir = mkdtempSync(join(tmpdir(), "sotto-e2e-worker-"));
+  cpSync(join(WORKER, "src"), join(workerDir, "src"), { recursive: true });
+  copyFileSync(join(WORKER, "package.json"), join(workerDir, "package.json"));
+  symlinkSync(join(WORKER, "node_modules"), join(workerDir, "node_modules"), "dir");
+  worker = spawn(process.execPath, [join(workerDir, "src", "index.ts")], {
+    stdio: "inherit",
+    env: {
+      PATH: process.env.PATH ?? "",
+      RPC_URL: bootstrap.rpcUrl,
+      DATABASE_URL: database.url,
+      SAS_SIGNER_KEYPAIR: bootstrap.sas.signerKeypair,
+      SAS_CREDENTIAL_ADDRESS: bootstrap.sas.credential,
+      SAS_SCHEMA_ADDRESS: bootstrap.sas.schema,
+      LOCALNET_USDC_MINT: bootstrap.usdcMint,
+    },
+  });
+}
+
 let stopping = false;
 async function stop(code: number): Promise<void> {
   if (stopping) return;
   stopping = true;
   web.kill("SIGTERM");
+  worker?.kill("SIGTERM");
+  if (workerDir) rmSync(workerDir, { recursive: true, force: true });
   await database.drop().catch(() => {});
   process.exit(code);
 }

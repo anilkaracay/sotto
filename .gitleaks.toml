@@ -17,3 +17,10 @@ regexes = [
   # ElGamal public key of the step 1.5 CLI check test keypair (A11); tests compare derived keys with it.
   '''^BxMVLbjVntF9DJtDjfpQLrgw4hopedMgNkZZKGcVkZp6$''',
 ]
+
+[[allowlists]]
+description = "Fixed uuids of test data (step 1.9): the generic-api-key rule flags a uuid named idempotency_key"
+regexes = [
+  # A made up uuid in packages/sdk/test/approvals.test.ts (also an org id in apps/web tests).
+  '''^7c2a9e41-1b2c-4f0e-8a77-3d5e6f708192$''',
+]

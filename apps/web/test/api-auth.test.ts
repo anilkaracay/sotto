@@ -188,11 +188,19 @@ describe("F-01 sign in", () => {
   it("AC-01.2 limits sign in requests per client IP", async () => {
     const wallet = await newWallet();
     const statuses: number[] = [];
-    for (let i = 0; i < 21; i++) {
-      const response = await nonce(
-        post("/api/auth/nonce", { wallet: wallet.address }, { "x-forwarded-for": "192.0.2.77" }),
-      );
-      statuses.push(response.status);
+    // The limits count in fixed one minute windows: the clock stays one second into a window, so the
+    // 21 requests cannot straddle two of them however slowly they run.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Math.floor(Date.now() / 60_000) * 60_000 + 1_000);
+    try {
+      for (let i = 0; i < 21; i++) {
+        const response = await nonce(
+          post("/api/auth/nonce", { wallet: wallet.address }, { "x-forwarded-for": "192.0.2.77" }),
+        );
+        statuses.push(response.status);
+      }
+    } finally {
+      vi.useRealTimers();
     }
     expect(statuses.slice(0, 20).every((status) => status === 200)).toBe(true);
     expect(statuses[20]).toBe(429);

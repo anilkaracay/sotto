@@ -42,6 +42,8 @@ export type LocalnetBootstrap = {
   usdcDecimals: number;
   wrappedUsdcMint: Address;
   escrow: Address;
+  /** The throwaway SAS signer (funded) and its credential and schema (scripts/bootstrap-localnet.ts). */
+  sas: { signer: Address; signerKeypair: string; credential: Address; schema: Address };
 };
 
 const DEFAULT_BOOTSTRAP = new URL("../../../../.localnet/bootstrap.json", import.meta.url);

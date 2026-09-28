@@ -7,14 +7,20 @@
 //   has recorded the wallet name and the changed values (never amounts);
 // - anything else: refuse with "Your wallet changed this transaction. It was not sent."
 // The caller hears every comparison through onSignedMessage, so the wallet name reaches the log in
-// each case (the check itself never looks at the wallet name, D-26).
+// each case (the check itself never looks at the wallet name, D-26). Since step 1.9 a transaction can
+// need other signers too (the proof context and record accounts a confidential transfer creates):
+// `cosign` adds their signatures to the message the wallet returned, after the check, so a budget
+// change by the wallet cannot invalidate them.
 import {
   assertIsFullySignedTransaction,
   assertIsTransactionWithinSizeLimit,
   compileTransaction,
   getBase64EncodedWireTransaction,
   getSignatureFromTransaction,
+  type Address,
   type Instruction,
+  type SignatureBytes,
+  type Transaction,
   type TransactionModifyingSigner,
 } from "@solana/kit";
 import type { TransactionVersionChoice } from "./budget.ts";
@@ -53,6 +59,10 @@ export async function sendWithWallet(options: {
   confirmTimeoutMs?: number;
   /** Waits for `finalized` after `confirmed` (the settled state). */
   finalize?: boolean;
+  /** Signatures of the other signers the message needs, over the message the wallet signed. */
+  cosign?: (transaction: Transaction) => Promise<Readonly<Record<Address, SignatureBytes>>>;
+  /** Hears the signature before the transaction is sent (the executions record, 08 section 3). */
+  onSignature?: (signature: string) => void | Promise<void>;
 }): Promise<WalletSendResult> {
   const { rpc, wallet } = options;
   const { message, prepared } = await prepareTransaction({
@@ -65,14 +75,21 @@ export async function sendWithWallet(options: {
       : { priorityFeeCapMicroLamports: options.priorityFeeCapMicroLamports }),
   });
   const built = compileTransaction(message);
-  const [signed] = await wallet.modifyAndSignTransactions([built]);
-  if (!signed) throw new Error("the wallet returned no signed transaction");
-  const comparison = compareSignedMessage(built.messageBytes, signed.messageBytes);
+  const [walletSigned] = await wallet.modifyAndSignTransactions([built]);
+  if (!walletSigned) throw new Error("the wallet returned no signed transaction");
+  const comparison = compareSignedMessage(built.messageBytes, walletSigned.messageBytes);
   await options.onSignedMessage?.(comparison);
   if (comparison.kind === "changed") throw new WalletChangedTransactionError(comparison.reason);
+  const signed = options.cosign
+    ? {
+        ...walletSigned,
+        signatures: { ...walletSigned.signatures, ...(await options.cosign(walletSigned)) },
+      }
+    : walletSigned;
   assertIsFullySignedTransaction(signed);
   assertIsTransactionWithinSizeLimit(signed);
   const signature = getSignatureFromTransaction(signed);
+  await options.onSignature?.(signature);
   await rpc
     .sendTransaction(getBase64EncodedWireTransaction(signed), {
       encoding: "base64",

@@ -6,6 +6,8 @@
 #   loaded at the same program ID as on devnet.
 # - The Solana Attestation Service program is cloned from devnet (facts E3), for the SAS bootstrap and
 #   the worker's localnet test.
+# - The SPL Record program is cloned from devnet (step 1.9): a confidential transfer in a version 0
+#   transaction stages its range proof in a record account (06 section 5).
 # - All feature gates are active at genesis, so the ZK ElGamal Proof program is enabled (facts B6).
 # Runs in the foreground. Extra arguments are passed to solana-test-validator.
 set -euo pipefail
@@ -14,6 +16,7 @@ REQUIRED_VALIDATOR_VERSION="4.2.2"
 DEVNET_URL="https://api.devnet.solana.com"
 TOKEN_2022_PROGRAM="TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
 SAS_PROGRAM="22zoJMtdu4tQc2PzL74ZUT7FrwgB1Udec8DdW4yw4BdG"
+RECORD_PROGRAM="recr1L3PCGKLbckBqMNcJhuuyU1zgo8nBhfLVsJNwr5"
 TOKEN_WRAP_PROGRAM="EEvqpjNRQkNRwXzVziuTGGi1wYDiPv7haYVVu3XZCoQn"
 # Upgrade authority recorded for the devnet deployment (wallet A, public key only).
 TOKEN_WRAP_UPGRADE_AUTHORITY="7SSpLJh516AbWiV5GM7ooZFTHoQN64pdohYxbDs3Gq4L"
@@ -36,5 +39,6 @@ exec solana-test-validator --reset --quiet \
   --url "$DEVNET_URL" \
   --clone-upgradeable-program "$TOKEN_2022_PROGRAM" \
   --clone-upgradeable-program "$SAS_PROGRAM" \
+  --clone-upgradeable-program "$RECORD_PROGRAM" \
   --upgradeable-program "$TOKEN_WRAP_PROGRAM" "$TOKEN_WRAP_SO" "$TOKEN_WRAP_UPGRADE_AUTHORITY" \
   "$@"

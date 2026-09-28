@@ -6,6 +6,7 @@
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   char,
   check,
   date,
@@ -345,6 +346,16 @@ export const payments = pgTable(
       .notNull()
       .references(() => recipients.id),
     idempotencyKey: text("idempotency_key").notNull().unique(),
+    /** Step 1.9: the member who created the payment; their execution counts as an approval (Q-11). */
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id),
+    /**
+     * Step 1.9: a single payment's amount and memo, sealed in the owner's browser to the owner's viewing
+     * key (07 section 2); its SHA-256 is part of the approval contents (D-04). Payroll lines use the
+     * run's blob.
+     */
+    privateBlob: bytea("private_blob"),
     status: paymentStatus("status").notNull().default("draft"),
     signatures: text("signatures")
       .array()
@@ -375,6 +386,11 @@ export const paymentAttempts = pgTable(
       .default(sql`'{}'::text[]`),
     status: paymentAttemptStatus("status").notNull(),
     errorCode: text("error_code"),
+    /**
+     * Step 1.9: the signature of the attempt's transaction that holds the transfer instruction; the
+     * confirm-executions job settles the payment when it is finalized.
+     */
+    transferSignature: text("transfer_signature"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
   },
   (t) => [
@@ -382,6 +398,18 @@ export const paymentAttempts = pgTable(
     check("payment_attempts_attempt_no_min", sql`${t.attemptNo} >= 1`),
   ],
 );
+
+/**
+ * Step 1.9 (F-19, AC-19.1): the worker's proof-program-health job records per cluster whether the ZK
+ * ElGamal Proof program verified a simulated proof; payment authorization needs a recent success.
+ */
+export const clusterHealth = pgTable("cluster_health", {
+  cluster: clusterName("cluster").primaryKey(),
+  proofProgramOk: boolean("proof_program_ok").notNull(),
+  /** Why the check failed (the simulation error), never secrets. */
+  detail: text("detail"),
+  checkedAt: timestamptz("checked_at").notNull(),
+});
 
 /** Q-11: kind message needs the signed message; kind execution needs the execution signature. */
 export const approvals = pgTable(

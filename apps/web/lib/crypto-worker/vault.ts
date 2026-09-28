@@ -4,19 +4,30 @@
 // instruction. It answers with public keys, status, balances for display and public instruction
 // data only. The SDK modules (and with them the zk-sdk WASM) load on the first request, so the worker
 // is ready before the WASM is. The vault makes no network calls: the page reads the chain and passes
-// account data in.
+// account data in. Since step 1.9 it builds confidential transfer plans (06 section 5): it keeps the
+// keypairs of the accounts a plan creates until the page ends the plan or the keys lock, and signs
+// with them over transactions the wallet already signed; rent comes from the page.
 import type { ConfidentialKeyMaterial, ViewingKeyMaterial } from "@sotto/sdk/keys";
-import { address, createNoopSigner, getBase64Decoder } from "@solana/kit";
+import {
+  address,
+  createNoopSigner,
+  getBase64Decoder,
+  getTransactionDecoder,
+  type KeyPairSigner,
+} from "@solana/kit";
 import type {
   ApplyInstructionResult,
   CheckAccountResult,
   ClearResult,
   ConfirmSignatureResult,
+  CosignResult,
   DecryptResult,
+  EndPlanResult,
   OpenSealedResult,
   SealResult,
   SetupInstructionsResult,
   StatusResult,
+  TransferPlanResult,
   UnlockResult,
   ViewingResult,
   WorkerErrorCode,
@@ -54,7 +65,12 @@ async function sha256(bytes: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.digest("SHA-256", new Uint8Array(bytes)));
 }
 
-export function createVault(load: () => Promise<VaultModules>) {
+export type VaultOptions = {
+  /** The rent exempt minimum for an account size, asked of the page (step 1.9). */
+  rent?: (space: bigint) => Promise<bigint>;
+};
+
+export function createVault(load: () => Promise<VaultModules>, options: VaultOptions = {}) {
   let modules: Promise<VaultModules> | null = null;
   const sdk = () => (modules ??= load());
   let wallet: string | null = null;
@@ -65,6 +81,8 @@ export function createVault(load: () => Promise<VaultModules>) {
    */
   let unlockDigest: Uint8Array | null = null;
   let viewing: ViewingKeyMaterial | null = null;
+  /** Step 1.9: the signers of each open transfer plan, by plan id. */
+  const plans = new Map<string, KeyPairSigner[]>();
 
   async function forWallet(next: string): Promise<VaultModules> {
     const loaded = await sdk();
@@ -80,6 +98,7 @@ export function createVault(load: () => Promise<VaultModules>) {
     confidential = null;
     unlockDigest = null;
     viewing = null;
+    plans.clear();
   }
 
   /** The unlocked wallet and its keys, or not_unlocked. */
@@ -212,6 +231,63 @@ export function createVault(load: () => Promise<VaultModules>) {
     }
   }
 
+  /** Step 1.9: a confidential transfer plan from the page's fresh account data (06 section 5). */
+  async function transferPlan(
+    request: Extract<WorkerRequest, { type: "transferPlan" }>,
+  ): Promise<TransferPlanResult> {
+    const loaded = await sdk();
+    const { owner, keys } = held();
+    const rent = options.rent;
+    if (!rent) throw new VaultError("failed", "The worker has no way to ask for rent");
+    const plan = await loaded.confidentialTransferPlan({
+      owner: address(owner),
+      sourceToken: address(request.sourceToken),
+      sourceTokenAccount: loaded.decodeToken2022Account(new Uint8Array(request.sourceAccount)),
+      destinationToken: address(request.destinationToken),
+      destinationTokenAccount: loaded.decodeToken2022Account(
+        new Uint8Array(request.destinationAccount),
+      ),
+      mint: address(request.mint),
+      mintAccount: loaded.decodeToken2022Mint(new Uint8Array(request.mintAccount)),
+      amount: BigInt(request.amount),
+      keys,
+      version: request.version,
+      rent,
+    });
+    const planId = crypto.randomUUID();
+    plans.set(planId, plan.signers);
+    return {
+      planId,
+      variant: plan.variant,
+      transactions: plan.transactions,
+      cleanup: plan.cleanup,
+      signers: plan.signers.map((signer) => signer.address),
+      availableBefore: plan.availableBefore,
+    };
+  }
+
+  /** Step 1.9: the plan's signatures over a transaction the wallet signed, for the signers it needs. */
+  async function cosign(planId: string, wire: Uint8Array): Promise<CosignResult> {
+    const signers = plans.get(planId);
+    if (!signers) throw new VaultError("no_plan", "This transfer plan has ended");
+    const transaction = getTransactionDecoder().decode(wire);
+    const signatures: Record<string, Uint8Array> = {};
+    for (const signer of signers) {
+      if (!(signer.address in transaction.signatures)) continue;
+      const [dictionary] = await signer.signTransactions([
+        transaction as Parameters<KeyPairSigner["signTransactions"]>[0][number],
+      ]);
+      const signature = dictionary?.[signer.address];
+      if (signature) signatures[signer.address] = new Uint8Array(signature);
+    }
+    return { signatures };
+  }
+
+  function endPlan(planId: string): EndPlanResult {
+    plans.delete(planId);
+    return { ended: true };
+  }
+
   /** Zeroes and drops every key; the worker is terminated right after (key-session.ts). */
   async function clearAll(): Promise<ClearResult> {
     if (modules) clear(await sdk());
@@ -247,6 +323,12 @@ export function createVault(load: () => Promise<VaultModules>) {
         return seal(new Uint8Array(request.publicKey), request.value);
       case "openSealed":
         return openSealed(new Uint8Array(request.ciphertext));
+      case "transferPlan":
+        return transferPlan(request);
+      case "cosign":
+        return cosign(request.planId, new Uint8Array(request.transaction));
+      case "endPlan":
+        return endPlan(request.planId);
     }
   }
 

@@ -46,9 +46,18 @@ export type TokenAccountState =
       confidential: ConfidentialState | null;
     };
 
+export type ConfidentialAccountErrorReason =
+  | "wrong_owner"
+  | "not_confidential"
+  | "key_mismatch"
+  /** Step 1.9: the recipient's account cannot receive this confidential transfer now. */
+  | "recipient_not_ready"
+  /** Step 1.9: the available balance is below the amount. */
+  | "insufficient_balance";
+
 export class ConfidentialAccountError extends Error {
-  readonly reason: "wrong_owner" | "not_confidential" | "key_mismatch";
-  constructor(reason: "wrong_owner" | "not_confidential" | "key_mismatch", message: string) {
+  readonly reason: ConfidentialAccountErrorReason;
+  constructor(reason: ConfidentialAccountErrorReason, message: string) {
     super(message);
     this.name = "ConfidentialAccountError";
     this.reason = reason;
@@ -69,6 +78,11 @@ export function confidentialExtension(token: Token) {
  */
 export function decodeToken2022Account(data: Uint8Array): Token {
   return getToken2022Decoder().decode(data);
+}
+
+/** A Token-2022 mint's data, decoded (step 1.9: the transfer plan reads its auditor setting). */
+export function decodeToken2022Mint(data: Uint8Array) {
+  return getMint2022Decoder().decode(data);
 }
 
 /**

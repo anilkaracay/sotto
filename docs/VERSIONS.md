@@ -293,3 +293,22 @@ scripts/localnet.sh &  node scripts/bootstrap-localnet.ts                       
 SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/worker test:localnet    # includes recipient-readiness
 pnpm build && scripts/db-local.sh test-up && pnpm --filter @sotto/e2e e2e:localnet        # includes the recipients spec (fresh validator)
 ```
+
+## Step 1.9 (2026-09-28): single confidential payment
+
+No new package versions: `@solana-program/record` 0.5.0 (the Record program client) is used through `@solana-program/token-2022` 0.19.0, which depends on it; Sotto imports none of it directly.
+
+| Item | Version | Resolved on | Source | Notes |
+|---|---|---|---|---|
+| Database migration | `0004_payment_execution` | 2026-09-28 | `packages/db/migrations` (drizzle-kit 0.31.11 generate) | `payments.created_by`, `payments.private_blob`, `payment_attempts.transfer_signature`, the `cluster_health` table |
+| New SDK entry | `@sotto/sdk/approvals` | 2026-09-28 | `packages/sdk/package.json` | The approval message and contents hash (D-04), no WASM |
+| SPL Record program on localnet | `recr1L3PCGKLbckBqMNcJhuuyU1zgo8nBhfLVsJNwr5`, cloned from devnet | 2026-09-28 | `scripts/localnet.sh` (`--clone-upgradeable-program`) | Version 0 confidential transfers stage the range proof in a record account (facts H9) |
+
+Commands:
+
+```sh
+scripts/localnet.sh &  node scripts/bootstrap-localnet.ts                                  # fresh validator and bootstrap
+SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/sdk test:localnet       # includes the transfer and its forced failure
+SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/worker test:localnet    # includes proof-program-health
+pnpm build && scripts/db-local.sh test-up && pnpm --filter @sotto/e2e e2e:localnet        # includes the payments spec, with the worker running
+```

@@ -1,5 +1,6 @@
 // The key free part of the confidential accounts module: public state reads, the confidential
-// deposit, wrap and deposit in one transaction, and token amounts. No zk-sdk, so pages, servers and
+// deposit, wrap and deposit in one transaction, token amounts, and since step 1.9 sending a transfer
+// plan's transactions and closing its proof accounts. No zk-sdk, so pages, servers and
 // the worker load it without the WASM.
 export { formatTokenAmount, parseTokenAmount } from "./amounts.ts";
 export { fundingTransactions, wrapAndDepositTransactions, type WrapAndDeposit } from "./funding.ts";
@@ -13,6 +14,7 @@ export {
   confidentialExtension,
   creditCounterNeedsApply,
   decodeToken2022Account,
+  decodeToken2022Mint,
   readMintInfo,
   readPublicTokenBalance,
   readTokenAccountState,
@@ -26,3 +28,10 @@ export {
   type RecipientReadiness,
   type TokenAccountState,
 } from "./state.ts";
+export {
+  closeProofAccounts,
+  sendTransferTransactions,
+  TransferStepError,
+  type SendableTransaction,
+  type TransferTransactionRole,
+} from "./transfer-send.ts";

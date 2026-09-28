@@ -2,6 +2,7 @@ export * from "./budget.ts";
 export * from "./compute-budget.ts";
 export * from "./errors.ts";
 export * from "./portable.ts";
+export * from "./plan.ts";
 export * from "./prepare.ts";
 export * from "./rpc.ts";
 export * from "./send-keypair.ts";

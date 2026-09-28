@@ -5,6 +5,16 @@ import { expect, type Page } from "@playwright/test";
 export const TEST_WALLET = fileURLToPath(new URL("./test-wallet.js", import.meta.url));
 
 /** Adds the test wallet to every page load, optionally with a fixed keypair (see fixtures.ts). */
+/**
+ * A client address for a browser context (TEST-NET-2, RFC 5737). The API's per IP limits key on the
+ * first x-forwarded-for entry (08 section 6); without one every local request shares a single bucket,
+ * so the specs, whose people sign in from one machine, give each context its own address, as
+ * separate users would have (step 1.9).
+ */
+export function clientAddress(): { "x-forwarded-for": string } {
+  return { "x-forwarded-for": `198.51.100.${1 + Math.floor(Math.random() * 254)}` };
+}
+
 export async function addTestWallet(page: Page, keypair?: number[]): Promise<void> {
   if (keypair) {
     await page.addInitScript({

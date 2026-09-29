@@ -7,13 +7,8 @@
 // wallet that changes a signed message, which stops the chunk before anything is sent (06 section 9).
 // Needs the bootstrapped localnet; skipped unless SOTTO_LOCALNET_RPC_URL is set (scripts/ci-local.sh
 // runs it in the localnet job).
+import { fetchToken } from "@solana-program/token-2022";
 import {
-  getDisableConfidentialCreditsInstruction,
-  getEnableConfidentialCreditsInstruction,
-  fetchToken,
-} from "@solana-program/token-2022";
-import {
-  createNoopSigner,
   fetchEncodedAccounts,
   type Address,
   type KeyPairSigner,
@@ -40,7 +35,7 @@ import {
   fundLocalnetAccount,
   newLocalnetOwner,
   readLocalnetBootstrap,
-  sendAsOwner,
+  setLocalnetConfidentialCredits,
   setUpLocalnetAccount,
   type LocalnetBootstrap,
   type LocalnetOwner,
@@ -235,15 +230,7 @@ describe.skipIf(!RPC_URL)("payroll chunks on localnet", () => {
       const pendingBefore = await Promise.all(people.map(pendingOf));
       const before = await availableOf(owner);
       const twelfth = people[11] as LocalnetOwner;
-      const credits = (on: boolean) =>
-        sendAsOwner(rpc, twelfth, [
-          (on ? getEnableConfidentialCreditsInstruction : getDisableConfidentialCreditsInstruction)(
-            {
-              token: twelfth.wusdc,
-              authority: createNoopSigner(twelfth.signer.address),
-            },
-          ),
-        ]);
+      const credits = (on: boolean) => setLocalnetConfidentialCredits(rpc, twelfth, on);
       const closedChecks: string[][] = [];
       const recorded: string[] = [];
       const budgets = new BudgetMemory();

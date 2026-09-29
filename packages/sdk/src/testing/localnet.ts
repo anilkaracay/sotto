@@ -8,7 +8,11 @@ import {
   getMintToInstruction,
   TOKEN_PROGRAM_ADDRESS,
 } from "@solana-program/token";
-import { fetchToken } from "@solana-program/token-2022";
+import {
+  fetchToken,
+  getDisableConfidentialCreditsInstruction,
+  getEnableConfidentialCreditsInstruction,
+} from "@solana-program/token-2022";
 import {
   createKeyPairSignerFromBytes,
   createNoopSigner,
@@ -245,4 +249,15 @@ export async function applyLocalnetPending(rpc: SolanaRpc, owner: LocalnetOwner)
       keys: owner.keys,
     }),
   ]);
+}
+
+/**
+ * The owner turns confidential credits of their wUSDC account off or on (step 2.3): a transfer to an
+ * account with credits off fails, which the payroll tests use to fail a chosen line.
+ */
+export function setLocalnetConfidentialCredits(rpc: SolanaRpc, owner: LocalnetOwner, on: boolean) {
+  const instruction = (
+    on ? getEnableConfidentialCreditsInstruction : getDisableConfidentialCreditsInstruction
+  )({ token: owner.wusdc, authority: createNoopSigner(owner.signer.address) });
+  return sendAsOwner(rpc, owner, [instruction]);
 }

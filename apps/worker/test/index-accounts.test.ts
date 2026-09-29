@@ -3,7 +3,9 @@
 // is recorded; the org owner's account is read oldest first, a failed transaction is skipped without
 // being fetched, a version 0 transaction with lookup tables is logged and skipped, only the deposits'
 // public amounts are stored; a transaction listed but not returned yet is read by the next pass, which
-// starts from the last one read; mainnet is not read during the beta (D-01). Real transactions of
+// starts from the last one read; a cursor the node has pruned is refused as `until` and the account is
+// listed back to the cursor's slot instead, and after that slot alone once nothing newer is found; an account whose reading fails does not stop the others;
+// mainnet is not read during the beta (D-01). Real transactions of
 // every flow, version 1 included, are read in index-accounts-localnet.test.ts.
 import { chainActivity, orgs, tokenAccounts, users } from "@sotto/db";
 import { createTestDatabase, type TestDatabase } from "@sotto/db/testing";
@@ -20,6 +22,7 @@ import {
   getAddressDecoder,
   getBase58Decoder,
   getBase64EncodedWireTransaction,
+  getSolanaErrorFromJsonRpcError,
   pipe,
   setTransactionMessageFeePayer,
   setTransactionMessageLifetimeUsingBlockhash,
@@ -79,9 +82,23 @@ function depositWire(owner: Address, account: Address, amount: bigint, other?: A
 
 type Listed = { signature: string; slot: bigint; err: unknown; wire: string | null };
 
-/** Lists `history` newest first, back to `until`; serves each transaction's wire, or none. */
-function fakeRpc(history: Listed[], genesis: string = GENESIS_HASHES.devnet) {
-  const calls = { genesis: 0, signatures: 0, transactions: [] as string[] };
+/**
+ * Lists `history` newest first, back to `until`, a page of `limit` before `before`; serves each
+ * transaction's wire, or none. Slots below `ledger.first` are pruned, as a node's cleanup does: they
+ * are not listed, and a signature of theirs as `until` is refused (JSON-RPC error -32020, facts M5).
+ * An address in `failing` fails; with `only`, other addresses have no history.
+ */
+function fakeRpc(
+  history: Listed[],
+  genesis: string = GENESIS_HASHES.devnet,
+  nodes: { ledger?: { first: bigint }; failing?: Set<string>; only?: string } = {},
+) {
+  const calls = {
+    genesis: 0,
+    signatures: 0,
+    transactions: [] as string[],
+    listings: [] as { target: string; until: string | null }[],
+  };
   const rpc = {
     getGenesisHash: () => ({
       send: async () => {
@@ -89,21 +106,41 @@ function fakeRpc(history: Listed[], genesis: string = GENESIS_HASHES.devnet) {
         return genesis;
       },
     }),
-    getSignaturesForAddress: (_: Address, options: { until?: string }) => ({
+    getSignaturesForAddress: (
+      target: Address,
+      options: { until?: string; before?: string; limit?: number },
+    ) => ({
       send: async () => {
         calls.signatures += 1;
-        const newestFirst = [...history].reverse();
+        calls.listings.push({ target, until: options.until ?? null });
+        if (nodes.failing?.has(target)) throw new Error("node unavailable");
+        if (nodes.only && target !== nodes.only) return [];
+        const first = nodes.ledger?.first ?? 0n;
+        let newestFirst = [...history].reverse().filter((entry) => entry.slot >= first);
+        if (options.until && !newestFirst.some((e) => e.signature === options.until)) {
+          throw getSolanaErrorFromJsonRpcError({
+            code: -32020,
+            message: `Transaction ${options.until} not found`,
+          });
+        }
+        if (options.before) {
+          newestFirst = newestFirst.slice(
+            newestFirst.findIndex((e) => e.signature === options.before) + 1,
+          );
+        }
         const stop = options.until
           ? newestFirst.findIndex((e) => e.signature === options.until)
           : -1;
-        return (stop === -1 ? newestFirst : newestFirst.slice(0, stop)).map((entry) => ({
-          signature: entry.signature,
-          slot: entry.slot,
-          err: entry.err,
-          blockTime: 1_790_000_000n + entry.slot,
-          confirmationStatus: "finalized",
-          memo: null,
-        }));
+        return (stop === -1 ? newestFirst : newestFirst.slice(0, stop))
+          .slice(0, options.limit ?? 1000)
+          .map((entry) => ({
+            signature: entry.signature,
+            slot: entry.slot,
+            err: entry.err,
+            blockTime: 1_790_000_000n + entry.slot,
+            confirmationStatus: "finalized",
+            memo: null,
+          }));
       },
     }),
     getTransaction: (signature: string) => ({
@@ -169,7 +206,7 @@ describe("index-accounts job", () => {
       transactions: 0,
       rows: 0,
     });
-    expect(calls).toEqual({ genesis: 0, signatures: 0, transactions: [] });
+    expect(calls).toEqual({ genesis: 0, signatures: 0, transactions: [], listings: [] });
   });
 
   it("AC-05.3 reads the account oldest first, skips failed and lookup table transactions, keeps only public amounts, and starts the next pass from the last one read", async () => {
@@ -224,6 +261,107 @@ describe("index-accounts job", () => {
       [13n, 5_000_000n],
     ]);
     expect(await job.run(context([]))).toEqual({ accounts: 1, transactions: 0, rows: 0 });
+  });
+
+  it("lists a pruned cursor's account back to the cursor's slot, then after that slot alone", async () => {
+    const { owner, account, orgId } = await orgAccount();
+    const deposit = (slot: bigint, amount: bigint): Listed => ({
+      signature: randomSignature(),
+      slot,
+      err: null,
+      wire: depositWire(owner, account, amount),
+    });
+    const [old, cursor, next, later] = [
+      deposit(20n, 1_000_000n),
+      deposit(21n, 2_000_000n),
+      deposit(22n, 4_000_000n),
+      deposit(23n, 5_000_000n),
+    ];
+    const history: Listed[] = [old, cursor];
+    const ledger = { first: 0n };
+    const { rpc, calls } = fakeRpc(history, GENESIS_HASHES.devnet, { ledger, only: account });
+    const job = indexAccountsJob({ db: database.db, rpc });
+    const stored = async () => {
+      const [row] = await database.db
+        .select({ until: tokenAccounts.indexedUntil, slot: tokenAccounts.indexedSlot })
+        .from(tokenAccounts)
+        .where(eq(tokenAccounts.address, account));
+      return row;
+    };
+    const pass = async () => {
+      const lines: string[] = [];
+      const result = await job.run(context(lines));
+      expect(lines).not.toContain("index_accounts_account_failed");
+      return {
+        ...result,
+        pruned: lines.filter((l) => l === "index_accounts_cursor_pruned").length,
+      };
+    };
+    expect(await pass()).toMatchObject({ transactions: 2, rows: 2, pruned: 0 });
+    expect(await stored()).toEqual({ until: cursor.signature, slot: 21n });
+
+    // The node prunes the cursor's slot; a newer transaction arrives and is read from the slot.
+    ledger.first = 22n;
+    history.push(next);
+    expect(await pass()).toMatchObject({ transactions: 1, rows: 1, pruned: 1 });
+    expect(await stored()).toEqual({ until: next.signature, slot: 22n });
+
+    // Pruned again with nothing newer: the signature is dropped once, then listing goes by the slot.
+    ledger.first = 23n;
+    expect(await pass()).toMatchObject({ transactions: 0, rows: 0, pruned: 1 });
+    expect(await stored()).toEqual({ until: null, slot: 22n });
+    const listings = calls.listings.length;
+    expect(await pass()).toMatchObject({ transactions: 0, rows: 0, pruned: 0 });
+    expect(calls.listings.slice(listings).filter((l) => l.target === account)).toEqual([
+      { target: account, until: null },
+    ]);
+    history.push(later);
+    expect(await pass()).toMatchObject({ transactions: 1, rows: 1, pruned: 0 });
+    expect(await stored()).toEqual({ until: later.signature, slot: 23n });
+
+    const amounts = await database.db
+      .select({ amount: chainActivity.publicAmountBaseUnits })
+      .from(chainActivity)
+      .where(eq(chainActivity.orgId, orgId))
+      .orderBy(asc(chainActivity.publicAmountBaseUnits));
+    expect(amounts.map((row) => row.amount)).toEqual([
+      1_000_000n,
+      2_000_000n,
+      4_000_000n,
+      5_000_000n,
+    ]);
+  });
+
+  it("goes on with the other accounts when one account's reading fails", async () => {
+    const broken = await orgAccount();
+    const working = await orgAccount();
+    const history: Listed[] = [
+      {
+        signature: randomSignature(),
+        slot: 30n,
+        err: null,
+        wire: depositWire(working.owner, working.account, 7_000_000n),
+      },
+    ];
+    const { rpc } = fakeRpc(history, GENESIS_HASHES.devnet, {
+      failing: new Set([broken.account]),
+      only: working.account,
+    });
+    const lines: string[] = [];
+    await indexAccountsJob({ db: database.db, rpc }).run(context(lines));
+    expect(lines.filter((line) => line === "index_accounts_account_failed")).toHaveLength(1);
+    const rows = await database.db
+      .select({ amount: chainActivity.publicAmountBaseUnits })
+      .from(chainActivity)
+      .where(eq(chainActivity.orgId, working.orgId));
+    expect(rows.map((row) => row.amount)).toEqual([7_000_000n]);
+    // The failing account was still marked read, so it does not hold the queue's head.
+    const [marked] = await database.db
+      .select({ at: tokenAccounts.indexedAt, until: tokenAccounts.indexedUntil })
+      .from(tokenAccounts)
+      .where(eq(tokenAccounts.address, broken.account));
+    expect(marked?.at).not.toBeNull();
+    expect(marked?.until).toBeNull();
   });
 
   it("does not read mainnet during the beta (D-01)", async () => {

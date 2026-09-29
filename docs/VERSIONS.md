@@ -313,3 +313,12 @@ SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/sdk test:local
 SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/worker test:localnet    # includes proof-program-health
 pnpm build && scripts/db-local.sh test-up && pnpm --filter @sotto/e2e e2e:localnet        # includes the payments spec, with the worker running
 ```
+
+## Step 2.6 (2026-09-29): the indexer's pruned cursor
+
+No new package versions.
+
+| Item | Version | Resolved on | Source | Notes |
+|---|---|---|---|---|
+| Database migration | `0008_indexer_cursor_slot` | 2026-09-29 | `packages/db/migrations` (drizzle-kit 0.31.11 generate) | `token_accounts.indexed_slot`, the slot of the index-accounts cursor |
+

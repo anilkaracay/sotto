@@ -1,0 +1,1 @@
+ALTER TABLE "token_accounts" ADD COLUMN "indexed_slot" bigint;

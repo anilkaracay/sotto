@@ -358,39 +358,56 @@ export async function runPayroll(options: {
         const lines = chunk.lines
           .map((paid) => byId.get(paid.payment.id))
           .filter((line): line is RunLine => line !== undefined);
-        // 06 section 7: the balance is the one the chunk's plans were built toward.
+        // 06 section 7: the balance is the one the chunk's plans were built toward. A check that
+        // cannot run now (the network) records nothing rather than a verdict.
         if (chunk.availableAfter !== null) {
-          const after = await readAccount(sourceToken);
-          const ok =
-            after !== null &&
-            (await options.worker().decrypt(after)).available === chunk.availableAfter;
-          await callApi(`/api/orgs/${orgId}/payroll-runs/${runId}/executions`, {
-            method: "POST",
-            body: { status: "integrity", ok },
-          }).catch(() => undefined);
+          try {
+            const after = await readAccount(sourceToken);
+            const ok =
+              after !== null &&
+              (await options.worker().decrypt(after)).available === chunk.availableAfter;
+            await callApi(`/api/orgs/${orgId}/payroll-runs/${runId}/executions`, {
+              method: "POST",
+              body: { status: "integrity", ok },
+            });
+          } catch {
+            // No verdict.
+          }
         }
+        // X-33: the chunk's records once it is final; if that cannot be done now, the run page and a
+        // resume save the missing ones later.
         onProgress(`Waiting for ${lineWords(lines)} to settle on Solana…`);
-        const last = chunk.lines.at(-1);
-        if (last) {
-          await waitForConfirmation(rpc, last.transferSignature as Signature, 120_000, "finalized");
+        let saved: DisclosureResult;
+        try {
+          const last = chunk.lines.at(-1);
+          if (last) {
+            await waitForConfirmation(
+              rpc,
+              last.transferSignature as Signature,
+              120_000,
+              "finalized",
+            );
+          }
+          onProgress(
+            `Saving the records of ${lineWords(lines)}, encrypted for you and each recipient…`,
+          );
+          saved = await discloseLines({
+            orgId,
+            lines: chunk.lines.map((paid) => ({
+              line: byId.get(paid.payment.id) as RunLine,
+              transferSignature: paid.transferSignature,
+            })),
+            owner: options.owner,
+            connected,
+            worker: options.worker,
+          });
+        } catch {
+          saved = {
+            saved: 0,
+            ownerOnly: 0,
+            problem: "The payroll records could not be saved yet; open the run again to save them.",
+          };
         }
-        onProgress(
-          `Saving the records of ${lineWords(lines)}, encrypted for you and each recipient…`,
-        );
-        const saved = await discloseLines({
-          orgId,
-          lines: chunk.lines.map((paid) => ({
-            line: byId.get(paid.payment.id) as RunLine,
-            transferSignature: paid.transferSignature,
-          })),
-          owner: options.owner,
-          connected,
-          worker: options.worker,
-        }).catch((): DisclosureResult => ({
-          saved: 0,
-          ownerOnly: 0,
-          problem: "The payroll records could not be saved; open the run again to save them.",
-        }));
         records = mergeRecords(records, saved);
       },
       confirmTimeoutMs: 60_000,
@@ -416,7 +433,11 @@ export async function runPayroll(options: {
     const step = stopped.step
       ? ` failed while ${ROLE_WORDS[stopped.step.role]}`
       : " did not complete";
-    const reason = describeTransactionError(cause, connected.info.name);
+    // A record the server refused (for example a run the worker stopped meanwhile) says why itself.
+    const reason =
+      cause instanceof ApiCallError
+        ? `${cause.message}.`
+        : describeTransactionError(cause, connected.info.name);
     if (line && stopped.signatures.length > 0) {
       await callApi(`/api/orgs/${orgId}/payroll-runs/${runId}/lines/${line.line.id}/executions`, {
         method: "POST",

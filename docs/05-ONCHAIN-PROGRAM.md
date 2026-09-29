@@ -106,7 +106,7 @@ Built in step 2.7 (`cargo test --locked -p sotto_proofs`, after `cargo-build-sbf
 - every error: `tests/verify.rs` (checks 1 to 10, `NotExpired` and `Unauthorized` for the close) and `tests/config.rs` (`Unauthorized` for `initialize_config`, also for an immutable program, and for `set_paused`);
 - a balance that changed after the proofs: `CiphertextMismatch` in `tests/verify.rs` (another ciphertext) and on localnet (1 wUSDC more deposited and applied);
 - contexts verified by the ZK ElGamal Proof program for another authority: `WrongContextAuthority`, both contexts;
-- contexts owned by the deprecated ZK Token Proof program `ZkTokenProof1111111111111111111111111111111`, Token-2022, the System Program or `sotto_proofs` itself: `WrongProofProgram`, both contexts;
+- contexts owned by the deprecated ZK Token Proof program (facts B4; the test names it through `solana_sdk_ids::zk_token_proof_program::ID`), Token-2022, the System Program or `sotto_proofs` itself: `WrongProofProgram`, both contexts;
 - only System Program calls: the static test `tests/static_limits.rs` (every cross program call inside `invoke_system`, which refuses any other program; no token instruction built, the token account never written; the IDL names no token program and passes the token account read only) and at runtime the inner instructions of a verification (`tests/verify.rs`);
 - `proptest`: instruction data decoding and round trips, the expiry rule over all times, the account layouts, and 48 runtime cases of arbitrary threshold, expiry and nonce against the outcome the checks predict (`tests/properties.rs`).
 

@@ -279,4 +279,30 @@ describe("constraints", () => {
     );
     expect(row?.metadata).toEqual({});
   });
+
+  it("AC-05.3 keep only deposit and withdraw amounts in chain activity (step 2.5, ENGINEERING-RULES.md rule 4)", async () => {
+    const account = "HmEvErXi8iX36Qi9ow6qb7MAUijbiHSUXx7Tiqvq3Srq";
+    const signature =
+      "571SV857ZQbj8RgBQ4Kdk1gtbSzVCnu8BGU4LNmJh39iEEf9UkDacJJd5i4TLyTreCzeoc4AJk7PaaANsfp4n159";
+    let index = 0;
+    const activity = (type: string, amount: bigint | null, counterparty: string | null = null) =>
+      sql`insert into chain_activity (org_id, token_account, signature, slot, instruction_index, instruction_type, counterparty_address, public_amount_base_units)
+          values (${orgId}, ${account}, ${signature}, 7, ${index++}, ${type}, ${counterparty}, ${amount})`;
+    expect(await violation(activity("deposit", null))).toBe("chain_activity_public_amount");
+    expect(await violation(activity("transfer_out", 5n, account))).toBe(
+      "chain_activity_public_amount",
+    );
+    expect(await violation(activity("wrap", 5n))).toBe("chain_activity_public_amount");
+    expect(await violation(activity("withdraw", -1n))).toBe("chain_activity_public_amount");
+    expect(await violation(activity("transfer_in", null, "not an address"))).toBe(
+      "chain_activity_counterparty_base58",
+    );
+    await test.db.execute(activity("deposit", 20_000_000n));
+    await test.db.execute(activity("withdraw", 3_000_000n));
+    await test.db.execute(activity("transfer_out", null, account));
+    const [count] = await rows<{ count: string }>(
+      sql`select count(*)::text as count from chain_activity where org_id = ${orgId}`,
+    );
+    expect(count?.count).toBe("3");
+  });
 });

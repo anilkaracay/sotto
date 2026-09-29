@@ -322,6 +322,83 @@ export function KeysCard({ className }: { className?: string }) {
   );
 }
 
+/**
+ * Step 2.5: the viewing key alone, for a reader who holds no confidential balance here (an
+ * accountant's books): one signature of Sotto's viewing key message, kept in this tab like the keys
+ * of the card above.
+ */
+export function ViewingUnlockCard({ className }: { className?: string }) {
+  const { wallet, connected } = useConfidential();
+  const { session, viewing, lockReason } = useKeySession();
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<SignProblem | "failed" | null>(null);
+  const [said, setSaid] = useState<WalletWords | null>(null);
+  const open = viewing?.wallet === wallet;
+
+  async function unlock() {
+    if (!connected) return;
+    setBusy(true);
+    setProblem(null);
+    setSaid(null);
+    try {
+      const outcome = await unlockViewingKey({ wallet, sign: connected.sign, session });
+      if (outcome !== "unlocked") setProblem(outcome);
+      setSaid(connected.walletWords());
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className={className} data-testid="viewing-unlock-card">
+      <div className={styles.head}>
+        <h2 className={styles.cardTitle}>Viewing key</h2>
+        <Chip tone={open ? "green" : "amber"} data-testid="viewing-unlocked">
+          {open ? "Unlocked" : "Locked"}
+        </Chip>
+      </div>
+      {open ? (
+        <>
+          <p className={styles.lead}>
+            The records shared with you open in this tab only, and nowhere else. The key locks when
+            you choose Lock, after 15 minutes without activity, after 5 minutes in another tab, when
+            you reload, sign out or switch organizations, and when your wallet switches accounts.
+          </p>
+          <div className={styles.actions}>
+            <Button variant="line" onClick={() => session.lock("button")}>
+              Lock
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          {lockReason && LOCK_NOTE[lockReason] ? (
+            <p className={styles.lead} data-testid="lock-note">
+              {LOCK_NOTE[lockReason]}
+            </p>
+          ) : null}
+          <p className={styles.lead}>
+            Unlocking asks your wallet for one signature of Sotto&apos;s viewing key message. It
+            gives your viewing key, which opens the records shared with you, in this tab only. Sotto
+            never receives it. Signing sends no transaction and costs no fee.
+          </p>
+          <div className={styles.actions}>
+            <Button variant="blue" disabled={!connected || busy} onClick={unlock}>
+              {busy ? "Waiting for your wallet…" : "Unlock with your wallet"}
+            </Button>
+          </div>
+        </>
+      )}
+      {problem ? (
+        <p className={styles.problem} role="alert">
+          {VIEWING_PROBLEM[problem]}
+          <WalletSaid words={said} />
+        </p>
+      ) : null}
+    </Card>
+  );
+}
+
 export function ViewingKeyCard({
   viewerKey,
   className,

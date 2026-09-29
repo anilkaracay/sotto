@@ -4,6 +4,7 @@
 // build, 13 A28).
 import type { AccessEventView } from "./server/access-log.ts";
 import { formatDate, shortWallet } from "./format.ts";
+import { monthLabel } from "./books.ts";
 import { expiryWords, scopeWords, type GrantScopeName } from "./grant.ts";
 
 const count = (value: unknown, one: string, many: string) => {
@@ -89,6 +90,25 @@ export function eventWords(
       };
     case "approval_recorded":
       return { title: `${actor} approved ${event.subject.label ?? "a payment"}`, detail: null };
+    case "export_created": {
+      // AC-11.4: who exported how many rows, under which grant's scope; never an amount.
+      const who = actor === "You" ? actor : (event.subject.label ?? actor);
+      const scope = scopeWords(
+        (meta.scope as GrantScopeName) ?? "all_payments",
+        (meta.periodFrom as string | null) ?? null,
+        (meta.periodTo as string | null) ?? null,
+      );
+      const month = typeof meta.month === "string" ? monthLabel(meta.month, true) : null;
+      return {
+        title: `${who} exported ${count(meta.rows, "record", "records")} to CSV`,
+        detail: month ? `${scope}, ${month}` : scope,
+      };
+    }
+    case "reconciliation_updated":
+      return {
+        title: `${actor} marked a payment to ${event.subject.label ?? "a recipient"} as ${meta.status === "matched" ? "matched" : "needing a receipt"}`,
+        detail: null,
+      };
     default:
       return { title: event.action.replaceAll("_", " "), detail: null };
   }

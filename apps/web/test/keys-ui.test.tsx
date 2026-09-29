@@ -99,5 +99,29 @@ describe("viewing keys page (F-10, F-14)", () => {
     expect(whenWords("2026-09-29T09:58:00.000Z", new Date("2026-09-29T10:00:00.000Z"))).toBe(
       "2 minutes ago",
     );
+    // Step 2.5 (AC-11.4, AC-11.3): an export and a reconciliation, from their metadata only.
+    const accountant = "1d1e2f3a-4b5c-4d6e-8f70-8192a3b4c5d6";
+    expect(
+      eventWords(
+        event(
+          "export_created",
+          { rows: 4, scope: "all_payments", periodFrom: null, periodTo: null, month: "2026-09" },
+          accountant,
+        ),
+        OWNER,
+      ),
+    ).toEqual({
+      title: "Daniel Osei exported 4 records to CSV",
+      detail: "Every amount, September 2026",
+    });
+    expect(
+      eventWords(
+        {
+          ...event("reconciliation_updated", { status: "matched" }, accountant),
+          subject: { type: "payment", id: "p", label: "Maya Chen" },
+        },
+        OWNER,
+      ).title,
+    ).toBe("7SSp…Gq4L marked a payment to Maya Chen as matched");
   });
 });

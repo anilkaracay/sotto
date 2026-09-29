@@ -3,7 +3,8 @@
 // The overview's client part (09 section 3). Step 1.7 built its balance cards (AC-05.1) with the
 // wallet and the keys that decrypt the confidential balances in this tab; step 1.10 adds the welcome,
 // the confidential account card, the recent activity (activity.tsx) and withdraw (F-09, AC-09.1) as a
-// drawer. Every figure comes from chain or from records decrypted in this tab.
+// drawer; step 2.5 what the chain shows (chain-panel.tsx, AC-05.3). Every figure comes from chain or
+// from records decrypted in this tab.
 import { Button, Drawer, PageHeader } from "@sotto/ui";
 import Link from "next/link";
 import { useCallback, useState } from "react";
@@ -19,6 +20,7 @@ import { NetworkBanner } from "../../_components/confidential/network-banner.tsx
 import { WithdrawForm } from "../../_components/confidential/withdraw.tsx";
 import { AccountSky } from "./account-sky.tsx";
 import { RecentActivity } from "./activity.tsx";
+import { ChainPanel } from "./chain-panel.tsx";
 import overview from "./overview.module.css";
 
 export function OverviewPanel({
@@ -88,6 +90,7 @@ function Overview({
           <KeysCard />
         </div>
         <RecentActivity userId={userId} />
+        <ChainPanel />
         <Drawer
           open={withdrawing}
           title="Withdraw"

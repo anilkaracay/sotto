@@ -1,10 +1,11 @@
 // The overview's recent activity card (step 1.10, component level): the loading, error, empty, locked
 // and opened states. Amounts show only when the tab holds the viewing key, and never as a number
-// before that (09 section 3; the same rule as AC-03.5 for the balances).
+// before that (09 section 3; the same rule as AC-03.5 for the balances). Since step 2.5 payroll lines
+// are listed with single payments and "Can read amount" names who else holds each record.
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ActivityView, type ActivityState } from "../app/app/[org]/overview/activity.tsx";
-import type { PaymentView } from "../lib/server/payments.ts";
+import type { ActivityPaymentView } from "../lib/server/activity.ts";
 
 const ORG = "3f1b6a2e-5c4d-4e8f-9a0b-1c2d3e4f5a6b";
 const text = (html: string) =>
@@ -13,21 +14,24 @@ const text = (html: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
-function payment(id: string, status: string, errorCode: string | null = null): PaymentView {
+function payment(
+  id: string,
+  status: string,
+  errorCode: string | null = null,
+  extra: Partial<ActivityPaymentView> = {},
+): ActivityPaymentView {
   return {
     id,
-    recipientId: "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e",
+    kind: "single",
+    run: null,
     recipient: { displayName: "Maya Chen", wallet: "7SSpLJh516AbWiV5GM7ooZFTHoQN64pdohYxbDs3Gq4L" },
-    idempotencyKey: "0d1e2f3a-4b5c-4d6e-8f70-8192a3b4c5d6",
     status,
-    privateBlob: "c2VhbGVk",
-    signatures: [],
-    settledSlot: null,
     errorCode,
     createdAt: "2026-09-28T09:30:00.000Z",
-    attempts: [],
-    contentsHash: null,
-    approvals: { required: 1, messages: 0 },
+    settledAt: null,
+    privateBlob: "c2VhbGVk",
+    readers: [],
+    ...extra,
   };
 }
 
@@ -68,7 +72,7 @@ describe("overview recent activity", () => {
     expect(locked).toContain(
       "Amounts, memos and types open in this tab once you unlock your keys.",
     );
-    expect(locked).toContain("Maya Chen 7SSp…Gq4L Sealed Settled Sealed");
+    expect(locked).toContain("Maya Chen 7SSp…Gq4L Sealed Settled Only you Sealed");
     expect(locked).not.toMatch(/\d+(\.\d+)? USDC/);
     // A secret the page holds is not shown while locked.
     const stale = text(
@@ -94,7 +98,7 @@ describe("overview recent activity", () => {
       ),
     );
     expect(open).not.toContain("once you unlock");
-    expect(open).toContain("Maya Chen Invoice 7 Supplier Settled 12.345678 USDC");
+    expect(open).toContain("Maya Chen Invoice 7 Supplier Settled Only you 12.345678 USDC");
   });
 
   it("names a payment that does not open with this key, and a payment screening blocked", () => {
@@ -109,7 +113,32 @@ describe("overview recent activity", () => {
         { unlocked: true, secrets: { [unreadable]: "unreadable" } },
       ),
     );
-    expect(html).toContain("Did not complete Not readable with this key");
-    expect(html).toContain("Blocked by screening Sealed");
+    expect(html).toContain("Did not complete Only you Not readable with this key");
+    expect(html).toContain("Blocked by screening Only you Sealed");
+  });
+
+  it("lists a payroll line with its run and names who else can read each amount", () => {
+    const line = "a0000000-0000-4000-8000-000000000004";
+    const html = render(
+      {
+        kind: "loaded",
+        payments: [
+          payment(line, "settled", null, {
+            kind: "payroll_line",
+            run: { id: "b0000000-0000-4000-8000-000000000001", title: "August payroll" },
+            readers: [
+              { name: "Maya Chen", via: "recipient" },
+              { name: "Daniel Osei", via: "grant" },
+            ],
+          }),
+        ],
+      },
+      { unlocked: false },
+    );
+    expect(html).toContain('data-kind="payroll_line"');
+    expect(text(html)).toContain(
+      "Maya Chen August payroll Sealed Settled M D Maya Chen, Daniel Osei Sealed",
+    );
+    expect(html).toContain('title="Maya Chen, Daniel Osei"');
   });
 });

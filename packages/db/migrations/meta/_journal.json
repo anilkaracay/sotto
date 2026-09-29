@@ -50,6 +50,13 @@
       "when": 1790680080729,
       "tag": "0006_grants_and_access_log",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790690272271,
+      "tag": "0007_chain_activity_and_reconciliations",
+      "breakpoints": true
     }
   ]
 }

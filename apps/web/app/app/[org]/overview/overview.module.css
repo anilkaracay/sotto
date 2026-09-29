@@ -190,3 +190,35 @@
 .viewAll:hover {
   background: #fafbfd;
 }
+
+/* Can read amount (step 2.5): the design's stacked avatars (.stk), as initials. */
+.readers {
+  display: inline-flex;
+  align-items: center;
+}
+
+.reader {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #eef3ff;
+  color: #1a45c4;
+  border: 2px solid var(--surface);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.reader + .reader {
+  margin-left: -8px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

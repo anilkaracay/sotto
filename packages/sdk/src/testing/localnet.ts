@@ -1,7 +1,8 @@
 // Localnet helpers for tests (the SDK, worker and E2E localnet tests): the bootstrap record of
 // scripts/bootstrap-localnet.ts, wallets funded with localnet SOL and the local USDC-like mint (the
-// bootstrap payer is its mint authority), and the owner steps of 06 sections 3 and 4 signed through the
-// wallet path. Localnet only: the bootstrap refuses devnet and mainnet.
+// bootstrap payer is its mint authority), and the owner steps of 06 sections 3 to 6 signed through the
+// wallet path (since step 2.5 a transfer, and a withdrawal with its unwrap). Localnet only: the
+// bootstrap refuses devnet and mainnet.
 import { readFileSync } from "node:fs";
 import {
   getCreateAssociatedTokenIdempotentInstruction,
@@ -9,6 +10,7 @@ import {
   TOKEN_PROGRAM_ADDRESS,
 } from "@solana-program/token";
 import {
+  fetchMint,
   fetchToken,
   getDisableConfidentialCreditsInstruction,
   getEnableConfidentialCreditsInstruction,
@@ -22,6 +24,9 @@ import {
   type Address,
   type Instruction,
   type KeyPairSigner,
+  type Signature,
+  type SignatureBytes,
+  type Transaction,
   type TransactionModifyingSigner,
 } from "@solana/kit";
 import { getClusterConfig, type AvailableClusterConfig } from "../cluster/config.ts";
@@ -30,13 +35,15 @@ import {
   confidentialAccountSetupInstructions,
 } from "../confidential/account.ts";
 import { wrapAndDepositTransactions } from "../confidential/funding.ts";
+import { confidentialTransferPlan, confidentialWithdrawPlan } from "../confidential/transfer.ts";
+import { sendTransferTransactions } from "../confidential/transfer-send.ts";
 import { associatedTokenAccount, confidentialDepositInstruction } from "../confidential/state.ts";
 import { confidentialKeysMessage } from "../keys/messages.ts";
 import { deriveStandardKeys, type ConfidentialKeyMaterial } from "../keys/confidential.ts";
 import type { SolanaRpc } from "../tx/rpc.ts";
 import { sendWithKeypairSigners, waitForConfirmation } from "../tx/send-keypair.ts";
 import { sendWithWallet } from "../tx/send-wallet.ts";
-import { wrapInstructions } from "../wrap/index.ts";
+import { unwrapInstructions, wrapInstructions } from "../wrap/index.ts";
 import { keypairWallet } from "./index.ts";
 
 export type LocalnetBootstrap = {
@@ -260,4 +267,100 @@ export function setLocalnetConfidentialCredits(rpc: SolanaRpc, owner: LocalnetOw
     on ? getEnableConfidentialCreditsInstruction : getDisableConfidentialCreditsInstruction
   )({ token: owner.wusdc, authority: createNoopSigner(owner.signer.address) });
   return sendAsOwner(rpc, owner, [instruction]);
+}
+
+/** A plan's own accounts sign the transactions that need them, over the message the wallet signed. */
+export function planCosigner(signers: readonly KeyPairSigner[]) {
+  return async (transaction: Transaction): Promise<Record<Address, SignatureBytes>> => {
+    const signatures: Record<Address, SignatureBytes> = {};
+    for (const signer of signers) {
+      if (!(signer.address in transaction.signatures)) continue;
+      const [dictionary] = await signer.signTransactions([
+        transaction as Parameters<KeyPairSigner["signTransactions"]>[0][number],
+      ]);
+      const signature = dictionary?.[signer.address];
+      if (signature) signatures[signer.address] = signature;
+    }
+    return signatures;
+  };
+}
+
+/**
+ * 06 section 5 (step 2.5): a confidential transfer between two localnet owners' wUSDC accounts, built
+ * from their state on chain now; returns the signature of its transfer transaction.
+ */
+export async function transferOnLocalnet(
+  rpc: SolanaRpc,
+  bootstrap: LocalnetBootstrap,
+  sender: LocalnetOwner,
+  recipient: LocalnetOwner,
+  amount: bigint,
+  version: 0 | 1 = 0,
+): Promise<Signature> {
+  const [source, destination, mint] = await Promise.all([
+    fetchToken(rpc, sender.wusdc, { commitment: "confirmed" }),
+    fetchToken(rpc, recipient.wusdc, { commitment: "confirmed" }),
+    fetchMint(rpc, bootstrap.wrappedUsdcMint, { commitment: "confirmed" }),
+  ]);
+  const plan = await confidentialTransferPlan({
+    owner: sender.signer.address,
+    sourceToken: sender.wusdc,
+    sourceTokenAccount: source.data,
+    destinationToken: recipient.wusdc,
+    destinationTokenAccount: destination.data,
+    mint: bootstrap.wrappedUsdcMint,
+    mintAccount: mint.data,
+    amount,
+    keys: sender.keys,
+    version,
+    rent: (space) => rpc.getMinimumBalanceForRentExemption(space).send(),
+  });
+  const sent = await sendTransferTransactions({
+    rpc,
+    wallet: sender.wallet,
+    version,
+    transactions: plan.transactions,
+    cosign: planCosigner(plan.signers),
+  });
+  return sent.transferSignature as Signature;
+}
+
+/**
+ * 06 section 6 (step 2.5): withdraws base units from the available balance to public wUSDC, then
+ * unwraps them to USDC; returns the unwrap's signature.
+ */
+export async function withdrawAndUnwrapOnLocalnet(
+  rpc: SolanaRpc,
+  bootstrap: LocalnetBootstrap,
+  owner: LocalnetOwner,
+  amount: bigint,
+  version: 0 | 1 = 0,
+): Promise<Signature> {
+  const token = await fetchToken(rpc, owner.wusdc, { commitment: "confirmed" });
+  const plan = await confidentialWithdrawPlan({
+    owner: owner.signer.address,
+    token: owner.wusdc,
+    tokenAccount: token.data,
+    mint: bootstrap.wrappedUsdcMint,
+    decimals: bootstrap.usdcDecimals,
+    amount,
+    keys: owner.keys,
+    version,
+    rent: (space) => rpc.getMinimumBalanceForRentExemption(space).send(),
+  });
+  await sendTransferTransactions({
+    rpc,
+    wallet: owner.wallet,
+    version,
+    transactions: plan.transactions,
+    cosign: planCosigner(plan.signers),
+  });
+  const unwrap = await unwrapInstructions({
+    owner: createNoopSigner(owner.signer.address),
+    unwrappedMint: bootstrap.usdcMint,
+    unwrappedTokenProgram: TOKEN_PROGRAM_ADDRESS,
+    programAddress: localnet().programs.tokenWrap,
+    amount,
+  });
+  return (await sendAsOwner(rpc, owner, unwrap.instructions, version)).signature;
 }

@@ -1,0 +1,497 @@
+/* The accountant's books (step 2.5) on the design's Books screen (design .pg with .dkc, .bigd, .gbw,
+   .gbars, .bmv, .bmr, .bmb, .rec8, .chipf, .srch8, .t8 and the payment drawer's .anat and .log). The
+   dark hero shows money out by month (money in is Post-hackathon, M1; 13 A45); the scope banner and
+   the export result have no approved design and use the app tokens. Pixel fidelity and motion get the
+   Phase 3 design pass (M2). */
+.page {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.page > * {
+  min-width: 0;
+}
+.s3 {
+  grid-column: span 3;
+}
+.s4 {
+  grid-column: span 4;
+}
+.s5 {
+  grid-column: span 5;
+}
+.s6 {
+  grid-column: span 6;
+}
+.s12 {
+  grid-column: span 12;
+}
+@media (max-width: 1100px) {
+  .s3,
+  .s4,
+  .s5,
+  .s6 {
+    grid-column: span 12;
+  }
+}
+.lead {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.muted {
+  color: var(--faint);
+  font-size: 12.5px;
+}
+.warning {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff4e0;
+  color: #8a5200;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.problem {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #ffecec;
+  color: #b4232a;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.done {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(14, 154, 100, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(14, 154, 100, 0.2);
+  color: #0b5e3f;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.empty {
+  margin-top: 14px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+/* Header actions: the month tabs (design .seg.pseg) and Export. */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.seg {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #f1f3f6;
+}
+.seg button {
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.seg button.on {
+  background: #1c2130;
+  color: #ffffff;
+}
+
+/* The scope banner (AC-11.1). */
+.banner {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink2);
+}
+.banner b {
+  font-weight: 500;
+}
+
+/* Money out hero (design .dkc with .bigd and the glowing bars .gbw). */
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cardHead h3 {
+  font-size: 22px;
+  font-weight: 450;
+  letter-spacing: -0.03em;
+}
+.darkChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 12.5px;
+  color: #c7d0de;
+}
+.bigd {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 46px;
+}
+.bigd b {
+  font-size: 40px;
+  font-weight: 450;
+  letter-spacing: -0.05em;
+}
+.bigd .sealed {
+  font-size: 18px;
+  color: #a9b4c7;
+}
+.gbw {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  height: 190px;
+  margin-top: 6px;
+}
+.gbars {
+  display: grid;
+  gap: 14px;
+  align-items: end;
+  background-image: repeating-linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06) 0 1px,
+    transparent 1px 55px
+  );
+}
+.gcol {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  height: 100%;
+}
+.gb {
+  position: relative;
+  min-height: 4px;
+  border-radius: 10px 10px 4px 4px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
+  transform-origin: bottom;
+  animation: grow 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.gb.on {
+  background: linear-gradient(180deg, #5ea0ff 0%, #2f6bff 55%, rgba(47, 107, 255, 0.25) 100%);
+  box-shadow:
+    0 0 0 1px rgba(160, 200, 255, 0.5) inset,
+    0 0 40px -4px rgba(76, 141, 255, 0.7);
+}
+.gm {
+  height: 20px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #8e98ab;
+  text-align: center;
+}
+.gtag {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.gtag small {
+  font-size: 11.5px;
+  color: #a9b4c7;
+}
+.gtag b {
+  margin-top: 2px;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+/* By category (design .bmr with .bmb bars). */
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.bmr {
+  margin-top: 16px;
+}
+.bml {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: var(--ink2);
+}
+.bml b {
+  font-weight: 500;
+}
+.bmb {
+  position: relative;
+  height: 30px;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: #f1f3f6;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(11, 24, 48, 0.09) 0 1px,
+    transparent 1px 7px
+  );
+}
+.bmb span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #4c8dff, #2f6bff);
+  transform-origin: left;
+  animation: growx 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.bmb span.b2 {
+  background: linear-gradient(90deg, #8fb4ff, #5e92ff);
+}
+.bmb span.b3 {
+  background: linear-gradient(90deg, #b9ccf7, #8faef0);
+}
+
+/* Reconciliation (design .bmv and .rec8). */
+.bmv {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 16px;
+}
+.bmv b {
+  font-size: 40px;
+  font-weight: 500;
+  letter-spacing: -0.05em;
+}
+.bmv span {
+  font-size: 16px;
+  color: var(--faint);
+}
+.rec {
+  display: grid;
+  grid-template-columns: repeat(20, minmax(0, 1fr));
+  gap: 2px;
+  min-height: 24px;
+  margin-top: 4px;
+}
+.rec i {
+  display: block;
+  height: 24px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #5ea0ff, #2f6bff);
+  transform-origin: bottom;
+  animation: grow 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.rec i.am {
+  background: linear-gradient(180deg, #f8c06a, #e8932e);
+}
+
+/* Ledger (design .tool8, .chipf, .srch8 and .t8). */
+.tool {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.toolLeft {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.toolLeft h2 {
+  font-size: 18px;
+  font-weight: 500;
+}
+.chipf {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #f1f3f6;
+  flex-wrap: wrap;
+}
+.chipf button {
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.chipf button.on {
+  background: #1c2130;
+  color: #ffffff;
+}
+.search {
+  width: 220px;
+  height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: #f1f3f6;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.scroll {
+  margin-top: 12px;
+  overflow-x: auto;
+}
+.row {
+  cursor: pointer;
+}
+.row:hover,
+.row.sel {
+  background: #eef3ff;
+}
+.person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.initial {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #eef3ff;
+  color: #1a45c4;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.person b {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+}
+.person small {
+  display: block;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+
+/* The payment drawer (design .big2, .anat and .log). */
+.drawerBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.big2 {
+  margin-top: 6px;
+  font-size: 34px;
+  font-weight: 450;
+  letter-spacing: -0.05em;
+}
+.chips {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.fieldLabel {
+  margin-top: 18px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--faint);
+}
+.anat {
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.anat > div {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 14px;
+  border-top: 1px solid var(--line);
+  font-size: 13.5px;
+}
+.anat > div:first-child {
+  border-top: 0;
+}
+.anat > div > span:first-child {
+  color: var(--faint);
+}
+.log {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.logEntry {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.logDot {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #eef3ff;
+}
+.logEntry b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.logEntry small {
+  display: block;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+
+@keyframes grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes growx {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gb,
+  .bmb span,
+  .rec i {
+    animation: none;
+  }
+}

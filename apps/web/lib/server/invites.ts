@@ -106,9 +106,11 @@ export type InviteView = {
   status: "open" | "expired" | "accepted" | "unavailable" | "withdrawn";
   /**
    * A recipient invite's details only for a session with the invited wallet (founder, step 1.8.1):
-   * the recipient's name, role and wallet and the link's expiry; an accountant invite's (step 2.4)
-   * for any signed in session: the holder as the owner named them, the scope and the expiries.
-   * Before sign in the page shows only the organization.
+   * the recipient's name, role and wallet and the link's expiry. An accountant invite's (step 2.4)
+   * while it is open, for any signed in session, and for its holder once they accepted: only what
+   * the grant offers, its scope and its expiry, never the holder's name as the owner typed it or
+   * any amount, payment or recipient (founder, 2026-09-29). Before sign in the page shows only the
+   * organization.
    */
   details:
     | {
@@ -118,12 +120,10 @@ export type InviteView = {
       }
     | {
         role: "accountant";
-        holder: { name: string; title: string | null };
         scope: GrantScope;
         periodFrom: string | null;
         periodTo: string | null;
         grantExpiresAt: string | null;
-        expiresAt: string;
       }
     | null;
   /** For a session with another wallet: the wallet the invite is for, and nothing else about it. */
@@ -156,8 +156,6 @@ export async function readInvite(
       grantFrom: grants.periodFrom,
       grantTo: grants.periodTo,
       grantExpiresAt: grants.expiresAt,
-      holderName: grants.holderName,
-      holderTitle: grants.holderTitle,
     })
     .from(invites)
     .innerJoin(orgs, eq(orgs.id, invites.orgId))
@@ -185,16 +183,20 @@ export async function readInvite(
             : "open";
   const invited = session !== null && row.recipientWallet !== null;
   const yours = invited && session.wallet === row.recipientWallet;
+  const acceptedByYou = session !== null && row.acceptedBy === session.userId;
   let details: InviteView["details"] = null;
-  if (accountant && session !== null && row.grantScope !== null) {
+  if (
+    accountant &&
+    session !== null &&
+    row.grantScope !== null &&
+    (status === "open" || acceptedByYou)
+  ) {
     details = {
       role: "accountant",
-      holder: { name: row.holderName ?? "Holder", title: row.holderTitle },
       scope: row.grantScope,
       periodFrom: row.grantFrom,
       periodTo: row.grantTo,
       grantExpiresAt: row.grantExpiresAt?.toISOString() ?? null,
-      expiresAt: row.expiresAt.toISOString(),
     };
   } else if (yours && row.recipientName !== null && row.recipientWallet !== null) {
     details = {
@@ -213,7 +215,7 @@ export async function readInvite(
     status,
     details,
     expectedWallet: invited && !yours ? row.recipientWallet : null,
-    acceptedByYou: session !== null && row.acceptedBy === session.userId,
+    acceptedByYou,
   };
 }
 

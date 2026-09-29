@@ -29,6 +29,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { ApiCallError, callApi } from "../../../../lib/client/api.ts";
 import { browserRpc } from "../../../../lib/client/rpc.ts";
 import { reportWallet } from "../../../../lib/client/wallet-report.ts";
+import { SETUP_BLOCKED } from "../../../../lib/client/transactions.ts";
 import { withWalletWords } from "../../../../lib/client/wallet-words.ts";
 import { ApplyPromptNotice, applyPromptNeeded } from "./apply-prompt.tsx";
 import styles from "./cards.module.css";
@@ -256,6 +257,7 @@ export function AccountCard({ recorded }: { recorded: RecordedAccount | null }) 
     await sending.send({
       busy: "Setting up the account…",
       done: "The account is set up with your encryption key.",
+      refused: SETUP_BLOCKED,
       build: async () => {
         const setup = await vault.worker().setupInstructions(mint);
         token = setup.token;

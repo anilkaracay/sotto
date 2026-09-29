@@ -37,6 +37,8 @@ export function useSend() {
       /** What the page shows once it landed. */
       done: string;
       build: () => Promise<readonly Instruction[]>;
+      /** What to say if the wallet refuses to sign (Q-15); its own words always follow. */
+      refused?: string;
       /** Runs after the transaction landed and the balances were read again. */
       after?: () => Promise<void>;
     }): Promise<boolean> => {
@@ -66,7 +68,11 @@ export function useSend() {
           problem:
             error instanceof StepError
               ? error.message
-              : describeTransactionError(error, connected.info.name),
+              : describeTransactionError(
+                  error,
+                  connected.info.name,
+                  step.refused === undefined ? {} : { refused: step.refused },
+                ),
           done: null,
         });
         await refresh();

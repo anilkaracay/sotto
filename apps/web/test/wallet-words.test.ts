@@ -7,6 +7,7 @@ import { describeWalletError, SignInError } from "../lib/client/auth.ts";
 import {
   describeTransactionError,
   isWalletCancel,
+  SETUP_BLOCKED,
   WALLET_REFUSED_TRANSACTION,
 } from "../lib/client/transactions.ts";
 import {
@@ -63,6 +64,14 @@ describe("the wallet's own words (Q-15)", () => {
     expect(isWalletCancel(cancelled)).toBe(true);
     expect(describeTransactionError(cancelled, "Phantom")).toBe(
       'You cancelled in your wallet. Nothing was sent. Phantom said: "User rejected the request. (code 4001)"',
+    );
+    // The account setup's own words for a refusal (the neutral capability message), never a name.
+    expect(describeTransactionError(refused, "Backpack", { refused: SETUP_BLOCKED })).toBe(
+      `${SETUP_BLOCKED} Backpack said: "WalletSignTransactionError: Transaction blocked"`,
+    );
+    expect(SETUP_BLOCKED).not.toMatch(/backpack|phantom|solflare/i);
+    expect(describeTransactionError(cancelled, "Phantom", { refused: SETUP_BLOCKED })).toMatch(
+      /^You cancelled in your wallet\. Nothing was sent\./,
     );
     // Not the wallet's error: no wallet words.
     const simulation = new SimulationFailedError(

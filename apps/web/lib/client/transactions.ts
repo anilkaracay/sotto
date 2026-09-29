@@ -26,8 +26,24 @@ export function isWalletCancel(error: unknown): boolean {
 export const WALLET_REFUSED_TRANSACTION =
   "Your wallet did not sign the transaction, so nothing was sent. Sotto had simulated it on this network and it would have succeeded, so the refusal comes from the wallet itself.";
 
-/** `wallet` is the wallet's name (Wallet Standard), for its own words in the message. */
-export function describeTransactionError(error: unknown, wallet?: string): string {
+/**
+ * A wallet's own check blocked the confidential account setup (Q-15, founder 2026-09-29): some
+ * wallets verify a transaction with a security service before signing and refuse ones it cannot
+ * verify. Neutral by design: it names no wallet, and the wallet's own words follow it.
+ */
+export const SETUP_BLOCKED =
+  "Your wallet's security check blocked this confidential account setup. Try another Solana wallet, or contact your wallet's support.";
+
+/**
+ * `wallet` is the wallet's name (Wallet Standard), for its own words in the message; `refused`
+ * replaces the explanation of a transaction the wallet did not sign (the account setup passes
+ * SETUP_BLOCKED).
+ */
+export function describeTransactionError(
+  error: unknown,
+  wallet?: string,
+  options: { refused?: string } = {},
+): string {
   if (error instanceof WalletChangedTransactionError) return WALLET_CHANGED_TRANSACTION;
   if (error instanceof SimulationFailedError) {
     return `The transaction would fail, so it was not sent: ${error.decoded.message}`;
@@ -42,7 +58,7 @@ export function describeTransactionError(error: unknown, wallet?: string): strin
     }
     return withWalletWords(
       error instanceof WalletSigningError
-        ? WALLET_REFUSED_TRANSACTION
+        ? (options.refused ?? WALLET_REFUSED_TRANSACTION)
         : "Your wallet could not complete the request, so nothing was sent.",
       words,
     );

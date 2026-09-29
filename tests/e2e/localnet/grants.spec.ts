@@ -293,6 +293,11 @@ test.describe.serial("viewing grants on localnet", () => {
       ["payment", FIRST.base, FIRST.memo],
       ["payroll_line", LINE.base, LINE.memo],
     ]);
+    // 13 A26: the run's "Who can read this run" names the holder once they hold its lines.
+    await go(page, "Payroll");
+    await page.getByTestId("run-row").first().getByRole("link").click();
+    await expect(page).toHaveURL(RUN_URL);
+    await expect(page.getByTestId("who-reader")).toHaveText("Daniel Osei, every line");
 
     // AC-06.4: a new payment reaches the accountant with no step of the owner's.
     await pay(page, LATER);

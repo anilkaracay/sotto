@@ -20,6 +20,7 @@ import {
   approvals,
   clusterHealth,
   disclosures,
+  grants,
   insertAccessEvent,
   orgPolicy,
   paymentAttempts,
@@ -38,12 +39,13 @@ import {
 import { sha256Hex } from "@sotto/sdk/disclosure";
 import type { SolanaRpc } from "@sotto/sdk/tx";
 import { address, fetchEncodedAccounts, type Signature } from "@solana/kit";
-import { and, asc, desc, eq, gt, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, countDistinct, desc, eq, gt, inArray, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { MAX_RUN_LINES } from "../payroll.ts";
 import type { Readiness } from "../recipient.ts";
 import type { ServerCluster } from "./cluster.ts";
 import { ApiError, apiErrors } from "./errors.ts";
+import { readableGrantCondition } from "./grants.ts";
 import { log } from "./log.ts";
 import { requireMoneyAccess } from "./orgs.ts";
 import {
@@ -183,6 +185,11 @@ export type PayrollRunView = {
   executedAt: string | null;
   createdBy: { userId: string; displayName: string | null; wallet: string };
   lines: PayrollLineView[];
+  /**
+   * Step 2.4 (13 A26): each readable grant that holds records of this run's lines, with how many, so
+   * "Who can read this run" names the holders who can open them now.
+   */
+  readers: { grantId: string; holder: string; lines: number }[];
   /** D-04: the contents hash approvals sign, the policy and the initiator's execution approval. */
   contentsHash: string;
   approvals: {
@@ -309,7 +316,7 @@ async function view(
 ): Promise<PayrollRunView> {
   const lines = await lineRows(db, run.id);
   const ids = lines.map((line) => line.payment.id);
-  const [attempts, disclosed, creator, execution] = await Promise.all([
+  const [attempts, disclosed, readers, creator, execution] = await Promise.all([
     ids.length === 0
       ? Promise.resolve([])
       : db
@@ -330,6 +337,27 @@ async function view(
               inArray(disclosures.subject, ids),
             ),
           ),
+    ids.length === 0
+      ? Promise.resolve([])
+      : db
+          .select({
+            grantId: grants.id,
+            holder: grants.holderName,
+            lines: countDistinct(disclosures.subject),
+          })
+          .from(disclosures)
+          .innerJoin(grants, eq(grants.id, disclosures.grantId))
+          .where(
+            and(
+              eq(disclosures.orgId, run.orgId),
+              eq(disclosures.kind, "payroll_line"),
+              inArray(disclosures.subject, ids),
+              ne(grants.scope, "own_payslips"),
+              readableGrantCondition(new Date()),
+            ),
+          )
+          .groupBy(grants.id, grants.holderName)
+          .orderBy(asc(grants.holderName)),
     db
       .select({ id: users.id, displayName: users.displayName, wallet: users.wallet })
       .from(users)
@@ -402,6 +430,11 @@ async function view(
           errorCode: attempt.errorCode,
         })),
       disclosed: opened.has(line.payment.id),
+    })),
+    readers: readers.map((reader) => ({
+      grantId: reader.grantId,
+      holder: reader.holder ?? "Holder",
+      lines: reader.lines,
     })),
     contentsHash: hash,
     approvals: {

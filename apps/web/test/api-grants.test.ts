@@ -29,6 +29,7 @@ import { GET as backfill } from "../app/api/orgs/[id]/grants/[gid]/backfill/rout
 import { POST as renew } from "../app/api/orgs/[id]/grants/[gid]/invite/route.ts";
 import { POST as revoke } from "../app/api/orgs/[id]/grants/[gid]/revoke/route.ts";
 import { GET as listGrants, POST as createGrant } from "../app/api/orgs/[id]/grants/route.ts";
+import { GET as readRun } from "../app/api/orgs/[id]/payroll-runs/[rid]/route.ts";
 import { POST as accept } from "../app/api/invites/[token]/accept/route.ts";
 import { GET as readInvite } from "../app/api/invites/[token]/route.ts";
 import { POST as registerViewerKey } from "../app/api/viewer-keys/route.ts";
@@ -436,6 +437,29 @@ describe("viewing grants", () => {
     });
     expect((await read()).items).toEqual([]);
     expect((await grants_(owner.cookie, orgId)).grants[0]).toMatchObject({ missing: 0, items: 1 });
+    // 13 A26: the run's "Who can read this run" names the holder with the lines they hold.
+    const [{ runId } = { runId: null }] = await test.db
+      .select({ runId: payments.runId })
+      .from(payments)
+      .where(eq(payments.id, line));
+    if (!runId) throw new Error("the line has no run");
+    const readers = async () =>
+      (
+        (await (
+          await readRun(
+            jsonRequest(`/api/orgs/${orgId}/payroll-runs/${runId}`, "GET", owner.cookie),
+            params({ id: orgId, rid: runId }),
+          )
+        ).json()) as { run: { readers: unknown[] } }
+      ).run.readers;
+    expect(await readers()).toEqual([
+      { grantId: created.grant.id, holder: "Daniel Osei", lines: 1 },
+    ]);
+    await revoke(
+      jsonRequest(`/api/orgs/${orgId}/grants/${created.grant.id}/revoke`, "POST", owner.cookie),
+      params({ id: orgId, gid: created.grant.id }),
+    );
+    expect(await readers()).toEqual([]);
   });
 
   it("AC-10.4 AC-10.5 revoking deletes the grant's records in the same transaction and logs it; a recipient's own payslips are not revoked here", async () => {

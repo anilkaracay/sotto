@@ -8,8 +8,9 @@
 //   the server to authorize the run (every line ready from chain and screened, before anything is
 //   signed), then pays the lines in chunks in this tab (payroll-run.ts); Resume after a stop;
 // - Recipients: each line's status (AC-08.4), a blocked line's reason, and removing it from a draft;
-// - Who can read this run: you, each recipient with a viewing key for their own line, and the chain
-//   without amounts (13 A26: no board line).
+// - Who can read this run: you, each recipient with a viewing key for their own line, since step 2.4
+//   each holder of a viewing grant with the lines they hold records of, and the chain without amounts
+//   (13 A26: no board line).
 import { Button, Card, Chip, Table, Td, Th } from "@sotto/ui";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
@@ -556,6 +557,17 @@ function RunView(props: {
               {view.lines.filter((line) => viewerKeys[line.recipientId]).length} of {lines})
             </span>
           </div>
+          {view.readers.map((reader) => (
+            <div key={reader.grantId} data-testid="who-reader">
+              <span className={styles.dot} />
+              <span>
+                {reader.holder},{" "}
+                {reader.lines >= lines
+                  ? "every line"
+                  : `${reader.lines} of ${lines} ${lines === 1 ? "line" : "lines"}`}
+              </span>
+            </div>
+          ))}
           <div>
             <span className={`${styles.dot} ${styles.faint}`} />
             <span>

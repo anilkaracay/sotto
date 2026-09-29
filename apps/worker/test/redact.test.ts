@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { redact } from "../src/redact.ts";
 
@@ -12,5 +13,21 @@ describe("redact", () => {
     expect(redact("rpc http://10.0.0.5:8899/secret failed", ["http://10.0.0.5:8899/secret"])).toBe(
       "rpc <redacted> failed",
     );
+  });
+
+  it("Q-16 replaces the bearer token of an invite link path, plain or URL encoded", () => {
+    // An invite link token has the shape of 32 random bytes in base64url (43 characters).
+    const token = randomBytes(32).toString("base64url");
+    const lines = [
+      redact(`POST /api/invites/${token}/accept failed`),
+      redact(`open https://sotto.example/app/invite/${token}?x=1`),
+      redact(`next=%2Fapp%2Finvite%2F${token}&y=2`),
+    ];
+    expect(lines).toEqual([
+      "POST /api/invites/:token/accept failed",
+      "open https://sotto.example/app/invite/:token?x=1",
+      "next=%2Fapp%2Finvite%2F:token&y=2",
+    ]);
+    for (const line of lines) expect(line).not.toContain(token);
   });
 });

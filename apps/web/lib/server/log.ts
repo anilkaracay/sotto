@@ -14,13 +14,35 @@ const SECRET_ENV = [
   "RESEND_API_KEY",
 ];
 
+/**
+ * URL path prefixes followed by a bearer secret (Q-16, step 2.1): the invite link token of
+ * /app/invite/[token] and /api/invites/[token]. Whoever holds such a URL holds the link, so the
+ * segment after the prefix becomes ":token" in every logged string, also URL encoded (a ?next=
+ * value). `apps/web/test/log-bearer.test.ts` fails if a dynamic route segment named like a secret
+ * is not covered here.
+ */
+export const BEARER_PATH_PREFIXES = ["/api/invites/", "/app/invite/"] as const;
+
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const BEARER_PATTERNS = BEARER_PATH_PREFIXES.flatMap((prefix) => [
+  new RegExp(`(${escapeRegExp(prefix)})[^/?#&\\s"'<>]+`, "g"),
+  new RegExp(`(${escapeRegExp(encodeURIComponent(prefix))})[^%&\\s"'<>]+`, "gi"),
+]);
+
+export function redactBearerPaths(text: string): string {
+  let out = text;
+  for (const pattern of BEARER_PATTERNS) out = out.replace(pattern, "$1:token");
+  return out;
+}
+
 export function scrub(text: string): string {
   let out = text;
   for (const name of SECRET_ENV) {
     const value = process.env[name];
     if (value && value.length >= 8) out = out.split(value).join(REDACTED);
   }
-  return out
+  return redactBearerPaths(out)
     .replace(/postgres(?:ql)?:\/\/[^\s"'<>]+/gi, "<database-url>")
     .replace(/https?:\/\/[^\s"'<>]*helius-rpc\.com[^\s"'<>]*/gi, "<rpc-url>")
     .replace(/(api[-_]?key|apikey|token|secret)=[^\s"'&<>]*/gi, "$1=" + REDACTED);

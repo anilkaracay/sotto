@@ -12,7 +12,7 @@ import {
   type Database,
 } from "@sotto/db";
 import { verifyViewKeyRegistration } from "@sotto/sdk/keys/public";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { ApiError, apiErrors } from "./errors.ts";
@@ -123,12 +123,17 @@ export async function registerViewerKey(
         .returning();
       if (!row) throw new Error("viewer key insert returned no row");
       // 07 section 5: grants waiting for this user's viewing key become active (step 1.8), each
-      // logged in its org since step 2.4 (AC-10.5).
+      // logged in its org since step 2.4 (AC-10.5); one past its expiry stays for the worker to expire.
+      const now = new Date();
       const activated = await tx
         .update(grants)
-        .set({ status: "active", activatedAt: new Date() })
+        .set({ status: "active", activatedAt: now })
         .where(
-          and(eq(grants.viewerUserId, session.userId), eq(grants.status, "pending_viewer_key")),
+          and(
+            eq(grants.viewerUserId, session.userId),
+            eq(grants.status, "pending_viewer_key"),
+            or(isNull(grants.expiresAt), gt(grants.expiresAt, now)),
+          ),
         )
         .returning({ id: grants.id, orgId: grants.orgId, scope: grants.scope });
       for (const grant of activated) {

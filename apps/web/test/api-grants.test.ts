@@ -364,6 +364,27 @@ describe("viewing grants", () => {
     });
   });
 
+  it("AC-10.4 does not activate a waiting grant whose expiry passed when its holder registers a key", async () => {
+    const { owner, orgId } = await setUp();
+    const created = (await (await grant(owner.cookie, orgId, { expiry: "30_days" })).json()) as {
+      grant: GrantView;
+      invite: { url: string };
+    };
+    const accountant = await createKeyUser(test);
+    expect((await acceptAs(accountant.cookie, tokenOf(created.invite.url))).status).toBe(200);
+    await test.db
+      .update(grants)
+      .set({ expiresAt: new Date(Date.now() - 60_000) })
+      .where(eq(grants.id, created.grant.id));
+    await registerKey(accountant);
+    const [stored] = await test.db.select().from(grants).where(eq(grants.id, created.grant.id));
+    expect(stored).toMatchObject({ status: "pending_viewer_key", activatedAt: null });
+    const [listed] = (await grants_(owner.cookie, orgId)).grants;
+    expect(listed?.status).toBe("expired");
+    const events = await test.db.select().from(accessLog).where(eq(accessLog.orgId, orgId));
+    expect(events.map((event) => event.action)).toEqual(["grant_created", "grant_accepted"]);
+  });
+
   it("AC-10.3 lists the owner's records in scope that the grant does not have yet, and nothing once they are shared", async () => {
     const { owner, orgId, payment, line } = await setUp();
     await ownRecords(owner, orgId, [

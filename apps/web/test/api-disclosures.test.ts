@@ -3,9 +3,19 @@
 // with the SHA-256 of each ciphertext, and only for viewers the org shares with (the owner, a current
 // recipient for payments and payslip lines, AC-06.4, or an active grant covering the kind, 07 section
 // 6); each viewer reads its own items with their manifests, which verify in the client (I-9); the money
-// gate of AC-02.2.
+// gate of AC-02.2. Since step 2.4 an item's subject must be what its viewer may see (a recipient's own
+// payment; a grant's scope, with a period's dates and own payslips), an expired or revoked grant
+// opens nothing, a read records the grant's last use, and each batch is in the access log.
 import { createHash, randomUUID } from "node:crypto";
-import { grants, invites, memberships, recipients } from "@sotto/db";
+import {
+  accessLog,
+  grants,
+  invites,
+  memberships,
+  payments,
+  payrollRuns,
+  recipients,
+} from "@sotto/db";
 import type { TestDatabase } from "@sotto/db/testing";
 import {
   buildManifest,
@@ -17,6 +27,7 @@ import {
 } from "@sotto/sdk/disclosure";
 import { openPayload, sealPayload } from "@sotto/sdk/disclosure/seal";
 import { viewerKeypair } from "@sotto/sdk/testing";
+import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET, POST } from "../app/api/orgs/[id]/disclosures/route.ts";
 import {
@@ -63,13 +74,62 @@ function payload(org: string, kind: DisclosurePayloadV1["kind"]): DisclosurePayl
   };
 }
 
+/** The subjects items name in each org: a settled single payment and payroll line to the recipient. */
+const subjectsOf = new Map<string, { payment: string; line: string }>();
+
+/** A settled payment to a recipient: a single payment or a payroll line of a run of its own. */
+async function settledPayment(input: {
+  orgId: string;
+  ownerId: string;
+  recipientId: string;
+  kind: "single" | "payroll_line";
+  settledAt?: Date;
+}): Promise<string> {
+  let runId: string | null = null;
+  if (input.kind === "payroll_line") {
+    const [run] = await test.db
+      .insert(payrollRuns)
+      .values({
+        orgId: input.orgId,
+        title: "September payroll",
+        period: "2026-09",
+        idempotencyKey: randomUUID(),
+        lineCount: 1,
+        createdBy: input.ownerId,
+        status: "settled",
+      })
+      .returning({ id: payrollRuns.id });
+    runId = run?.id ?? null;
+  }
+  const [row] = await test.db
+    .insert(payments)
+    .values({
+      orgId: input.orgId,
+      kind: input.kind,
+      runId,
+      lineNo: runId ? 1 : null,
+      recipientId: input.recipientId,
+      idempotencyKey: randomUUID(),
+      createdBy: input.ownerId,
+      privateBlob: Buffer.alloc(96, 3),
+      status: "settled",
+      settledAt: input.settledAt ?? new Date(),
+    })
+    .returning({ id: payments.id });
+  if (!row) throw new Error("payment not created");
+  return row.id;
+}
+
 /** An active grant created through an accepted invite, as 07 section 7 requires. */
 async function activeGrant(input: {
   orgId: string;
   ownerId: string;
   viewerId: string;
-  scope: "all_payments" | "payroll_only" | "own_payslips";
+  scope: "all_payments" | "payroll_only" | "own_payslips" | "period";
   recipientId?: string;
+  periodFrom?: string;
+  periodTo?: string;
+  expiresAt?: Date;
 }): Promise<string> {
   const token = createHash("sha256").update(randomUUID()).digest("hex");
   await test.db.insert(invites).values({
@@ -89,6 +149,9 @@ async function activeGrant(input: {
       viewerUserId: input.viewerId,
       inviteToken: token,
       scope: input.scope,
+      periodFrom: input.periodFrom ?? null,
+      periodTo: input.periodTo ?? null,
+      expiresAt: input.expiresAt ?? null,
       status: "active",
       createdBy: input.ownerId,
     })
@@ -128,7 +191,20 @@ async function setUp(scope: "all_payments" | "payroll_only" = "all_payments") {
     viewerId: accountant.userId,
     scope,
   });
-  return { owner, orgId, recipient, payslipsGrantId, accountant, grantId };
+  const common = { orgId, ownerId: owner.userId, recipientId: recipientRow.id };
+  subjectsOf.set(orgId, {
+    payment: await settledPayment({ ...common, kind: "single" }),
+    line: await settledPayment({ ...common, kind: "payroll_line" }),
+  });
+  return {
+    owner,
+    orgId,
+    recipient,
+    recipientRowId: recipientRow.id,
+    payslipsGrantId,
+    accountant,
+    grantId,
+  };
 }
 
 type Item = {
@@ -145,9 +221,23 @@ async function item(
   viewerUserId: string,
   grantId: string | null,
   kind: DisclosurePayloadV1["kind"] = "payroll_line",
+  subject?: string,
 ): Promise<Item & { keys: Awaited<ReturnType<typeof viewerKeypair>> }> {
   const keys = await viewerKeypair();
-  const body = payload(orgId, kind);
+  const known = subjectsOf.get(orgId);
+  const body = {
+    ...payload(orgId, kind),
+    subject:
+      subject ??
+      (kind === "payment"
+        ? known?.payment
+        : kind === "payroll_line"
+          ? known?.line
+          : kind === "balance_snapshot"
+            ? "2026-09-29"
+            : "2026-09") ??
+      randomUUID(),
+  };
   return {
     id: randomUUID(),
     viewerUserId,
@@ -303,7 +393,6 @@ describe("disclosures", () => {
         code: "disclosure_not_allowed",
       });
     }
-    const { eq } = await import("drizzle-orm");
     await test.db
       .update(memberships)
       .set({ removedAt: new Date() })
@@ -400,5 +489,130 @@ describe("disclosures", () => {
         code: "org_not_active",
       });
     }
+  });
+
+  it("AC-06.4 takes a grant's item only for what its scope covers: a period's settled payments, the viewer's own payslips, never an expired grant", async () => {
+    const { owner, orgId, recipient, recipientRowId, payslipsGrantId, accountant } = await setUp();
+    const common = { orgId, ownerId: owner.userId, recipientId: recipientRowId };
+    const inside = await settledPayment({
+      ...common,
+      kind: "single",
+      settledAt: new Date("2026-08-15T10:00:00Z"),
+    });
+    const after = await settledPayment({
+      ...common,
+      kind: "single",
+      settledAt: new Date("2026-10-01T00:00:00Z"),
+    });
+    const q3 = await activeGrant({
+      orgId,
+      ownerId: owner.userId,
+      viewerId: accountant.userId,
+      scope: "period",
+      periodFrom: "2026-07-01",
+      periodTo: "2026-09-30",
+    });
+    const send = async (entry: Item) =>
+      post(owner.cookie, orgId, await batch(owner, orgId, [entry]));
+    expect((await send(await item(orgId, accountant.userId, q3, "payment", inside))).status).toBe(
+      201,
+    );
+    expect(
+      await errorOf(await send(await item(orgId, accountant.userId, q3, "payment", after))),
+    ).toMatchObject({ code: "disclosure_not_allowed" });
+    // The item's kind names its subject's kind, and the subject is a payment of this org.
+    expect(
+      await errorOf(await send(await item(orgId, accountant.userId, q3, "payroll_line", inside))),
+    ).toMatchObject({ code: "disclosure_not_allowed" });
+    expect(
+      await errorOf(await send(await item(orgId, accountant.userId, q3, "payment", randomUUID()))),
+    ).toMatchObject({ code: "disclosure_not_allowed" });
+    // Own payslips: the viewer's own lines only; another recipient's line is refused.
+    const other = await createKeyUser(test);
+    await test.db.insert(memberships).values({ orgId, userId: other.userId, role: "recipient" });
+    const [otherRow] = await test.db
+      .insert(recipients)
+      .values({ orgId, displayName: "Idris Kaya", wallet: other.wallet, userId: other.userId })
+      .returning({ id: recipients.id });
+    if (!otherRow) throw new Error("recipient not created");
+    const idrisLine = await settledPayment({
+      ...common,
+      recipientId: otherRow.id,
+      kind: "payroll_line",
+    });
+    expect(
+      await errorOf(
+        await send(await item(orgId, recipient.userId, payslipsGrantId, "payroll_line", idrisLine)),
+      ),
+    ).toMatchObject({ code: "disclosure_not_allowed" });
+    // Without a grant, a recipient's item is about a payment to them, never to someone else.
+    expect(
+      await errorOf(
+        await send(await item(orgId, recipient.userId, null, "payroll_line", idrisLine)),
+      ),
+    ).toMatchObject({ code: "disclosure_not_allowed" });
+    // An expired grant covers nothing, before the worker marks it.
+    const lapsed = await activeGrant({
+      orgId,
+      ownerId: owner.userId,
+      viewerId: accountant.userId,
+      scope: "all_payments",
+      expiresAt: new Date(Date.now() - 1000),
+    });
+    expect(
+      await errorOf(await send(await item(orgId, accountant.userId, lapsed, "payment"))),
+    ).toMatchObject({ code: "disclosure_not_allowed" });
+  });
+
+  it("AC-10.4 gives the viewer nothing of a grant that is revoked or has expired, and a read records the grant's last use", async () => {
+    const { owner, orgId, accountant, grantId } = await setUp();
+    const shared = await item(orgId, accountant.userId, grantId, "payment");
+    expect((await post(owner.cookie, orgId, await batch(owner, orgId, [shared]))).status).toBe(201);
+    const ids = async () =>
+      (
+        (await (await get(accountant.cookie, orgId)).json()) as { items: { id: string }[] }
+      ).items.map((row) => row.id);
+    expect(await ids()).toEqual([shared.id]);
+    const [used] = await test.db.select().from(grants).where(eq(grants.id, grantId));
+    expect(used?.lastUsedAt).toBeInstanceOf(Date);
+    // Its expiry passed: the item is not returned even though it is still stored.
+    await test.db
+      .update(grants)
+      .set({ expiresAt: new Date(Date.now() - 1000) })
+      .where(eq(grants.id, grantId));
+    expect(await ids()).toEqual([]);
+    await test.db
+      .update(grants)
+      .set({ expiresAt: null, status: "revoked" })
+      .where(eq(grants.id, grantId));
+    expect(await ids()).toEqual([]);
+  });
+
+  it("AC-14.1 writes each batch to the access log, a back fill as such, with counts and kinds only", async () => {
+    const { owner, orgId, recipient, accountant, grantId } = await setUp();
+    const own = await item(orgId, owner.userId, null, "payment");
+    const theirs = await item(orgId, recipient.userId, null, "payment");
+    const created = await post(owner.cookie, orgId, await batch(owner, orgId, [own, theirs]));
+    const { manifestId } = (await created.json()) as { manifestId: string };
+    const backfill = await item(orgId, accountant.userId, grantId, "payroll_line");
+    expect((await post(owner.cookie, orgId, await batch(owner, orgId, [backfill]))).status).toBe(
+      201,
+    );
+    const events = await test.db.select().from(accessLog).where(eq(accessLog.orgId, orgId));
+    expect(events.map((event) => [event.action, event.subjectType])).toEqual([
+      ["disclosure_batch_created", "manifest"],
+      ["grant_backfilled", "grant"],
+    ]);
+    expect(events[0]).toMatchObject({
+      actorUserId: owner.userId,
+      subjectId: manifestId,
+      metadata: { manifestId, items: 2, kinds: ["payment"], viewers: 2, grants: 0 },
+    });
+    expect(events[1]).toMatchObject({ subjectId: grantId, metadata: { items: 1, grants: 1 } });
+    expect(
+      JSON.stringify(events, (_, value: unknown) =>
+        typeof value === "bigint" ? value.toString() : value,
+      ),
+    ).not.toContain("9400000000");
   });
 });

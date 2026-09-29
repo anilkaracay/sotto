@@ -3,16 +3,23 @@
 // exactly the posted items with the SHA-256 of each ciphertext, and every viewer must be allowed:
 // without a grant, the owner's own items (07 section 6) and a current recipient's disclosures of a
 // payment or payslip line (AC-06.4, AC-12.1); with a grant, an active grant of this org for that viewer
-// whose scope covers the kind. GET returns the caller's own items with their manifests, which the
-// browser verifies again (I-9). Money endpoints (requireMoneyAccess, AC-02.2). The server never opens a
-// ciphertext.
+// whose scope covers the kind. Since step 2.4 an item's subject must be what its viewer may see: a
+// recipient's item a payment to that recipient, a grant's item a payment the scope covers (a period
+// grant: settled in its period; own payslips: the viewer's own line), and an expired grant covers
+// nothing; each batch is written to the access log (a back fill when it holds only one grant's items).
+// GET returns the caller's own items with their manifests, which the browser verifies again (I-9),
+// never the items of a grant that is not active or has expired, and records the viewer's last use of
+// their grants. Money endpoints (requireMoneyAccess, AC-02.2). The server never opens a ciphertext.
 import {
   disclosures,
   grants,
+  insertAccessEvent,
   manifests,
   memberships,
   membershipRole,
   orgs,
+  payments,
+  recipients,
   users,
   type Database,
 } from "@sotto/db";
@@ -21,12 +28,12 @@ import {
   DisclosureError,
   itemInManifest,
   MAX_MANIFEST_ITEMS,
-  scopeAllowsKind,
+  scopeCovers,
   validateManifest,
   verifyManifest,
   type DisclosureKind,
 } from "@sotto/sdk/disclosure";
-import { and, asc, eq, gte, inArray, isNull, lt } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError, apiErrors } from "./errors.ts";
 import { requireMoneyAccess } from "./orgs.ts";
@@ -93,11 +100,52 @@ export const disclosureErrors = {
   exists: () => new ApiError(409, "disclosure_exists", "An item with this id already exists"),
 };
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+type Subject = {
+  kind: "single" | "payroll_line";
+  status: string;
+  settledAt: Date | null;
+  recipientUser: string | null;
+};
+
+/** The payments of this org that items name as their subject (payment and payroll line ids). */
+async function subjectsOf(
+  db: Database,
+  orgId: string,
+  subjects: string[],
+): Promise<Map<string, Subject>> {
+  const ids = [...new Set(subjects.filter((subject) => UUID.test(subject)))];
+  if (ids.length === 0) return new Map();
+  const rows = await db
+    .select({
+      id: payments.id,
+      kind: payments.kind,
+      status: payments.status,
+      settledAt: payments.settledAt,
+      recipientUser: recipients.userId,
+    })
+    .from(payments)
+    .innerJoin(recipients, eq(recipients.id, payments.recipientId))
+    .where(and(eq(payments.orgId, orgId), inArray(payments.id, ids)));
+  return new Map(rows.map((row) => [row.id, row]));
+}
+
+/** An item's kind names its subject's kind: a single payment or a payroll line of this org. */
+function subjectMatches(kind: DisclosureKind, subject: Subject | undefined): subject is Subject {
+  if (!subject) return false;
+  return (
+    (kind === "payment" && subject.kind === "single") ||
+    (kind === "payroll_line" && subject.kind === "payroll_line")
+  );
+}
+
 export async function createDisclosures(
   db: Database,
   session: Session | null,
   orgId: string,
   input: z.infer<typeof disclosurePostSchema>,
+  now = new Date(),
 ): Promise<{ manifestId: string; count: number }> {
   await requireMoneyAccess(db, session, orgId, ["owner"]);
   if (!session) throw apiErrors.unauthenticated();
@@ -156,10 +204,18 @@ export async function createDisclosures(
           viewer: grants.viewerUserId,
           scope: grants.scope,
           status: grants.status,
+          periodFrom: grants.periodFrom,
+          periodTo: grants.periodTo,
+          expiresAt: grants.expiresAt,
         })
         .from(grants)
         .where(and(eq(grants.orgId, orgId), inArray(grants.id, grantIds)))
     : [];
+  const subjects = await subjectsOf(
+    db,
+    orgId,
+    input.items.filter((item) => item.viewerUserId !== owner.userId).map((item) => item.subject),
+  );
   const recipientViewers = [
     ...new Set(
       input.items
@@ -184,7 +240,14 @@ export async function createDisclosures(
   for (const item of input.items) {
     if (item.grantId === null) {
       if (item.viewerUserId === owner.userId) continue;
-      if (!recipientsOfOrg.has(item.viewerUserId) || !RECIPIENT_KINDS.includes(item.kind)) {
+      // A recipient's item is about a payment to that recipient (step 2.4).
+      const subject = subjects.get(item.subject);
+      if (
+        !recipientsOfOrg.has(item.viewerUserId) ||
+        !RECIPIENT_KINDS.includes(item.kind) ||
+        !subjectMatches(item.kind, subject) ||
+        subject.recipientUser !== item.viewerUserId
+      ) {
         throw disclosureErrors.notAllowed();
       }
       continue;
@@ -194,11 +257,29 @@ export async function createDisclosures(
       !grant ||
       grant.viewer !== item.viewerUserId ||
       grant.status !== "active" ||
-      !scopeAllowsKind(grant.scope, item.kind)
+      (grant.expiresAt !== null && grant.expiresAt <= now)
+    ) {
+      throw disclosureErrors.notAllowed();
+    }
+    // Step 2.4: the scope covers the item's subject, a payment of this org that settled or is being
+    // disclosed as it settles (06 section 9: disclosures follow finality).
+    const subject = subjects.get(item.subject);
+    if (!subjectMatches(item.kind, subject) || !["settled", "executing"].includes(subject.status)) {
+      throw disclosureErrors.notAllowed();
+    }
+    if (
+      !scopeCovers(grant, {
+        kind: item.kind,
+        settledAt: subject.settledAt ?? now,
+        ownLine: subject.recipientUser === item.viewerUserId,
+      })
     ) {
       throw disclosureErrors.notAllowed();
     }
   }
+  const backfill =
+    input.items.every((item) => item.grantId !== null) &&
+    new Set(input.items.map((item) => item.grantId)).size === 1;
 
   return db.transaction(async (tx) => {
     const [stored] = await tx
@@ -228,6 +309,22 @@ export async function createDisclosures(
       .onConflictDoNothing({ target: disclosures.id })
       .returning({ id: disclosures.id });
     if (inserted.length !== input.items.length) throw disclosureErrors.exists();
+    // AC-14.1: the batch, metadata only (counts and kinds, never a payload).
+    const firstGrant = input.items[0]?.grantId ?? null;
+    await insertAccessEvent(tx, {
+      orgId,
+      actorUserId: session.userId,
+      action: backfill ? "grant_backfilled" : "disclosure_batch_created",
+      subjectType: backfill ? "grant" : "manifest",
+      subjectId: backfill && firstGrant ? firstGrant : stored.id,
+      metadata: {
+        manifestId: stored.id,
+        items: inserted.length,
+        kinds: [...new Set(input.items.map((item) => item.kind))],
+        viewers: new Set(input.items.map((item) => item.viewerUserId)).size,
+        grants: grantIds.length,
+      },
+    });
     return { manifestId: stored.id, count: inserted.length };
   });
 }
@@ -270,16 +367,27 @@ export async function listDisclosures(
   session: Session | null,
   orgId: string,
   query: z.infer<typeof disclosureQuerySchema>,
+  now = new Date(),
 ): Promise<{ items: DisclosureItemView[]; manifests: ManifestView[] }> {
   await requireMoneyAccess(db, session, orgId, [...membershipRole.enumValues]);
   if (!session) throw apiErrors.unauthenticated();
-  const rows = await db
-    .select()
+  const found = await db
+    .select({ disclosure: disclosures })
     .from(disclosures)
+    .leftJoin(grants, eq(grants.id, disclosures.grantId))
     .where(
       and(
         eq(disclosures.orgId, orgId),
         eq(disclosures.viewerUserId, session.userId),
+        // 07 section 7: a grant that is not active or has expired opens nothing, even before the
+        // worker's grant-expiry job deletes its items.
+        or(
+          isNull(disclosures.grantId),
+          and(
+            eq(grants.status, "active"),
+            sql`(${grants.expiresAt} is null or ${grants.expiresAt} > ${now.toISOString()}::timestamptz)`,
+          ),
+        ),
         query.kind ? eq(disclosures.kind, query.kind) : undefined,
         query.from
           ? gte(disclosures.createdAt, new Date(`${query.from}T00:00:00.000Z`))
@@ -289,6 +397,18 @@ export async function listDisclosures(
     )
     .orderBy(asc(disclosures.createdAt))
     .limit(1000);
+  const rows = found.map((row) => row.disclosure);
+  // X-24: a viewer's successful fetch is the last use of their active grants in this org.
+  await db
+    .update(grants)
+    .set({ lastUsedAt: now })
+    .where(
+      and(
+        eq(grants.orgId, orgId),
+        eq(grants.viewerUserId, session.userId),
+        eq(grants.status, "active"),
+      ),
+    );
   const manifestIds = [...new Set(rows.map((row) => row.manifestId))];
   const manifestRows = manifestIds.length
     ? await db.select().from(manifests).where(inArray(manifests.id, manifestIds))

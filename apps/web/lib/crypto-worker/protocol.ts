@@ -5,7 +5,7 @@
 // secret key material or a wallet signature, so none can leave the worker. Since step 1.9 the worker
 // builds a confidential transfer plan and keeps the keypairs of the proof context and record accounts
 // the plan creates; `cosign` answers with their transaction signatures, which the transaction
-// publishes onchain anyway. For the rent of those accounts the worker asks the page (`rent`), which
+// publishes onchain anyway. Since step 2.3 it builds the plans of a payroll chunk the same way. For the rent of those accounts the worker asks the page (`rent`), which
 // reads the chain: the worker makes no network calls.
 import type { SendableTransaction } from "@sotto/sdk/confidential/public";
 import type { PortableInstruction } from "@sotto/sdk/tx";
@@ -52,6 +52,20 @@ export type WorkerRequest =
       amount: string;
       version: 0 | 1;
     }
+  /**
+   * Step 2.3: the transfer plans of a payroll chunk (06 section 7), each built against the state the
+   * lines before it leave, from account data the page just read.
+   */
+  | {
+      id: number;
+      type: "transferChunk";
+      sourceToken: string;
+      sourceAccount: ArrayBuffer;
+      mint: string;
+      mintAccount: ArrayBuffer;
+      lines: { destinationToken: string; destinationAccount: ArrayBuffer; amount: string }[];
+      version: 0 | 1;
+    }
   /** Step 1.9: the plan's own signatures over a transaction the wallet signed (wire bytes). */
   | { id: number; type: "cosign"; planId: string; transaction: ArrayBuffer }
   /** Step 1.9: drops the plan's keypairs once it is done. */
@@ -89,6 +103,8 @@ export type TransferPlanResult = {
   /** Base units, decrypted for the integrity check after settlement. */
   availableBefore: bigint;
 };
+/** Step 2.3: a chunk's plans in order, and the available balance after the last line (base units). */
+export type TransferChunkResult = { plans: TransferPlanResult[]; availableAfter: bigint };
 export type CosignResult = { signatures: Record<string, Uint8Array> };
 export type EndPlanResult = { ended: true };
 export type WorkerResult =
@@ -104,6 +120,7 @@ export type WorkerResult =
   | SealResult
   | OpenSealedResult
   | TransferPlanResult
+  | TransferChunkResult
   | CosignResult
   | EndPlanResult;
 

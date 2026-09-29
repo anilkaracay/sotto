@@ -6,7 +6,8 @@
 // is ready before the WASM is. The vault makes no network calls: the page reads the chain and passes
 // account data in. Since step 1.9 it builds confidential transfer plans (06 section 5): it keeps the
 // keypairs of the accounts a plan creates until the page ends the plan or the keys lock, and signs
-// with them over transactions the wallet already signed; rent comes from the page.
+// with them over transactions the wallet already signed; rent comes from the page. Since step 2.3 it
+// builds the plans of a payroll chunk (06 section 7), each from the state the line ahead leaves.
 import type { ConfidentialKeyMaterial, ViewingKeyMaterial } from "@sotto/sdk/keys";
 import {
   address,
@@ -27,6 +28,7 @@ import type {
   SealResult,
   SetupInstructionsResult,
   StatusResult,
+  TransferChunkResult,
   TransferPlanResult,
   UnlockResult,
   ViewingResult,
@@ -266,6 +268,48 @@ export function createVault(load: () => Promise<VaultModules>, options: VaultOpt
     };
   }
 
+  /** Step 2.3: a payroll chunk's plans from the page's fresh account data (06 section 7). */
+  async function transferChunk(
+    request: Extract<WorkerRequest, { type: "transferChunk" }>,
+  ): Promise<TransferChunkResult> {
+    const loaded = await sdk();
+    const { owner, keys } = held();
+    const rent = options.rent;
+    if (!rent) throw new VaultError("failed", "The worker has no way to ask for rent");
+    const chunk = await loaded.confidentialTransferChunk({
+      owner: address(owner),
+      sourceToken: address(request.sourceToken),
+      sourceTokenAccount: loaded.decodeToken2022Account(new Uint8Array(request.sourceAccount)),
+      mint: address(request.mint),
+      mintAccount: loaded.decodeToken2022Mint(new Uint8Array(request.mintAccount)),
+      lines: request.lines.map((line) => ({
+        destinationToken: address(line.destinationToken),
+        destinationTokenAccount: loaded.decodeToken2022Account(
+          new Uint8Array(line.destinationAccount),
+        ),
+        amount: BigInt(line.amount),
+      })),
+      keys,
+      version: request.version,
+      rent,
+    });
+    return {
+      plans: chunk.plans.map((plan) => {
+        const planId = crypto.randomUUID();
+        plans.set(planId, plan.signers);
+        return {
+          planId,
+          variant: plan.variant,
+          transactions: plan.transactions,
+          cleanup: plan.cleanup,
+          signers: plan.signers.map((signer) => signer.address),
+          availableBefore: plan.availableBefore,
+        };
+      }),
+      availableAfter: chunk.availableAfter,
+    };
+  }
+
   /** Step 1.10: a withdraw plan from the page's fresh account data (06 section 6). */
   async function withdrawPlan(
     request: Extract<WorkerRequest, { type: "withdrawPlan" }>,
@@ -358,6 +402,8 @@ export function createVault(load: () => Promise<VaultModules>, options: VaultOpt
         return transferPlan(request);
       case "withdrawPlan":
         return withdrawPlan(request);
+      case "transferChunk":
+        return transferChunk(request);
       case "cosign":
         return cosign(request.planId, new Uint8Array(request.transaction));
       case "endPlan":

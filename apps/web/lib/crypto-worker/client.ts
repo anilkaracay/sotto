@@ -20,6 +20,7 @@ import type {
   SealResult,
   SetupInstructionsResult,
   StatusResult,
+  TransferChunkResult,
   TransferPlanResult,
   UnlockResult,
   ViewingResult,
@@ -273,6 +274,41 @@ export class CryptoWorkerClient {
         amount: input.amount.toString(),
         version: input.version,
       })) as TransferPlanResult;
+    } finally {
+      this.rentReader = null;
+    }
+  }
+
+  /**
+   * Step 2.3: the plans of a payroll chunk (06 section 7), built with the keys from account data the
+   * page just read, each line from the state the line ahead of it leaves.
+   */
+  async transferChunk(
+    input: {
+      sourceToken: string;
+      sourceAccount: Uint8Array;
+      mint: string;
+      mintAccount: Uint8Array;
+      lines: { destinationToken: string; destinationAccount: Uint8Array; amount: bigint }[];
+      version: 0 | 1;
+    },
+    rent: (space: bigint) => Promise<bigint>,
+  ): Promise<TransferChunkResult> {
+    this.rentReader = rent;
+    try {
+      return (await this.request({
+        type: "transferChunk",
+        sourceToken: input.sourceToken,
+        sourceAccount: new Uint8Array(input.sourceAccount).buffer,
+        mint: input.mint,
+        mintAccount: new Uint8Array(input.mintAccount).buffer,
+        lines: input.lines.map((line) => ({
+          destinationToken: line.destinationToken,
+          destinationAccount: new Uint8Array(line.destinationAccount).buffer,
+          amount: line.amount.toString(),
+        })),
+        version: input.version,
+      })) as TransferChunkResult;
     } finally {
       this.rentReader = null;
     }

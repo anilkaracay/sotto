@@ -47,6 +47,7 @@ import type { SignProblem } from "../../../../lib/crypto-worker/unlock.ts";
 import { browserRpc } from "../../../../lib/client/rpc.ts";
 import { isWalletCancel } from "../../../../lib/client/transactions.ts";
 import { walletInfo, type WalletInfo } from "../../../../lib/client/wallet-report.ts";
+import { walletWords, type WalletWords } from "../../../../lib/client/wallet-words.ts";
 import type { NetworkView } from "../../../../lib/server/network-view.ts";
 import { useKeySession } from "../key-session.tsx";
 
@@ -72,6 +73,11 @@ export type Connected = {
   info: WalletInfo;
   /** Signs exactly these bytes, or says why not; the signature verifies for the wallet. */
   sign: (message: Uint8Array) => Promise<Uint8Array | SignProblem>;
+  /**
+   * The wallet's own words for the last `sign` it refused or cancelled (Q-15), null after a
+   * signature or a problem Sotto found itself (a changed message, a bad signature).
+   */
+  walletWords: () => WalletWords | null;
   /** Null when the wallet cannot sign transactions for this network's chain. */
   signer: TransactionModifyingSigner | null;
   /** The transaction version for this wallet and network (D-26). */
@@ -119,6 +125,17 @@ type ContextValue = {
 };
 
 const ConfidentialContext = createContext<ContextValue | null>(null);
+
+/** Holds the wallet's words of the last refused signature (Q-15), set and read outside rendering. */
+class WalletWordsBox {
+  #words: WalletWords | null = null;
+  set(words: WalletWords | null): void {
+    this.#words = words;
+  }
+  get(): WalletWords | null {
+    return this.#words;
+  }
+}
 
 export function useConfidential(): ContextValue {
   const value = useContext(ConfidentialContext);
@@ -315,12 +332,16 @@ function ConnectedLayer({
 }) {
   const signMessage = useSignMessage(account);
   const wallet = base.wallet;
+  // Outside React state: what the wallet said for the last refused signature, read after the call.
+  const [lastWords] = useState(() => new WalletWordsBox());
   const sign = useCallback(
     async (message: Uint8Array): Promise<Uint8Array | SignProblem> => {
+      lastWords.set(null);
       let output: { signedMessage: Uint8Array; signature: Uint8Array };
       try {
         output = await signMessage({ message });
       } catch (error) {
+        lastWords.set(walletWords(uiWallet.name, error));
         return isWalletCancel(error) ? "cancelled" : "refused";
       }
       const signature = new Uint8Array(output.signature);
@@ -336,13 +357,14 @@ function ConnectedLayer({
       }
       return signature;
     },
-    [signMessage, wallet],
+    [signMessage, wallet, uiWallet.name, lastWords],
   );
+  const words = useCallback(() => lastWords.get(), [lastWords]);
   const info = useMemo(() => walletInfo(uiWallet), [uiWallet]);
   const version = versionFor(uiWallet, base.network.v1);
   const provide = (signer: TransactionModifyingSigner | null) => (
     <ConfidentialContext.Provider
-      value={{ ...base, connected: { account, info, sign, signer, version } }}
+      value={{ ...base, connected: { account, info, sign, walletWords: words, signer, version } }}
     >
       {children}
     </ConfidentialContext.Provider>

@@ -109,6 +109,10 @@ test("AC-03.2 unlocks only after the click, derives the CLI's key in the worker 
   await expect(page.getByTestId("keys-card").getByRole("alert")).toContainText(
     "Your wallet refused to sign the key message",
   );
+  // Q-15: the wallet's own words follow Sotto's explanation.
+  await expect(page.getByTestId("keys-card").getByTestId("wallet-said")).toHaveText(
+    'Sotto Test Wallet said: "This wallet does not sign this message"',
+  );
   await expect(page.getByRole("link", { name: "Read the recovery guide" })).toHaveAttribute(
     "href",
     "/app/recovery",
@@ -139,7 +143,7 @@ test("AC-03.2 unlocks only after the click, derives the CLI's key in the worker 
   await expect(page.getByTestId("elgamal-public-key")).toHaveText(E2E_CLI_ELGAMAL_KEY);
   await expect(page.getByTestId("viewing-unlocked")).toHaveText("Not unlocked");
   await expect(page.getByTestId("viewing-missing")).toContainText(
-    "Your wallet refused to sign the viewing key message.",
+    'Your wallet refused to sign the viewing key message. Sotto Test Wallet said: "This wallet does not sign this message"',
   );
   await expect(page.getByTestId("viewing-missing")).toContainText(
     "the amounts you keep sealed and the payment details shared with you stay closed in this tab",

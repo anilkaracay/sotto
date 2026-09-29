@@ -2,6 +2,7 @@
 // /dev/wallet-lab/rpc, which forwards allow listed methods to RPC_URL. Production code
 // goes through /api/rpc.
 import {
+  AccountRole,
   address,
   appendTransactionMessageInstruction,
   compileTransaction,
@@ -70,6 +71,11 @@ export function retryingTransport(
     }
   };
   return transport as RpcTransport;
+}
+
+/** The lab's RPC through the dev proxy, for the SDK's wallet path (probe R13). */
+export function labSolanaRpc(onRetry?: RetryNotice) {
+  return labRpc(onRetry);
 }
 
 function labRpc(onRetry?: RetryNotice) {
@@ -154,6 +160,115 @@ export function buildSelfTransfer(
     messageBytes: new Uint8Array(transaction.messageBytes),
   };
 }
+
+/**
+ * Step 2.1 probes (Q-15): does a wallet refuse a devnet transaction because of what it touches?
+ * R11 moves 1 base unit of devnet USDC from the owner's associated account to itself (SPL Token only;
+ * the mint and the account exist on devnet only). R12 is one ZK ElGamal Proof verification with its
+ * proof inline for a fixed throwaway ElGamal key (no account; the program exists on mainnet too,
+ * facts B1). Both simulate successfully on devnet (VERIFICATION-LOG step 2.1).
+ */
+export const DEVNET_USDC_MINT = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
+const SPL_TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+const ZK_ELGAMAL_PROOF_PROGRAM = "ZkE1Gama1Proof11111111111111111111111111111";
+/** VerifyPubkeyValidity (discriminator 4), the throwaway public key and its proof, 97 bytes. */
+const PUBKEY_VALIDITY_PROBE =
+  "BBgANXy+UCGVE2mMWjHhahF/pK/cDKpVlIA7yXV1ZGYZUC6CEqVqKth1eFzn9hgcy4Dxp+wmndCMHhXp7vpZ5C/YIqz4fz2P+Va2BB4ZLczeAfr4WYH3eVFqMit40B4sDg==";
+
+export function buildProbe(
+  owner: string,
+  kind: "usdc" | "zk",
+  usdcAccount: string,
+  blockhash: Awaited<ReturnType<typeof latestBlockhash>>,
+): { wire: Uint8Array; messageBytes: Uint8Array } {
+  const ownerAddress: Address = address(owner);
+  const data = new Uint8Array(10);
+  data[0] = 12; // TransferChecked
+  data[1] = 1; // 1 base unit, little endian
+  data[9] = 6; // USDC decimals
+  const instruction =
+    kind === "usdc"
+      ? {
+          programAddress: address(SPL_TOKEN_PROGRAM),
+          accounts: [
+            { address: address(usdcAccount), role: AccountRole.WRITABLE },
+            { address: address(DEVNET_USDC_MINT), role: AccountRole.READONLY },
+            { address: address(usdcAccount), role: AccountRole.WRITABLE },
+            { address: ownerAddress, role: AccountRole.READONLY_SIGNER },
+          ],
+          data,
+        }
+      : {
+          programAddress: address(ZK_ELGAMAL_PROOF_PROGRAM),
+          accounts: [],
+          data: Uint8Array.from(atob(PUBKEY_VALIDITY_PROBE), (c) => c.charCodeAt(0)),
+        };
+  const transaction = compileTransaction(
+    pipe(
+      createTransactionMessage({ version: 0 }),
+      (m) => setTransactionMessageFeePayer(ownerAddress, m),
+      (m) => setTransactionMessageLifetimeUsingBlockhash(blockhash, m),
+      (m) => appendTransactionMessageInstruction(instruction, m),
+    ),
+  );
+  return {
+    wire: new Uint8Array(getTransactionEncoder().encode(transaction)),
+    messageBytes: new Uint8Array(transaction.messageBytes),
+  };
+}
+
+/**
+ * Step 2.1 probe R13 (Q-15): the product's account setup transaction for a fresh account, built by
+ * the SDK's confidentialAccountSetupInstructions for the test wallet and the G1 test mint (Token-2022
+ * with confidential transfers, auto approve, no auditor; the test wallet has no account for it), with
+ * the ElGamal and AES keys of a throwaway keypair. It creates the associated account 4QHNHpkTVwssfTGM4ygotqKnf7Qiwq5FWifh9D16Z8aQ, reallocates it, configures it and verifies the key's proof. Devnet
+ * simulation passes as version 1 and version 0 (VERIFICATION-LOG step 2.1). For the test wallet only.
+ */
+export const R13_MINT = "4hteAX4eGnP5qyjYPhfnmnZ83uTVEy9RP3PKaZXHXejp";
+export const R13_TOKEN_ACCOUNT = "4QHNHpkTVwssfTGM4ygotqKnf7Qiwq5FWifh9D16Z8aQ";
+export const R13_SETUP: {
+  programAddress: string;
+  accounts: { address: string; role: number }[];
+  data: string;
+}[] = [
+  {
+    programAddress: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+    accounts: [
+      { address: "71GuHKz8HqEKvGbMwQQTiNpqQbMvEu89pSvUcv71QbLh", role: 3 },
+      { address: "4QHNHpkTVwssfTGM4ygotqKnf7Qiwq5FWifh9D16Z8aQ", role: 1 },
+      { address: "71GuHKz8HqEKvGbMwQQTiNpqQbMvEu89pSvUcv71QbLh", role: 0 },
+      { address: "4hteAX4eGnP5qyjYPhfnmnZ83uTVEy9RP3PKaZXHXejp", role: 0 },
+      { address: "11111111111111111111111111111111", role: 0 },
+      { address: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb", role: 0 },
+    ],
+    data: "AQ==",
+  },
+  {
+    programAddress: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+    accounts: [
+      { address: "4QHNHpkTVwssfTGM4ygotqKnf7Qiwq5FWifh9D16Z8aQ", role: 1 },
+      { address: "71GuHKz8HqEKvGbMwQQTiNpqQbMvEu89pSvUcv71QbLh", role: 3 },
+      { address: "11111111111111111111111111111111", role: 0 },
+      { address: "71GuHKz8HqEKvGbMwQQTiNpqQbMvEu89pSvUcv71QbLh", role: 2 },
+    ],
+    data: "HQUA",
+  },
+  {
+    programAddress: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+    accounts: [
+      { address: "4QHNHpkTVwssfTGM4ygotqKnf7Qiwq5FWifh9D16Z8aQ", role: 1 },
+      { address: "4hteAX4eGnP5qyjYPhfnmnZ83uTVEy9RP3PKaZXHXejp", role: 0 },
+      { address: "Sysvar1nstructions1111111111111111111111111", role: 0 },
+      { address: "71GuHKz8HqEKvGbMwQQTiNpqQbMvEu89pSvUcv71QbLh", role: 2 },
+    ],
+    data: "GwLSFEWK2eG3sVR4yecgVtoGD3ML34n6cLdI+6GsATfRx04vceUAAAEAAAAAAAE=",
+  },
+  {
+    programAddress: "ZkE1Gama1Proof11111111111111111111111111111",
+    accounts: [],
+    data: "BCLMdyPZcaFFpg+XGl9d3biG67KJ+dmMn0HpEtJ8zjM/Zom3UlGMbsY6Ly54O1laDVJK2jVAN7IKr3Ys71PuMm1hKy99K1nxyMfdxt3ePHpnkCKXj9czBw7JKZk+V+x0DA==",
+  },
+];
 
 export function decodeTransaction(wire: Uint8Array): Transaction {
   return getTransactionDecoder().decode(wire);

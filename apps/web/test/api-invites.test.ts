@@ -231,6 +231,31 @@ describe("recipient invites", () => {
     }
   });
 
+  it("Q-16 writes no invite link token to the request log while the link is read and accepted", async () => {
+    const { owner, orgId, person, recipientId } = await setUp();
+    const lines: string[] = [];
+    vi.mocked(console.log).mockImplementation((line: string) => lines.push(line));
+    vi.spyOn(console, "error").mockImplementation((line: string) => lines.push(line));
+    const created = await invite(owner.cookie, orgId, recipientId);
+    const token = tokenOf(((await created.json()) as { invite: { url: string } }).invite.url);
+    expect(token).toHaveLength(43);
+    expect((await view(token)).status).toBe(200);
+    expect((await view(token, person.cookie)).status).toBe(200);
+    expect((await acceptAs(person.cookie, token)).status).toBe(200);
+    // A wrong token is logged the same way, never in the clear either.
+    expect((await acceptAs(person.cookie, `${token.slice(0, 40)}xyz`)).status).toBe(404);
+    const requests = lines.filter((line) => line.includes('"event":"api_request"'));
+    expect(requests.length).toBeGreaterThanOrEqual(5);
+    for (const line of lines) {
+      expect(line).not.toContain(token);
+      expect(line).not.toContain(token.slice(0, 40));
+    }
+    expect(requests.some((line) => line.includes('"path":"/api/invites/:token"'))).toBe(true);
+    expect(requests.some((line) => line.includes('"path":"/api/invites/:token/accept"'))).toBe(
+      true,
+    );
+  });
+
   it("AC-02.2 lets only the owner of an active org create invite links, and never for a joined recipient", async () => {
     const { owner, orgId, person, recipientId } = await setUp();
     const stranger = await createKeyUser(test);

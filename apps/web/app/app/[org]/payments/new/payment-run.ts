@@ -31,6 +31,7 @@ import { address, fetchEncodedAccount, fetchEncodedAccounts } from "@solana/kit"
 import { callApi } from "../../../../../lib/client/api.ts";
 import { browserRpc } from "../../../../../lib/client/rpc.ts";
 import { describeTransactionError } from "../../../../../lib/client/transactions.ts";
+import { withWalletWords } from "../../../../../lib/client/wallet-words.ts";
 import { reportComparison } from "../../../../../lib/client/wallet-report.ts";
 import type { CryptoWorkerClient } from "../../../../../lib/crypto-worker/client.ts";
 import type { PaymentCategory } from "../../../../../lib/payment.ts";
@@ -181,9 +182,9 @@ export async function runPayment(options: {
     return { kind: "settled", transferSignature: sent.transferSignature, integrityOk, disclosed };
   } catch (error) {
     if (!(error instanceof TransferStepError)) {
-      return { kind: "failed", message: describeTransactionError(error) };
+      return { kind: "failed", message: describeTransactionError(error, connected.info.name) };
     }
-    const where = `Step ${error.index + 1} of ${total} (${ROLE_WORDS[error.role]}) failed: ${describeTransactionError(error.cause)}`;
+    const where = `Step ${error.index + 1} of ${total} (${ROLE_WORDS[error.role]}) failed: ${describeTransactionError(error.cause, connected.info.name)}`;
     onProgress("Closing the proof accounts this attempt created…");
     let cleaned: boolean;
     let closing: string[] = [];
@@ -290,7 +291,10 @@ async function disclose(
     return {
       self: false,
       recipient: false,
-      problem: "Your wallet did not sign the payment record, so it was not saved.",
+      problem: withWalletWords(
+        "Your wallet did not sign the payment record, so it was not saved.",
+        connected.walletWords(),
+      ),
     };
   }
   await callApi(`/api/orgs/${input.orgId}/disclosures`, {

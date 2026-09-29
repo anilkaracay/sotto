@@ -60,6 +60,8 @@ describe("checkLabRpcRequest", () => {
       "getSignatureStatuses",
       "getBalance",
       "getTransaction",
+      "getRecentPrioritizationFees",
+      "simulateTransaction",
     ]);
     for (const method of LAB_RPC_METHODS) {
       expect(checkLabRpcRequest({ jsonrpc: "2.0", id: 1, method })).toEqual({ ok: true, method });

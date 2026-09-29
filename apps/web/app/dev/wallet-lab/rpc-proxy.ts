@@ -1,13 +1,18 @@
 // Pure checks for the dev only wallet lab RPC proxy (app/dev/wallet-lab/rpc/route.dev.ts).
 // Unit tested in test/wallet-lab-rpc.test.ts.
 
-/** The only JSON-RPC methods the wallet lab needs. */
+/**
+ * The only JSON-RPC methods the wallet lab needs. The step 2.1 probe R13 sends through the product's
+ * wallet path (sendWithWallet), which also reads recent prioritization fees and simulates first.
+ */
 export const LAB_RPC_METHODS = [
   "getLatestBlockhash",
   "sendTransaction",
   "getSignatureStatuses",
   "getBalance",
   "getTransaction",
+  "getRecentPrioritizationFees",
+  "simulateTransaction",
 ] as const;
 
 export const RPC_URL_ERROR = "RPC_URL is not set or invalid";

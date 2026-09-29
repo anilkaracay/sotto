@@ -6,7 +6,7 @@
 useDefault = true
 
 [[allowlists]]
-description = "Public Solana addresses and keys (facts A11, C8, E7)"
+description = "Public Solana addresses and keys (facts A11, C8, D5, E7)"
 regexes = [
   # Sotto devnet test deployment of Token Wrap (C8).
   '''^EEvqpjNRQkNRwXzVziuTGGi1wYDiPv7haYVVu3XZCoQn$''',
@@ -16,6 +16,8 @@ regexes = [
   '''^4KX4P7he62x5x8X35vubNNhJRhV4vJXPGNsc8skPyKFT$''',
   # ElGamal public key of the step 1.5 CLI check test keypair (A11); tests compare derived keys with it.
   '''^BxMVLbjVntF9DJtDjfpQLrgw4hopedMgNkZZKGcVkZp6$''',
+  # The associated account of the wallet lab probe R13 (step 2.1, D5), named R13_TOKEN_ACCOUNT.
+  '''^4QHNHpkTVwssfTGM4ygotqKnf7Qiwq5FWifh9D16Z8aQ$''',
 ]
 
 [[allowlists]]

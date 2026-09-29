@@ -1,6 +1,8 @@
 // Browser side of sign in (D-15): ask the API for the sign in message, then send the wallet's signed
 // message back. Only the signature and the signed message travel; no key material.
 import { getBase64Decoder } from "@solana/kit";
+import { isWalletCancel } from "./transactions.ts";
+import { isWalletError, walletWords, withWalletWords } from "./wallet-words.ts";
 
 export type IssuedSignIn = {
   input: {
@@ -69,10 +71,22 @@ export async function signOut(): Promise<void> {
   await post("/api/auth/logout", {});
 }
 
-/** A plain message for a wallet error; wallet rejections read as a cancellation. */
-export function describeWalletError(error: unknown): string {
+/**
+ * A plain message for a sign in error: the server's words for a refused sign in, and for an error
+ * the wallet raised (connect, sign in, sign message) the wallet's own words after Sotto's
+ * explanation (Q-15, step 2.1). Wallet rejections read as a cancellation.
+ */
+export function describeWalletError(error: unknown, wallet?: string): string {
   if (error instanceof SignInError) return error.message;
-  const text = error instanceof Error ? `${error.name} ${error.message}` : String(error);
-  if (/reject|denied|cancel|declin/i.test(text)) return "Sign in was cancelled in your wallet.";
-  return "The wallet could not sign in. Try again, or choose another wallet.";
+  const cancelled = isWalletCancel(error);
+  if (isWalletError(error)) {
+    return withWalletWords(
+      cancelled
+        ? "Sign in was cancelled in your wallet."
+        : "The wallet could not sign in. Try again, or choose another wallet.",
+      walletWords(wallet ?? "Your wallet", error),
+    );
+  }
+  if (cancelled) return "Sign in was cancelled in your wallet.";
+  return "Sign in could not be completed. Check your connection and try again.";
 }

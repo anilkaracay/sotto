@@ -4,7 +4,8 @@
 // in an earlier init script. Like the wallets tested in Gate G2, it signs sign in requests and any
 // message, deterministically, and it logs the text of every message it signs
 // (window.__sottoTestWallet.signedMessages). A spec can make it refuse given messages, as a wallet that
-// follows the guidance to refuse solana-conf-bal/v1 would (window.__sottoTestWallet.refuse), or hand
+// follows the guidance to refuse solana-conf-bal/v1 would (window.__sottoTestWallet.refuse), refuse
+// every transaction with a given error (refuseTransactions, step 2.1), or hand
 // out given signatures for the next messages instead of its own, as a wallet with randomized
 // signatures would (window.__sottoTestWallet.queueSignatures, base64). Since step 1.7 it signs
 // legacy and version 0 transactions (solana:signTransaction) for localnet flows, and counts them
@@ -72,6 +73,9 @@
   const listeners = new Set();
   const signedMessages = [];
   let refused = new Set();
+  // When set, every transaction signature is refused with this error, as a wallet whose own check
+  // blocks a transaction does (step 2.1, Q-15): { name, message }.
+  let transactionRefusal = null;
   let queued = [];
   let signedTransactions = 0;
   const fixed = window.__sottoTestWalletKeypair;
@@ -230,6 +234,11 @@
         supportedTransactionVersions: ["legacy", 0],
         signTransaction: async (...inputs) => {
           await ensureAccount();
+          if (transactionRefusal) {
+            throw Object.assign(new Error(transactionRefusal.message), {
+              name: transactionRefusal.name,
+            });
+          }
           return Promise.all(
             inputs.map(async ({ transaction }) => ({
               signedTransaction: await signWireTransaction(new Uint8Array(transaction)),
@@ -255,6 +264,9 @@
     },
     refuse(texts) {
       refused = new Set(texts);
+    },
+    refuseTransactions(refusal) {
+      transactionRefusal = refusal;
     },
     queueSignatures(signatures) {
       queued = [...signatures];

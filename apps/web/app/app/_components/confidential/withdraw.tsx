@@ -90,7 +90,11 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
         done: `Unwrapped ${shown} wUSDC to ${shown} USDC (transaction ${signature.slice(0, 12)}…).`,
       });
     } catch (error) {
-      setOutcome({ busy: null, problem: describeTransactionError(error), done: null });
+      setOutcome({
+        busy: null,
+        problem: describeTransactionError(error, connected?.info.name),
+        done: null,
+      });
     } finally {
       release();
       await refresh();
@@ -176,7 +180,7 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
           () => true,
           () => false,
         );
-        const where = `Step ${error.index + 1} of ${total} (${ROLE_WORDS[error.role]}) failed: ${describeTransactionError(error.cause)}`;
+        const where = `Step ${error.index + 1} of ${total} (${ROLE_WORDS[error.role]}) failed: ${describeTransactionError(error.cause, connected.info.name)}`;
         const rent = cleaned
           ? " Sotto closed the proof accounts this attempt created, so no rent is left behind."
           : " Sotto could not close every proof account this attempt created; they keep their rent until they are closed.";
@@ -204,7 +208,7 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
           done = `Withdrew ${shown} wUSDC and unwrapped it to ${shown} USDC (transactions ${withdrawSignature.slice(0, 12)}… and ${unwrapped.slice(0, 12)}…).`;
         } catch (error) {
           // The withdraw landed: say so, and why the unwrap did not.
-          done = `${done} The unwrap to USDC did not complete: ${describeTransactionError(error)} The ${shown} wUSDC is in your public balance; unwrap it below.`;
+          done = `${done} The unwrap to USDC did not complete: ${describeTransactionError(error, connected.info.name)} The ${shown} wUSDC is in your public balance; unwrap it below.`;
         }
       }
       setOutcome({ busy: null, problem: null, done: `${done}${note}` });
@@ -216,7 +220,7 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
         problem:
           error instanceof CryptoWorkerError && error.code === "insufficient_balance"
             ? "Your available confidential balance is below this amount. Nothing was sent."
-            : describeTransactionError(error),
+            : describeTransactionError(error, connected?.info.name),
         done: null,
       });
     } finally {

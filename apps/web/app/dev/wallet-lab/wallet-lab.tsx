@@ -1,7 +1,19 @@
 "use client";
 
-// Gate G2 wallet capability matrix (docs/12-MILESTONES.md, step 0.6). Development only.
-import { useSignIn, useSignMessage, useSignTransaction, useSignTransactions } from "@solana/react";
+// Gate G2 wallet capability matrix (docs/12-MILESTONES.md, step 0.6), with the step 2.1 probes R11 and
+// R12 (Q-15). Development only.
+import { associatedTokenAccount } from "@sotto/sdk/confidential/public";
+import { sendWithWallet, type SolanaRpc } from "@sotto/sdk/tx";
+import { transactionPath, walletCapabilities } from "@sotto/sdk/wallet";
+import { AccountRole, address } from "@solana/kit";
+import {
+  useSignIn,
+  useSignMessage,
+  useSignTransaction,
+  useSignTransactions,
+  useWalletAccountTransactionSigner,
+} from "@solana/react";
+import { walletWords } from "../../../lib/client/wallet-words.ts";
 import {
   getWalletFeature,
   useConnect,
@@ -12,10 +24,15 @@ import {
 } from "@wallet-standard/react";
 import { Component, useCallback, useMemo, useState, type ReactNode } from "react";
 import {
+  buildProbe,
   buildSelfTransfer,
   checkSignedTransaction,
   d03Message,
   DEVNET_CHAIN,
+  DEVNET_USDC_MINT,
+  labSolanaRpc,
+  R13_SETUP,
+  R13_TOKEN_ACCOUNT,
   LAB_RPC_DESCRIPTION,
   latestBlockhash,
   type RetryNotice,
@@ -82,6 +99,24 @@ const ROWS: { id: string; title: string; feature?: string }[] = [
   {
     id: "R10",
     title: "signTransaction with three v1 transactions in one call",
+    feature: "solana:signTransaction",
+  },
+  {
+    id: "R11",
+    title:
+      "Step 2.1 probe: v0 transfer of 1 base unit of devnet USDC to yourself (devnet only mint and account; SPL Token only), sign, send, confirm",
+    feature: "solana:signTransaction",
+  },
+  {
+    id: "R13",
+    title:
+      "Step 2.1 probe: Sotto's confidential account setup for a fresh account of the test wallet (G1 test mint, throwaway keys), through Sotto's wallet path: the version and compute budget Sotto picks, simulate, sign, send, confirm",
+    feature: "solana:signTransaction",
+  },
+  {
+    id: "R12",
+    title:
+      "Step 2.1 probe: v0 transaction with one ZK ElGamal proof verification (a fixed throwaway key, no account), sign, send, confirm",
     feature: "solana:signTransaction",
   },
 ];
@@ -406,6 +441,115 @@ function SingleTransactionRow({
   );
 }
 
+/** Step 2.1 probes (Q-15): a devnet only token account, then a lone ZK proof verification. */
+function ProbeRow({
+  id,
+  kind,
+  account,
+  record,
+}: RowProps & { id: "R11" | "R12"; kind: "usdc" | "zk" }) {
+  const signTransaction = useSignTransaction(account, DEVNET_CHAIN);
+  return (
+    <RunButton
+      onRun={async () => {
+        const onRetry = busyNotice(id, record);
+        let built: ReturnType<typeof buildProbe>;
+        try {
+          const blockhash = await latestBlockhash(onRetry);
+          const usdcAccount = await associatedTokenAccount(
+            address(account.address),
+            address(DEVNET_USDC_MINT),
+            address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+          );
+          built = buildProbe(account.address, kind, usdcAccount, blockhash);
+        } catch (error) {
+          record(id, classify(error));
+          return;
+        }
+        try {
+          const { signedTransaction } = await signTransaction({ transaction: built.wire });
+          const { check, transaction } = await checkSignedTransaction(
+            account.address,
+            new Uint8Array(signedTransaction),
+            built.messageBytes,
+          );
+          const signature = await sendAndConfirm(transaction, onRetry);
+          record(id, {
+            outcome: "pass",
+            detail: `signed and confirmed ${signature}`,
+            data: { ...check, transactionSignature: signature, wireBytes: built.wire.length },
+          });
+        } catch (error) {
+          record(id, classify(error));
+        }
+      }}
+    />
+  );
+}
+
+/**
+ * Step 2.1 probe R13 (Q-15): the product's setup transaction for a fresh account, sent exactly as the
+ * product sends it (sendWithWallet: Sotto's compute budget, simulation first, the version the wallet
+ * declares on devnet).
+ */
+function SetupProbeRow({ wallet, account, record }: RowProps & { wallet: UiWallet }) {
+  const signer = useWalletAccountTransactionSigner(account, DEVNET_CHAIN);
+  return (
+    <RunButton
+      onRun={async () => {
+        const id = "R13";
+        if (account.address !== TEST_ADDRESS) {
+          record(id, {
+            outcome: "error",
+            detail: `R13 is built for the test wallet ${TEST_ADDRESS}`,
+          });
+          return;
+        }
+        const feature = getWalletFeature(wallet, "solana:signTransaction");
+        const version =
+          transactionPath(
+            walletCapabilities({
+              chains: wallet.chains,
+              features: { "solana:signTransaction": feature },
+            }),
+          ) === "v1"
+            ? 1
+            : 0;
+        try {
+          const sent = await sendWithWallet({
+            rpc: labSolanaRpc(busyNotice(id, record)) as unknown as SolanaRpc,
+            wallet: signer,
+            version,
+            instructions: R13_SETUP.map((instruction) => ({
+              programAddress: address(instruction.programAddress),
+              accounts: instruction.accounts.map((meta) => ({
+                address: address(meta.address),
+                role: meta.role as AccountRole,
+              })),
+              data: Uint8Array.from(atob(instruction.data), (c) => c.charCodeAt(0)),
+            })),
+          });
+          record(id, {
+            outcome: "pass",
+            detail: `version ${version}, signed and confirmed ${sent.signature}; account ${R13_TOKEN_ACCOUNT}`,
+            data: {
+              version,
+              transactionSignature: sent.signature,
+              comparison: sent.comparison.kind,
+            },
+          });
+        } catch (error) {
+          const words = walletWords(wallet.name, error);
+          record(id, {
+            outcome: "error",
+            detail: `version ${version}: ${error instanceof Error ? error.name : "error"}; ${words.wallet} said: ${words.text || "(no message)"}`,
+          });
+        }
+      }}
+    />
+  );
+}
+
 function BatchRow({
   id,
   version,
@@ -493,6 +637,12 @@ function Rows({ wallet, account, record, results }: { wallet: UiWallet } & RowPr
         return <BatchRow id="R9" version={0} {...props} />;
       case "R10":
         return <BatchRow id="R10" version={1} {...props} />;
+      case "R11":
+        return <ProbeRow id="R11" kind="usdc" {...props} />;
+      case "R12":
+        return <ProbeRow id="R12" kind="zk" {...props} />;
+      case "R13":
+        return <SetupProbeRow wallet={wallet} {...props} />;
       default:
         return null;
     }

@@ -7,13 +7,15 @@ import { ApiError } from "./errors.ts";
 
 /**
  * Methods the Phase 1 browser flows need: startup verification (06 section 0), transaction building,
- * simulation, sending and confirmation (06 section 9), balances. Heavy or abusable methods
- * (getProgramAccounts, requestAirdrop, getSignaturesForAddress) are not allowed.
+ * simulation, sending and confirmation (06 section 9), balances. Since step 2.3 `getBlockHeight`:
+ * a payroll chunk starts a line only while its blockhash still has blocks left (06 section 7). Heavy
+ * or abusable methods (getProgramAccounts, requestAirdrop, getSignaturesForAddress) are not allowed.
  */
 export const RPC_METHODS = [
   "getAccountInfo",
   "getBalance",
   "getBlock",
+  "getBlockHeight",
   "getGenesisHash",
   "getLatestBlockhash",
   "getMinimumBalanceForRentExemption",

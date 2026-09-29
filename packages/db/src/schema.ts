@@ -1,8 +1,8 @@
 // Phase 1 tables of the logical schema in docs/08-BACKEND.md section 2, plus rate_limits (08 section
-// 6), and since step 2.3 payroll_runs with the payments.run_id foreign key. Golden rule (08 section
-// 1): no plaintext amount, balance or key material in any column; amounts exist only as ciphertext
-// (private_blob, disclosures.ciphertext). test/golden-rule.test.ts checks the column names. Later
-// steps add proof_records, reconciliations, access_log, waitlist and chain_activity.
+// 6), since step 2.3 payroll_runs with the payments.run_id foreign key, and since step 2.4 access_log.
+// Golden rule (08 section 1): no plaintext amount, balance or key material in any column; amounts
+// exist only as ciphertext (private_blob, disclosures.ciphertext). test/golden-rule.test.ts checks the
+// column names. Later steps add proof_records, reconciliations, waitlist and chain_activity.
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -410,6 +410,11 @@ export const payments = pgTable(
     errorCode: text("error_code"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+    /**
+     * Step 2.4: when the worker settled the payment (finality); a period grant covers the payments
+     * settled in its period (07 section 6).
+     */
+    settledAt: timestamptz("settled_at"),
   },
   (t) => [
     index("payments_org_id_idx").on(t.orgId),
@@ -517,6 +522,11 @@ export const grants = pgTable(
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     revokedAt: timestamptz("revoked_at"),
     lastUsedAt: timestamptz("last_used_at"),
+    /** Step 2.4: the holder as the owner named them in the invite (a recipient's grant has none). */
+    holderName: text("holder_name"),
+    holderTitle: text("holder_title"),
+    /** Step 2.4: when the grant became active (the viewer accepted with a viewing key). */
+    activatedAt: timestamptz("activated_at"),
   },
   (t) => [
     check(
@@ -573,6 +583,34 @@ export const disclosures = pgTable(
   (t) => [
     index("disclosures_viewer_org_idx").on(t.viewerUserId, t.orgId),
     index("disclosures_grant_id_idx").on(t.grantId),
+  ],
+);
+
+/**
+ * Step 2.4 (F-14, AC-14.1): what happened in an org, metadata only, never an amount: grants, back
+ * fills and disclosure batches, payments and payroll runs, approvals. `metadata` holds ids, counts,
+ * scopes and dates (the writers check its keys against the golden rule).
+ */
+export const accessLog = pgTable(
+  "access_log",
+  {
+    id: bigint("id", { mode: "bigint" }).primaryKey().generatedAlwaysAsIdentity(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id),
+    /** Null for the worker (an expiry, a settlement). */
+    actorUserId: uuid("actor_user_id").references(() => users.id),
+    action: text("action").notNull(),
+    subjectType: text("subject_type").notNull(),
+    subjectId: text("subject_id").notNull(),
+    metadata: jsonb("metadata")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    check("access_log_action_format", sql`${t.action} ~ '^[a-z][a-z_]{2,63}$'`),
+    index("access_log_org_created_idx").on(t.orgId, t.createdAt),
   ],
 );
 

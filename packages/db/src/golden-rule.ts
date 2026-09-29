@@ -16,3 +16,21 @@ export function forbiddenColumns(columns: Iterable<{ table: string; column: stri
   }
   return found.sort();
 }
+
+/**
+ * Step 2.4 (F-14, AC-14.1): the keys of access log metadata that break the golden rule, at any depth:
+ * the log records metadata only, never amounts.
+ */
+export function forbiddenMetadataKeys(metadata: unknown, path = ""): string[] {
+  if (Array.isArray(metadata)) {
+    return metadata.flatMap((item, index) => forbiddenMetadataKeys(item, `${path}[${index}]`));
+  }
+  if (typeof metadata !== "object" || metadata === null) return [];
+  return Object.entries(metadata as Record<string, unknown>).flatMap(([key, value]) => {
+    const name = path ? `${path}.${key}` : key;
+    return [
+      ...(FORBIDDEN_COLUMN_NAME.test(key) ? [name] : []),
+      ...forbiddenMetadataKeys(value, name),
+    ];
+  });
+}

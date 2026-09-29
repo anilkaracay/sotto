@@ -33,9 +33,10 @@ import {
   verifyManifest,
   type DisclosureKind,
 } from "@sotto/sdk/disclosure";
-import { and, asc, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lt, or } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError, apiErrors } from "./errors.ts";
+import { readableGrantCondition } from "./grants.ts";
 import { requireMoneyAccess } from "./orgs.ts";
 import type { Session } from "./session.ts";
 
@@ -381,13 +382,7 @@ export async function listDisclosures(
         eq(disclosures.viewerUserId, session.userId),
         // 07 section 7: a grant that is not active or has expired opens nothing, even before the
         // worker's grant-expiry job deletes its items.
-        or(
-          isNull(disclosures.grantId),
-          and(
-            eq(grants.status, "active"),
-            sql`(${grants.expiresAt} is null or ${grants.expiresAt} > ${now.toISOString()}::timestamptz)`,
-          ),
-        ),
+        or(isNull(disclosures.grantId), readableGrantCondition(now)),
         query.kind ? eq(disclosures.kind, query.kind) : undefined,
         query.from
           ? gte(disclosures.createdAt, new Date(`${query.from}T00:00:00.000Z`))

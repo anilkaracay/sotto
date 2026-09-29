@@ -21,10 +21,13 @@ regexes = [
 ]
 
 [[allowlists]]
-description = "Fixed uuids of test data (steps 1.9 and 1.10): the generic-api-key rule flags a uuid named idempotency_key or idempotencyKey"
+description = "Fixed values of test data (steps 1.9, 1.10 and 2.6): the generic-api-key rule flags a uuid named idempotency_key or idempotencyKey, and an address named tokenAccount or TOKEN"
 regexes = [
   # A made up uuid in packages/sdk/test/approvals.test.ts (also an org id in apps/web tests).
   '''^7c2a9e41-1b2c-4f0e-8a77-3d5e6f708192$''',
   # A made up idempotency key in apps/web/test/overview-ui.test.tsx (step 1.10).
   '''^0d1e2f3a-4b5c-4d6e-8f70-8192a3b4c5d6$''',
+  # A fixed test address, the recipient's token account in apps/web/test/pay-fields.test.ts and
+  # pay-ui.test.tsx (step 2.6), also used in chain-ui.test.tsx and packages/sdk/test/chain.test.ts.
+  '''^3tsDBjBsSycu8Hp1XtQqGqGixNXgWQFyRKRfSXp2sDb6$''',
 ]

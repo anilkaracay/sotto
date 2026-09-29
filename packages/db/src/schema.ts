@@ -309,6 +309,8 @@ export const tokenAccounts = pgTable(
      * read (08 section 4), and when it last read the account.
      */
     indexedUntil: text("indexed_until"),
+    /** Step 2.6: the cursor's slot, to read on from when a node no longer knows the cursor. */
+    indexedSlot: bigint("indexed_slot", { mode: "bigint" }),
     indexedAt: timestamptz("indexed_at"),
   },
   (t) => [

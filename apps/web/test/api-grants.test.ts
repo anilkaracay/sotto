@@ -360,7 +360,7 @@ describe("viewing grants", () => {
     });
   });
 
-  it("AC-10.2 shows a wallet that is not the holder yet only the organization, the offered scope and the expiry", async () => {
+  it("AC-10.2 shows a wallet that is not the holder yet only the organization, the offered scope, the expiry and the link's deadline", async () => {
     const { owner, orgId, person, payment, line } = await setUp();
     await ownRecords(owner, orgId, [
       [payment, "payment"],
@@ -373,7 +373,7 @@ describe("viewing grants", () => {
         periodTo: "2026-09-30",
         expiry: "end_of_year",
       })
-    ).json()) as { grant: GrantView; invite: { url: string } };
+    ).json()) as { grant: GrantView; invite: { url: string; expiresAt: string } };
     const token = tokenOf(created.invite.url);
     const read = async (cookie: string) =>
       (await (
@@ -405,6 +405,8 @@ describe("viewing grants", () => {
             periodFrom: "2026-07-01",
             periodTo: "2026-09-30",
             grantExpiresAt: created.grant.expiresAt,
+            // The link's own deadline is shown (founder, step 2.5 confirmation).
+            expiresAt: created.invite.expiresAt,
           },
           expectedWallet: null,
           acceptedByYou: false,

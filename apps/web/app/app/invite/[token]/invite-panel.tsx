@@ -140,6 +140,8 @@ export function InvitePanel({
             <dd>{scopeWords(details.scope, details.periodFrom, details.periodTo)}</dd>
             <dt>Access</dt>
             <dd>{expiryWords(details.grantExpiresAt)}</dd>
+            <dt>Link valid until</dt>
+            <dd>{formatDate(details.expiresAt)}</dd>
           </dl>
         ) : null}
         {details?.role === "recipient" && invite.status === "open" ? (

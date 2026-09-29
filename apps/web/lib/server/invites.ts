@@ -108,9 +108,9 @@ export type InviteView = {
    * A recipient invite's details only for a session with the invited wallet (founder, step 1.8.1):
    * the recipient's name, role and wallet and the link's expiry. An accountant invite's (step 2.4)
    * while it is open, for any signed in session, and for its holder once they accepted: only what
-   * the grant offers, its scope and its expiry, never the holder's name as the owner typed it or
-   * any amount, payment or recipient (founder, 2026-09-29). Before sign in the page shows only the
-   * organization.
+   * the grant offers, its scope and its expiry, and the link's own deadline (founder, step 2.5
+   * confirmation), never the holder's name as the owner typed it or any amount, payment or recipient
+   * (founder, 2026-09-29). Before sign in the page shows only the organization.
    */
   details:
     | {
@@ -124,6 +124,8 @@ export type InviteView = {
         periodFrom: string | null;
         periodTo: string | null;
         grantExpiresAt: string | null;
+        /** The link's own deadline. */
+        expiresAt: string;
       }
     | null;
   /** For a session with another wallet: the wallet the invite is for, and nothing else about it. */
@@ -197,6 +199,7 @@ export async function readInvite(
       periodFrom: row.grantFrom,
       periodTo: row.grantTo,
       grantExpiresAt: row.grantExpiresAt?.toISOString() ?? null,
+      expiresAt: row.expiresAt.toISOString(),
     };
   } else if (yours && row.recipientName !== null && row.recipientWallet !== null) {
     details = {

@@ -1,5 +1,7 @@
-/* The recipient's minimal pay page (step 1.10), built on the app tokens and the overview's cards until
-   My pay gets its design in Phase 2 (13 A40). */
+/* My pay (step 2.6) on the design's My pay screen (design .skyk.pay8 with .slipg, .dkc with the glowing
+   month bars, .psl8 and .ps8, .today and .pubx); the balances, the withdraw card and the keys cards
+   keep the confidential pages' cards (13 A40). Pixel fidelity and motion get the Phase 3 design pass
+   (M2). */
 .side {
   display: flex;
   flex-direction: column;
@@ -9,24 +11,290 @@
 .wide {
   grid-column: 1 / -1;
   min-width: 0;
-  overflow-x: auto;
-}
-.head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
 }
 .muted {
   color: var(--faint);
   font-size: 12.5px;
 }
-.wide .empty {
+.empty {
   padding: 18px 0 6px;
   font-size: 14px;
   color: var(--muted);
 }
 .apply {
   margin-bottom: 4px;
+}
+
+/* One organization's pay (grouped by organization). */
+.group {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.group > * {
+  min-width: 0;
+}
+.groupHead {
+  grid-column: 1 / -1;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.s5 {
+  grid-column: span 5;
+}
+.s7 {
+  grid-column: span 7;
+}
+.s12 {
+  grid-column: 1 / -1;
+}
+@media (max-width: 1100px) {
+  .s5,
+  .s7 {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The latest payslip (design .skyk.pay8 and .slipg). */
+.sky {
+  position: relative;
+  overflow: hidden;
+  min-height: 420px;
+  border-radius: 24px;
+  color: #ffffff;
+}
+.skyArt {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.skyText {
+  position: relative;
+  padding: 26px;
+}
+.skyText h3 {
+  font-size: 24px;
+  font-weight: 450;
+  letter-spacing: -0.035em;
+}
+.skyText p {
+  margin-top: 6px;
+  max-width: 22em;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.88);
+}
+.slip {
+  position: absolute;
+  left: 26px;
+  right: 26px;
+  bottom: 26px;
+  padding: 22px 24px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.55));
+  backdrop-filter: blur(16px) saturate(1.4);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.8),
+    0 30px 50px -24px rgba(11, 40, 90, 0.5);
+  color: #0b1830;
+}
+.sg1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #445370;
+}
+.paid {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: rgba(14, 154, 100, 0.12);
+  color: #0b7a51;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.sgb {
+  display: block;
+  margin-top: 6px;
+  font-size: 48px;
+  font-weight: 450;
+  letter-spacing: -0.055em;
+}
+.sealedBig {
+  display: block;
+  margin-top: 10px;
+  font-size: 20px;
+  color: #445370;
+}
+.sg2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.sg2 div {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+}
+.sg2 small {
+  display: block;
+  font-size: 11.5px;
+  color: #445370;
+}
+.sg2 b {
+  display: block;
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.sg3 {
+  margin-top: 14px;
+  font-size: 12.5px;
+  color: #445370;
+}
+
+/* The pay history (design .dkc with the month bars). */
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cardHead h3 {
+  font-size: 22px;
+  font-weight: 450;
+  letter-spacing: -0.03em;
+}
+.darkChip {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 12.5px;
+  color: #c7d0de;
+}
+.darkEmpty {
+  padding: 18px 0 8px;
+  font-size: 13.5px;
+  color: #a9b4c7;
+}
+
+/* Payslips (design .psl8 and .ps8). */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.head h3 {
+  font-size: 18px;
+  font-weight: 500;
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 8px;
+}
+.slipRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 66px;
+  border-top: 1px solid var(--line);
+}
+.slipRow:first-child {
+  border-top: 0;
+}
+.slipIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 12px;
+  background: #eef3ff;
+  color: #1f5be8;
+  font-size: 12px;
+  font-weight: 600;
+}
+.slipRow b {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+}
+.slipRow small {
+  display: block;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+.slipRow .amount {
+  margin-left: auto;
+  font-weight: 500;
+}
+
+/* What your colleagues see (design .today, .pubx, .pxr and .sb5). */
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.today {
+  margin: 10px 0 18px;
+  font-size: 15px;
+  color: var(--muted);
+}
+.today b {
+  color: var(--ink);
+  font-weight: 500;
+}
+.pub {
+  padding: 4px 16px;
+  border-radius: 16px;
+  background: #f5f6f8;
+}
+.pubRow {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) 110px;
+  align-items: center;
+  height: 46px;
+  border-top: 1px solid #e9ecf0;
+  font-size: 13px;
+  color: var(--faint);
+}
+.pubRow:first-child {
+  border-top: 0;
+}
+.pubRow .mono {
+  color: var(--ink);
+}
+.bar {
+  height: 20px;
+  border-radius: 7px;
+  background: linear-gradient(90deg, #e1e6ee, #f1f4f8, #e1e6ee);
+  background-size: 200% 100%;
+  animation: sheen 3s ease-in-out infinite;
+}
+@keyframes sheen {
+  0%,
+  100% {
+    background-position: 0% 0;
+  }
+  50% {
+    background-position: 100% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    animation: none;
+  }
 }

@@ -57,6 +57,13 @@
       "when": 1790690272271,
       "tag": "0007_chain_activity_and_reconciliations",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790700066489,
+      "tag": "0008_indexer_cursor_slot",
+      "breakpoints": true
     }
   ]
 }

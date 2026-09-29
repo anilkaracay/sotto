@@ -47,6 +47,7 @@ import {
 } from "../../_components/confidential/context.tsx";
 import { ViewingUnlockCard, WalletCard } from "../../_components/confidential/keys.tsx";
 import { useKeySession } from "../../_components/key-session.tsx";
+import { MonthBars } from "../../_components/month-bars.tsx";
 import styles from "./books.module.css";
 
 type Records = { items: DisclosureItemView[]; manifests: ManifestView[] };
@@ -193,7 +194,6 @@ export function BooksScreen({
   const inRange = rows ? rows.filter((row) => months.includes(row.month)) : [];
   const shown = rows ? filterRows(rows, { month: activeMonth, chip, search }) : [];
   const totals = monthTotals(inRange, months);
-  const highest = totals.reduce((max, entry) => (entry.total > max ? entry.total : max), 0n);
   const categories = categoryTotals(inRange);
   const rangeTotal = sum(inRange);
   const needs = payments.filter(
@@ -317,36 +317,12 @@ export function BooksScreen({
             )}
           </div>
           {rows && totals.length > 0 ? (
-            <div className={styles.gbw}>
-              <div
-                className={styles.gbars}
-                style={{ gridTemplateColumns: `repeat(${totals.length}, minmax(0, 1fr))` }}
-              >
-                {totals.map((entry, index) => {
-                  const height =
-                    highest > 0n ? Math.max(3, Number((entry.total * 1000n) / highest) / 10) : 3;
-                  const on = entry.month === activeMonth;
-                  return (
-                    <div key={entry.month} className={styles.gcol}>
-                      <div
-                        className={`${styles.gb} ${on ? styles.on : ""}`}
-                        style={{ height: `${height}%`, animationDelay: `${index * 0.07}s` }}
-                        data-testid="money-out-bar"
-                        data-month={entry.month}
-                      >
-                        {on ? (
-                          <span className={styles.gtag}>
-                            <small>{monthLabel(entry.month, true)}</small>
-                            <b className="num">{formatUsdc(entry.total)}</b>
-                          </span>
-                        ) : null}
-                      </div>
-                      <span className={styles.gm}>{monthLabel(entry.month)}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <MonthBars
+              totals={totals}
+              selected={activeMonth}
+              format={formatUsdc}
+              testId="money-out-bar"
+            />
           ) : null}
         </Card>
 

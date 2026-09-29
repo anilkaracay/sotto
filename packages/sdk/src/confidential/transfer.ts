@@ -13,7 +13,15 @@
 // Since step 1.10 a withdraw from the available balance to the public balance (06 section 6, AC-09.1)
 // uses the same machinery: its plan has two proofs (equality and a 64 bit range proof), the withdraw
 // instruction and the closes, and its main transaction carries the role "transfer" like a transfer's.
+// Since step 2.3 a payroll chunk (06 section 7, facts K6) builds the plans of several lines before any
+// is sent: each line's plan is built against the source state the previous line leaves, whose
+// available balance ciphertext is the one in the previous plan's equality proof and whose decryptable
+// balance is the previous plaintext minus its amount, encrypted with the AES key.
 import type { Mint, Token } from "@solana-program/token-2022";
+import {
+  ZK_ELGAMAL_PROOF_PROGRAM_ADDRESS,
+  ZkElGamalProofInstruction,
+} from "@solana-program/zk-elgamal-proof";
 import {
   getConfidentialTransferInstructionPlan,
   getConfidentialTransferWithRecordInstructionPlan,
@@ -251,6 +259,97 @@ export async function confidentialTransferPlan(input: {
     secret.free();
     aesKey.free();
   }
+}
+
+/**
+ * The source account after a transfer plan lands (facts K6): the available balance ciphertext of the
+ * plan's equality proof (the verify instruction's data after the instruction byte: public key 32,
+ * ciphertext 64, commitment 32 bytes) and the remaining balance encrypted with the AES key.
+ */
+function predictedSource(
+  source: Token,
+  plan: ConfidentialTransferPlan,
+  remaining: bigint,
+  keys: ConfidentialKeyMaterial,
+): Token {
+  const equality = plan.transactions
+    .flatMap((transaction) => transaction.instructions)
+    .find(
+      (instruction) =>
+        instruction.programAddress === ZK_ELGAMAL_PROOF_PROGRAM_ADDRESS &&
+        instruction.data[0] === ZkElGamalProofInstruction.VerifyCiphertextCommitmentEquality,
+    );
+  if (!equality || equality.data.length < 97) {
+    throw new Error("the transfer plan has no equality proof to predict the next balance from");
+  }
+  const availableBalance = equality.data.slice(33, 97);
+  const aesKey = AeKey.fromBytes(keys.aeKey);
+  let decryptableAvailableBalance: Uint8Array;
+  try {
+    decryptableAvailableBalance = aesKey.encrypt(remaining).toBytes();
+  } finally {
+    aesKey.free();
+  }
+  if (source.extensions.__option !== "Some") throw new Error("the source has no extensions");
+  return {
+    ...source,
+    extensions: {
+      __option: "Some",
+      value: source.extensions.value.map((extension) =>
+        extension.__kind === "ConfidentialTransferAccount"
+          ? { ...extension, availableBalance, decryptableAvailableBalance }
+          : extension,
+      ),
+    },
+  };
+}
+
+export type TransferChunkLine = {
+  destinationToken: Address;
+  destinationTokenAccount: Token;
+  amount: bigint;
+};
+
+/**
+ * 06 section 7 step 2 (step 2.3): the transfer plans of a payroll chunk, in order, each built against
+ * the state the lines before it leave, so the whole chunk can be signed before any line is sent.
+ * `availableBefore` of each plan is the balance its line starts from; `next` is the source state after
+ * the last line, for an integrity check once the chunk has landed.
+ */
+export async function confidentialTransferChunk(input: {
+  owner: Address;
+  sourceToken: Address;
+  sourceTokenAccount: Token;
+  mint: Address;
+  mintAccount: Mint;
+  lines: readonly TransferChunkLine[];
+  keys: ConfidentialKeyMaterial;
+  version: TransactionVersionChoice;
+  rent: (space: bigint) => Promise<bigint>;
+}): Promise<{ plans: ConfidentialTransferPlan[]; availableAfter: bigint; next: Token }> {
+  if (input.lines.length === 0) throw new Error("a chunk has at least one line");
+  const plans: ConfidentialTransferPlan[] = [];
+  let source = input.sourceTokenAccount;
+  let available = 0n;
+  for (const line of input.lines) {
+    const plan = await confidentialTransferPlan({
+      owner: input.owner,
+      sourceToken: input.sourceToken,
+      sourceTokenAccount: source,
+      destinationToken: line.destinationToken,
+      destinationTokenAccount: line.destinationTokenAccount,
+      mint: input.mint,
+      mintAccount: input.mintAccount,
+      amount: line.amount,
+      keys: input.keys,
+      version: input.version,
+      rent: input.rent,
+    });
+    available = plan.availableBefore - line.amount;
+    source = predictedSource(source, plan, available, input.keys);
+    plans.push(plan);
+  }
+  return { plans, availableAfter: available, next: source };
 }
 
 /**

@@ -65,6 +65,32 @@ export async function simulateWire(
   };
 }
 
+/**
+ * Step 2.3 (06 section 7): simulates a transaction that is already signed, exactly as it would be
+ * sent: its own blockhash (an expired one fails) and its signatures checked. A payroll chunk signs
+ * lines before the lines ahead of them land, so each is simulated again right before it is sent.
+ */
+export async function simulateSigned(
+  rpc: SolanaRpc,
+  wire: ReturnType<typeof getBase64EncodedWireTransaction>,
+): Promise<SimulationResult> {
+  const { value } = await rpc
+    .simulateTransaction(wire, {
+      encoding: "base64",
+      sigVerify: true,
+      replaceRecentBlockhash: false,
+      commitment: "confirmed",
+    })
+    .send();
+  return {
+    err: value.err ?? null,
+    logs: value.logs ?? [],
+    unitsConsumed: value.unitsConsumed ?? 0n,
+    loadedAccountsDataSize:
+      value.loadedAccountsDataSize === undefined ? null : Number(value.loadedAccountsDataSize),
+  };
+}
+
 /** Simulates instructions without signatures, with the maximum limits. Never sends. */
 export async function simulateInstructions(options: {
   rpc: SolanaRpc;

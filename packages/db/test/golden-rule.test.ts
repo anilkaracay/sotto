@@ -8,12 +8,16 @@ import {
 } from "../src/golden-rule.ts";
 import * as schema from "../src/schema.ts";
 
-/** The tables of step 1.2, rate_limits, payroll_runs since step 2.3 and access_log since 2.4. */
+/**
+ * The tables of step 1.2, rate_limits, payroll_runs since step 2.3, access_log since 2.4, and
+ * chain_activity and reconciliations since 2.5.
+ */
 export const TABLES = [
   "access_log",
   "admins",
   "approvals",
   "auth_nonces",
+  "chain_activity",
   "cluster_health",
   "disclosures",
   "grants",
@@ -27,6 +31,7 @@ export const TABLES = [
   "payroll_runs",
   "rate_limits",
   "recipients",
+  "reconciliations",
   "screenings",
   "sessions",
   "token_accounts",
@@ -41,7 +46,7 @@ function schemaTables(): PgTable[] {
 }
 
 describe("golden rule for data (08 section 1)", () => {
-  it("defines the tables of 12 step 1.2, rate_limits, payroll_runs (step 2.3) and access_log (step 2.4)", () => {
+  it("defines the tables of 12 step 1.2, rate_limits, payroll_runs (step 2.3), access_log (step 2.4), chain_activity and reconciliations (step 2.5)", () => {
     expect(
       schemaTables()
         .map((t) => getTableConfig(t).name)

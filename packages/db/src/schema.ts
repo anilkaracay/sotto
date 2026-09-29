@@ -1,8 +1,9 @@
 // Phase 1 tables of the logical schema in docs/08-BACKEND.md section 2, plus rate_limits (08 section
-// 6), since step 2.3 payroll_runs with the payments.run_id foreign key, and since step 2.4 access_log.
-// Golden rule (08 section 1): no plaintext amount, balance or key material in any column; amounts
-// exist only as ciphertext (private_blob, disclosures.ciphertext). test/golden-rule.test.ts checks the
-// column names. Later steps add proof_records, reconciliations, waitlist and chain_activity.
+// 6), since step 2.3 payroll_runs with the payments.run_id foreign key, since step 2.4 access_log, and
+// since step 2.5 chain_activity and reconciliations. Golden rule (08 section 1): no plaintext amount,
+// balance or key material in any column; amounts exist only as ciphertext (private_blob,
+// disclosures.ciphertext), except the amounts that are public onchain (ENGINEERING-RULES.md rule 4).
+// test/golden-rule.test.ts checks the column names. Later steps add proof_records and waitlist.
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -88,6 +89,21 @@ export const disclosureKind = pgEnum("disclosure_kind", [
   "month_total",
   "balance_snapshot",
 ]);
+/** Step 2.5 (08 section 4): what an instruction did to an org's token account, public data only. */
+export const chainActivityType = pgEnum("chain_activity_type", [
+  "account_setup",
+  "deposit",
+  "apply_pending",
+  "transfer_out",
+  "transfer_in",
+  "withdraw",
+  "wrap",
+  "unwrap",
+  "public_transfer_out",
+  "public_transfer_in",
+]);
+/** Step 2.5 (AC-11.3): reconciliation status only; notes are Post-hackathon (D-27). */
+export const reconciliationStatus = pgEnum("reconciliation_status", ["matched", "needs_receipt"]);
 
 export const users = pgTable(
   "users",
@@ -288,6 +304,12 @@ export const tokenAccounts = pgTable(
      * unlock. Cleared when the counter is below again.
      */
     applyFlaggedAt: timestamptz("apply_flagged_at"),
+    /**
+     * Step 2.5: the index-accounts job's cursor, the newest finalized transaction of the account it has
+     * read (08 section 4), and when it last read the account.
+     */
+    indexedUntil: text("indexed_until"),
+    indexedAt: timestamptz("indexed_at"),
   },
   (t) => [
     unique("token_accounts_cluster_address_key").on(t.cluster, t.address),
@@ -613,6 +635,70 @@ export const accessLog = pgTable(
     index("access_log_org_created_idx").on(t.orgId, t.createdAt),
   ],
 );
+
+/**
+ * Step 2.5 (08 section 4, AC-05.3): the public activity of an org's token accounts, one row per
+ * instruction of a finalized transaction that touched one: who, when, which instruction and the other
+ * account. The only amounts are those public onchain, a confidential deposit's or withdrawal's
+ * (ENGINEERING-RULES.md rule 4); the check refuses any other.
+ */
+export const chainActivity = pgTable(
+  "chain_activity",
+  {
+    id: bigint("id", { mode: "bigint" }).primaryKey().generatedAlwaysAsIdentity(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id),
+    tokenAccount: text("token_account").notNull(),
+    signature: text("signature").notNull(),
+    slot: bigint("slot", { mode: "bigint" }).notNull(),
+    blockTime: timestamptz("block_time"),
+    instructionIndex: integer("instruction_index").notNull(),
+    instructionType: chainActivityType("instruction_type").notNull(),
+    counterpartyAddress: text("counterparty_address"),
+    publicAmountBaseUnits: bigint("public_amount_base_units", { mode: "bigint" }),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("chain_activity_instruction_key").on(
+      t.orgId,
+      t.tokenAccount,
+      t.signature,
+      t.instructionIndex,
+    ),
+    check(
+      "chain_activity_token_account_base58",
+      sql`${t.tokenAccount} ~ ${sql.raw(`'${BASE58_ADDRESS}'`)}`,
+    ),
+    check(
+      "chain_activity_counterparty_base58",
+      sql`${t.counterpartyAddress} is null or ${t.counterpartyAddress} ~ ${sql.raw(`'${BASE58_ADDRESS}'`)}`,
+    ),
+    check("chain_activity_signature_base58", sql`${t.signature} ~ '^[1-9A-HJ-NP-Za-km-z]{64,88}$'`),
+    check("chain_activity_instruction_index", sql`${t.instructionIndex} >= 0`),
+    check(
+      "chain_activity_public_amount",
+      sql`(${t.instructionType} in ('deposit', 'withdraw')) = (${t.publicAmountBaseUnits} is not null) and (${t.publicAmountBaseUnits} is null or ${t.publicAmountBaseUnits} >= 0)`,
+    ),
+    index("chain_activity_org_slot_idx").on(t.orgId, t.slot),
+    index("chain_activity_signature_idx").on(t.signature),
+  ],
+);
+
+/** Step 2.5 (AC-11.3): a payment's reconciliation status, set by a reader of its record; no notes. */
+export const reconciliations = pgTable("reconciliations", {
+  paymentId: uuid("payment_id")
+    .primaryKey()
+    .references(() => payments.id),
+  orgId: uuid("org_id")
+    .notNull()
+    .references(() => orgs.id),
+  status: reconciliationStatus("status").notNull(),
+  updatedBy: uuid("updated_by")
+    .notNull()
+    .references(() => users.id),
+  updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+});
 
 /**
  * Fixed window rate limit counters (08 section 6), shared by every server instance. `key` is an HMAC

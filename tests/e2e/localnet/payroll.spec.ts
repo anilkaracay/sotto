@@ -6,9 +6,12 @@
 // the chunk of lines 11 to 20 is signed), the run stops partially settled with lines 1 to 11 paid,
 // and Resume pays lines 12 to 24 to settlement without paying lines 1 to 11 twice (AC-08.4,
 // AC-08.5). Every settled line has its self disclosure and, for the recipient who registered a
-// viewing key, the recipient's, and she reads it on her pay page (AC-08.6). The amounts and memos
-// appear in no request (I-2). The accounts are prepared with the SDK; everything the owner and the
+// viewing key, the recipient's, and she reads it on her pay page (AC-08.6); since step 2.6 her line
+// carries its gross and tax, which her payslip shows, her payslip PDF is made in her tab, and what her
+// colleagues see lists the transfer from the indexed chain without its amount (AC-12.1 to AC-12.3).
+// The amounts and memos appear in no request (I-2). The accounts are prepared with the SDK; everything the owner and the
 // recipient do runs in the browser. Runs in the localnet job of scripts/ci-local.sh, never on devnet.
+import { readFile } from "node:fs/promises";
 import { decryptTokenAccount } from "@sotto/sdk/confidential";
 import { associatedTokenAccount, decodeToken2022Account } from "@sotto/sdk/confidential/public";
 import { confidentialKeysMessage, deriveStandardKeys } from "@sotto/sdk/keys";
@@ -49,6 +52,9 @@ const USDC = 1_000_000n;
 /** I-2: line amounts that are never used for a deposit or a withdrawal, and a memo. */
 const amountOf = (index: number) => 2_000_000n + BigInt(index + 1) * 11_111n;
 const MEMO = "October salary sentinel 5521";
+/** Step 2.6 (AC-12.1): Maya's line carries its gross and tax withheld, both sentinels too. */
+const TAX = 507_531n;
+const GROSS = 2_011_111n + TAX;
 const V1_WALLET = "window.__sottoTestWalletVersions = ['legacy', 0, 1];";
 
 async function chainPerson(keypair: number[], usdc: bigint): Promise<LocalnetOwner> {
@@ -106,8 +112,9 @@ const wallet = <T>(page: Page, key: "signTransactionCalls" | "signedTransactions
     key,
   );
 
-async function uploadCsv(page: Page, name: string, rows: string[]) {
-  const csv = ["wallet,amount,memo,name,team,country", ...rows].join("\n");
+async function uploadCsv(page: Page, name: string, rows: string[], payslips = false) {
+  const header = `wallet,amount,memo,name,team,country${payslips ? ",gross,tax" : ""}`;
+  const csv = [header, ...rows].join("\n");
   await page
     .getByLabel("Payroll CSV")
     .setInputFiles({ name, mimeType: "text/csv", buffer: Buffer.from(csv) });
@@ -194,6 +201,12 @@ test.describe.serial("payroll runs on localnet", () => {
     }
     await add("Not Ready", NOT_READY.address, 0);
     await add("Blocked Vendor", DENIED.address, 1);
+    // The account the SDK set up, recorded as the setup page records it (the indexer reads it).
+    const recorded = await page.request.post("/api/token-accounts", {
+      headers: { origin },
+      data: { orgId, address: owner.wusdc, keyScheme: "standard_v1" },
+    });
+    expect([200, 201]).toContain(recorded.status());
 
     // Maya joins through her invite and registers her viewing key.
     await page.getByRole("navigation").getByRole("link", { name: "Recipients" }).click();
@@ -256,7 +269,7 @@ test.describe.serial("payroll runs on localnet", () => {
     expect(await wallet<number[]>(page, "signTransactionCalls")).toEqual([]);
   });
 
-  test("AC-08.4 AC-08.5 AC-08.6 pays 24 lines in chunks, stops at a failure forced on line 12, and a resume settles the run without paying lines 1 to 11 twice", async ({
+  test("AC-08.4 AC-08.5 AC-08.6 AC-12.1 AC-12.2 AC-12.3 pays 24 lines in chunks, stops at a failure forced on line 12, a resume settles the run without paying lines 1 to 11 twice, and the recipient reads her payslip", async ({
     page,
     browser,
   }) => {
@@ -274,8 +287,11 @@ test.describe.serial("payroll runs on localnet", () => {
       "october.csv",
       PEOPLE.map(
         (person, index) =>
-          `${person.address},${format(amountOf(index))},${index === 0 ? MEMO : ""},,,`,
+          `${person.address},${format(amountOf(index))},${index === 0 ? MEMO : ""},,,,${
+            index === 0 ? `${format(GROSS)},${format(TAX)}` : ","
+          }`,
       ),
+      true,
     );
     await expect(page.getByTestId("csv-summary")).toContainText("24 lines from october.csv");
     await page.getByRole("button", { name: "Create run" }).click();
@@ -343,7 +359,13 @@ test.describe.serial("payroll runs on localnet", () => {
     ).json()) as { items: { subject: string }[] };
     expect(new Set(disclosures.items.map((item) => item.subject)).size).toBe(24);
     const everything = traffic.join("\n");
-    for (const plaintext of [format(amountOf(0)), amountOf(0).toString(), MEMO]) {
+    for (const plaintext of [
+      format(amountOf(0)),
+      amountOf(0).toString(),
+      MEMO,
+      format(GROSS),
+      format(TAX),
+    ]) {
       expect(everything).not.toContain(plaintext);
     }
 
@@ -355,6 +377,24 @@ test.describe.serial("payroll runs on localnet", () => {
     await expect(received.getByTestId("received-amount")).toHaveText(`${format(amountOf(0))} USDC`);
     await expect(received).toContainText(MEMO);
     await expect(received).toContainText("Payroll");
+    // AC-12.1: the latest payslip with its net, gross and tax withheld, opened in the tab.
+    await expect(maya.getByTestId("payslip-net")).toHaveText(`${format(amountOf(0))} USDC`);
+    await expect(maya.getByTestId("payslip-gross")).toHaveText(`${format(GROSS)} USDC`);
+    await expect(maya.getByTestId("payslip-tax")).toHaveText(`(${format(TAX)} USDC)`);
+    // AC-12.3: the payslip PDF, made in the tab.
+    const downloading = maya.waitForEvent("download");
+    await received.getByTestId("payslip-pdf").click();
+    const pdf = await readFile((await (await downloading).path()) as string, "latin1");
+    expect(pdf.startsWith("%PDF-1.4\n")).toBe(true);
+    expect(pdf).toContain(`(Net pay: ${format(amountOf(0))} USDC) Tj`);
+    expect(pdf).toContain(`(Gross pay: ${format(GROSS)} USDC) Tj`);
+    expect(pdf).toContain(`(Tax withheld: ${format(TAX)} USDC) Tj`);
+    // AC-12.2: what the colleagues see, from the indexed chain: the transfer, never the amount.
+    await expect(async () => {
+      await maya.reload();
+      await expect(maya.getByTestId("colleagues-row").first()).toBeVisible({ timeout: 5_000 });
+    }).toPass({ timeout: 120_000 });
+    await expect(maya.getByTestId("colleagues-view")).not.toContainText("USDC");
     await maya.context().close();
   });
 });

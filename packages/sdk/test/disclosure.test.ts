@@ -17,6 +17,8 @@ import {
   validatePayload,
   verifyManifest,
   type DisclosurePayloadV1,
+  periodBounds,
+  scopeCovers,
 } from "../src/disclosure/index.ts";
 import { openJson, openPayload, sealJson, sealPayload } from "../src/disclosure/seal.ts";
 
@@ -229,5 +231,55 @@ describe("signed manifests (07 section 4, I-9)", () => {
     ]) {
       expect(() => validateManifest(bad)).toThrow(DisclosureError);
     }
+  });
+});
+
+describe("grant scope evaluation (07 sections 6 and 9)", () => {
+  const all = { scope: "all_payments" as const, periodFrom: null, periodTo: null };
+  const payroll = { scope: "payroll_only" as const, periodFrom: null, periodTo: null };
+  const own = { scope: "own_payslips" as const, periodFrom: null, periodTo: null };
+  const q3 = { scope: "period" as const, periodFrom: "2026-07-01", periodTo: "2026-09-30" };
+  const at = (iso: string) => new Date(iso);
+
+  it("AC-10.1 covers each kind by scope", () => {
+    const table: [typeof all | typeof payroll | typeof own, string, boolean][] = [
+      [all, "payment", true],
+      [all, "payroll_line", true],
+      [all, "balance_snapshot", true],
+      [all, "month_total", false],
+      [payroll, "payment", false],
+      [payroll, "payroll_line", true],
+      [payroll, "balance_snapshot", false],
+      [own, "payment", false],
+    ];
+    for (const [grant, kind, covered] of table) {
+      expect(
+        scopeCovers(grant, { kind: kind as never, settledAt: at("2026-08-01T00:00:00Z") }),
+      ).toBe(covered);
+    }
+    // Own payslips: the viewer's own lines only.
+    expect(scopeCovers(own, { kind: "payroll_line", settledAt: null, ownLine: true })).toBe(true);
+    expect(scopeCovers(own, { kind: "payroll_line", settledAt: null, ownLine: false })).toBe(false);
+  });
+
+  it("AC-10.1 covers a period from its first day included to the day after its last excluded, in UTC", () => {
+    const covers = (iso: string | null) =>
+      scopeCovers(q3, { kind: "payment", settledAt: iso ? at(iso) : null });
+    expect(covers("2026-06-30T23:59:59.999Z")).toBe(false);
+    expect(covers("2026-07-01T00:00:00.000Z")).toBe(true);
+    expect(covers("2026-09-30T23:59:59.999Z")).toBe(true);
+    expect(covers("2026-10-01T00:00:00.000Z")).toBe(false);
+    // Not settled: no period covers it.
+    expect(covers(null)).toBe(false);
+    expect(scopeCovers(q3, { kind: "month_total", settledAt: at("2026-08-01T00:00:00Z") })).toBe(
+      false,
+    );
+    // One day periods, and bounds that are not a period.
+    expect(periodBounds("2026-07-01", "2026-07-01")).toEqual({
+      from: at("2026-07-01T00:00:00.000Z"),
+      to: at("2026-07-02T00:00:00.000Z"),
+    });
+    expect(() => periodBounds("2026-07-02", "2026-07-01")).toThrow();
+    expect(() => periodBounds("2026-7-1", "2026-07-01")).toThrow();
   });
 });

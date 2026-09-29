@@ -23,4 +23,10 @@ export {
   type DisclosureKind,
   type DisclosurePayloadV1,
 } from "./payload.ts";
-export { scopeAllowsKind, type GrantScope } from "./scope.ts";
+export {
+  periodBounds,
+  scopeAllowsKind,
+  scopeCovers,
+  type GrantCoverage,
+  type GrantScope,
+} from "./scope.ts";

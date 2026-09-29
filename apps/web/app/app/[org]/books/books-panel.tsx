@@ -286,19 +286,11 @@ export function BooksScreen({
       />
       <div className={styles.page}>
         <Card className={styles.s12} data-testid="scope-banner">
-          <div className={styles.banner}>
-            <span>
-              Shared by <b>{granter}</b>
-            </span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {grant ? scopeWords(grant.scope, grant.periodFrom, grant.periodTo) : "Every amount"}
-            </span>
-            <span aria-hidden="true">·</span>
-            <span>{expiry}</span>
-            <span aria-hidden="true">·</span>
-            <span>Read only, never control of funds</span>
-          </div>
+          <p className={styles.banner}>
+            Shared by <b>{granter}</b> ·{" "}
+            {grant ? scopeWords(grant.scope, grant.periodFrom, grant.periodTo) : "Every amount"} ·{" "}
+            {expiry} · Read only, never control of funds
+          </p>
           {exported ? (
             <p
               className={exported.tone === "done" ? styles.done : styles.problem}

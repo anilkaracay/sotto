@@ -110,11 +110,8 @@
 
 /* The scope banner (AC-11.1). */
 .banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
   font-size: 14px;
+  line-height: 1.5;
   color: var(--ink2);
 }
 .banner b {

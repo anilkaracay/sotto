@@ -1,5 +1,5 @@
 [workspace]
-members = ["programs/sotto_proofs", "programs/g4_probe"]
+members = ["programs/sotto_proofs"]
 resolver = "2"
 
 [profile.release]

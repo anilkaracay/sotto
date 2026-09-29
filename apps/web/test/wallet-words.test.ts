@@ -70,6 +70,10 @@ describe("the wallet's own words (Q-15)", () => {
       `${SETUP_BLOCKED} Backpack said: "WalletSignTransactionError: Transaction blocked"`,
     );
     expect(SETUP_BLOCKED).not.toMatch(/backpack|phantom|solflare/i);
+    // True for any refusal, not only a security block (founder, step 2.2).
+    expect(SETUP_BLOCKED).toBe(
+      "Your wallet did not sign this confidential account setup. If your wallet mentions a security check, try another Solana wallet or contact your wallet's support.",
+    );
     expect(describeTransactionError(cancelled, "Phantom", { refused: SETUP_BLOCKED })).toMatch(
       /^You cancelled in your wallet\. Nothing was sent\./,
     );

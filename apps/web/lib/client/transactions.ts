@@ -27,12 +27,13 @@ export const WALLET_REFUSED_TRANSACTION =
   "Your wallet did not sign the transaction, so nothing was sent. Sotto had simulated it on this network and it would have succeeded, so the refusal comes from the wallet itself.";
 
 /**
- * A wallet's own check blocked the confidential account setup (Q-15, founder 2026-09-29): some
- * wallets verify a transaction with a security service before signing and refuse ones it cannot
- * verify. Neutral by design: it names no wallet, and the wallet's own words follow it.
+ * The wallet did not sign the confidential account setup (Q-15, founder 2026-09-29): some wallets
+ * verify a transaction with their own security service before signing and refuse ones it cannot
+ * verify, and Sotto cannot tell such a block from any other refusal, so the words hold in every case
+ * (founder, step 2.2). Neutral by design: it names no wallet, and the wallet's own words follow it.
  */
 export const SETUP_BLOCKED =
-  "Your wallet's security check blocked this confidential account setup. Try another Solana wallet, or contact your wallet's support.";
+  "Your wallet did not sign this confidential account setup. If your wallet mentions a security check, try another Solana wallet or contact your wallet's support.";
 
 /**
  * `wallet` is the wallet's name (Wallet Standard), for its own words in the message; `refused`

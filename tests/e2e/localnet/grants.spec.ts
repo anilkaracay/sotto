@@ -276,11 +276,13 @@ test.describe.serial("viewing grants on localnet", () => {
     await option.getByRole("button", { name: "Connect" }).click();
     await option.getByRole("button", { name: "Sign in" }).click();
     await expect(daniel.getByTestId("invite-details")).toContainText("Every amount");
-    // Before acceptance the page shows the organization, the scope and the expiry, nothing else.
+    // Before acceptance the page shows the organization, the scope, the expiry and the link's
+    // deadline, nothing else.
     await expect(daniel.getByTestId("invite-card")).toContainText(
       "Grants Test Ltd invites you to read its payment records in Sotto",
     );
     await expect(daniel.getByTestId("invite-details")).toContainText("No expiry");
+    await expect(daniel.getByTestId("invite-details")).toContainText("Link valid until");
     const shown = await daniel.locator("body").innerText();
     for (const hidden of [
       "Daniel Osei",

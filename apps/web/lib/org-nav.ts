@@ -1,12 +1,12 @@
 // The top nav of an org's pages (09 section 2): only screens that exist (rule 6). Step 1.7 adds the
 // overview with the balance cards next to the setup page, step 1.8 the recipients, step 1.9 the
 // single payment page, step 1.10 the recipient's pay page, step 2.3 payroll (after Overview, as in
-// the design's nav).
+// the design's nav), step 2.4 the viewing keys (after Payroll, as in the design).
 import type { TopNavItem } from "@sotto/ui";
 
 export function ownerNav(
   orgId: string,
-  active: "overview" | "payroll" | "recipients" | "payments" | "setup",
+  active: "overview" | "payroll" | "keys" | "recipients" | "payments" | "setup",
 ): TopNavItem[] {
   return [
     {
@@ -20,6 +20,12 @@ export function ownerNav(
       label: "Payroll",
       href: `/app/${orgId}/payroll`,
       active: active === "payroll",
+    },
+    {
+      key: "keys",
+      label: "Viewing keys",
+      href: `/app/${orgId}/keys`,
+      active: active === "keys",
     },
     {
       key: "recipients",

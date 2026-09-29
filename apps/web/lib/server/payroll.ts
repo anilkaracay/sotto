@@ -162,6 +162,8 @@ export type PayrollLineView = {
   privateBlob: string | null;
   errorCode: string | null;
   settledSlot: string | null;
+  /** Step 2.4: when the worker saw the line's transfer finalized; period grants cover by it. */
+  settledAt: string | null;
   signatures: string[];
   attempts: {
     attemptNo: number;
@@ -419,6 +421,7 @@ async function view(
         : null,
       errorCode: line.payment.errorCode,
       settledSlot: line.payment.settledSlot?.toString() ?? null,
+      settledAt: line.payment.settledAt?.toISOString() ?? null,
       signatures: line.payment.signatures,
       attempts: attempts
         .filter((attempt) => attempt.paymentId === line.payment.id)

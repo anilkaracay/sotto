@@ -20,12 +20,7 @@ import {
   type PaidLine,
   type TransferTransactionRole,
 } from "@sotto/sdk/confidential/public";
-import {
-  buildManifest,
-  manifestMessage,
-  validatePayload,
-  type DisclosurePayloadV1,
-} from "@sotto/sdk/disclosure";
+import { validatePayload, type DisclosurePayloadV1 } from "@sotto/sdk/disclosure";
 import { verifyViewKeyRegistration } from "@sotto/sdk/keys/public";
 import {
   fromPortableInstruction,
@@ -36,6 +31,7 @@ import {
 import { address, fetchEncodedAccount, type Signature } from "@solana/kit";
 import { ApiCallError, callApi } from "../../../../../lib/client/api.ts";
 import { activeGrantViewers, coveringGrants } from "../../../../../lib/client/grant-viewers.ts";
+import { storeRecords, type RecordItem } from "../../../../../lib/client/records.ts";
 import { browserRpc } from "../../../../../lib/client/rpc.ts";
 import {
   describeTransactionError,
@@ -67,6 +63,8 @@ export type DisclosureResult = {
   saved: number;
   /** Of those, lines whose recipient has no viewing key yet (only the owner's record). */
   ownerOnly: number;
+  /** A covering grant may lack its copy of a saved line (records.ts); Share past records adds it. */
+  grantCopiesMissing: boolean;
   problem: string | null;
 };
 
@@ -80,7 +78,6 @@ const ROLE_WORDS: Record<TransferTransactionRole, string> = {
   cleanup: "closing the proof accounts",
 };
 
-const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
 const fromBase64 = (text: string) => Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
 
 /**
@@ -120,8 +117,9 @@ async function verified(key: ViewerKeyRecord | null): Promise<boolean> {
 }
 
 /**
- * AC-08.6, X-33: the owner's self disclosure and the recipient's of each settled line, under one
- * manifest the owner wallet signs.
+ * AC-08.6, X-33: the owner's self disclosure and the recipient's of each settled line, and since step
+ * 2.4 one for every grant whose scope covers the line, by its settlement time when Sotto holds it
+ * (07 section 6), under one manifest the owner wallet signs (`storeRecords`).
  */
 export async function discloseLines(options: {
   orgId: string;
@@ -130,20 +128,16 @@ export async function discloseLines(options: {
   connected: Connected;
   worker: () => CryptoWorkerClient;
 }): Promise<DisclosureResult> {
-  if (options.lines.length === 0) return { saved: 0, ownerOnly: 0, problem: null };
+  const none = { saved: 0, ownerOnly: 0, grantCopiesMissing: false };
+  if (options.lines.length === 0) return { ...none, problem: null };
   if (!(await verified(options.owner))) {
-    return { saved: 0, ownerOnly: 0, problem: "Your viewing key did not verify." };
+    return { ...none, problem: "Your viewing key did not verify." };
   }
-  const items: {
-    id: string;
-    viewerUserId: string;
-    grantId: string | null;
-    subject: string;
-    ciphertext: Uint8Array;
-  }[] = [];
+  const items: RecordItem[] = [];
   let ownerOnly = 0;
-  // AC-06.4 grant part: the active grants whose scope covers a payroll line (I-8 checked there).
-  const grants = coveringGrants(await activeGrantViewers(options.orgId), "payroll_line");
+  // AC-06.4 grant part: the active grants (I-8 checked there); the grants that cannot be read now
+  // get their copies from Share past records.
+  const grants = await activeGrantViewers(options.orgId).catch(() => null);
   for (const { line, transferSignature } of options.lines) {
     const payload: DisclosurePayloadV1 = validatePayload({
       v: 1,
@@ -169,62 +163,50 @@ export async function discloseLines(options: {
         id: crypto.randomUUID(),
         viewerUserId: viewer.userId,
         grantId: null,
+        kind: "payroll_line",
         subject: line.line.id,
         ciphertext: await options.worker().seal(fromBase64(viewer.publicKey), payload),
       });
     }
-    for (const grant of grants) {
+    const settledAt = line.line.settledAt ? new Date(line.line.settledAt) : new Date();
+    for (const grant of coveringGrants(grants ?? [], "payroll_line", settledAt)) {
       items.push({
         id: crypto.randomUUID(),
         viewerUserId: grant.viewer.userId,
         grantId: grant.grantId,
+        kind: "payroll_line",
         subject: line.line.id,
         ciphertext: await options.worker().seal(fromBase64(grant.viewer.publicKey), payload),
       });
     }
   }
-  const manifest = await buildManifest({
-    org: options.orgId,
-    createdAt: new Date().toISOString(),
-    items: items.map((item) => ({
-      id: item.id,
-      viewer: item.viewerUserId,
-      ciphertext: item.ciphertext,
-    })),
+  const stored = await storeRecords({
+    orgId: options.orgId,
+    items,
+    sign: (message) => options.connected.sign(message),
   });
-  const signature = await options.connected.sign(await manifestMessage(manifest));
-  if (typeof signature === "string") {
+  if (stored.kind === "not_signed") {
     return {
-      saved: 0,
-      ownerOnly: 0,
+      ...none,
       problem: withWalletWords(
         "Your wallet did not sign the payroll records, so they were not saved. The payments themselves are done.",
         options.connected.walletWords(),
       ),
     };
   }
-  await callApi(`/api/orgs/${options.orgId}/disclosures`, {
-    method: "POST",
-    body: {
-      manifest,
-      signature: toBase64(signature),
-      items: items.map((item) => ({
-        id: item.id,
-        viewerUserId: item.viewerUserId,
-        grantId: item.grantId,
-        kind: "payroll_line",
-        subject: item.subject,
-        ciphertext: toBase64(item.ciphertext),
-      })),
-    },
-  });
-  return { saved: options.lines.length, ownerOnly, problem: null };
+  return {
+    saved: options.lines.length,
+    ownerOnly,
+    grantCopiesMissing: grants === null || stored.withoutGrants,
+    problem: null,
+  };
 }
 
 function mergeRecords(a: DisclosureResult, b: DisclosureResult): DisclosureResult {
   return {
     saved: a.saved + b.saved,
     ownerOnly: a.ownerOnly + b.ownerOnly,
+    grantCopiesMissing: a.grantCopiesMissing || b.grantCopiesMissing,
     problem: a.problem ?? b.problem,
   };
 }
@@ -243,7 +225,12 @@ export async function runPayroll(options: {
   onLanded: (lineId: string) => void;
 }): Promise<PayrollRunOutcome> {
   const { connected, orgId, runId, onProgress } = options;
-  let records: DisclosureResult = { saved: 0, ownerOnly: 0, problem: null };
+  let records: DisclosureResult = {
+    saved: 0,
+    ownerOnly: 0,
+    grantCopiesMissing: false,
+    problem: null,
+  };
   const stop = async (message: string, landed: number, errorCode: string) => {
     await callApi(`/api/orgs/${orgId}/payroll-runs/${runId}/executions`, {
       method: "POST",
@@ -419,6 +406,7 @@ export async function runPayroll(options: {
           saved = {
             saved: 0,
             ownerOnly: 0,
+            grantCopiesMissing: false,
             problem: "The payroll records could not be saved yet; open the run again to save them.",
           };
         }

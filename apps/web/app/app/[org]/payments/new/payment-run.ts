@@ -12,7 +12,8 @@
 // 5. after the transfer is finalized, check that the new available balance is the previous one minus
 //    the amount (06 section 5 step 5), and write the self and recipient disclosures with a manifest
 //    the owner wallet signs (07 section 4, AC-06.4 Phase 1 part), and since step 2.4 one for every
-//    active grant whose scope covers the payment (AC-06.4 grant part).
+//    active grant whose scope covers the payment (AC-06.4 grant part). Once the transfer landed, a
+//    record that cannot be saved is a problem of the record, never a failed payment.
 import {
   associatedTokenAccount,
   closeProofAccounts,
@@ -20,17 +21,13 @@ import {
   TransferStepError,
   type TransferTransactionRole,
 } from "@sotto/sdk/confidential/public";
-import {
-  buildManifest,
-  manifestMessage,
-  validatePayload,
-  type DisclosurePayloadV1,
-} from "@sotto/sdk/disclosure";
+import { validatePayload, type DisclosurePayloadV1 } from "@sotto/sdk/disclosure";
 import { verifyViewKeyRegistration } from "@sotto/sdk/keys/public";
 import { fromPortableInstruction, sendWithWallet } from "@sotto/sdk/tx";
 import { address, fetchEncodedAccount, fetchEncodedAccounts } from "@solana/kit";
-import { callApi } from "../../../../../lib/client/api.ts";
+import { ApiCallError, callApi } from "../../../../../lib/client/api.ts";
 import { activeGrantViewers, coveringGrants } from "../../../../../lib/client/grant-viewers.ts";
+import { storeRecords, type RecordItem } from "../../../../../lib/client/records.ts";
 import { browserRpc } from "../../../../../lib/client/rpc.ts";
 import { describeTransactionError } from "../../../../../lib/client/transactions.ts";
 import { withWalletWords } from "../../../../../lib/client/wallet-words.ts";
@@ -64,7 +61,7 @@ export type PaymentRunOutcome =
       transferSignature: string;
       integrityOk: boolean;
       /** Who got a disclosure, or why none was written. */
-      disclosed: { self: boolean; recipient: boolean; problem: string | null };
+      disclosed: Disclosed;
     }
   | { kind: "failed"; message: string };
 
@@ -74,7 +71,6 @@ const ROLE_WORDS: Record<TransferTransactionRole, string> = {
   cleanup: "closing the proof accounts",
 };
 
-const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
 const fromBase64 = (text: string) => Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
 
 async function readAccount(at: string): Promise<Uint8Array | null> {
@@ -232,105 +228,117 @@ export async function runPayment(options: {
   }
 }
 
+/** What the payment's records reached; `grantCopiesMissing` when a covering grant may lack its copy. */
+export type Disclosed = {
+  self: boolean;
+  recipient: boolean;
+  grantCopiesMissing: boolean;
+  problem: string | null;
+};
+
 /**
  * AC-06.4: the owner's self disclosure, the recipient's and, since step 2.4, one for every active grant
- * covering the payment, in one signed manifest.
+ * covering the payment, in one signed manifest (`storeRecords`). It never throws: the transfer has
+ * landed, so a record that cannot be saved is reported as such.
  */
 async function disclose(
   input: PaymentRunInput,
   connected: Connected,
   worker: () => CryptoWorkerClient,
   transferSignature: string,
-): Promise<{ self: boolean; recipient: boolean; problem: string | null }> {
-  const payload: DisclosurePayloadV1 = validatePayload({
-    v: 1,
-    org: input.orgId,
-    kind: "payment",
-    direction: "out",
-    category: input.category,
-    subject: input.paymentId,
-    amount: input.amount.toString(),
-    currency: "USDC",
-    memo: input.memo,
-    gross: null,
-    tax: null,
-    counterparty: input.recipient.displayName,
-    signatures: [transferSignature],
-    created_at: new Date().toISOString(),
-  });
-  // I-8: a viewer's key is used only after its registration signature verifies.
-  const viewers: ViewerKeyRecord[] = [];
-  for (const key of [input.owner, input.recipient.viewerKey]) {
-    if (!key) continue;
-    const verified = await verifyViewKeyRegistration({
-      wallet: key.wallet,
-      publicKey: fromBase64(key.publicKey),
-      signature: fromBase64(key.signature),
+): Promise<Disclosed> {
+  try {
+    const payload: DisclosurePayloadV1 = validatePayload({
+      v: 1,
+      org: input.orgId,
+      kind: "payment",
+      direction: "out",
+      category: input.category,
+      subject: input.paymentId,
+      amount: input.amount.toString(),
+      currency: "USDC",
+      memo: input.memo,
+      gross: null,
+      tax: null,
+      counterparty: input.recipient.displayName,
+      signatures: [transferSignature],
+      created_at: new Date().toISOString(),
     });
-    if (verified) viewers.push(key);
-  }
-  const self = viewers.some((viewer) => viewer.userId === input.owner.userId);
-  const recipient = viewers.some((viewer) => viewer.userId === input.recipient.viewerKey?.userId);
-  if (!self) {
-    return { self: false, recipient: false, problem: "Your viewing key did not verify." };
-  }
-  const items: {
-    id: string;
-    viewerUserId: string;
-    grantId: string | null;
-    ciphertext: Uint8Array;
-  }[] = [];
-  for (const viewer of viewers) {
-    items.push({
-      id: crypto.randomUUID(),
-      viewerUserId: viewer.userId,
-      grantId: null,
-      ciphertext: await worker().seal(fromBase64(viewer.publicKey), payload),
+    // I-8: a viewer's key is used only after its registration signature verifies.
+    const viewers: ViewerKeyRecord[] = [];
+    for (const key of [input.owner, input.recipient.viewerKey]) {
+      if (!key) continue;
+      const verified = await verifyViewKeyRegistration({
+        wallet: key.wallet,
+        publicKey: fromBase64(key.publicKey),
+        signature: fromBase64(key.signature),
+      });
+      if (verified) viewers.push(key);
+    }
+    const self = viewers.some((viewer) => viewer.userId === input.owner.userId);
+    const recipient = viewers.some((viewer) => viewer.userId === input.recipient.viewerKey?.userId);
+    if (!self) {
+      return {
+        self: false,
+        recipient: false,
+        grantCopiesMissing: false,
+        problem: "Your viewing key did not verify.",
+      };
+    }
+    const items: RecordItem[] = [];
+    for (const viewer of viewers) {
+      items.push({
+        id: crypto.randomUUID(),
+        viewerUserId: viewer.userId,
+        grantId: null,
+        kind: "payment",
+        subject: input.paymentId,
+        ciphertext: await worker().seal(fromBase64(viewer.publicKey), payload),
+      });
+    }
+    // AC-06.4 grant part: every active grant whose scope covers the payment (I-8 checked there). The
+    // grants that cannot be read now get their copy from Share past records.
+    const grants = await activeGrantViewers(input.orgId).catch(() => null);
+    for (const grant of coveringGrants(grants ?? [], "payment")) {
+      items.push({
+        id: crypto.randomUUID(),
+        viewerUserId: grant.viewer.userId,
+        grantId: grant.grantId,
+        kind: "payment",
+        subject: input.paymentId,
+        ciphertext: await worker().seal(fromBase64(grant.viewer.publicKey), payload),
+      });
+    }
+    const stored = await storeRecords({
+      orgId: input.orgId,
+      items,
+      sign: (message) => connected.sign(message),
     });
-  }
-  // AC-06.4 grant part: every active grant whose scope covers the payment (I-8 checked there).
-  for (const grant of coveringGrants(await activeGrantViewers(input.orgId), "payment")) {
-    items.push({
-      id: crypto.randomUUID(),
-      viewerUserId: grant.viewer.userId,
-      grantId: grant.grantId,
-      ciphertext: await worker().seal(fromBase64(grant.viewer.publicKey), payload),
-    });
-  }
-  const manifest = await buildManifest({
-    org: input.orgId,
-    createdAt: new Date().toISOString(),
-    items: items.map((item) => ({
-      id: item.id,
-      viewer: item.viewerUserId,
-      ciphertext: item.ciphertext,
-    })),
-  });
-  const signature = await connected.sign(await manifestMessage(manifest));
-  if (typeof signature === "string") {
+    if (stored.kind === "not_signed") {
+      return {
+        self: false,
+        recipient: false,
+        grantCopiesMissing: false,
+        problem: withWalletWords(
+          "Your wallet did not sign the payment record, so it was not saved.",
+          connected.walletWords(),
+        ),
+      };
+    }
+    return {
+      self,
+      recipient,
+      grantCopiesMissing: grants === null || stored.withoutGrants,
+      problem: null,
+    };
+  } catch (error) {
     return {
       self: false,
       recipient: false,
-      problem: withWalletWords(
-        "Your wallet did not sign the payment record, so it was not saved.",
-        connected.walletWords(),
-      ),
+      grantCopiesMissing: false,
+      problem: `The payment record could not be saved: ${
+        error instanceof ApiCallError ? error.message : "Sotto could not store it."
+      }`,
     };
   }
-  await callApi(`/api/orgs/${input.orgId}/disclosures`, {
-    method: "POST",
-    body: {
-      manifest,
-      signature: toBase64(signature),
-      items: items.map((item) => ({
-        id: item.id,
-        viewerUserId: item.viewerUserId,
-        grantId: item.grantId,
-        kind: "payment",
-        subject: input.paymentId,
-        ciphertext: toBase64(item.ciphertext),
-      })),
-    },
-  });
-  return { self, recipient, problem: null };
 }

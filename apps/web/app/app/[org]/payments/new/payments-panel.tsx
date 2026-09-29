@@ -13,6 +13,7 @@ import { Button, Card, Chip, Table, Td, Th } from "@sotto/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { ApiCallError, callApi } from "../../../../../lib/client/api.ts";
+import { GRANT_COPIES_MISSING } from "../../../../../lib/client/records.ts";
 import { describeTransactionError } from "../../../../../lib/client/transactions.ts";
 import { CryptoWorkerError } from "../../../../../lib/crypto-worker/client.ts";
 import { formatDate, shortWallet } from "../../../../../lib/format.ts";
@@ -173,9 +174,11 @@ function usePaymentAttempt(ownerKey: ViewerKeyRecord | null) {
     const amount = `${formatTokenAmount(BigInt(secret.amount), DECIMALS)} USDC`;
     const record = outcome.disclosed.problem
       ? ` ${outcome.disclosed.problem}`
-      : outcome.disclosed.recipient
-        ? ` The payment record is saved, encrypted for you and ${recipient.displayName}.`
-        : ` The payment record is saved, encrypted for you; ${recipient.displayName} has no viewing key yet.`;
+      : `${
+          outcome.disclosed.recipient
+            ? ` The payment record is saved, encrypted for you and ${recipient.displayName}.`
+            : ` The payment record is saved, encrypted for you; ${recipient.displayName} has no viewing key yet.`
+        }${outcome.disclosed.grantCopiesMissing ? ` ${GRANT_COPIES_MISSING}` : ""}`;
     const integrity = outcome.integrityOk
       ? ""
       : " Your new available balance does not match the amount, so Sotto logged an integrity alert.";

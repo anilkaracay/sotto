@@ -1,11 +1,16 @@
 import { is } from "drizzle-orm";
 import { getTableConfig, PgTable } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
-import { forbiddenColumns, FORBIDDEN_COLUMN_NAME } from "../src/golden-rule.ts";
+import {
+  forbiddenColumns,
+  forbiddenMetadataKeys,
+  FORBIDDEN_COLUMN_NAME,
+} from "../src/golden-rule.ts";
 import * as schema from "../src/schema.ts";
 
-/** The tables of step 1.2, rate_limits, and payroll_runs since step 2.3. */
+/** The tables of step 1.2, rate_limits, payroll_runs since step 2.3 and access_log since 2.4. */
 export const TABLES = [
+  "access_log",
   "admins",
   "approvals",
   "auth_nonces",
@@ -36,7 +41,7 @@ function schemaTables(): PgTable[] {
 }
 
 describe("golden rule for data (08 section 1)", () => {
-  it("defines the tables of 12 step 1.2, rate_limits and payroll_runs (step 2.3)", () => {
+  it("defines the tables of 12 step 1.2, rate_limits, payroll_runs (step 2.3) and access_log (step 2.4)", () => {
     expect(
       schemaTables()
         .map((t) => getTableConfig(t).name)
@@ -73,5 +78,14 @@ describe("golden rule for data (08 section 1)", () => {
         { table: "orgs", column: "monthly_budget" },
       ]),
     ).toEqual(["orgs.monthly_budget", "payments.amount"]);
+  });
+
+  it("AC-14.1 finds amount like keys at any depth of access log metadata (step 2.4)", () => {
+    expect(
+      forbiddenMetadataKeys({ grantId: "g", scope: "period", items: 3, lines: [{ id: "l" }] }),
+    ).toEqual([]);
+    expect(
+      forbiddenMetadataKeys({ amount: "5", nested: { grossPay: 1 }, list: [{ tax: 0 }] }),
+    ).toEqual(["amount", "nested.grossPay", "list[0].tax"]);
   });
 });

@@ -43,6 +43,13 @@
       "when": 1790673763183,
       "tag": "0005_payroll_runs",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790680080729,
+      "tag": "0006_grants_and_access_log",
+      "breakpoints": true
     }
   ]
 }

@@ -4,8 +4,9 @@
 // owner's wUSDC token account address (public) and "Sealed", read from chain through the
 // confidential session. An account that is not set up says so and links to Account setup.
 import Link from "next/link";
-import { useId, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useConfidential } from "../../_components/confidential/context.tsx";
+import { SkyArt } from "../../_components/sky-art.tsx";
 import styles from "./overview.module.css";
 
 function Lock() {
@@ -29,7 +30,6 @@ function Lock() {
 
 export function AccountSky({ orgName }: { orgName: string }) {
   const { orgId, network, ready, data } = useConfidential();
-  const art = useId().replace(/:/g, "");
   const configured = data.wusdc?.status === "present" && data.wusdc.confidential !== null;
   const address = configured ? (data.wusdcAccount ?? null) : null;
 
@@ -63,37 +63,7 @@ export function AccountSky({ orgName }: { orgName: string }) {
       data-testid="account-sky"
       data-state={configured ? "set_up" : "not_set_up"}
     >
-      <svg
-        className={styles.skyArt}
-        viewBox="0 0 600 420"
-        preserveAspectRatio="xMidYMid slice"
-        aria-hidden="true"
-      >
-        <defs>
-          <linearGradient id={`${art}g`} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stopColor="#3F7ED6" />
-            <stop offset=".6" stopColor="#8CBDF0" />
-            <stop offset="1" stopColor="#DCEBFA" />
-          </linearGradient>
-          <filter id={`${art}f`} x="0" y="0" width="100%" height="100%">
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency=".006 .014"
-              numOctaves={6}
-              seed={9}
-              result="n"
-            />
-            <feColorMatrix
-              in="n"
-              type="matrix"
-              values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  3.1 0 0 0 -1.35"
-            />
-            <feGaussianBlur stdDeviation=".8" />
-          </filter>
-        </defs>
-        <rect width="600" height="420" fill={`url(#${art}g)`} />
-        <rect y="140" width="600" height="280" filter={`url(#${art}f)`} opacity=".95" />
-      </svg>
+      <SkyArt className={styles.skyArt} />
       <div className={styles.skyText}>
         <h2>Your confidential account</h2>
         <p role="status">{text}</p>

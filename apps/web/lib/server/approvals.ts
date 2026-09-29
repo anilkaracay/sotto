@@ -6,7 +6,7 @@
 // and approving again replaces the earlier signature. Policies above 1 cannot be set in the hackathon
 // build (Q-12), so this path is exercised through the API and its tests; the approver screen is
 // Post-hackathon.
-import { approvals, payments, recipients, type Database } from "@sotto/db";
+import { approvals, insertAccessEvent, payments, recipients, type Database } from "@sotto/db";
 import { approvalMessage } from "@sotto/sdk/approvals";
 import { verifyWalletSignature } from "@sotto/sdk/keys/public";
 import { and, eq } from "drizzle-orm";
@@ -58,22 +58,33 @@ async function storeApproval(
   message: string,
   signature: Buffer,
 ): Promise<void> {
-  await db
-    .insert(approvals)
-    .values({
+  await db.transaction(async (tx) => {
+    await tx
+      .insert(approvals)
+      .values({
+        orgId: input.orgId,
+        subjectType: input.subjectType,
+        subjectId: input.subjectId,
+        approverUserId: session.userId,
+        kind: "message",
+        message,
+        signature,
+      })
+      .onConflictDoUpdate({
+        target: [approvals.subjectType, approvals.subjectId, approvals.approverUserId],
+        set: { message, signature, kind: "message", createdAt: new Date() },
+        where: and(eq(approvals.kind, "message")),
+      });
+    // AC-14.1: an approval, metadata only, with the approval it records.
+    await insertAccessEvent(tx, {
       orgId: input.orgId,
+      actorUserId: session.userId,
+      action: "approval_recorded",
       subjectType: input.subjectType,
       subjectId: input.subjectId,
-      approverUserId: session.userId,
-      kind: "message",
-      message,
-      signature,
-    })
-    .onConflictDoUpdate({
-      target: [approvals.subjectType, approvals.subjectId, approvals.approverUserId],
-      set: { message, signature, kind: "message", createdAt: new Date() },
-      where: and(eq(approvals.kind, "message")),
+      metadata: { kind: "message" },
     });
+  });
 }
 
 async function checkSignature(session: Session, message: string, encoded: string): Promise<Buffer> {

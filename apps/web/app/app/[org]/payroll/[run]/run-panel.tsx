@@ -8,12 +8,14 @@
 //   the server to authorize the run (every line ready from chain and screened, before anything is
 //   signed), then pays the lines in chunks in this tab (payroll-run.ts); Resume after a stop;
 // - Recipients: each line's status (AC-08.4), a blocked line's reason, and removing it from a draft;
-// - Who can read this run: you, each recipient with a viewing key for their own line, and the chain
-//   without amounts (13 A26: no board line).
+// - Who can read this run: you, each recipient with a viewing key for their own line, since step 2.4
+//   each holder of a viewing grant with the lines they hold records of, and the chain without amounts
+//   (13 A26: no board line).
 import { Button, Card, Chip, Table, Td, Th } from "@sotto/ui";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { ApiCallError, callApi } from "../../../../../lib/client/api.ts";
+import { GRANT_COPIES_MISSING } from "../../../../../lib/client/records.ts";
 import { describeTransactionError } from "../../../../../lib/client/transactions.ts";
 import { CryptoWorkerError } from "../../../../../lib/crypto-worker/client.ts";
 import { shortWallet } from "../../../../../lib/format.ts";
@@ -37,7 +39,13 @@ import { KeysCard, WalletCard } from "../../../_components/confidential/keys.tsx
 import { useKeySession } from "../../../_components/key-session.tsx";
 import cards from "../../../_components/confidential/cards.module.css";
 import styles from "../payroll.module.css";
-import { discloseLines, runPayroll, type RunLine, type ViewerKeyRecord } from "./payroll-run.ts";
+import {
+  discloseLines,
+  runPayroll,
+  type DisclosureResult,
+  type RunLine,
+  type ViewerKeyRecord,
+} from "./payroll-run.ts";
 
 type Progress = { busy: string | null; problem: string | null; done: string | null };
 const IDLE: Progress = { busy: null, problem: null, done: null };
@@ -161,7 +169,7 @@ function RunView(props: {
   }
 
   /** X-33: the records of settled lines that have none yet, under one manifest. */
-  async function saveRecords(run: PayrollRunView): Promise<string | null> {
+  async function saveRecords(run: PayrollRunView): Promise<DisclosureResult | null> {
     if (!connected || !ownerKey) return null;
     const pending = run.lines
       .filter((line) => line.status === "settled" && !line.disclosed && transferOf(line))
@@ -179,14 +187,13 @@ function RunView(props: {
       problem: null,
       done: null,
     });
-    const result = await discloseLines({
+    return discloseLines({
       orgId,
       lines: pending,
       owner: ownerKey,
       connected,
       worker: vault.worker,
     });
-    return result.problem;
   }
 
   async function run() {
@@ -198,7 +205,9 @@ function RunView(props: {
     });
     const release = vault.hold();
     try {
-      const recordProblem = RESUMABLE.includes(view.status) ? await saveRecords(view) : null;
+      const saved = RESUMABLE.includes(view.status) ? await saveRecords(view) : null;
+      const recordProblem =
+        saved?.problem ?? (saved?.grantCopiesMissing ? GRANT_COPIES_MISSING : null);
       let authorized: PayrollRunView;
       try {
         authorized = (
@@ -241,9 +250,11 @@ function RunView(props: {
       const records = outcome.records.problem
         ? ` ${outcome.records.problem}`
         : outcome.records.saved > 0
-          ? outcome.records.ownerOnly > 0
-            ? ` The payroll records are saved, encrypted for you and each recipient with a viewing key; ${outcome.records.ownerOnly} ${outcome.records.ownerOnly === 1 ? "recipient has" : "recipients have"} none yet.`
-            : " The payroll records are saved, encrypted for you and each recipient."
+          ? `${
+              outcome.records.ownerOnly > 0
+                ? ` The payroll records are saved, encrypted for you and each recipient with a viewing key; ${outcome.records.ownerOnly} ${outcome.records.ownerOnly === 1 ? "recipient has" : "recipients have"} none yet.`
+                : " The payroll records are saved, encrypted for you and each recipient."
+            }${outcome.records.grantCopiesMissing ? ` ${GRANT_COPIES_MISSING}` : ""}`
           : "";
       setProgress(
         outcome.kind === "done"
@@ -275,11 +286,14 @@ function RunView(props: {
   async function save() {
     const release = vault.hold();
     try {
-      const problem = await saveRecords(view);
+      const saved = await saveRecords(view);
+      const problem = saved?.problem ?? null;
       setProgress({
         busy: null,
         problem,
-        done: problem ? null : "The records of the settled lines are saved.",
+        done: problem
+          ? null
+          : `The records of the settled lines are saved.${saved?.grantCopiesMissing ? ` ${GRANT_COPIES_MISSING}` : ""}`,
       });
     } catch {
       setProgress({ busy: null, problem: "The records could not be saved.", done: null });
@@ -556,6 +570,17 @@ function RunView(props: {
               {view.lines.filter((line) => viewerKeys[line.recipientId]).length} of {lines})
             </span>
           </div>
+          {view.readers.map((reader) => (
+            <div key={reader.grantId} data-testid="who-reader">
+              <span className={styles.dot} />
+              <span>
+                {reader.holder},{" "}
+                {reader.lines >= lines
+                  ? "every line"
+                  : `${reader.lines} of ${lines} ${lines === 1 ? "line" : "lines"}`}
+              </span>
+            </div>
+          ))}
           <div>
             <span className={`${styles.dot} ${styles.faint}`} />
             <span>

@@ -6,6 +6,7 @@ import { createDb } from "@sotto/db";
 import { createRetryingRpc } from "@sotto/sdk/tx";
 import { ConfigError, loadWorkerConfig } from "./config.ts";
 import { confirmExecutionsJob } from "./jobs/confirm-executions.ts";
+import { grantExpiryJob } from "./jobs/grant-expiry.ts";
 import { payrollRunsJob } from "./jobs/payroll-runs.ts";
 import { pendingCreditsJob } from "./jobs/pending-credits.ts";
 import { proofProgramHealthJob } from "./jobs/proof-program-health.ts";
@@ -59,6 +60,7 @@ export async function main(
     recipientReadinessJob({ db, rpc, localnetUsdcMint: config.localnetUsdcMint }),
     confirmExecutionsJob({ db, rpc }),
     payrollRunsJob({ db }),
+    grantExpiryJob({ db }),
     proofProgramHealthJob({ db, rpc, feePayer: signer.address }),
   ];
   log("worker_started", { jobs: jobs.map((job) => job.name), once, signer: signer.address });

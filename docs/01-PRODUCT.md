@@ -84,7 +84,7 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 ### F-10 Viewing grants
 - AC-10.1 Owner grants a viewer a scope: `all_payments`, `period` (from, to), `payroll_only`, `own_payslips` (recipient), with optional expiry. The `totals_only` scope is Post-hackathon (D-27).
 - AC-10.2 Grants are always created through an invite: the viewer accepts, becomes a user, registers a viewing public key (see `07-SELECTIVE-DISCLOSURE.md`), and the grant activates. Until then the grant is `pending_viewer_key`.
-- AC-10.3 On grant creation, the owner's browser back fills disclosures for past payments inside the scope.
+- AC-10.3 Once the grant is active (its viewer registered a viewing key, `07-SELECTIVE-DISCLOSURE.md` section 7), the owner's browser back fills disclosures for past payments inside the scope.
 - AC-10.4 Revoke deletes stored disclosures for that grant and stops future ones. UI states that already viewed data cannot be unseen.
 - AC-10.5 Every grant change is written to the access log.
 

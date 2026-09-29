@@ -15,6 +15,7 @@
 import {
   approvals,
   clusterHealth,
+  insertAccessEvent,
   orgPolicy,
   paymentAttempts,
   payments,
@@ -511,7 +512,7 @@ export async function applyAttempt(
   paymentId: string,
   input: AttemptInput,
   now: Date,
-): Promise<void> {
+): Promise<{ opened: boolean }> {
   const [current] = await tx
     .select({ status: payments.status })
     .from(payments)
@@ -561,7 +562,7 @@ export async function applyAttempt(
       .update(payments)
       .set({ status: "executing", updatedAt: now })
       .where(eq(payments.id, paymentId));
-    return;
+    return { opened: opening };
   }
 
   // failed_clean or failed: the client stopped the attempt (and closed its proof accounts).
@@ -580,6 +581,7 @@ export async function applyAttempt(
     .update(payments)
     .set({ status: input.status, errorCode: input.errorCode, updatedAt: now })
     .where(eq(payments.id, paymentId));
+  return { opened: false };
 }
 
 export async function recordExecution(
@@ -610,8 +612,19 @@ export async function recordExecution(
   }
 
   await db.transaction(async (tx) => {
-    await applyAttempt(tx, payment.id, input, now);
+    const { opened } = await applyAttempt(tx, payment.id, input, now);
     if (input.status !== "sent") return;
+    // AC-14.1: an attempt of the payment started, metadata only.
+    if (opened) {
+      await insertAccessEvent(tx, {
+        orgId,
+        actorUserId: session.userId,
+        action: "payment_executed",
+        subjectType: "payment",
+        subjectId: payment.id,
+        metadata: { attemptNo: input.attemptNo },
+      });
+    }
     // Q-11: the initiator's execution is their approval, with the first execution signature.
     await tx
       .insert(approvals)

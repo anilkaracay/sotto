@@ -266,4 +266,17 @@ describe("constraints", () => {
     );
     await test.db.execute(line("single-f", "single", null, null));
   });
+
+  it("keep access log actions as short snake case names (step 2.4)", async () => {
+    const event = (action: string) =>
+      sql`insert into access_log (org_id, actor_user_id, action, subject_type, subject_id, metadata)
+          values (${orgId}, ${userId}, ${action}, 'grant', 'g1', '{}'::jsonb)`;
+    expect(await violation(event("Grant Created"))).toBe("access_log_action_format");
+    expect(await violation(event("x"))).toBe("access_log_action_format");
+    await test.db.execute(event("grant_created"));
+    const [row] = await rows<{ id: string; metadata: unknown }>(
+      sql`select id::text as id, metadata from access_log where action = 'grant_created'`,
+    );
+    expect(row?.metadata).toEqual({});
+  });
 });

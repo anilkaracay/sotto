@@ -4,7 +4,15 @@
 // the page ended as failed_clean inside that window (I-7), and makes no RPC call with nothing to
 // check; proof-program-health stores the verdict of the check per cluster and stores nothing when
 // the RPC cannot be reached.
-import { clusterHealth, orgs, paymentAttempts, payments, recipients, users } from "@sotto/db";
+import {
+  accessLog,
+  clusterHealth,
+  orgs,
+  paymentAttempts,
+  payments,
+  recipients,
+  users,
+} from "@sotto/db";
 import { createTestDatabase, type TestDatabase } from "@sotto/db/testing";
 import { GENESIS_HASHES } from "@sotto/sdk/cluster";
 import type { SolanaRpc } from "@sotto/sdk/tx";
@@ -158,6 +166,15 @@ describe("confirm-executions job", () => {
       settledSlot: 1234n,
       signatures: good.signatures,
     });
+    // Step 2.4: the settlement time (a period grant needs it) and the access log event.
+    expect(settled.payment?.settledAt).toBeInstanceOf(Date);
+    const events = await database.db
+      .select()
+      .from(accessLog)
+      .where(eq(accessLog.subjectId, good.paymentId));
+    expect(events).toMatchObject([
+      { action: "payment_settled", actorUserId: null, metadata: { slot: "1234", attemptNo: 1 } },
+    ]);
     expect(settled.attempt?.status).toBe("finalized");
     const failed = await stateOf(bad.paymentId);
     expect(failed.payment?.status).toBe("failed");

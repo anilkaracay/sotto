@@ -20,6 +20,7 @@ import {
   approvals,
   clusterHealth,
   disclosures,
+  insertAccessEvent,
   orgPolicy,
   paymentAttempts,
   payments,
@@ -787,6 +788,17 @@ export async function recordLineExecution(
     }
     await applyAttempt(tx, line.id, input, now);
     if (input.status !== "sent") return;
+    // AC-14.1: the run's execution starts (again, on a resume), metadata only.
+    if (status === "approved") {
+      await insertAccessEvent(tx, {
+        orgId,
+        actorUserId: session.userId,
+        action: "payroll_executed",
+        subjectType: "payroll_run",
+        subjectId: run.id,
+        metadata: { lines: run.lineCount, resumed: run.executedAt !== null },
+      });
+    }
     await tx
       .update(payrollRuns)
       .set({
@@ -862,6 +874,14 @@ export async function recordRunExecution(
       .update(payrollRuns)
       .set({ status: next, updatedAt: now })
       .where(eq(payrollRuns.id, run.id));
+    await insertAccessEvent(tx, {
+      orgId,
+      actorUserId: session.userId,
+      action: "payroll_run_stopped",
+      subjectType: "payroll_run",
+      subjectId: run.id,
+      metadata: { status: next, errorCode: input.errorCode },
+    });
   });
   log("info", "payroll_run_stopped", { orgId, runId, errorCode: input.errorCode });
   return view(db, session, await runRow(db, orgId, runId), cluster);

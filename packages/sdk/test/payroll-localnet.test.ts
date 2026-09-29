@@ -20,12 +20,14 @@ import {
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   BudgetMemory,
+  ChunkStepError,
   chunkLinesFor,
   confidentialTransferChunk,
   decodeToken2022Account,
   decodeToken2022Mint,
   decryptTokenAccount,
   payPayrollLines,
+  sendTransferChunk,
   type BuiltChunk,
   type PayrollPayment,
 } from "../src/confidential/index.ts";
@@ -324,6 +326,69 @@ describe.skipIf(!RPC_URL)("payroll chunks on localnet", () => {
         expect(pending).toBe((pendingBefore[index] ?? 0n) + (payments[index]?.amount ?? 0n)),
       );
       expect(await allClosed(closedChecks)).toBe(true);
+    },
+  );
+
+  it(
+    "I-7 a transfer built from a balance that has since moved cannot land: two plans from the same state pay once",
+    { timeout: 120_000 },
+    async () => {
+      const [first, second] = people as [LocalnetOwner, LocalnetOwner];
+      // Two single line chunks built from the same source state, as a resume racing a line still in
+      // flight would build them.
+      const build = builder(1, []);
+      const read = async (at: Address) => {
+        const { value } = await rpc
+          .getAccountInfo(at, { encoding: "base64", commitment: "confirmed" })
+          .send();
+        return new Uint8Array(Buffer.from(value?.data[0] ?? "", "base64"));
+      };
+      const [source, mint, one, two] = await Promise.all([
+        read(owner.wusdc),
+        read(bootstrap.wrappedUsdcMint),
+        read(first.wusdc),
+        read(second.wusdc),
+      ]);
+      const a = await build({
+        source,
+        mint,
+        lines: [{ destinationToken: first.wusdc, destination: one, amount: 1_230_000n }],
+      });
+      const b = await build({
+        source,
+        mint,
+        lines: [{ destinationToken: second.wusdc, destination: two, amount: 1_230_000n }],
+      });
+      const before = await availableOf(owner);
+      const pendingBefore = await pendingOf(first);
+      const secondBefore = await pendingOf(second);
+      const sent = await sendTransferChunk({
+        rpc,
+        wallet: owner.wallet,
+        version: 1,
+        lines: a.lines,
+        budgets: new BudgetMemory(),
+      });
+      expect(sent.landed).toHaveLength(1);
+      // The other plan's transaction now fails: its proof names the balance before the first landed.
+      let failure: unknown;
+      try {
+        await sendTransferChunk({
+          rpc,
+          wallet: owner.wallet,
+          version: 1,
+          lines: b.lines,
+          budgets: new BudgetMemory(),
+        });
+      } catch (error) {
+        failure = error;
+      }
+      expect(failure).toBeInstanceOf(ChunkStepError);
+      expect((failure as ChunkStepError).sent).toBe(false);
+      console.log(`stale plan refused: ${String((failure as ChunkStepError).cause)}`);
+      expect(await availableOf(owner)).toBe(before - 1_230_000n);
+      expect(await pendingOf(first)).toBe(pendingBefore + 1_230_000n);
+      expect(await pendingOf(second)).toBe(secondBefore);
     },
   );
 

@@ -21,6 +21,7 @@ import {
   type SignatureBytes,
   type Transaction,
 } from "@solana/kit";
+import { AeKey } from "@solana/zk-sdk/bundler";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   checkProofProgram,
@@ -253,6 +254,98 @@ describe.skipIf(!RPC_URL)("confidential transfer on localnet", () => {
           authority: createNoopSigner(recipient.signer.address),
         }),
       ]);
+    },
+  );
+
+  it(
+    "G3 builds a second transfer from the state the first one leaves, before either is sent, and both land in order (06 section 7)",
+    { timeout: 240_000 },
+    async () => {
+      const [source, destination, mint] = await Promise.all([
+        fetchToken(rpc, sender.wusdc, { commitment: "confirmed" }),
+        fetchToken(rpc, recipient.wusdc, { commitment: "confirmed" }),
+        fetchMint(rpc, bootstrap.wrappedUsdcMint, { commitment: "confirmed" }),
+      ]);
+      const before = decryptTokenAccount(source.data, sender.keys);
+      const recipientBefore = await decrypted(recipient);
+      const build = (sourceTokenAccount: typeof source.data, amount: bigint) =>
+        confidentialTransferPlan({
+          owner: sender.signer.address,
+          sourceToken: sender.wusdc,
+          sourceTokenAccount,
+          destinationToken: recipient.wusdc,
+          destinationTokenAccount: destination.data,
+          mint: bootstrap.wrappedUsdcMint,
+          mintAccount: mint.data,
+          amount,
+          keys: sender.keys,
+          version: 1,
+          rent: (space) => rpc.getMinimumBalanceForRentExemption(space).send(),
+        });
+      const first = await build(source.data, 1_100_000n);
+      // The first plan's equality proof names the source's next available balance ciphertext: the
+      // proof data follows the instruction byte as pubkey (32), ciphertext (64), commitment (32).
+      const equality = first.transactions
+        .flatMap((transaction) => transaction.instructions)
+        .find(
+          (instruction) =>
+            instruction.programAddress === "ZkE1Gama1Proof11111111111111111111111111111" &&
+            instruction.data[0] === 3,
+        );
+      if (!equality) throw new Error("the first plan has no equality proof");
+      const nextCiphertext = equality.data.slice(33, 97);
+      // The simulated source state: that ciphertext, and the next balance under the AES key.
+      const aes = AeKey.fromBytes(sender.keys.aeKey);
+      const nextDecryptable = aes.encrypt(before.available - 1_100_000n).toBytes();
+      aes.free();
+      const extensions =
+        source.data.extensions.__option === "Some" ? source.data.extensions.value : [];
+      const simulated = {
+        ...source.data,
+        extensions: {
+          __option: "Some" as const,
+          value: extensions.map((extension) =>
+            extension.__kind === "ConfidentialTransferAccount"
+              ? {
+                  ...extension,
+                  availableBalance: nextCiphertext,
+                  decryptableAvailableBalance: nextDecryptable,
+                }
+              : extension,
+          ),
+        },
+      };
+      const second = await build(simulated, 900_000n);
+
+      // Only now is anything sent: the first line, then the second.
+      await sendTransferTransactions({
+        rpc,
+        wallet: sender.wallet,
+        version: 1,
+        transactions: first.transactions,
+        cosign: cosigner(first.signers),
+      });
+      const afterFirst = await fetchToken(rpc, sender.wusdc, { commitment: "confirmed" });
+      const onchain =
+        afterFirst.data.extensions.__option === "Some"
+          ? afterFirst.data.extensions.value.find((e) => e.__kind === "ConfidentialTransferAccount")
+          : undefined;
+      expect(
+        onchain && onchain.__kind === "ConfidentialTransferAccount"
+          ? [...onchain.availableBalance]
+          : [],
+      ).toEqual([...nextCiphertext]);
+      await sendTransferTransactions({
+        rpc,
+        wallet: sender.wallet,
+        version: 1,
+        transactions: second.transactions,
+        cosign: cosigner(second.signers),
+      });
+      expect((await decrypted(sender)).available).toBe(before.available - 2_000_000n);
+      expect((await decrypted(recipient)).pending).toBe(recipientBefore.pending + 2_000_000n);
+      expect(await allClosed(first)).toBe(true);
+      expect(await allClosed(second)).toBe(true);
     },
   );
 

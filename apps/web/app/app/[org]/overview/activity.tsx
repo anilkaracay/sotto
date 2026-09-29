@@ -1,10 +1,12 @@
 "use client";
 
-// The overview's recent activity (09 section 3; step 1.10). Until the chain indexer of Phase 2 (M4) it
-// lists the org's recent payments; each amount, memo and category opens in this tab from the owner's
-// self disclosure of the payment (verified against the owner's manifest signature first, I-9), or,
-// for a payment that has no disclosure yet (not settled), from the payment's private blob. Both are
-// sealed to the owner's viewing key, so nothing opens until the keys are unlocked in this tab.
+// The overview's recent activity (09 section 3; step 1.10). It lists the org's recent payments, since
+// step 2.5 payroll lines with single payments (GET /orgs/:id/activity); each amount, memo and category
+// opens in this tab from the owner's self disclosure of the payment (verified against the owner's
+// manifest signature first, I-9), or, for a payment that has no disclosure yet (not settled), from its
+// private blob. Both are sealed to the owner's viewing key, so nothing opens until the keys are
+// unlocked in this tab. Since step 2.5 "Can read amount" names who else holds the payment's record:
+// the recipient, and each holder of a readable grant (the design's avatars, as initials).
 import { formatTokenAmount } from "@sotto/sdk/confidential/public";
 import type { DisclosurePayloadV1 } from "@sotto/sdk/disclosure";
 import { Button, Card, Chip, Table, Td, Th } from "@sotto/ui";
@@ -19,8 +21,9 @@ import {
   paymentStatusChip,
   type PaymentCategory,
 } from "../../../../lib/payment.ts";
+import { parseLinePrivate } from "../../../../lib/payroll.ts";
+import type { ActivityPaymentView } from "../../../../lib/server/activity.ts";
 import type { DisclosureItemView, ManifestView } from "../../../../lib/server/disclosures.ts";
-import type { PaymentView } from "../../../../lib/server/payments.ts";
 import cards from "../../_components/confidential/cards.module.css";
 import { useConfidential } from "../../_components/confidential/context.tsx";
 import { useKeySession } from "../../_components/key-session.tsx";
@@ -32,7 +35,7 @@ const DECIMALS = 6;
 const fromBase64 = (text: string) => Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
 
 type Loaded = {
-  payments: PaymentView[];
+  payments: ActivityPaymentView[];
   items: DisclosureItemView[];
   manifests: ManifestView[];
 };
@@ -58,14 +61,9 @@ export function RecentActivity({ userId }: { userId: string }) {
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    void Promise.all([
-      callApi<{ payments: PaymentView[] }>(`/api/orgs/${orgId}/payments`),
-      callApi<{ items: DisclosureItemView[]; manifests: ManifestView[] }>(
-        `/api/orgs/${orgId}/disclosures?kind=payment`,
-      ),
-    ]).then(
-      ([{ payments }, disclosures]) => {
-        if (!cancelled) setLoaded({ payments: payments.slice(0, SHOWN), ...disclosures });
+    void callApi<Loaded>(`/api/orgs/${orgId}/activity?limit=${SHOWN}`).then(
+      (activity) => {
+        if (!cancelled) setLoaded(activity);
       },
       () => {
         if (!cancelled) setProblem("Recent activity could not be loaded. Try again.");
@@ -117,8 +115,15 @@ export function RecentActivity({ userId }: { userId: string }) {
         }
         if (!payment.privateBlob) continue;
         try {
-          secrets[payment.id] =
-            parsePaymentPrivate(await open(fromBase64(payment.privateBlob))) ?? "unreadable";
+          const blob = await open(fromBase64(payment.privateBlob));
+          if (payment.kind === "payroll_line") {
+            const line = parseLinePrivate(blob);
+            secrets[payment.id] = line
+              ? { amount: line.amount, memo: line.memo, category: "payroll" }
+              : "unreadable";
+          } else {
+            secrets[payment.id] = parsePaymentPrivate(blob) ?? "unreadable";
+          }
         } catch {
           secrets[payment.id] = "unreadable";
         }
@@ -152,7 +157,27 @@ export function RecentActivity({ userId }: { userId: string }) {
 export type ActivityState =
   | { kind: "loading" }
   | { kind: "error"; message: string }
-  | { kind: "loaded"; payments: PaymentView[] };
+  | { kind: "loaded"; payments: ActivityPaymentView[] };
+
+/** "Can read amount": initials of who else holds the record, with their names for every reader. */
+function Readers({ readers }: { readers: ActivityPaymentView["readers"] }) {
+  if (readers.length === 0) return <span className={styles.muted}>Only you</span>;
+  const names = readers.map((reader) => reader.name).join(", ");
+  return (
+    <span className={styles.readers} title={names} data-testid="activity-readers">
+      {readers.map((reader, index) => (
+        <span
+          key={`${reader.via}:${reader.name}:${index}`}
+          className={styles.reader}
+          aria-hidden="true"
+        >
+          {reader.name.slice(0, 1).toUpperCase()}
+        </span>
+      ))}
+      <span className={styles.srOnly}>{names}</span>
+    </span>
+  );
+}
 
 /** The card itself, from what the container loaded and opened: the loading, error, empty, locked and filled states. */
 export function ActivityView({
@@ -218,6 +243,7 @@ export function ActivityView({
                 <Th>Counterparty</Th>
                 <Th>Type</Th>
                 <Th>Status</Th>
+                <Th>Can read amount</Th>
                 <Th align="right">Amount</Th>
               </tr>
             </thead>
@@ -227,7 +253,12 @@ export function ActivityView({
                 const chip = paymentStatusChip(payment.status, payment.errorCode);
                 const readable = secret !== undefined && secret !== "unreadable" ? secret : null;
                 return (
-                  <tr key={payment.id} data-testid="activity-row" data-status={payment.status}>
+                  <tr
+                    key={payment.id}
+                    data-testid="activity-row"
+                    data-status={payment.status}
+                    data-kind={payment.kind}
+                  >
                     <Td>
                       <span className={`num ${styles.date}`}>{formatDate(payment.createdAt)}</span>
                     </Td>
@@ -235,7 +266,7 @@ export function ActivityView({
                       <span className={styles.person}>
                         <b>{payment.recipient.displayName}</b>
                         <small>
-                          {readable?.memo ?? (
+                          {readable?.memo ?? payment.run?.title ?? (
                             <span className="mono">{shortWallet(payment.recipient.wallet)}</span>
                           )}
                         </small>
@@ -244,6 +275,9 @@ export function ActivityView({
                     <Td>{readable ? <Chip>{categoryLabel(readable.category)}</Chip> : sealed}</Td>
                     <Td>
                       <Chip tone={chip.tone}>{chip.label}</Chip>
+                    </Td>
+                    <Td>
+                      <Readers readers={payment.readers} />
                     </Td>
                     <Td align="right">
                       {readable ? (

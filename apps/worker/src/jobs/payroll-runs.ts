@@ -1,16 +1,18 @@
 // payroll-runs (08 section 4, AC-08.2; step 2.3). Every 5 seconds, with no RPC call: the
 // confirm-executions job settles each payroll line at finality, and this job moves the runs:
 // - an executing or partially settled run whose every line is settled becomes settled;
-// - an executing run with no line in flight and no attempt in the last three minutes (the landing
-//   window of confirm-executions) was left by its page, for example a closed tab: it becomes
-//   partially settled when a line landed or is landing, otherwise not paid (failed), so the owner can
-//   resume it. The page itself reports a stop when it ends early.
+// - an executing run with no line in flight and no attempt in the last ten minutes was left by its
+//   page, for example a closed tab: it becomes partially settled when a line landed or is landing,
+//   otherwise not paid (failed), so the owner can resume it. Ten minutes, well past the landing
+//   window of confirm-executions, so an owner who takes a few minutes over a chunk's wallet prompt
+//   is not stopped. The page itself reports a stop when it ends early.
 import { paymentAttempts, payments, payrollRuns, type Database } from "@sotto/db";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { LANDING_WINDOW_MS } from "./confirm-executions.ts";
 import type { Job } from "./runner.ts";
 
 export const PAYROLL_RUNS_INTERVAL_MS = 5_000;
+/** A run with nothing in flight and no attempt for this long was left by its page. */
+export const STALE_RUN_MS = 10 * 60_000;
 
 export type PayrollRunsDeps = { db: Database; now?: () => Date };
 
@@ -20,7 +22,7 @@ export function payrollRunsJob(deps: PayrollRunsDeps): Job {
     intervalMs: PAYROLL_RUNS_INTERVAL_MS,
     run: async () => {
       const now = deps.now?.() ?? new Date();
-      const windowStart = new Date(now.getTime() - LANDING_WINDOW_MS);
+      const windowStart = new Date(now.getTime() - STALE_RUN_MS);
       const settled = await deps.db
         .update(payrollRuns)
         .set({ status: "settled", updatedAt: now })

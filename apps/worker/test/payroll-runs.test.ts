@@ -1,7 +1,7 @@
 // The payroll-runs job of step 2.3 (08 section 4, AC-08.2) against a fresh test database: a run whose
-// every line settled becomes settled, a run whose page went away with nothing in flight becomes
-// partially settled or not paid, and a run still sending or waiting inside the landing window is
-// left alone.
+// every line settled becomes settled, a run whose page went away with nothing in flight for ten
+// minutes becomes partially settled or not paid, and a run still sending, or whose owner may still be
+// over a wallet prompt, is left alone.
 import { orgs, paymentAttempts, payments, payrollRuns, recipients, users } from "@sotto/db";
 import { createTestDatabase, type TestDatabase } from "@sotto/db/testing";
 import { getAddressDecoder, getBase58Decoder } from "@solana/kit";
@@ -131,20 +131,21 @@ describe("payroll-runs job", () => {
 
   it("AC-08.2 stops a run its page left, as partially settled when a line landed and not paid otherwise", async () => {
     const left = await runWith("executing", [
-      { status: "settled", attempt: { status: "finalized", minutesAgo: 6 } },
+      { status: "settled", attempt: { status: "finalized", minutesAgo: 11 } },
       { status: "authorized" },
     ]);
     const nothing = await runWith("executing", [
-      { status: "failed", attempt: { status: "failed", minutesAgo: 6 } },
+      { status: "failed", attempt: { status: "failed", minutesAgo: 11 } },
       { status: "authorized" },
     ]);
-    // Inside the landing window, or with a line in flight, the page may still be working.
+    // Within ten minutes, or with a line in flight, the page may still be working (its owner may be
+    // reading the next chunk's wallet prompt).
     const recent = await runWith("executing", [
-      { status: "settled", attempt: { status: "finalized", minutesAgo: 1 } },
+      { status: "settled", attempt: { status: "finalized", minutesAgo: 6 } },
       { status: "authorized" },
     ]);
     const flying = await runWith("executing", [
-      { status: "executing", attempt: { status: "sent", minutesAgo: 6 } },
+      { status: "executing", attempt: { status: "sent", minutesAgo: 11 } },
       { status: "authorized" },
     ]);
     const approved = await runWith("approved", [{ status: "authorized" }]);

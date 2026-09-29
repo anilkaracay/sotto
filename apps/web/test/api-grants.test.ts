@@ -312,12 +312,7 @@ describe("viewing grants", () => {
       )
     ).json()) as { invite: Record<string, unknown> };
     expect(seen.invite).toMatchObject({
-      details: {
-        role: "accountant",
-        holder: { name: "Daniel Osei", title: "Accountant, external" },
-        scope: "all_payments",
-        periodFrom: null,
-      },
+      details: { role: "accountant", scope: "all_payments", periodFrom: null },
     });
     const accepted = await acceptAs(accountant.cookie, token);
     expect(accepted.status).toBe(200);
@@ -362,6 +357,71 @@ describe("viewing grants", () => {
     const late = await createKeyUser(test);
     expect(await errorOf(await acceptAs(late.cookie, tokenOf(second.invite.url)))).toMatchObject({
       code: "invite_withdrawn",
+    });
+  });
+
+  it("AC-10.2 shows a wallet that is not the holder yet only the organization, the offered scope and the expiry", async () => {
+    const { owner, orgId, person, payment, line } = await setUp();
+    await ownRecords(owner, orgId, [
+      [payment, "payment"],
+      [line, "payroll_line"],
+    ]);
+    const created = (await (
+      await grant(owner.cookie, orgId, {
+        scope: "period",
+        periodFrom: "2026-07-01",
+        periodTo: "2026-09-30",
+        expiry: "end_of_year",
+      })
+    ).json()) as { grant: GrantView; invite: { url: string } };
+    const token = tokenOf(created.invite.url);
+    const read = async (cookie: string) =>
+      (await (
+        await readInvite(jsonRequest(`/api/invites/${token}`, "GET", cookie), params({ token }))
+      ).json()) as { invite: { org: { displayName: string } } & Record<string, unknown> };
+    const leaks = (body: unknown) => {
+      const text = JSON.stringify(body);
+      return [
+        "Daniel",
+        "Accountant, external",
+        "Maya Chen",
+        person.wallet,
+        payment,
+        line,
+        "7777000000",
+        created.grant.id,
+      ].filter((value) => text.includes(value));
+    };
+    for (const viewer of [await createKeyUser(test), owner]) {
+      const body = await read(viewer.cookie);
+      expect(body).toEqual({
+        invite: {
+          org: { id: orgId, displayName: body.invite.org.displayName },
+          role: "accountant",
+          status: "open",
+          details: {
+            role: "accountant",
+            scope: "period",
+            periodFrom: "2026-07-01",
+            periodTo: "2026-09-30",
+            grantExpiresAt: created.grant.expiresAt,
+          },
+          expectedWallet: null,
+          acceptedByYou: false,
+        },
+      });
+      expect(leaks(body)).toEqual([]);
+    }
+    // Once the holder accepted, another wallet learns only that; the holder keeps what they read.
+    const accountant = await createKeyUser(test);
+    expect((await acceptAs(accountant.cookie, token)).status).toBe(200);
+    const later = await read((await createKeyUser(test)).cookie);
+    expect(later.invite).toMatchObject({ status: "accepted", details: null });
+    expect(leaks(later)).toEqual([]);
+    expect((await read(accountant.cookie)).invite).toMatchObject({
+      status: "accepted",
+      acceptedByYou: true,
+      details: { scope: "period", grantExpiresAt: created.grant.expiresAt },
     });
   });
 

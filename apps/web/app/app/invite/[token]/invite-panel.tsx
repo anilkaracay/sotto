@@ -7,10 +7,11 @@
 // records so the recipient shows as ready (readiness from chain). Since step 1.8.1 (founder) the page
 // shows only the organization before sign in; the recipient's name, role and wallet appear only to the
 // invited wallet, and another wallet sees only the refusal with the expected address. Since step 2.4 an
-// accountant invite carries a viewing grant (X-37): once signed in, a wallet sees the holder's name as
-// the owner gave it, what the grant reads and until when (the link is the holder's; no wallet is known
-// before they accept); accepting, which the owner's own wallet cannot, makes the user the org's
-// accountant, and their viewing key, created on the same page, activates the grant.
+// accountant invite carries a viewing grant (X-37): once signed in, a wallet that is not the holder yet
+// sees only the organization, what the grant reads and until when, never the holder's name, an amount,
+// a payment or a recipient (founder, 2026-09-29; no wallet is known before the holder accepts);
+// accepting, which the owner's own wallet cannot, makes the user the org's accountant, and their
+// viewing key, created on the same page, activates the grant.
 import { Button, Card } from "@sotto/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -135,17 +136,10 @@ export function InvitePanel({
         <InviteState token={token} invite={invite} wallet={wallet} />
         {details?.role === "accountant" && invite.status === "open" ? (
           <dl className={cards.details} data-testid="invite-details">
-            <dt>Holder</dt>
-            <dd>
-              {details.holder.name}
-              {details.holder.title ? `, ${details.holder.title}` : ""}
-            </dd>
             <dt>You can read</dt>
             <dd>{scopeWords(details.scope, details.periodFrom, details.periodTo)}</dd>
             <dt>Access</dt>
             <dd>{expiryWords(details.grantExpiresAt)}</dd>
-            <dt>Link valid until</dt>
-            <dd>{formatDate(details.expiresAt)}</dd>
           </dl>
         ) : null}
         {details?.role === "recipient" && invite.status === "open" ? (

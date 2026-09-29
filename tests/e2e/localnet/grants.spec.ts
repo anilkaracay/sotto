@@ -7,7 +7,14 @@
 // accountant without any step of the owner's (AC-06.4). Revoking leaves the accountant's fetch empty
 // (AC-10.4). The access log shows these events and no amount appears in it or in any request of the
 // owner's (AC-10.5, AC-14.1, I-2). Expiry is tested with the worker's job and the API (a browser spec
-// cannot wait for it). Runs in the localnet job of scripts/ci-local.sh, never on devnet.
+// cannot wait for it). Since step 2.5 the accountant also reads the books (AC-11.1 to AC-11.4): /app
+// opens them, the viewing key unlocks alone, the ledger shows the three payments of the grant's scope
+// with the money out total, filters and searches in memory, marks a payment reconciled and exports the
+// rows shown as CSV, with the export in the owner's access log; after the revocation the books say that
+// nothing is shared. The owner's overview lists the payroll line with the payments and names the
+// accountant as a reader, and what the chain shows comes from the indexed chain only (AC-05.3), with
+// every confidential transfer sealed. Runs in the localnet job of scripts/ci-local.sh, never on devnet.
+import { readFile } from "node:fs/promises";
 import { associatedTokenAccount } from "@sotto/sdk/confidential/public";
 import { validateManifest, verifyManifest } from "@sotto/sdk/disclosure";
 import { openPayload } from "@sotto/sdk/disclosure/seal";
@@ -174,7 +181,7 @@ test.describe.serial("viewing grants on localnet", () => {
     await ensureAccount(await chainPerson(MAYA.keypair, 0n));
   });
 
-  test("AC-10.1 AC-10.2 AC-10.3 AC-10.4 AC-10.5 AC-06.4 AC-14.1 grants an accountant a key through an invite, shares past payments and payroll lines, reaches them with a new payment, and revokes it", async ({
+  test("AC-10.1 AC-10.2 AC-10.3 AC-10.4 AC-10.5 AC-06.4 AC-14.1 AC-11.1 AC-11.2 AC-11.3 AC-11.4 AC-05.3 grants an accountant a key through an invite, shares past payments and payroll lines, reaches them with a new payment, lets them read and export the books, shows what the chain shows, and revokes it", async ({
     page,
     browser,
   }) => {
@@ -208,6 +215,12 @@ test.describe.serial("viewing grants on localnet", () => {
       data: { displayName: "Maya Chen", wallet: MAYA.address, team: "Design", country: "NL" },
     });
     expect(added.status()).toBe(201);
+    // The account the SDK set up, recorded as the setup page records it (the indexer reads it).
+    const recorded = await page.request.post("/api/token-accounts", {
+      headers: { origin },
+      data: { orgId, address: owner.wusdc, keyScheme: "standard_v1" },
+    });
+    expect([200, 201]).toContain(recorded.status());
     const traffic: string[] = [];
     page.on("request", (request) => {
       traffic.push(request.url());
@@ -263,6 +276,21 @@ test.describe.serial("viewing grants on localnet", () => {
     await option.getByRole("button", { name: "Connect" }).click();
     await option.getByRole("button", { name: "Sign in" }).click();
     await expect(daniel.getByTestId("invite-details")).toContainText("Every amount");
+    // Before acceptance the page shows the organization, the scope and the expiry, nothing else.
+    await expect(daniel.getByTestId("invite-card")).toContainText(
+      "Grants Test Ltd invites you to read its payment records in Sotto",
+    );
+    await expect(daniel.getByTestId("invite-details")).toContainText("No expiry");
+    const shown = await daniel.locator("body").innerText();
+    for (const hidden of [
+      "Daniel Osei",
+      "Accountant, external",
+      "Maya Chen",
+      MAYA.address,
+      ...[FIRST, LINE].flatMap((value) => [value.amount, value.base, value.memo]),
+    ]) {
+      expect(shown).not.toContain(hidden);
+    }
     await daniel.getByRole("button", { name: "Accept invite" }).click();
     await expect(daniel.getByTestId("invite-joined")).toContainText("as its accountant");
     await connectWallet(daniel);
@@ -306,6 +334,87 @@ test.describe.serial("viewing grants on localnet", () => {
       [FIRST.base, LINE.base, LATER.base].sort(),
     );
 
+    // The overview lists the payroll line with the payments, and names the accountant as a reader.
+    await go(page, "Overview");
+    const activity = page.getByTestId("activity-row");
+    await expect(activity).toHaveCount(3);
+    await expect(
+      page.locator('[data-testid="activity-row"][data-kind="payroll_line"]'),
+    ).toHaveCount(1);
+    for (const readers of await page.getByTestId("activity-readers").all()) {
+      await expect(readers).toHaveAttribute("title", "Daniel Osei");
+    }
+
+    // AC-11.1: /app opens the books of the org, the only place the accountant has.
+    const booksTraffic: string[] = [];
+    daniel.on("request", (request) => {
+      booksTraffic.push(request.url());
+      booksTraffic.push(request.postData() ?? "");
+    });
+    await daniel.goto("/app");
+    await expect(daniel).toHaveURL(new RegExp(`/app/${orgId}/books$`));
+    await expect(daniel.getByTestId("scope-banner")).toContainText("Every amount · No expiry");
+    await expect(daniel.getByTestId("books-locked")).toContainText(
+      "3 records are sealed to your viewing key.",
+    );
+    await connectWallet(daniel);
+    await daniel
+      .getByTestId("viewing-unlock-card")
+      .getByRole("button", { name: "Unlock with your wallet" })
+      .click();
+    await expect(daniel.getByTestId("viewing-unlocked")).toHaveText("Unlocked");
+    // AC-11.2: the ledger opened in the tab, exactly the grant's three payments.
+    const ledger = daniel.getByTestId("ledger-row");
+    await expect(ledger).toHaveCount(3);
+    await expect(daniel.getByTestId("money-out-total")).toHaveText("7.274086 USDC");
+    const payroll = daniel
+      .getByTestId("ledger")
+      .getByRole("button", { name: "Payroll", exact: true });
+    await payroll.click();
+    await expect(ledger).toHaveCount(1);
+    await expect(ledger.first()).toContainText(LINE.memo);
+    await daniel.getByTestId("ledger").getByRole("button", { name: "All", exact: true }).click();
+    await daniel.getByLabel("Search the ledger").fill(FIRST.memo);
+    await expect(ledger).toHaveCount(1);
+    await expect(ledger.first().getByTestId("ledger-amount")).toHaveText(`${FIRST.amount} USDC`);
+    // AC-11.3: the drawer shows what each party sees, and the accountant marks it reconciled.
+    await ledger.first().click();
+    const detail = daniel.getByRole("dialog", { name: "Maya Chen" });
+    await expect(detail.getByTestId("payment-detail")).toContainText("Recipient clear");
+    await expect(detail.getByTestId("payment-detail")).toContainText(
+      "Sealed and settled on Solana",
+    );
+    await detail.getByTestId("mark-reconciled").click();
+    await expect(detail.getByTestId("detail-reconciliation")).toHaveText("Matched");
+    await detail.getByRole("button", { name: "Close" }).click();
+    await daniel.getByLabel("Search the ledger").fill("");
+    // AC-11.4: the export of the rows shown, made in the tab, with its event in the access log.
+    const downloading = daniel.waitForEvent("download");
+    await daniel.getByTestId("export-csv").click();
+    const download = await downloading;
+    const exported = (await readFile((await download.path()) as string, "utf8")).split("\r\n");
+    expect(exported[0]).toBe(
+      "date,counterparty,memo,category,amount,currency,type,reconciliation,transaction",
+    );
+    expect(
+      exported
+        .slice(1, -1)
+        .map((line) => line.split(",")[4])
+        .sort(),
+    ).toEqual([FIRST.amount, LINE.amount, LATER.amount].sort());
+    await expect(daniel.getByTestId("export-result")).toContainText(
+      "Exported 3 rows to CSV in this tab. Grants Test Ltd sees the export in its access log.",
+    );
+    // The search text and every amount stayed in the accountant's tab.
+    const booksSent = booksTraffic.join("\n");
+    for (const plaintext of [FIRST, LINE, LATER].flatMap((value) => [
+      value.amount,
+      value.base,
+      value.memo,
+    ])) {
+      expect(booksSent).not.toContain(plaintext);
+    }
+
     // AC-10.4: revoking leaves the accountant's fetch empty.
     await go(page, "Viewing keys");
     await row.getByTestId("key-toggle").click();
@@ -315,7 +424,33 @@ test.describe.serial("viewing grants on localnet", () => {
     await row.getByTestId("confirm-revoke").click();
     await expect(row).toHaveAttribute("data-status", "revoked");
     expect(await readRecords(daniel, orgId, danielKeys)).toEqual([]);
+    await daniel.reload();
+    await expect(daniel.getByTestId("books-unavailable")).toHaveText(
+      "You hold no active viewing key for this organization",
+    );
     await daniel.context().close();
+
+    // AC-05.3: what the chain shows, from the indexed chain only; every transfer is sealed.
+    await go(page, "Overview");
+    await expect(page).toHaveURL(OVERVIEW_URL);
+    await expect(async () => {
+      await page.reload();
+      await expect(page.locator('[data-testid="chain-row"][data-type="transfer_out"]')).toHaveCount(
+        3,
+        { timeout: 5_000 },
+      );
+    }).toPass({ timeout: 120_000 });
+    for (const transfer of await page
+      .locator('[data-testid="chain-row"][data-type="transfer_out"]')
+      .all()) {
+      await expect(transfer.getByTestId("chain-amount")).toHaveText("Sealed");
+    }
+    await expect(
+      page
+        .locator('[data-testid="chain-row"][data-type="deposit"]')
+        .first()
+        .getByTestId("chain-amount"),
+    ).toHaveText("30 wUSDC");
 
     // AC-10.5, AC-14.1: the events are logged, and no amount or memo is in the log or any request.
     const log = await page.request.get(`/api/orgs/${orgId}/access-log`);
@@ -330,6 +465,8 @@ test.describe.serial("viewing grants on localnet", () => {
       "payment_executed",
       "payroll_executed",
       "disclosure_batch_created",
+      "export_created",
+      "reconciliation_updated",
     ]) {
       expect(actions).toContain(action);
     }
@@ -341,6 +478,9 @@ test.describe.serial("viewing grants on localnet", () => {
     ])) {
       expect(everything).not.toContain(plaintext);
     }
-    await expect(page.getByTestId("access-log").getByTestId("log-entry").first()).toBeVisible();
+    await go(page, "Viewing keys");
+    await expect(
+      page.locator('[data-testid="log-entry"][data-action="export_created"]'),
+    ).toContainText("Daniel Osei exported 3 records to CSV");
   });
 });

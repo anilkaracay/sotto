@@ -7,9 +7,10 @@
 // records so the recipient shows as ready (readiness from chain). Since step 1.8.1 (founder) the page
 // shows only the organization before sign in; the recipient's name, role and wallet appear only to the
 // invited wallet, and another wallet sees only the refusal with the expected address. Since step 2.4 an
-// accountant invite carries a viewing grant (X-37): once signed in, any wallet but the owner's sees
-// the holder's name as the owner gave it, what the grant reads and until when; accepting makes the
-// user the org's accountant, and their viewing key, created on the same page, activates the grant.
+// accountant invite carries a viewing grant (X-37): once signed in, a wallet sees the holder's name as
+// the owner gave it, what the grant reads and until when (the link is the holder's; no wallet is known
+// before they accept); accepting, which the owner's own wallet cannot, makes the user the org's
+// accountant, and their viewing key, created on the same page, activates the grant.
 import { Button, Card } from "@sotto/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -68,8 +69,7 @@ export function InvitePanel({
             <h2 className={cards.cardTitle}>You joined {org} as its accountant</h2>
             <p className={cards.lead}>
               Your access is read only, never control of funds. {org} shares its records with you
-              encrypted to your viewing key, so only this wallet can read them, and you read them in
-              this tab.
+              encrypted to your viewing key, so only this wallet can read them.
             </p>
             {details?.role === "accountant" ? (
               <dl className={cards.details}>
@@ -81,8 +81,8 @@ export function InvitePanel({
             ) : null}
             <p className={cards.lead}>
               {viewerKey
-                ? `Your viewing key is registered, so your access is active. Past records appear once ${org} shares them.`
-                : `Create your viewing key below: your access starts once it is registered.`}
+                ? "Your viewing key is registered, so your access is active."
+                : "Create your viewing key below: your access starts once it is registered."}
             </p>
           </Card>
           <WalletCard />

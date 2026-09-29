@@ -18,6 +18,8 @@ Hard limits (tests must prove each one):
 - ElGamal ciphertext arithmetic that runs onchain through syscalls, the same code Token-2022 uses to subtract a plaintext amount from a ciphertext. Expected: the `spl-token-confidential-transfer-ciphertext-arithmetic` crate. Confirm function names on docs.rs.
 Do not implement any curve arithmetic yourself.
 
+Resolved at Gate G4 (step 2.2, facts K1 to K3, K8): the program depends on the interface crates `spl-token-2022` 11.1.0 itself resolves, not on `spl-token-2022` or `solana-zk-sdk`: `spl-token-2022-interface` =3.1.2 (`extension::{StateWithExtensions, BaseStateWithExtensions}`, `state::Account`, `extension::confidential_transfer::ConfidentialTransferAccount`, `id()`), `solana-zk-elgamal-proof-interface` =0.1.3 (`state::ProofContextState`, `proof_data::{ProofType, CiphertextCommitmentEqualityProofContext, BatchedRangeProofContext}`, `id()`), `solana-zk-sdk-pod` =0.1.2 (the pod ciphertext, public key and commitment types), `spl-token-confidential-transfer-ciphertext-arithmetic` =0.5.1 (`subtract_from`) and `bytemuck` =1.25.0, with the core crates already pinned. It is built with `cargo-build-sbf --arch v3`: the local validator refuses new SBPF v0 to v2 deployments (SIMD-0500), devnet accepts v3. The Rust test of section 7 that makes real proofs needs a proof generation crate whose proof data matches the runtime's verifier; step 2.7 chooses it (the arithmetic crate's own tests use `solana-zk-sdk` 6.0.1 and `spl-token-confidential-transfer-proof-generation` 0.6.0).
+
 ## 3. Accounts
 
 ### Config (PDA, seeds `["config"]`)
@@ -63,7 +65,7 @@ Checks, in this order, each with its own error:
 5. `equality_context` is owned by the ZK ElGamal Proof program, its proof type is ciphertext commitment equality, its context state authority equals `owner`.
 6. The equality context's ElGamal public key equals the token account's `elgamal_pubkey`.
 7. The equality context's ciphertext equals `available_balance minus threshold`, computed onchain with the ciphertext arithmetic library (section 2).
-8. `range_context` is owned by the ZK ElGamal Proof program, its proof type is the batched range proof used for the remaining balance in Token-2022 withdraw (Gate G4 names it), its context state authority equals `owner`.
+8. `range_context` is owned by the ZK ElGamal Proof program, its proof type is the batched range proof used for the remaining balance in Token-2022 withdraw, `BatchedRangeProofU64` (Gate G4, facts K2), its context state authority equals `owner`.
 9. The range context proves exactly one commitment with bit length 64, and that commitment equals the equality context's commitment. Any other used slot is an error.
 10. Write the record, emit `ProofVerified { record, token_account, owner, threshold, slot, expiry }`.
 
@@ -77,6 +79,8 @@ Signer: `owner` of the record. Allowed only after `expiry` (error `NotExpired`).
 ## 6. Compute
 
 Measure at Gate G4 with `solana-program-test` or LiteSVM and a real proof. Set the client's compute unit limit to measured value plus 20 percent. If the instruction exceeds the per instruction limit, split the check into a two step flow and document it here before implementing.
+
+Measured at Gate G4 (step 2.2, facts K4): the checks 4 to 9 with real proofs on localnet take 4728 compute units (a probe program, `programs/g4_probe`, and `scripts/g4-probe-localnet.ts`; the proofs come from the token-2022 withdraw proof builder, which makes the statement of 06 section 8). The whole instruction adds the config and clock reads, one SHA-256 and the record PDA creation, measured in step 2.7; it stays far below the 200000 unit default, so it is one instruction, no split.
 
 ## 7. Tests (all required)
 

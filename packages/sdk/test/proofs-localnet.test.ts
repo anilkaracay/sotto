@@ -234,14 +234,13 @@ describe.skipIf(!RPC_URL)("sotto_proofs on localnet (step 2.7)", () => {
 
     // The contexts closed, their rent to the fee payer; the token account's lamports unchanged.
     await closeContexts(proofs);
-    const contexts = await fetchEncodedAccounts(
-      rpc,
-      [proofs.equalityContext, proofs.rangeContext],
-      {
-        commitment: "confirmed",
-      },
+    // Every account the proofs created (both contexts and the range proof's record account).
+    const created = proofs.cleanup.map(
+      (instruction) => instruction.accounts[0]?.address as Address,
     );
-    expect(contexts.map((account) => account.exists)).toEqual([false, false]);
+    expect(created).toEqual(expect.arrayContaining([proofs.equalityContext, proofs.rangeContext]));
+    const left = await fetchEncodedAccounts(rpc, created, { commitment: "confirmed" });
+    expect(left.map((account) => account.exists)).toEqual(created.map(() => false));
     expect(
       (await rpc.getBalance(owner.wusdc as Address, { commitment: "confirmed" }).send()).value,
     ).toBe(tokenLamportsBefore);

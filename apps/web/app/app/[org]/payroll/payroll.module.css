@@ -1,0 +1,424 @@
+/* The payroll pages (step 2.3). The run page follows the design's payroll screen (design .pg with
+   .dkc, .gbw, .stp8, .radw2, .apl, .t8, .who8): the run total with its team bars and steps, the
+   settlement gauge with the approvals block (13 A31) and the recipients table. The new run card has no
+   approved design and reuses the recipients page's fields (13 A42). Pixel fidelity and motion get the
+   Phase 3 design pass (M2). */
+.page {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.page > * {
+  grid-column: span 12;
+  min-width: 0;
+}
+.s8 {
+  grid-column: span 8;
+}
+.s4 {
+  grid-column: span 4;
+}
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.page .lead {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.page .warning {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff4e0;
+  color: #8a5200;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.page .problem {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #ffecec;
+  color: #b4232a;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.page .status {
+  margin-top: 14px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.page .done {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(14, 154, 100, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(14, 154, 100, 0.2);
+  color: #0b5e3f;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.page .summary,
+.page .empty {
+  margin-top: 14px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+  margin-top: 16px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.wide {
+  grid-column: 1 / -1;
+}
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink2);
+}
+.control {
+  height: 42px;
+  width: 100%;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--line);
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+}
+.control:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--blue);
+}
+.file {
+  font: inherit;
+  font-size: 14px;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+.scroll {
+  margin-top: 14px;
+  overflow-x: auto;
+}
+.person b {
+  display: block;
+  font-weight: 500;
+}
+.person small,
+.muted {
+  color: var(--faint);
+  font-size: 12.5px;
+}
+.rowError {
+  display: block;
+  max-width: 34em;
+  white-space: normal;
+  color: #b4232a;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.rowWarning,
+.reason {
+  display: block;
+  max-width: 34em;
+  margin-top: 4px;
+  white-space: normal;
+  color: #8a5200;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.runLink {
+  color: inherit;
+  font-weight: 500;
+}
+
+/* The run total (design .dkc .ch h3, .bigd, .gbw, .stp8). */
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cardHead h3 {
+  font-size: 22px;
+  font-weight: 450;
+  letter-spacing: -0.03em;
+}
+.periodChip {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 12.5px;
+  color: #c7d0de;
+}
+.big {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 30px;
+}
+.big b {
+  font-size: 40px;
+  font-weight: 450;
+  letter-spacing: -0.05em;
+}
+.big small {
+  font-size: 13.5px;
+  color: #a9b4c7;
+}
+.bars {
+  display: grid;
+  gap: 14px;
+  align-items: end;
+  height: 180px;
+  background-image: repeating-linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06) 0 1px,
+    transparent 1px 45px
+  );
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100%;
+  min-width: 0;
+}
+.bar {
+  position: relative;
+  border-radius: 10px 10px 4px 4px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
+  transform-origin: bottom;
+  animation: grow 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.bar.on {
+  background: linear-gradient(180deg, #5ea0ff 0%, #2f6bff 55%, rgba(47, 107, 255, 0.25) 100%);
+  box-shadow:
+    0 0 0 1px rgba(160, 200, 255, 0.5) inset,
+    0 0 40px -4px rgba(76, 141, 255, 0.7);
+}
+.barLabel {
+  margin-top: 8px;
+  overflow: hidden;
+  font-size: 12px;
+  color: #8e98ab;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.barValue {
+  font-size: 12px;
+  color: #dce3ee;
+  text-align: center;
+  margin-bottom: 6px;
+}
+.sealed {
+  padding: 30px 0;
+  font-size: 13.5px;
+  color: #a9b4c7;
+}
+.steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 22px -26px -24px;
+  padding: 14px 18px 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0 0 24px 24px;
+}
+.step {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  color: #8e98ab;
+}
+.step i {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: #a9b4c7;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 600;
+}
+.step.done {
+  color: #dce3ee;
+}
+.step.done i {
+  background: rgba(143, 227, 184, 0.16);
+  color: #8fe3b8;
+}
+.step.cur {
+  background: rgba(76, 141, 255, 0.16);
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(122, 165, 255, 0.35);
+}
+.step.cur i {
+  background: #2f6bff;
+  color: #ffffff;
+  box-shadow: 0 0 16px rgba(76, 141, 255, 0.7);
+}
+
+/* The settlement gauge (design .radw2, .rd2, .radc). */
+.gauge {
+  position: relative;
+  margin: 4px -6px 0;
+}
+.gauge svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.gauge line {
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 9;
+  stroke-linecap: round;
+  transition: stroke 0.4s ease;
+}
+.gauge line.lit {
+  stroke: var(--c);
+}
+.gaugeText {
+  position: absolute;
+  right: 0;
+  bottom: 6px;
+  left: 0;
+  text-align: center;
+}
+.gaugeText b {
+  display: block;
+  font-size: 26px;
+  font-weight: 450;
+  letter-spacing: -0.04em;
+  color: #ffffff;
+}
+.gaugeText small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: #a9b4c7;
+}
+
+/* Approvals (design .apl, .apr; 13 A31). */
+.approvals {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+}
+.approver {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.approver b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.approver small {
+  display: block;
+  font-size: 12px;
+  color: #a9b4c7;
+}
+.approver > span:last-child {
+  margin-left: auto;
+}
+.avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 13px;
+  font-weight: 600;
+}
+.page .approvalNote {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #a9b4c7;
+}
+.runButton {
+  width: 100%;
+  margin-top: 16px;
+}
+
+/* Who can read this run (design .who8; 13 A26). */
+.who {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 14px;
+  font-size: 14px;
+  color: var(--ink2);
+}
+.who div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--blue);
+}
+.dot.faint {
+  background: var(--line);
+}
+
+@keyframes grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    animation: none;
+  }
+  .gauge line {
+    transition: none;
+  }
+}

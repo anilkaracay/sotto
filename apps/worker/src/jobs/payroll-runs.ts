@@ -29,50 +29,60 @@ export function payrollRunsJob(deps: PayrollRunsDeps): Job {
     run: async () => {
       const now = deps.now?.() ?? new Date();
       const windowStart = new Date(now.getTime() - STALE_RUN_MS);
-      const settled = await deps.db
-        .update(payrollRuns)
-        .set({ status: "settled", updatedAt: now })
-        .where(
-          and(
-            inArray(payrollRuns.status, ["executing", "partially_settled"]),
-            sql`not exists (select 1 from ${payments} where ${payments.runId} = ${payrollRuns.id} and ${payments.status} <> 'settled')`,
-          ),
-        )
-        .returning({ id: payrollRuns.id, orgId: payrollRuns.orgId, lines: payrollRuns.lineCount });
-      // AC-14.1: metadata only.
-      for (const run of settled) {
-        await insertAccessEvent(deps.db, {
-          orgId: run.orgId,
-          actorUserId: null,
-          action: "payroll_run_settled",
-          subjectType: "payroll_run",
-          subjectId: run.id,
-          metadata: { lines: run.lines },
-        });
-      }
-      const stopped = await deps.db
-        .update(payrollRuns)
-        .set({
-          status: sql`case when exists (select 1 from ${payments} where ${payments.runId} = ${payrollRuns.id} and ${payments.status} in ('settled', 'executing')) then 'partially_settled'::payroll_run_status else 'failed'::payroll_run_status end`,
-          updatedAt: now,
-        })
-        .where(
-          and(
-            eq(payrollRuns.status, "executing"),
-            sql`not exists (select 1 from ${paymentAttempts} inner join ${payments} on ${payments.id} = ${paymentAttempts.paymentId} where ${payments.runId} = ${payrollRuns.id} and (${paymentAttempts.status} in ('sent', 'confirmed') or ${paymentAttempts.createdAt} > ${windowStart.toISOString()}::timestamptz))`,
-          ),
-        )
-        .returning({ id: payrollRuns.id, orgId: payrollRuns.orgId, status: payrollRuns.status });
-      for (const run of stopped) {
-        await insertAccessEvent(deps.db, {
-          orgId: run.orgId,
-          actorUserId: null,
-          action: "payroll_run_stopped",
-          subjectType: "payroll_run",
-          subjectId: run.id,
-          metadata: { status: run.status, by: "worker" },
-        });
-      }
+      // AC-14.1: each change and its access log events in one transaction, metadata only.
+      const settled = await deps.db.transaction(async (tx) => {
+        const rows = await tx
+          .update(payrollRuns)
+          .set({ status: "settled", updatedAt: now })
+          .where(
+            and(
+              inArray(payrollRuns.status, ["executing", "partially_settled"]),
+              sql`not exists (select 1 from ${payments} where ${payments.runId} = ${payrollRuns.id} and ${payments.status} <> 'settled')`,
+            ),
+          )
+          .returning({
+            id: payrollRuns.id,
+            orgId: payrollRuns.orgId,
+            lines: payrollRuns.lineCount,
+          });
+        for (const run of rows) {
+          await insertAccessEvent(tx, {
+            orgId: run.orgId,
+            actorUserId: null,
+            action: "payroll_run_settled",
+            subjectType: "payroll_run",
+            subjectId: run.id,
+            metadata: { lines: run.lines },
+          });
+        }
+        return rows;
+      });
+      const stopped = await deps.db.transaction(async (tx) => {
+        const rows = await tx
+          .update(payrollRuns)
+          .set({
+            status: sql`case when exists (select 1 from ${payments} where ${payments.runId} = ${payrollRuns.id} and ${payments.status} in ('settled', 'executing')) then 'partially_settled'::payroll_run_status else 'failed'::payroll_run_status end`,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(payrollRuns.status, "executing"),
+              sql`not exists (select 1 from ${paymentAttempts} inner join ${payments} on ${payments.id} = ${paymentAttempts.paymentId} where ${payments.runId} = ${payrollRuns.id} and (${paymentAttempts.status} in ('sent', 'confirmed') or ${paymentAttempts.createdAt} > ${windowStart.toISOString()}::timestamptz))`,
+            ),
+          )
+          .returning({ id: payrollRuns.id, orgId: payrollRuns.orgId, status: payrollRuns.status });
+        for (const run of rows) {
+          await insertAccessEvent(tx, {
+            orgId: run.orgId,
+            actorUserId: null,
+            action: "payroll_run_stopped",
+            subjectType: "payroll_run",
+            subjectId: run.id,
+            metadata: { status: run.status, by: "worker" },
+          });
+        }
+        return rows;
+      });
       return { settled: settled.length, stopped: stopped.length };
     },
   };

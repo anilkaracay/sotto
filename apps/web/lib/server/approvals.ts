@@ -58,30 +58,32 @@ async function storeApproval(
   message: string,
   signature: Buffer,
 ): Promise<void> {
-  await db
-    .insert(approvals)
-    .values({
+  await db.transaction(async (tx) => {
+    await tx
+      .insert(approvals)
+      .values({
+        orgId: input.orgId,
+        subjectType: input.subjectType,
+        subjectId: input.subjectId,
+        approverUserId: session.userId,
+        kind: "message",
+        message,
+        signature,
+      })
+      .onConflictDoUpdate({
+        target: [approvals.subjectType, approvals.subjectId, approvals.approverUserId],
+        set: { message, signature, kind: "message", createdAt: new Date() },
+        where: and(eq(approvals.kind, "message")),
+      });
+    // AC-14.1: an approval, metadata only, with the approval it records.
+    await insertAccessEvent(tx, {
       orgId: input.orgId,
+      actorUserId: session.userId,
+      action: "approval_recorded",
       subjectType: input.subjectType,
       subjectId: input.subjectId,
-      approverUserId: session.userId,
-      kind: "message",
-      message,
-      signature,
-    })
-    .onConflictDoUpdate({
-      target: [approvals.subjectType, approvals.subjectId, approvals.approverUserId],
-      set: { message, signature, kind: "message", createdAt: new Date() },
-      where: and(eq(approvals.kind, "message")),
+      metadata: { kind: "message" },
     });
-  // AC-14.1: an approval, metadata only.
-  await insertAccessEvent(db, {
-    orgId: input.orgId,
-    actorUserId: session.userId,
-    action: "approval_recorded",
-    subjectType: input.subjectType,
-    subjectId: input.subjectId,
-    metadata: { kind: "message" },
   });
 }
 

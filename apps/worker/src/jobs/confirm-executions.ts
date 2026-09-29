@@ -103,31 +103,35 @@ export function confirmExecutionsJob(deps: ConfirmExecutionsDeps): Job {
           continue;
         }
         if (status.confirmationStatus === "finalized") {
-          await deps.db
-            .update(paymentAttempts)
-            .set({ status: "finalized", errorCode: null })
-            .where(eq(paymentAttempts.id, attempt.id));
-          await deps.db
-            .update(payments)
-            .set({
-              status: "settled",
-              settledSlot: status.slot,
-              signatures: attempt.signatures,
-              errorCode: null,
-              updatedAt: now,
-              settledAt: now,
-            })
-            .where(eq(payments.id, attempt.paymentId));
-          if (row.kind === "single") {
-            await insertAccessEvent(deps.db, {
-              orgId: row.orgId,
-              actorUserId: null,
-              action: "payment_settled",
-              subjectType: "payment",
-              subjectId: attempt.paymentId,
-              metadata: { slot: status.slot.toString(), attemptNo: attempt.attemptNo },
-            });
-          }
+          // The attempt, the payment and the access log event (AC-14.1) in one transaction, so a
+          // stop between them cannot leave a finalized attempt on a payment that is not settled.
+          await deps.db.transaction(async (tx) => {
+            await tx
+              .update(paymentAttempts)
+              .set({ status: "finalized", errorCode: null })
+              .where(eq(paymentAttempts.id, attempt.id));
+            await tx
+              .update(payments)
+              .set({
+                status: "settled",
+                settledSlot: status.slot,
+                signatures: attempt.signatures,
+                errorCode: null,
+                updatedAt: now,
+                settledAt: now,
+              })
+              .where(eq(payments.id, attempt.paymentId));
+            if (row.kind === "single") {
+              await insertAccessEvent(tx, {
+                orgId: row.orgId,
+                actorUserId: null,
+                action: "payment_settled",
+                subjectType: "payment",
+                subjectId: attempt.paymentId,
+                metadata: { slot: status.slot.toString(), attemptNo: attempt.attemptNo },
+              });
+            }
+          });
           settled += 1;
         } else if (attempt.status === "sent") {
           await deps.db

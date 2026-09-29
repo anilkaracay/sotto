@@ -108,7 +108,7 @@ job_node() {
 # Full mode: remove the SBF build (cargo-build-sbf uses target/sbpf-solana-solana, which the host
 # cargo clean does not touch) and the host build of sotto_proofs, so the program builds from scratch.
 clean_program() {
-  run rm -rf "$ROOT/target/sbpf-solana-solana" "$ROOT/target/deploy" &&
+  run rm -rf "$ROOT/target/sbpf-solana-solana" "$ROOT/target/sbpfv3-solana-solana" "$ROOT/target/deploy" &&
     run cargo clean -p sotto_proofs
 }
 
@@ -116,7 +116,7 @@ job_program() {
   require_version "solana-cli" "$(solana --version | awk '{print $2}')" "$AGAVE_VERSION" &&
     require_version "cargo-build-sbf" "$(cargo-build-sbf --version | awk 'NR==1 {print $2}')" "$CARGO_BUILD_SBF_VERSION" &&
     { [[ -z "$FULL" ]] || clean_program; } &&
-    run cargo-build-sbf --manifest-path programs/sotto_proofs/Cargo.toml -- --locked &&
+    run cargo-build-sbf --manifest-path programs/sotto_proofs/Cargo.toml --arch v3 -- --locked &&
     run cargo test --locked -p sotto_proofs
 }
 

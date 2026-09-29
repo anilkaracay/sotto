@@ -1,3 +1,4 @@
+export * from "./access-log.ts";
 export * from "./admins.ts";
 export * from "./client.ts";
 export * from "./golden-rule.ts";

@@ -55,6 +55,9 @@ export type LocalnetBootstrap = {
   escrow: Address;
   /** The throwaway SAS signer (funded) and its credential and schema (scripts/bootstrap-localnet.ts). */
   sas: { signer: Address; signerKeypair: string; credential: Address; schema: Address };
+  /** sotto_proofs under a throwaway program keypair, the payer its upgrade authority (step 2.7); null
+   * when it was not built before the bootstrap. */
+  sottoProofs: { programId: Address; config: Address; programKeypair: string } | null;
 };
 
 const DEFAULT_BOOTSTRAP = new URL("../../../../.localnet/bootstrap.json", import.meta.url);

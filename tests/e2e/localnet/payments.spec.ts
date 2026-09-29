@@ -239,9 +239,10 @@ test.describe.serial("single confidential payment on localnet", () => {
     const pay = page.getByTestId("pay-card");
     const signedBefore = await page.evaluate(
       () =>
-        (window as unknown as { __sottoTestWallet: { signedTransactions: unknown[] } })
-          .__sottoTestWallet.signedTransactions.length,
+        (window as unknown as { __sottoTestWallet: { signedTransactions: number } })
+          .__sottoTestWallet.signedTransactions,
     );
+    expect(typeof signedBefore).toBe("number");
     await pay.getByLabel("Recipient").selectOption({
       label: `Blocked Vendor · ${DENIED.address.slice(0, 4)}…${DENIED.address.slice(-4)}`,
     });
@@ -253,8 +254,8 @@ test.describe.serial("single confidential payment on localnet", () => {
     expect(
       await page.evaluate(
         () =>
-          (window as unknown as { __sottoTestWallet: { signedTransactions: unknown[] } })
-            .__sottoTestWallet.signedTransactions.length,
+          (window as unknown as { __sottoTestWallet: { signedTransactions: number } })
+            .__sottoTestWallet.signedTransactions,
       ),
     ).toBe(signedBefore);
 

@@ -299,3 +299,20 @@ K7. Exports of the pinned packages (listed with Node): `@solana-program/token-20
 K8. SBPF versions: the local validator (Agave 4.2.2 test validator) has SIMD-0500 "Disable deployment of SBPF v0, v1 and v2 programs" active from epoch 0, so a program deployed there must be built with `cargo-build-sbf --arch v3` (the default v0 build is refused: "Detected sbpf_version required by the executable which are not enabled"). On devnet the SBPF v1, v2 and v3 gates are active (epochs 902, 918 and 1069) and SIMD-0500 is inactive, so devnet accepts v0 to v3 deployments today; building `sotto_proofs` as v3 works on both.
 **VERIFIED** 2026-09-29 · localnet and devnet (read only, `solana feature status`) · step 2.2.
 
+## L. Payroll chunks (verified in step 2.3)
+
+L1. `@solana/react` 8.3.0: the modifying signer of `useWalletAccountTransactionSigner` refuses more than one transaction per `modifyAndSignTransactions` call (`SOLANA_ERROR__SIGNER__WALLET_MULTISIGN_UNIMPLEMENTED`), while `useSignTransactions(account, chain)` passes all of its inputs to one `solana:signTransaction` call of the Wallet Standard, "batching multiple transactions in a single wallet prompt when the wallet implementation allows it" (its type documentation). Sotto signs a payroll chunk through the second (`apps/web/lib/client/batch-signer.ts`).
+**VERIFIED** 2026-09-29 · source (`dist/index.browser.mjs`, `dist/types/useSignTransaction.d.ts`) · step 2.3.
+
+L2. The wire format of a version 1 transaction in kit 8.3 (`@solana/transactions` and `@solana/transaction-messages` 8.3.0) puts the message first and the signatures after it; the number of signatures is the header's first field (message byte 1), and the static accounts start at message byte 42 (version 1, header 3, config mask 4, lifetime token 32, instruction count 1 and account count 1 bytes). Legacy and version 0 put the signatures first. The E2E test wallet signs version 1 this way (step 2.3), and the payroll spec lands them on localnet.
+**VERIFIED** 2026-09-29 · source · step 2.3.
+
+L3. The record variant of the token-2022 0.19.0 transfer plan (`getConfidentialTransferWithRecordInstructionPlan`, version 0) verifies the equality and the ciphertext validity proofs inline and stages only the range proof in a record account (`buildContextStateProofPlan` with a record payer only for the range proof), so the next available balance of K6 is read the same way from a version 0 plan. On localnet six version 0 lines built as chunks from the predicted state landed in order: the first line transaction by transaction (5 wallet calls), then one call for the rest of each chunk (15 and 10 transactions).
+**VERIFIED** 2026-09-29 · source and localnet (`packages/sdk/test/payroll-localnet.test.ts`) · step 2.3.
+
+L4. Token-2022 refuses a confidential transfer whose equality proof was built from an available balance that has changed since: custom error 27, `ConfidentialTransferBalanceMismatch` ("Balance mismatch") in `spl-token-2022-interface` 3.1.2 `TokenError` (the `@solana-program/token-2022` 0.19.0 client names codes 0 to 19 only). On localnet two plans built from the same source state: once one landed, the other failed its simulation with this error and nothing of it moved. So two transfers built from one state can never both land, and a plan built from an older state can never land at all (the balance ciphertext never returns to an earlier value).
+**VERIFIED** 2026-09-29 · source (`src/error.rs`) and localnet ("I-7 a transfer built from a balance that has since moved cannot land") · step 2.3.
+
+L5. Localnet times (Agave 4.2.2 test validator, the development machine of K5): 24 version 1 lines in chunks of 10, 10 and 4 with one wallet call each took 40.8 s from the first chunk's reads to the last line's confirmation (each chunk's balance read included, finality not waited for); 6 version 0 lines, 30 transactions, took 20.4 s, about 0.66 s per transaction. In the browser the 24 line run with its stop at line 12 and the resume, each chunk waited to finality and its records signed, took 3.0 minutes in the E2E spec.
+**VERIFIED** 2026-09-29 · localnet · step 2.3.
+

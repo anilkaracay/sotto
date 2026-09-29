@@ -11,8 +11,10 @@ export {
 export { readConfidentialBalance, type ConfidentialBalance } from "./balance.ts";
 export { checkProofProgram, type ProofProgramCheck } from "./health.ts";
 export {
+  confidentialTransferChunk,
   confidentialTransferPlan,
   confidentialWithdrawPlan,
   type ConfidentialTransferPlan,
+  type TransferChunkLine,
 } from "./transfer.ts";
 export * from "./public.ts";

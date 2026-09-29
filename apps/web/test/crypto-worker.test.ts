@@ -745,6 +745,81 @@ describe("confidential transfers in the vault (step 1.9)", () => {
     });
   });
 
+  it("AC-08.4 builds a payroll chunk's plans in order, each from the balance the line ahead leaves, with its own signers", async () => {
+    const vault = createVault(loadVaultModules, { rent: async () => 1_000_000n });
+    const sender = await testWallet(CLI_SEED);
+    const signature = await sender.sign(confidentialKeysMessage());
+    const keys = await deriveStandardKeys(sender.address, signature);
+    const recipient = await testWallet(new Uint8Array(32).fill(9));
+    const recipientKeys = await deriveStandardKeys(
+      recipient.address,
+      await recipient.sign(confidentialKeysMessage()),
+    );
+    const source = encodeToken2022Account(
+      encryptedTokenAccount({
+        owner: sender.address,
+        mint: MINT,
+        keys,
+        available: 50_000_000n,
+        pending: 0n,
+      }),
+    );
+    const destination = encodeToken2022Account(
+      encryptedTokenAccount({
+        owner: recipient.address,
+        mint: MINT,
+        keys: recipientKeys,
+        available: 0n,
+        pending: 0n,
+      }),
+    );
+    const mint = encodeConfidentialMint({ decimals: 6 });
+    const chunk = (id: number, amounts: string[]) =>
+      vault.handle({
+        id,
+        type: "transferChunk",
+        sourceToken: address("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"),
+        sourceAccount: source.slice().buffer,
+        mint: MINT,
+        mintAccount: mint.slice().buffer,
+        lines: amounts.map((amount) => ({
+          destinationToken: address("EQMW3o1DVsB72Ej1RRRmHLW1XaEpbjLKrMHUbS8cRLZC"),
+          destinationAccount: destination.slice().buffer,
+          amount,
+        })),
+        version: 1,
+      });
+    expect(await chunk(1, ["1000000"])).toMatchObject({ error: { code: "not_unlocked" } });
+    await vault.handle({
+      id: 2,
+      type: "unlock",
+      wallet: sender.address,
+      signature: new Uint8Array(signature).buffer,
+    });
+    const built = await chunk(3, ["10000000", "15000000", "5000000"]);
+    if (!("ok" in built) || !built.ok || !("plans" in built.result)) throw new Error("no chunk");
+    const { plans, availableAfter } = built.result;
+    expect(plans.map((plan) => plan.availableBefore)).toEqual([
+      50_000_000n,
+      40_000_000n,
+      25_000_000n,
+    ]);
+    expect(availableAfter).toBe(20_000_000n);
+    expect(new Set(plans.map((plan) => plan.planId)).size).toBe(3);
+    expect(plans.every((plan) => plan.variant === "inline")).toBe(true);
+    const serialized = JSON.stringify(built.result, (_, value: unknown) =>
+      typeof value === "bigint" ? value.toString() : value,
+    );
+    for (const secret of [signature, keys.elgamalSecretKey, keys.aeKey]) {
+      expect(serialized).not.toContain(hex(secret));
+      expect(serialized).not.toContain(b64(secret));
+    }
+    // The chunk's lines together above the balance: refused before anything is signed.
+    expect(await chunk(4, ["30000000", "30000000"])).toMatchObject({
+      error: { code: "insufficient_balance" },
+    });
+  });
+
   it("answers the worker's rent question with the page's reader while a plan is built", async () => {
     const { worker, posted } = fakeWorker();
     const client = new CryptoWorkerClient(worker);

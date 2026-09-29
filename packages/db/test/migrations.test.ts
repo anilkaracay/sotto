@@ -9,7 +9,7 @@ import { forbiddenColumns } from "../src/golden-rule.ts";
 import { MIGRATIONS_FOLDER, migrateDatabase } from "../src/migrate.ts";
 import * as schema from "../src/schema.ts";
 import { createTestDatabase, type TestDatabase } from "../src/testing.ts";
-import { PHASE_1_TABLES } from "./golden-rule.test.ts";
+import { TABLES } from "./golden-rule.test.ts";
 
 const WALLET_A = "7SSpLJh516AbWiV5GM7ooZFTHoQN64pdohYxbDs3Gq4L";
 const WALLET_B = "6xosZg2PbZuneXX4riov7GmUCJmydQc3o5MGX6p5EU2";
@@ -50,11 +50,11 @@ async function violation(query: ReturnType<typeof sql>): Promise<string> {
 }
 
 describe("migrations on a fresh database", () => {
-  it("create exactly the Phase 1 tables", async () => {
+  it("create exactly the tables of the schema", async () => {
     const tables = await rows<{ table_name: string }>(
       sql`select table_name from information_schema.tables where table_schema = 'public' order by table_name`,
     );
-    expect(tables.map((t) => t.table_name)).toEqual(PHASE_1_TABLES);
+    expect(tables.map((t) => t.table_name)).toEqual(TABLES);
   });
 
   it("keep the golden rule in the database itself", async () => {
@@ -238,5 +238,32 @@ describe("constraints", () => {
     // Removing the recipient removes its invites.
     await test.db.execute(sql`delete from recipients where id = ${recipient.id}`);
     expect(await rows(sql`select token from invites where token = ${"3c".repeat(32)}`)).toEqual([]);
+  });
+
+  it("keep payroll periods as YYYY-MM and tie payroll lines to a run with a line number (step 2.3)", async () => {
+    const run = (key: string, period: string) =>
+      sql`insert into payroll_runs (org_id, title, period, idempotency_key, line_count, created_by)
+          values (${orgId}, 'October payroll', ${period}, ${key}, 1, ${userId}) returning id`;
+    expect(await violation(run("run-a", "2026-13"))).toBe("payroll_runs_period_format");
+    expect(await violation(run("run-b", "26-10"))).toBe("payroll_runs_period_format");
+    const [created] = await rows<{ id: string }>(run("run-c", "2026-10"));
+    if (!created) throw new Error("run not inserted");
+    const [recipient] = await rows<{ id: string }>(
+      sql`insert into recipients (org_id, display_name, wallet) values (${orgId}, 'L', ${WALLET_A}) returning id`,
+    );
+    if (!recipient) throw new Error("recipient not inserted");
+    const line = (key: string, kind: string, runId: string | null, lineNo: number | null) =>
+      sql`insert into payments (org_id, kind, run_id, line_no, recipient_id, idempotency_key, created_by)
+          values (${orgId}, ${kind}, ${runId}, ${lineNo}, ${recipient.id}, ${key}, ${userId})`;
+    expect(await violation(line("line-a", "payroll_line", null, null))).toBe("payments_kind_run");
+    expect(await violation(line("line-b", "payroll_line", created.id, 0))).toBe(
+      "payments_kind_run",
+    );
+    expect(await violation(line("line-c", "single", created.id, 1))).toBe("payments_kind_run");
+    await test.db.execute(line("line-d", "payroll_line", created.id, 1));
+    expect(await violation(line("line-e", "payroll_line", created.id, 1))).toBe(
+      "payments_run_line_key",
+    );
+    await test.db.execute(line("single-f", "single", null, null));
   });
 });

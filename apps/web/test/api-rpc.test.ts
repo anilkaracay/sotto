@@ -94,6 +94,7 @@ describe("POST /api/rpc", () => {
       "getAccountInfo",
       "getBalance",
       "getBlock",
+      "getBlockHeight",
       "getGenesisHash",
       "getLatestBlockhash",
       "getMinimumBalanceForRentExemption",

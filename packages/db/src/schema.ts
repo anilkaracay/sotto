@@ -1,8 +1,8 @@
 // Phase 1 tables of the logical schema in docs/08-BACKEND.md section 2, plus rate_limits (08 section
-// 6). Golden rule (08 section 1): no plaintext amount, balance or key material in any column; amounts
-// exist only as ciphertext (private_blob, disclosures.ciphertext). test/golden-rule.test.ts checks the
-// column names. Later phases add payroll_runs (and the payments.run_id foreign key), proof_records,
-// reconciliations, access_log, waitlist and chain_activity.
+// 6), and since step 2.3 payroll_runs with the payments.run_id foreign key. Golden rule (08 section
+// 1): no plaintext amount, balance or key material in any column; amounts exist only as ciphertext
+// (private_blob, disclosures.ciphertext). test/golden-rule.test.ts checks the column names. Later
+// steps add proof_records, reconciliations, access_log, waitlist and chain_activity.
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -58,6 +58,15 @@ export const paymentAttemptStatus = pgEnum("payment_attempt_status", [
   "finalized",
   "failed",
   "failed_clean",
+]);
+export const payrollRunStatus = pgEnum("payroll_run_status", [
+  "draft",
+  "awaiting_approval",
+  "approved",
+  "executing",
+  "settled",
+  "partially_settled",
+  "failed",
 ]);
 export const approvalSubjectType = pgEnum("approval_subject_type", ["payment", "payroll_run"]);
 export const approvalKind = pgEnum("approval_kind", ["message", "execution"]);
@@ -332,6 +341,40 @@ export const screenings = pgTable(
   ],
 );
 
+/**
+ * Step 2.3 (F-08): a payroll run. Its lines are payments of kind payroll_line; the run holds no
+ * amount, each line's amount is in its own private blob. `status` follows AC-08.2.
+ */
+export const payrollRuns = pgTable(
+  "payroll_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id),
+    title: text("title").notNull(),
+    /** The pay period, YYYY-MM. */
+    period: char("period", { length: 7 }).notNull(),
+    /** A client made uuid per run the owner means to create: the same key returns the same run. */
+    idempotencyKey: text("idempotency_key").notNull().unique(),
+    status: payrollRunStatus("status").notNull().default("draft"),
+    lineCount: integer("line_count").notNull(),
+    /** The initiator: running the payroll is their approval (Q-11, 13 A31). */
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+    /** When the first line was sent. */
+    executedAt: timestamptz("executed_at"),
+    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    check("payroll_runs_period_format", sql`${t.period} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`),
+    check("payroll_runs_line_count_min", sql`${t.lineCount} >= 1`),
+    index("payroll_runs_org_id_idx").on(t.orgId),
+  ],
+);
+
 export const payments = pgTable(
   "payments",
   {
@@ -340,8 +383,10 @@ export const payments = pgTable(
       .notNull()
       .references(() => orgs.id),
     kind: paymentKind("kind").notNull(),
-    /** payroll_runs arrives in Phase 2, which adds the foreign key. */
-    runId: uuid("run_id"),
+    /** Step 2.3: the run of a payroll line, null for a single payment. */
+    runId: uuid("run_id").references((): AnyPgColumn => payrollRuns.id),
+    /** Step 2.3: a payroll line's place in its run, from 1; lines are paid in this order. */
+    lineNo: integer("line_no"),
     recipientId: uuid("recipient_id")
       .notNull()
       .references(() => recipients.id),
@@ -351,9 +396,9 @@ export const payments = pgTable(
       .notNull()
       .references(() => users.id),
     /**
-     * Step 1.9: a single payment's amount and memo, sealed in the owner's browser to the owner's viewing
-     * key (07 section 2); its SHA-256 is part of the approval contents (D-04). Payroll lines use the
-     * run's blob.
+     * Step 1.9: the amount and memo, sealed in the owner's browser to the owner's viewing key (07
+     * section 2); its SHA-256 is part of the approval contents (D-04). Since step 2.3 each payroll
+     * line has its own, with the gross and tax columns of the CSV when given.
      */
     privateBlob: bytea("private_blob"),
     status: paymentStatus("status").notNull().default("draft"),
@@ -369,6 +414,12 @@ export const payments = pgTable(
   (t) => [
     index("payments_org_id_idx").on(t.orgId),
     index("payments_recipient_id_idx").on(t.recipientId),
+    index("payments_run_id_idx").on(t.runId),
+    unique("payments_run_line_key").on(t.runId, t.lineNo),
+    check(
+      "payments_kind_run",
+      sql`(${t.kind} = 'payroll_line' and ${t.runId} is not null and ${t.lineNo} is not null and ${t.lineNo} >= 1) or (${t.kind} = 'single' and ${t.runId} is null and ${t.lineNo} is null)`,
+    ),
   ],
 );
 

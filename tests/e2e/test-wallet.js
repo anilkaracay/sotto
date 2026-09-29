@@ -10,8 +10,13 @@
 // signatures would (window.__sottoTestWallet.queueSignatures, base64). Since step 1.7 it signs
 // legacy and version 0 transactions (solana:signTransaction) for localnet flows, and counts them
 // (window.__sottoTestWallet.signedTransactions); since step 1.7.1 it can switch to another account
-// (window.__sottoTestWallet.switchAccount). It registers through the Wallet Standard events
-// (wallet-standard:register-wallet and wallet-standard:app-ready).
+// (window.__sottoTestWallet.switchAccount). Since step 2.3 a spec can make it declare and sign
+// version 1 transactions too (window.__sottoTestWalletVersions = ["legacy", 0, 1] in an earlier init
+// script), it records the number of transactions of each signTransaction call
+// (window.__sottoTestWallet.signTransactionCalls, one entry per call, as one prompt), and it awaits
+// window.__sottoOnSignTransaction(call, count) before answering a call when a spec exposed one. It
+// registers through the Wallet Standard events (wallet-standard:register-wallet and
+// wallet-standard:app-ready).
 (() => {
   const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
   const CHAINS = ["solana:devnet", "solana:localnet"];
@@ -78,6 +83,10 @@
   let transactionRefusal = null;
   let queued = [];
   let signedTransactions = 0;
+  const signTransactionCalls = [];
+  const versions = Array.isArray(window.__sottoTestWalletVersions)
+    ? window.__sottoTestWalletVersions
+    : ["legacy", 0];
   const fixed = window.__sottoTestWalletKeypair;
   // PKCS #8 prefix of a raw Ed25519 private key (RFC 8410).
   const PKCS8_ED25519 = [48, 46, 2, 1, 0, 48, 5, 6, 3, 43, 101, 112, 4, 34, 4, 32];
@@ -125,8 +134,31 @@
     }
   }
 
+  // A version 1 transaction puts its message first and the signatures after it; the message's
+  // header gives the number of signers, and its static accounts start at byte 42 (kit 8.3).
+  async function signMessageFirst(wire) {
+    if (!versions.includes(1)) throw new Error("This wallet does not sign version 1 transactions");
+    const required = wire[1];
+    const messageLength = wire.length - required * 64;
+    const message = wire.slice(0, messageLength);
+    let index = -1;
+    for (let i = 0; i < required; i += 1) {
+      const key = message.slice(42 + i * 32, 42 + (i + 1) * 32);
+      if (key.every((byte, j) => byte === account.publicKey[j])) {
+        index = i;
+        break;
+      }
+    }
+    if (index < 0) throw new Error("This account does not sign this transaction");
+    const signed = new Uint8Array(wire);
+    signed.set(await sign(message), messageLength + index * 64);
+    signedTransactions += 1;
+    return signed;
+  }
+
   // Signs a wire transaction (signatures, then the message) as its signer at this account's index.
   async function signWireTransaction(wire) {
+    if (wire[0] & 0x80) return signMessageFirst(wire);
     const [count, countSize] = readShortVec(wire, 0);
     const messageStart = countSize + count * 64;
     const message = wire.slice(messageStart);
@@ -231,7 +263,7 @@
       },
       "solana:signTransaction": {
         version: "1.0.0",
-        supportedTransactionVersions: ["legacy", 0],
+        supportedTransactionVersions: versions,
         signTransaction: async (...inputs) => {
           await ensureAccount();
           if (transactionRefusal) {
@@ -239,11 +271,16 @@
               name: transactionRefusal.name,
             });
           }
-          return Promise.all(
+          signTransactionCalls.push(inputs.length);
+          const signed = await Promise.all(
             inputs.map(async ({ transaction }) => ({
               signedTransaction: await signWireTransaction(new Uint8Array(transaction)),
             })),
           );
+          if (typeof window.__sottoOnSignTransaction === "function") {
+            await window.__sottoOnSignTransaction(signTransactionCalls.length, inputs.length);
+          }
+          return signed;
         },
       },
     },
@@ -261,6 +298,9 @@
     },
     get signedTransactions() {
       return signedTransactions;
+    },
+    get signTransactionCalls() {
+      return [...signTransactionCalls];
     },
     refuse(texts) {
       refused = new Set(texts);

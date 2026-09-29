@@ -143,6 +143,20 @@ describe("decoded errors (09 section 4)", () => {
     expect(decodeTransactionError({ InstructionError: [1, { Custom: 3 }] }, programs).message).toBe(
       "Token program error: Account not associated with this Mint.",
     );
+    // Step 2.3: the confidential transfer errors the client does not name, in plain words.
+    expect(
+      decodeTransactionError({ InstructionError: [1n, { Custom: 27n }] }, programs),
+    ).toMatchObject({
+      code: "token_2022_27",
+      message:
+        "The confidential balance changed after this transfer was prepared, so it no longer matches and nothing moved.",
+    });
+    expect(
+      decodeTransactionError({ InstructionError: [1, { Custom: 25 }] }, programs).message,
+    ).toBe("The receiving account does not accept confidential transfers right now.");
+    expect(
+      decodeTransactionError({ InstructionError: [1, { Custom: 60 }] }, programs).message,
+    ).toBe("Token program error 60.");
     expect(decodeTransactionError({ InstructionError: [2, { Custom: 1 }] }, programs).message).toBe(
       "The account does not have enough SOL to perform the operation.",
     );

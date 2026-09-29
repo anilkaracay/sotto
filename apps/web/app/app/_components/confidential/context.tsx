@@ -22,7 +22,11 @@ import {
   transactionPath,
   walletCapabilities,
 } from "@sotto/sdk/wallet";
-import { useSignMessage, useWalletAccountTransactionSigner } from "@solana/react";
+import {
+  useSignMessage,
+  useSignTransactions,
+  useWalletAccountTransactionSigner,
+} from "@solana/react";
 import { address, fetchEncodedAccount, type TransactionModifyingSigner } from "@solana/kit";
 import {
   getWalletFeature,
@@ -44,6 +48,7 @@ import { CryptoWorkerClient, CryptoWorkerError } from "../../../../lib/crypto-wo
 import type { LockReason } from "../../../../lib/crypto-worker/key-session.ts";
 import type { UnlockResult } from "../../../../lib/crypto-worker/protocol.ts";
 import type { SignProblem } from "../../../../lib/crypto-worker/unlock.ts";
+import { batchSigner } from "../../../../lib/client/batch-signer.ts";
 import { browserRpc } from "../../../../lib/client/rpc.ts";
 import { isWalletCancel } from "../../../../lib/client/transactions.ts";
 import { walletInfo, type WalletInfo } from "../../../../lib/client/wallet-report.ts";
@@ -80,6 +85,11 @@ export type Connected = {
   walletWords: () => WalletWords | null;
   /** Null when the wallet cannot sign transactions for this network's chain. */
   signer: TransactionModifyingSigner | null;
+  /**
+   * Step 2.3: signs several transactions in one Wallet Standard call (a payroll chunk, D-21); null
+   * with `signer`.
+   */
+  batchSigner: TransactionModifyingSigner | null;
   /** The transaction version for this wallet and network (D-26). */
   version: 0 | 1;
 };
@@ -362,9 +372,23 @@ function ConnectedLayer({
   const words = useCallback(() => lastWords.get(), [lastWords]);
   const info = useMemo(() => walletInfo(uiWallet), [uiWallet]);
   const version = versionFor(uiWallet, base.network.v1);
-  const provide = (signer: TransactionModifyingSigner | null) => (
+  const provide = (
+    signer: TransactionModifyingSigner | null,
+    batch: TransactionModifyingSigner | null,
+  ) => (
     <ConfidentialContext.Provider
-      value={{ ...base, connected: { account, info, sign, walletWords: words, signer, version } }}
+      value={{
+        ...base,
+        connected: {
+          account,
+          info,
+          sign,
+          walletWords: words,
+          signer,
+          batchSigner: batch,
+          version,
+        },
+      }}
     >
       {children}
     </ConfidentialContext.Provider>
@@ -375,7 +399,7 @@ function ConnectedLayer({
       {provide}
     </TransactionSigner>
   ) : (
-    provide(null)
+    provide(null, null)
   );
 }
 
@@ -386,8 +410,13 @@ function TransactionSigner({
 }: {
   account: UiWalletAccount;
   chain: `solana:${string}`;
-  children: (signer: TransactionModifyingSigner) => ReactNode;
+  children: (signer: TransactionModifyingSigner, batch: TransactionModifyingSigner) => ReactNode;
 }) {
   const signer = useWalletAccountTransactionSigner(account, chain);
-  return <>{children(signer)}</>;
+  const signTransactions = useSignTransactions(account, chain);
+  const batch = useMemo(
+    () => batchSigner(account.address, signTransactions),
+    [account.address, signTransactions],
+  );
+  return <>{children(signer, batch)}</>;
 }

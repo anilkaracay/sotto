@@ -2,9 +2,9 @@
 
 // The recipient's pay page, client part (step 1.10): the balances of the recipient's own wUSDC
 // account, the payments received, and withdraw and unwrap (F-09, AC-09.1). A payment received is the
-// recipient disclosure of AC-06.4: it is trusted only when its manifest names this org and carries the
-// org owner's signature and lists the item for this recipient (I-9), and it opens with the recipient's
-// viewing key in this tab. The pending balance can be applied here; withdraw applies it first too.
+// recipient disclosure of a payment (AC-06.4) or, since step 2.3, of a payroll line (AC-08.6): it is
+// trusted only when its manifest names this org and carries the org owner's signature and lists the
+// item for this recipient (I-9), and it opens with the recipient's viewing key in this tab. The pending balance can be applied here; withdraw applies it first too.
 import { formatTokenAmount } from "@sotto/sdk/confidential/public";
 import { Button, Card, Chip, Table, Td, Th } from "@sotto/ui";
 import { address, fetchEncodedAccount } from "@solana/kit";
@@ -143,9 +143,17 @@ function Received({
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    void callApi<Loaded>(`/api/orgs/${orgId}/disclosures?kind=payment`).then(
+    // Single payments and, since step 2.3, payroll lines: both are payments to this recipient.
+    void callApi<Loaded>(`/api/orgs/${orgId}/disclosures`).then(
       (result) => {
-        if (!cancelled) setLoaded(result);
+        if (!cancelled) {
+          setLoaded({
+            items: result.items.filter(
+              (item) => item.kind === "payment" || item.kind === "payroll_line",
+            ),
+            manifests: result.manifests,
+          });
+        }
       },
       () => {
         if (!cancelled) setProblem("Your payments could not be loaded. Try again.");

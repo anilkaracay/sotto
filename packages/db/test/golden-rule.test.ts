@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import { forbiddenColumns, FORBIDDEN_COLUMN_NAME } from "../src/golden-rule.ts";
 import * as schema from "../src/schema.ts";
 
-export const PHASE_1_TABLES = [
+/** The tables of step 1.2, rate_limits, and payroll_runs since step 2.3. */
+export const TABLES = [
   "admins",
   "approvals",
   "auth_nonces",
@@ -18,6 +19,7 @@ export const PHASE_1_TABLES = [
   "orgs",
   "payment_attempts",
   "payments",
+  "payroll_runs",
   "rate_limits",
   "recipients",
   "screenings",
@@ -34,12 +36,12 @@ function schemaTables(): PgTable[] {
 }
 
 describe("golden rule for data (08 section 1)", () => {
-  it("defines the Phase 1 tables of 12 step 1.2 plus rate_limits", () => {
+  it("defines the tables of 12 step 1.2, rate_limits and payroll_runs (step 2.3)", () => {
     expect(
       schemaTables()
         .map((t) => getTableConfig(t).name)
         .sort(),
-    ).toEqual(PHASE_1_TABLES);
+    ).toEqual(TABLES);
   });
 
   it("has no column named like an amount outside the allow list", () => {

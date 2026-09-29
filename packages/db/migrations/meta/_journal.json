@@ -36,6 +36,13 @@
       "when": 1790571100928,
       "tag": "0004_payment_execution",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790673763183,
+      "tag": "0005_payroll_runs",
+      "breakpoints": true
     }
   ]
 }

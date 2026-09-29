@@ -48,6 +48,11 @@ export function ownerNav(
   ];
 }
 
+/** An accountant's nav (step 2.5): Books; Close and export is Post-hackathon (D-27, 13 A30). */
+export function accountantNav(orgId: string): TopNavItem[] {
+  return [{ key: "books", label: "Books", href: `/app/${orgId}/books`, active: true }];
+}
+
 /** A recipient's nav: the minimal pay page of step 1.10 (My pay comes in Phase 2). */
 export function recipientNav(orgId: string): TopNavItem[] {
   return [{ key: "pay", label: "My pay", href: `/app/${orgId}/pay`, active: true }];

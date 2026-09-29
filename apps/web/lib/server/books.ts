@@ -110,6 +110,27 @@ async function heldPaymentIds(
   return rows.map((row) => row.subject).filter((subject) => UUID.test(subject));
 }
 
+/** AC-11.1: the active orgs where the user holds a readable viewing grant, by name. */
+export async function listBooksOrgs(
+  db: Database,
+  session: Session,
+  now = new Date(),
+): Promise<{ orgId: string; orgName: string }[]> {
+  const rows = await db
+    .selectDistinct({ orgId: orgs.id, orgName: orgs.displayName })
+    .from(grants)
+    .innerJoin(orgs, eq(orgs.id, grants.orgId))
+    .where(
+      and(
+        eq(grants.viewerUserId, session.userId),
+        ne(grants.scope, "own_payslips"),
+        eq(orgs.status, "active"),
+        readableGrantCondition(now),
+      ),
+    );
+  return rows.sort((a, b) => a.orgName.localeCompare(b.orgName));
+}
+
 export async function readBooks(
   db: Database,
   session: Session | null,

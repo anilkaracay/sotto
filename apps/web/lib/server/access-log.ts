@@ -1,7 +1,7 @@
 // The access log (F-14, AC-14.1, AC-10.5; step 2.4): the owner reads what happened in the org, newest
 // first. Every row is metadata only (the writer in @sotto/db refuses amount like keys); the labels the
-// page shows come from the rows' subjects at read time: a grant's holder, a payment's recipient, a
-// run's title.
+// page shows come from the rows' subjects at read time: a grant's holder (also for an export, whose
+// subject is the grant it was made under, step 2.5), a payment's recipient, a run's title.
 import {
   accessLog,
   grants,
@@ -59,7 +59,7 @@ export async function listAccessLog(
     ),
   ];
   const [grantLabels, paymentLabels, runLabels] = await Promise.all([
-    ids("grant").length
+    [...ids("grant"), ...ids("export")].length
       ? db
           .select({
             id: grants.id,
@@ -71,7 +71,9 @@ export async function listAccessLog(
             recipients,
             and(eq(recipients.orgId, grants.orgId), eq(recipients.userId, grants.viewerUserId)),
           )
-          .where(and(eq(grants.orgId, orgId), inArray(grants.id, ids("grant"))))
+          .where(
+            and(eq(grants.orgId, orgId), inArray(grants.id, [...ids("grant"), ...ids("export")])),
+          )
       : Promise.resolve([]),
     ids("payment").length
       ? db
@@ -88,7 +90,7 @@ export async function listAccessLog(
       : Promise.resolve([]),
   ]);
   const label = (type: string, id: string): string | null => {
-    if (type === "grant") {
+    if (type === "grant" || type === "export") {
       const grant = grantLabels.find((row) => row.id === id);
       return grant?.holderName ?? grant?.recipientName ?? null;
     }

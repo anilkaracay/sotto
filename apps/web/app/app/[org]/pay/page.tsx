@@ -1,10 +1,14 @@
-// /app/[org]/pay (09 section 1; step 1.10): the recipient's minimal pay page until My pay in Phase 2.
-// The recipient's balances (decrypted in this tab after an unlock), the payments received from their
-// disclosures (verified against the org owner's manifest signature and opened in this tab, I-9), and
-// withdraw and unwrap (F-09, AC-09.1). Only for a recipient of the org; the org must be active.
+// /app/[org]/pay (09 section 1; step 1.10, My pay since step 2.6, F-12): the recipient's pay from each
+// active organization that pays them, grouped by organization with this page's first (its payslips,
+// pay history and what the chain shows, from their own records opened in the tab, I-9), then their
+// balances and withdraw and unwrap (F-09, AC-09.1). Only for a recipient of the org; the org must be
+// active. The header names the organization and the recipient's role there.
+import { recipients } from "@sotto/db";
 import { PageHeader } from "@sotto/ui";
+import { and, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { recipientNav } from "../../../../lib/org-nav.ts";
+import { payOrgs } from "../../../../lib/pay.ts";
 import { currentSession } from "../../../../lib/server/current-session.ts";
 import { getDb } from "../../../../lib/server/db.ts";
 import { orgOwnerWallet } from "../../../../lib/server/disclosures.ts";
@@ -35,18 +39,29 @@ export default async function PayPage({ params }: { params: Promise<{ org: strin
       </AppShell>
     );
   }
-  const [network, ownerWallet] = await Promise.all([loadNetworkView(), orgOwnerWallet(db, orgId)]);
+  const [network, ownerWallet, [recipient]] = await Promise.all([
+    loadNetworkView(),
+    orgOwnerWallet(db, orgId),
+    db
+      .select({ roleTitle: recipients.roleTitle })
+      .from(recipients)
+      .where(and(eq(recipients.orgId, orgId), eq(recipients.userId, session.userId)))
+      .limit(1),
+  ]);
   if (!ownerWallet) notFound();
+  const orgs = payOrgs(me.memberships, orgId);
+  const overline = recipient?.roleTitle
+    ? `${membership.orgName}, ${recipient.roleTitle}`
+    : membership.orgName;
   return (
     <AppShell me={me} network={network.label} nav={recipientNav(orgId)}>
-      <PageHeader overline={membership.orgName} title={title} />
+      <PageHeader overline={overline} title={title} />
       {network.available ? (
         <PayPanel
           wallet={me.user.wallet}
           userId={me.user.id}
           orgId={orgId}
-          orgName={membership.orgName}
-          ownerWallet={ownerWallet}
+          orgs={orgs}
           network={network}
         />
       ) : (

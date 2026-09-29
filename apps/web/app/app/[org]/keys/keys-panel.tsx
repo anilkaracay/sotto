@@ -92,6 +92,9 @@ function KeysView(props: Props) {
   const [ownerItems, setOwnerItems] = useState(props.ownerItems);
   const [events, setEvents] = useState(props.events);
   const [drawer, setDrawer] = useState(false);
+  // The last share's result: the Backfill card closes once no active key misses records, and the
+  // result stays in its place.
+  const [shared, setShared] = useState<string | null>(null);
 
   async function refresh() {
     const [listed, log] = await Promise.all([
@@ -125,8 +128,17 @@ function KeysView(props: Props) {
             ownerKey={props.ownerKey}
             ownerWallet={props.ownerWallet}
             you={props.you}
+            shared={shared}
+            onShared={setShared}
             onDone={refresh}
           />
+        ) : shared ? (
+          <Card className={styles.s12} data-testid="backfill">
+            <h2 className={cards.cardTitle}>Share past records</h2>
+            <p className={styles.done} role="status" data-testid="backfill-message">
+              {shared}
+            </p>
+          </Card>
         ) : null}
         <KeysTable grants={grants} onChange={refresh} />
         <AccessLog events={events} you={props.you} />
@@ -233,41 +245,47 @@ function Backfill({
   ownerKey,
   ownerWallet,
   you,
+  shared,
+  onShared,
   onDone,
 }: {
   grants: GrantView[];
   ownerKey: ViewerKeyRecord | null;
   ownerWallet: string;
   you: string;
+  shared: string | null;
+  onShared: (text: string | null) => void;
   onDone: () => Promise<void>;
 }) {
   const { orgId, wallet, connected, vault } = useConfidential();
   const { session, viewing } = useKeySession();
   const [busy, setBusy] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ tone: "done" | "problem"; text: string } | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
   const unlocked = viewing?.wallet === wallet;
 
   async function share(grant: GrantView) {
     const key = grant.viewer?.viewerKey;
-    if (!connected || !key || !grant.viewer) return;
+    const viewer = grant.viewer;
+    if (!connected || !key || !viewer) return;
     setBusy(grant.id);
-    setMessage(null);
+    setProblem(null);
+    onShared(null);
     const release = vault.hold();
+    // What was stored, so the result says so even when a later batch stops.
+    let count = 0;
     try {
       // I-8: the holder's key is used only after its registration verifies for their wallet.
       const verified = await verifyViewKeyRegistration({
-        wallet: grant.viewer.wallet,
+        wallet: viewer.wallet,
         publicKey: fromBase64(key.publicKey),
         signature: fromBase64(key.signature),
       });
       if (!verified) {
-        setMessage({
-          tone: "problem",
-          text: `${grant.holder.name}'s viewing key does not verify for their wallet, so Sotto does not encrypt to it.`,
-        });
+        setProblem(
+          `${grant.holder.name}'s viewing key does not verify for their wallet, so Sotto does not encrypt to it.`,
+        );
         return;
       }
-      let shared = 0;
       for (let batch = 0; batch < 20; batch++) {
         const pending = await callApi<{
           items: DisclosureItemView[];
@@ -297,31 +315,31 @@ function Backfill({
           });
         }
         if (items.length === 0) {
-          setMessage({
-            tone: "problem",
-            text: "The records left to share did not verify against your manifests, so they were not shared.",
-          });
-          return;
+          setProblem(
+            "The records left to share did not verify against your manifests, so they were not shared.",
+          );
+          break;
         }
         const manifest = await buildManifest({
           org: orgId,
           createdAt: new Date().toISOString(),
           items: items.map((item) => ({
             id: item.id,
-            viewer: grant.viewer?.userId ?? "",
+            viewer: viewer.userId,
             ciphertext: item.ciphertext,
           })),
         });
         const signature = await connected.sign(await manifestMessage(manifest));
         if (typeof signature === "string") {
-          setMessage({
-            tone: "problem",
-            text: withWalletWords(
-              "Your wallet did not sign the records, so nothing was shared.",
+          setProblem(
+            withWalletWords(
+              count > 0
+                ? "Your wallet did not sign the rest of the records, so they were not shared."
+                : "Your wallet did not sign the records, so nothing was shared.",
               connected.walletWords(),
             ),
-          });
-          return;
+          );
+          break;
         }
         await callApi(`/api/orgs/${orgId}/disclosures`, {
           method: "POST",
@@ -330,7 +348,7 @@ function Backfill({
             signature: toBase64(signature),
             items: items.map((item) => ({
               id: item.id,
-              viewerUserId: grant.viewer?.userId,
+              viewerUserId: viewer.userId,
               grantId: grant.id,
               kind: item.kind,
               subject: item.subject,
@@ -338,22 +356,26 @@ function Backfill({
             })),
           },
         });
-        shared += items.length;
+        count += items.length;
       }
-      setMessage({
-        tone: "done",
-        text: `Shared ${shared} past ${shared === 1 ? "record" : "records"} with ${grant.holder.name}, encrypted for them only.`,
-      });
-      await onDone();
     } catch (error) {
-      setMessage({
-        tone: "problem",
-        text:
-          error instanceof ApiCallError ? error.message : "The past records could not be shared.",
-      });
+      setProblem(
+        error instanceof ApiCallError
+          ? error.message
+          : count > 0
+            ? "The rest of the past records could not be shared."
+            : "The past records could not be shared.",
+      );
     } finally {
       release();
       setBusy(null);
+    }
+    if (count > 0) {
+      onShared(
+        `Shared ${count} past ${count === 1 ? "record" : "records"} with ${grant.holder.name}, encrypted for them only.`,
+      );
+      // The counts and the coverage follow; this card closes once no active key misses records.
+      await onDone().catch(() => undefined);
     }
   }
 
@@ -388,13 +410,14 @@ function Backfill({
           </div>
         ))}
       </div>
-      {message ? (
-        <p
-          className={message.tone === "done" ? styles.done : styles.problem}
-          role={message.tone === "done" ? "status" : "alert"}
-          data-testid="backfill-message"
-        >
-          {message.text}
+      {shared ? (
+        <p className={styles.done} role="status" data-testid="backfill-message">
+          {shared}
+        </p>
+      ) : null}
+      {problem ? (
+        <p className={styles.problem} role="alert" data-testid="backfill-problem">
+          {problem}
         </p>
       ) : null}
     </Card>

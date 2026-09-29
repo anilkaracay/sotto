@@ -9,6 +9,10 @@
 # - The SPL Record program is cloned from devnet (step 1.9): a confidential transfer in a version 0
 #   transaction stages its range proof in a record account (06 section 5).
 # - All feature gates are active at genesis, so the ZK ElGamal Proof program is enabled (facts B6).
+# - The ledger keeps 200 000 shreds instead of the default 10 000 (step 2.6): with the default the
+#   cleanup keeps about 50 slots, under half a minute, so getSignaturesForAddress soon refuses an
+#   indexer cursor it purged (facts M5). The indexer copes with that too; about 9 minutes of ledger
+#   keep the e2e runs reading the normal path.
 # Runs in the foreground. Extra arguments are passed to solana-test-validator.
 set -euo pipefail
 
@@ -36,6 +40,7 @@ mkdir -p "$(dirname "$LEDGER")"
 
 exec solana-test-validator --reset --quiet \
   --ledger "$LEDGER" \
+  --limit-ledger-size 200000 \
   --url "$DEVNET_URL" \
   --clone-upgradeable-program "$TOKEN_2022_PROGRAM" \
   --clone-upgradeable-program "$SAS_PROGRAM" \

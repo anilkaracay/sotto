@@ -11,7 +11,8 @@
 //    attempt as failed_clean, so a retry is safe;
 // 5. after the transfer is finalized, check that the new available balance is the previous one minus
 //    the amount (06 section 5 step 5), and write the self and recipient disclosures with a manifest
-//    the owner wallet signs (07 section 4, AC-06.4 Phase 1 part).
+//    the owner wallet signs (07 section 4, AC-06.4 Phase 1 part), and since step 2.4 one for every
+//    active grant whose scope covers the payment (AC-06.4 grant part).
 import {
   associatedTokenAccount,
   closeProofAccounts,
@@ -29,6 +30,7 @@ import { verifyViewKeyRegistration } from "@sotto/sdk/keys/public";
 import { fromPortableInstruction, sendWithWallet } from "@sotto/sdk/tx";
 import { address, fetchEncodedAccount, fetchEncodedAccounts } from "@solana/kit";
 import { callApi } from "../../../../../lib/client/api.ts";
+import { activeGrantViewers, coveringGrants } from "../../../../../lib/client/grant-viewers.ts";
 import { browserRpc } from "../../../../../lib/client/rpc.ts";
 import { describeTransactionError } from "../../../../../lib/client/transactions.ts";
 import { withWalletWords } from "../../../../../lib/client/wallet-words.ts";
@@ -230,7 +232,10 @@ export async function runPayment(options: {
   }
 }
 
-/** AC-06.4 Phase 1: the owner's self disclosure and the recipient's, in one signed manifest. */
+/**
+ * AC-06.4: the owner's self disclosure, the recipient's and, since step 2.4, one for every active grant
+ * covering the payment, in one signed manifest.
+ */
 async function disclose(
   input: PaymentRunInput,
   connected: Connected,
@@ -269,12 +274,27 @@ async function disclose(
   if (!self) {
     return { self: false, recipient: false, problem: "Your viewing key did not verify." };
   }
-  const items = [];
+  const items: {
+    id: string;
+    viewerUserId: string;
+    grantId: string | null;
+    ciphertext: Uint8Array;
+  }[] = [];
   for (const viewer of viewers) {
     items.push({
       id: crypto.randomUUID(),
       viewerUserId: viewer.userId,
+      grantId: null,
       ciphertext: await worker().seal(fromBase64(viewer.publicKey), payload),
+    });
+  }
+  // AC-06.4 grant part: every active grant whose scope covers the payment (I-8 checked there).
+  for (const grant of coveringGrants(await activeGrantViewers(input.orgId), "payment")) {
+    items.push({
+      id: crypto.randomUUID(),
+      viewerUserId: grant.viewer.userId,
+      grantId: grant.grantId,
+      ciphertext: await worker().seal(fromBase64(grant.viewer.publicKey), payload),
     });
   }
   const manifest = await buildManifest({
@@ -305,7 +325,7 @@ async function disclose(
       items: items.map((item) => ({
         id: item.id,
         viewerUserId: item.viewerUserId,
-        grantId: null,
+        grantId: item.grantId,
         kind: "payment",
         subject: input.paymentId,
         ciphertext: toBase64(item.ciphertext),

@@ -9,8 +9,8 @@
 //    signTransaction call; one call per transaction if the wallet fails the batch call, D-26), sent
 //    line by line, every signature recorded before its transaction is sent (I-7);
 // 3. after each chunk: the balance checked against the chunk's prediction, the chunk waited to
-//    finality, then the self and recipient disclosures of its lines under one manifest the owner
-//    signs (X-33, AC-08.6);
+//    finality, then the self and recipient disclosures of its lines, and since step 2.4 one for every
+//    active grant covering each line, under one manifest the owner signs (X-33, AC-08.6, AC-06.4);
 // 4. a failed line stops the run: its proof accounts are closed, its attempt and the run's stop are
 //    recorded, and Resume pays the rest from chain state.
 import {
@@ -35,6 +35,7 @@ import {
 } from "@sotto/sdk/tx";
 import { address, fetchEncodedAccount, type Signature } from "@solana/kit";
 import { ApiCallError, callApi } from "../../../../../lib/client/api.ts";
+import { activeGrantViewers, coveringGrants } from "../../../../../lib/client/grant-viewers.ts";
 import { browserRpc } from "../../../../../lib/client/rpc.ts";
 import {
   describeTransactionError,
@@ -136,10 +137,13 @@ export async function discloseLines(options: {
   const items: {
     id: string;
     viewerUserId: string;
+    grantId: string | null;
     subject: string;
     ciphertext: Uint8Array;
   }[] = [];
   let ownerOnly = 0;
+  // AC-06.4 grant part: the active grants whose scope covers a payroll line (I-8 checked there).
+  const grants = coveringGrants(await activeGrantViewers(options.orgId), "payroll_line");
   for (const { line, transferSignature } of options.lines) {
     const payload: DisclosurePayloadV1 = validatePayload({
       v: 1,
@@ -164,8 +168,18 @@ export async function discloseLines(options: {
       items.push({
         id: crypto.randomUUID(),
         viewerUserId: viewer.userId,
+        grantId: null,
         subject: line.line.id,
         ciphertext: await options.worker().seal(fromBase64(viewer.publicKey), payload),
+      });
+    }
+    for (const grant of grants) {
+      items.push({
+        id: crypto.randomUUID(),
+        viewerUserId: grant.viewer.userId,
+        grantId: grant.grantId,
+        subject: line.line.id,
+        ciphertext: await options.worker().seal(fromBase64(grant.viewer.publicKey), payload),
       });
     }
   }
@@ -197,7 +211,7 @@ export async function discloseLines(options: {
       items: items.map((item) => ({
         id: item.id,
         viewerUserId: item.viewerUserId,
-        grantId: null,
+        grantId: item.grantId,
         kind: "payroll_line",
         subject: item.subject,
         ciphertext: toBase64(item.ciphertext),

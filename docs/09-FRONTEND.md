@@ -69,7 +69,7 @@ Read only, in the app design language, reusing overview cards: totals and month 
 Builder: thresholds `$100k, $500k, $1M, $2.5M` plus custom; counterparty label free text. Statement wording: "Balance is at least $X". Certificate: from the onchain record just written. Issued list: `proof_records`.
 
 ### Books (accountant)
-Money in and out totals: sums of decrypted disclosures in the browser. Reconciliation: `reconciliations`. Ledger: disclosures in scope, decrypted, joined with `chain_activity` for signatures and times.
+Money in and out totals: sums of decrypted disclosures in the browser. In the hackathon build money in is Post-hackathon (M1, founder 2026-09-29): Books shows money out only, and the design's money in figures are not shown (a 13 row when step 2.5 builds Books). Reconciliation: `reconciliations`. Ledger: disclosures in scope, decrypted, joined with `chain_activity` for signatures and times.
 
 ### Close and export (Post-hackathon, D-27)
 Checklist: `close_items`. In the hackathon build the CSV export is generated client side inside Books (AC-11.4); the server logs the event only.

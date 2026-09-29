@@ -90,7 +90,7 @@ Post-hackathon with `totals_only` (D-27): `month_total` items are written on the
 
 - Recipient: on demand, with a "Verify against chain" button (not automatically), decrypts the stored destination ciphertext of the transfer (section 3) with their own ElGamal secret and compares it with the disclosure.
 - Owner: compares each self disclosure with the decrypted balance delta of the corresponding settlement.
-- Accountant and board: rely on the owner's signed manifest. The UI labels these numbers "Shared by <owner name>".
+- Accountant and board: rely on the owner's signed manifest. The UI labels these numbers "Shared by <owner name>". Implementation (step 2.5, Books): every record is verified against the owner's manifest before it opens (I-9), one that does not verify is counted in a warning and not opened, and the scope banner says "Shared by <owner>" with what the grant reads and until when.
 
 ## 9. Tests
 

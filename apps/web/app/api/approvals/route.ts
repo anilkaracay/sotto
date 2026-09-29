@@ -1,6 +1,6 @@
 // POST /api/approvals { subjectType, subjectId, message, signature } (an owner or approver of the
-// payment's org, active org; D-04, Q-12 (a); step 1.9): an approval message signed by the approver's
-// wallet over the payment's current contents hash.
+// subject's org, active org; D-04, Q-12 (a); step 1.9): an approval message signed by the approver's
+// wallet over the current contents hash of a payment or, since step 2.3, a payroll run.
 import { apiRoute } from "../../../lib/server/api-route.ts";
 import { approvalSchema, recordApproval } from "../../../lib/server/approvals.ts";
 import { readJson } from "../../../lib/server/body.ts";

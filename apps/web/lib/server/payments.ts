@@ -498,6 +498,90 @@ export async function authorizePayment(
   return view(db, orgId, await paymentRow(db, orgId, paymentId), cluster);
 }
 
+type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+export type AttemptInput = Exclude<z.infer<typeof executionSchema>, { status: "integrity" }>;
+
+/**
+ * The attempt part of an execution record (08 section 3), shared by single payments and, since step
+ * 2.3, payroll lines: a signature opens the next attempt of an authorized payment or joins its open
+ * attempt, and the end of an attempt records how it ended. The payment row is locked meanwhile.
+ */
+export async function applyAttempt(
+  tx: Transaction,
+  paymentId: string,
+  input: AttemptInput,
+  now: Date,
+): Promise<void> {
+  const [current] = await tx
+    .select({ status: payments.status })
+    .from(payments)
+    .where(eq(payments.id, paymentId))
+    .for("update");
+  if (!current) throw paymentErrors.notFound();
+  const status = current.status;
+  const [attempt] = await tx
+    .select()
+    .from(paymentAttempts)
+    .where(
+      and(eq(paymentAttempts.paymentId, paymentId), eq(paymentAttempts.attemptNo, input.attemptNo)),
+    )
+    .limit(1);
+  const [latest] = await tx
+    .select({ attemptNo: paymentAttempts.attemptNo })
+    .from(paymentAttempts)
+    .where(eq(paymentAttempts.paymentId, paymentId))
+    .orderBy(desc(paymentAttempts.attemptNo))
+    .limit(1);
+
+  if (input.status === "sent") {
+    const opening = !attempt;
+    // A new attempt starts only after authorization, as the next number.
+    if (opening && (status !== "authorized" || input.attemptNo !== (latest?.attemptNo ?? 0) + 1)) {
+      throw paymentErrors.status(status);
+    }
+    if (!opening && status !== "executing") throw paymentErrors.status(status);
+    if (opening) {
+      await tx.insert(paymentAttempts).values({
+        paymentId,
+        attemptNo: input.attemptNo,
+        signatures: [input.signature],
+        status: "sent",
+        transferSignature: input.transfer ? input.signature : null,
+      });
+    } else if (!attempt.signatures.includes(input.signature)) {
+      await tx
+        .update(paymentAttempts)
+        .set({
+          signatures: [...attempt.signatures, input.signature],
+          ...(input.transfer ? { transferSignature: input.signature } : {}),
+        })
+        .where(eq(paymentAttempts.id, attempt.id));
+    }
+    await tx
+      .update(payments)
+      .set({ status: "executing", updatedAt: now })
+      .where(eq(payments.id, paymentId));
+    return;
+  }
+
+  // failed_clean or failed: the client stopped the attempt (and closed its proof accounts).
+  if (!attempt || !["executing", "failed", "authorized"].includes(status)) {
+    throw paymentErrors.status(status);
+  }
+  await tx
+    .update(paymentAttempts)
+    .set({
+      status: input.status,
+      errorCode: input.errorCode,
+      signatures: [...new Set([...attempt.signatures, ...input.signatures])],
+    })
+    .where(eq(paymentAttempts.id, attempt.id));
+  await tx
+    .update(payments)
+    .set({ status: input.status, errorCode: input.errorCode, updatedAt: now })
+    .where(eq(payments.id, paymentId));
+}
+
 export async function recordExecution(
   db: Database,
   session: Session | null,
@@ -526,93 +610,22 @@ export async function recordExecution(
   }
 
   await db.transaction(async (tx) => {
-    const [current] = await tx
-      .select({ status: payments.status })
-      .from(payments)
-      .where(eq(payments.id, payment.id))
-      .for("update");
-    const status = current?.status ?? payment.status;
-    const [attempt] = await tx
-      .select()
-      .from(paymentAttempts)
-      .where(
-        and(
-          eq(paymentAttempts.paymentId, payment.id),
-          eq(paymentAttempts.attemptNo, input.attemptNo),
-        ),
-      )
-      .limit(1);
-    const [latest] = await tx
-      .select({ attemptNo: paymentAttempts.attemptNo })
-      .from(paymentAttempts)
-      .where(eq(paymentAttempts.paymentId, payment.id))
-      .orderBy(desc(paymentAttempts.attemptNo))
-      .limit(1);
-
-    if (input.status === "sent") {
-      const opening = !attempt;
-      // A new attempt starts only after authorization, as the next number.
-      if (
-        opening &&
-        (status !== "authorized" || input.attemptNo !== (latest?.attemptNo ?? 0) + 1)
-      ) {
-        throw paymentErrors.status(status);
-      }
-      if (!opening && status !== "executing") throw paymentErrors.status(status);
-      if (opening) {
-        await tx.insert(paymentAttempts).values({
-          paymentId: payment.id,
-          attemptNo: input.attemptNo,
-          signatures: [input.signature],
-          status: "sent",
-          transferSignature: input.transfer ? input.signature : null,
-        });
-      } else if (!attempt.signatures.includes(input.signature)) {
-        await tx
-          .update(paymentAttempts)
-          .set({
-            signatures: [...attempt.signatures, input.signature],
-            ...(input.transfer ? { transferSignature: input.signature } : {}),
-          })
-          .where(eq(paymentAttempts.id, attempt.id));
-      }
-      await tx
-        .update(payments)
-        .set({ status: "executing", updatedAt: now })
-        .where(eq(payments.id, payment.id));
-      // Q-11: the initiator's execution is their approval, with the first execution signature.
-      await tx
-        .insert(approvals)
-        .values({
-          orgId,
-          subjectType: "payment",
-          subjectId: payment.id,
-          approverUserId: session.userId,
-          kind: "execution",
-          executionSignature: input.signature,
-        })
-        .onConflictDoNothing({
-          target: [approvals.subjectType, approvals.subjectId, approvals.approverUserId],
-        });
-      return;
-    }
-
-    // failed_clean or failed: the client stopped the attempt (and closed its proof accounts).
-    if (!attempt || !["executing", "failed", "authorized"].includes(status)) {
-      throw paymentErrors.status(status);
-    }
+    await applyAttempt(tx, payment.id, input, now);
+    if (input.status !== "sent") return;
+    // Q-11: the initiator's execution is their approval, with the first execution signature.
     await tx
-      .update(paymentAttempts)
-      .set({
-        status: input.status,
-        errorCode: input.errorCode,
-        signatures: [...new Set([...attempt.signatures, ...input.signatures])],
+      .insert(approvals)
+      .values({
+        orgId,
+        subjectType: "payment",
+        subjectId: payment.id,
+        approverUserId: session.userId,
+        kind: "execution",
+        executionSignature: input.signature,
       })
-      .where(eq(paymentAttempts.id, attempt.id));
-    await tx
-      .update(payments)
-      .set({ status: input.status, errorCode: input.errorCode, updatedAt: now })
-      .where(eq(payments.id, payment.id));
+      .onConflictDoNothing({
+        target: [approvals.subjectType, approvals.subjectId, approvals.approverUserId],
+      });
   });
   return view(db, orgId, await paymentRow(db, orgId, paymentId), cluster);
 }

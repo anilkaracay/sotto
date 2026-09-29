@@ -177,8 +177,8 @@ test.describe.serial("confidential account on localnet", () => {
     await expect(value(page, "balance-public-wusdc")).toHaveText("5 wUSDC");
     await expect(value(page, "balance-available")).toHaveText("Not set up yet");
 
-    // Q-15 (step 2.1): a wallet whose own security check blocks the setup; Sotto shows the neutral
-    // capability message and the wallet's words, and nothing is sent.
+    // Q-15 (steps 2.1 and 2.2): a wallet whose own security check blocks the setup; Sotto shows the
+    // neutral message, true for any refusal, and the wallet's words, and nothing is sent.
     await page.evaluate(() =>
       (
         window as unknown as {
@@ -191,7 +191,7 @@ test.describe.serial("confidential account on localnet", () => {
     );
     await page.getByRole("button", { name: "Set up the account" }).click();
     await expect(page.getByTestId("account-card").getByRole("alert")).toContainText(
-      "Your wallet's security check blocked this confidential account setup. Try another Solana wallet, or contact your wallet's support. Sotto Test Wallet said: \"WalletSignTransactionError: Unable to verify this transaction. It cannot be signed.\"",
+      'Your wallet did not sign this confidential account setup. If your wallet mentions a security check, try another Solana wallet or contact your wallet\'s support. Sotto Test Wallet said: "WalletSignTransactionError: Unable to verify this transaction. It cannot be signed."',
     );
     await expect(page.getByTestId("account-status")).toHaveText("Not set up");
     expect(await testWallet<number>(page, "signedTransactions")).toBe(0);

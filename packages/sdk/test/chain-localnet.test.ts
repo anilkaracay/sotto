@@ -7,55 +7,25 @@
 // account shows the two transfers in. getTransaction refuses a version 1 transaction without
 // maxSupportedTransactionVersion (facts D2 tested only getBlock). Needs the bootstrapped localnet;
 // skipped unless SOTTO_LOCALNET_RPC_URL is set (scripts/ci-local.sh runs it in the localnet job).
-import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
-import { fetchMint, fetchToken } from "@solana-program/token-2022";
-import {
-  createNoopSigner,
-  getBase64Encoder,
-  type Address,
-  type KeyPairSigner,
-  type Signature,
-  type SignatureBytes,
-  type Transaction,
-} from "@solana/kit";
+import { getBase64Encoder, type Address, type Signature } from "@solana/kit";
 import { beforeAll, describe, expect, it } from "vitest";
 import { activityOf, type ChainActivity } from "../src/chain/activity.ts";
 import { getClusterConfig, type AvailableClusterConfig } from "../src/cluster/config.ts";
-import {
-  confidentialTransferPlan,
-  confidentialWithdrawPlan,
-  sendTransferTransactions,
-} from "../src/confidential/index.ts";
 import {
   applyLocalnetPending,
   fundLocalnetAccount,
   newLocalnetOwner,
   readLocalnetBootstrap,
-  sendAsOwner,
   setUpLocalnetAccount,
+  transferOnLocalnet,
+  withdrawAndUnwrapOnLocalnet,
   type LocalnetBootstrap,
   type LocalnetOwner,
 } from "../src/testing/localnet.ts";
 import { createRetryingRpc, waitForConfirmation, type SolanaRpc } from "../src/tx/index.ts";
-import { unwrapInstructions } from "../src/wrap/index.ts";
 
 const RPC_URL = process.env.SOTTO_LOCALNET_RPC_URL;
 const USDC = 1_000_000n;
-
-function cosigner(signers: readonly KeyPairSigner[]) {
-  return async (transaction: Transaction): Promise<Record<Address, SignatureBytes>> => {
-    const signatures: Record<Address, SignatureBytes> = {};
-    for (const signer of signers) {
-      if (!(signer.address in transaction.signatures)) continue;
-      const [dictionary] = await signer.signTransactions([
-        transaction as Parameters<KeyPairSigner["signTransactions"]>[0][number],
-      ]);
-      const signature = dictionary?.[signer.address];
-      if (signature) signatures[signer.address] = signature;
-    }
-    return signatures;
-  };
-}
 
 describe.skipIf(!RPC_URL)("what the chain shows on localnet", () => {
   let rpc: SolanaRpc;
@@ -103,61 +73,10 @@ describe.skipIf(!RPC_URL)("what the chain shows on localnet", () => {
     await setUpLocalnetAccount(rpc, recipient, bootstrap);
     await fundLocalnetAccount(rpc, owner, bootstrap, 20n * USDC, 1);
     await applyLocalnetPending(rpc, owner);
-    for (const version of [0, 1] as const) {
-      const [source, destination, mint] = await Promise.all([
-        fetchToken(rpc, owner.wusdc, { commitment: "confirmed" }),
-        fetchToken(rpc, recipient.wusdc, { commitment: "confirmed" }),
-        fetchMint(rpc, bootstrap.wrappedUsdcMint, { commitment: "confirmed" }),
-      ]);
-      const plan = await confidentialTransferPlan({
-        owner: owner.signer.address,
-        sourceToken: owner.wusdc,
-        sourceTokenAccount: source.data,
-        destinationToken: recipient.wusdc,
-        destinationTokenAccount: destination.data,
-        mint: bootstrap.wrappedUsdcMint,
-        mintAccount: mint.data,
-        amount: 1_250_000n,
-        keys: owner.keys,
-        version,
-        rent: (space) => rpc.getMinimumBalanceForRentExemption(space).send(),
-      });
-      await sendTransferTransactions({
-        rpc,
-        wallet: owner.wallet,
-        version,
-        transactions: plan.transactions,
-        cosign: cosigner(plan.signers),
-      });
-    }
-    const token = await fetchToken(rpc, owner.wusdc, { commitment: "confirmed" });
-    const withdraw = await confidentialWithdrawPlan({
-      owner: owner.signer.address,
-      token: owner.wusdc,
-      tokenAccount: token.data,
-      mint: bootstrap.wrappedUsdcMint,
-      decimals: bootstrap.usdcDecimals,
-      amount: 3_000_000n,
-      keys: owner.keys,
-      version: 1,
-      rent: (space) => rpc.getMinimumBalanceForRentExemption(space).send(),
-    });
-    await sendTransferTransactions({
-      rpc,
-      wallet: owner.wallet,
-      version: 1,
-      transactions: withdraw.transactions,
-      cosign: cosigner(withdraw.signers),
-    });
-    const unwrap = await unwrapInstructions({
-      owner: createNoopSigner(owner.signer.address),
-      unwrappedMint: bootstrap.usdcMint,
-      unwrappedTokenProgram: TOKEN_PROGRAM_ADDRESS,
-      programAddress: tokenWrap,
-      amount: 3_000_000n,
-    });
-    const last = await sendAsOwner(rpc, owner, unwrap.instructions, 1);
-    await waitForConfirmation(rpc, last.signature, 120_000, "finalized");
+    await transferOnLocalnet(rpc, bootstrap, owner, recipient, 1_250_000n, 0);
+    await transferOnLocalnet(rpc, bootstrap, owner, recipient, 1_250_000n, 1);
+    const last = await withdrawAndUnwrapOnLocalnet(rpc, bootstrap, owner, 3_000_000n, 1);
+    await waitForConfirmation(rpc, last, 120_000, "finalized");
   }, 420_000);
 
   it(

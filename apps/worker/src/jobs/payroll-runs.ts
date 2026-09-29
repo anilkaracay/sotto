@@ -6,7 +6,13 @@
 //   otherwise not paid (failed), so the owner can resume it. Ten minutes, well past the landing
 //   window of confirm-executions, so an owner who takes a few minutes over a chunk's wallet prompt
 //   is not stopped. The page itself reports a stop when it ends early.
-import { paymentAttempts, payments, payrollRuns, type Database } from "@sotto/db";
+import {
+  insertAccessEvent,
+  paymentAttempts,
+  payments,
+  payrollRuns,
+  type Database,
+} from "@sotto/db";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Job } from "./runner.ts";
 
@@ -32,7 +38,18 @@ export function payrollRunsJob(deps: PayrollRunsDeps): Job {
             sql`not exists (select 1 from ${payments} where ${payments.runId} = ${payrollRuns.id} and ${payments.status} <> 'settled')`,
           ),
         )
-        .returning({ id: payrollRuns.id });
+        .returning({ id: payrollRuns.id, orgId: payrollRuns.orgId, lines: payrollRuns.lineCount });
+      // AC-14.1: metadata only.
+      for (const run of settled) {
+        await insertAccessEvent(deps.db, {
+          orgId: run.orgId,
+          actorUserId: null,
+          action: "payroll_run_settled",
+          subjectType: "payroll_run",
+          subjectId: run.id,
+          metadata: { lines: run.lines },
+        });
+      }
       const stopped = await deps.db
         .update(payrollRuns)
         .set({
@@ -45,7 +62,17 @@ export function payrollRunsJob(deps: PayrollRunsDeps): Job {
             sql`not exists (select 1 from ${paymentAttempts} inner join ${payments} on ${payments.id} = ${paymentAttempts.paymentId} where ${payments.runId} = ${payrollRuns.id} and (${paymentAttempts.status} in ('sent', 'confirmed') or ${paymentAttempts.createdAt} > ${windowStart.toISOString()}::timestamptz))`,
           ),
         )
-        .returning({ id: payrollRuns.id, status: payrollRuns.status });
+        .returning({ id: payrollRuns.id, orgId: payrollRuns.orgId, status: payrollRuns.status });
+      for (const run of stopped) {
+        await insertAccessEvent(deps.db, {
+          orgId: run.orgId,
+          actorUserId: null,
+          action: "payroll_run_stopped",
+          subjectType: "payroll_run",
+          subjectId: run.id,
+          metadata: { status: run.status, by: "worker" },
+        });
+      }
       return { settled: settled.length, stopped: stopped.length };
     },
   };

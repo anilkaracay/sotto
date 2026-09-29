@@ -9,7 +9,9 @@
 //   land; the attempt failed as transfer_not_found.
 // An attempt the page ended as failed_clean is still read for those three minutes, so a transfer that
 // landed after all is settled and never sent again (I-7). With nothing to check it makes no RPC call.
-import { paymentAttempts, payments, type Database } from "@sotto/db";
+// Since step 2.4 a settled payment records when it settled (a period grant needs it) and a single
+// payment's settlement is written to the access log (AC-14.1, metadata only).
+import { insertAccessEvent, paymentAttempts, payments, type Database } from "@sotto/db";
 import type { SolanaRpc } from "@sotto/sdk/tx";
 import type { Signature } from "@solana/kit";
 import { and, eq, gt, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
@@ -37,7 +39,12 @@ export function confirmExecutionsJob(deps: ConfirmExecutionsDeps): Job {
       const now = deps.now?.() ?? new Date();
       const windowStart = new Date(now.getTime() - LANDING_WINDOW_MS);
       const rows = await deps.db
-        .select({ attempt: paymentAttempts, paymentStatus: payments.status })
+        .select({
+          attempt: paymentAttempts,
+          paymentStatus: payments.status,
+          kind: payments.kind,
+          orgId: payments.orgId,
+        })
         .from(paymentAttempts)
         .innerJoin(payments, eq(payments.id, paymentAttempts.paymentId))
         .where(
@@ -108,8 +115,19 @@ export function confirmExecutionsJob(deps: ConfirmExecutionsDeps): Job {
               signatures: attempt.signatures,
               errorCode: null,
               updatedAt: now,
+              settledAt: now,
             })
             .where(eq(payments.id, attempt.paymentId));
+          if (row.kind === "single") {
+            await insertAccessEvent(deps.db, {
+              orgId: row.orgId,
+              actorUserId: null,
+              action: "payment_settled",
+              subjectType: "payment",
+              subjectId: attempt.paymentId,
+              metadata: { slot: status.slot.toString(), attemptNo: attempt.attemptNo },
+            });
+          }
           settled += 1;
         } else if (attempt.status === "sent") {
           await deps.db

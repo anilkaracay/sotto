@@ -58,18 +58,29 @@ const INSTRUCTION_LEVEL: Record<string, [string, string]> = {
   UninitializedAccount: ["account_missing", "An account this step needs does not exist yet."],
 };
 
+/**
+ * Plain words for the Token-2022 errors a Sotto flow meets. Codes above 19 are the confidential
+ * transfer errors of `spl-token-2022-interface` 3.1.2 `TokenError` (step 2.3), which the
+ * `@solana-program/token-2022` 0.19.0 client does not name.
+ */
 const PLAIN_TOKEN_2022: Record<number, string> = {
   1: "The token account does not have enough tokens for this step.",
   4: "The token account belongs to another wallet.",
   17: "The token account is frozen.",
+  24: "The receiving account is not approved for confidential transfers.",
+  25: "The receiving account does not accept confidential transfers right now.",
+  26: "An account's encryption key does not match the one the transfer was prepared for.",
+  27: "The confidential balance changed after this transfer was prepared, so it no longer matches and nothing moved.",
+  39: "The receiving account has too many pending payments; its owner must apply the pending balance first.",
 };
 
 function customError(programAddress: Address | undefined, code: number): [string, string] {
   if (programAddress === TOKEN_2022_PROGRAM_ADDRESS) {
     const plain = PLAIN_TOKEN_2022[code];
+    const named = getToken2022ErrorMessage(code as never) as string | undefined;
     return [
       `token_2022_${code}`,
-      plain ?? `Token program error: ${getToken2022ErrorMessage(code as never)}.`,
+      plain ?? (named ? `Token program error: ${named}.` : `Token program error ${code}.`),
     ];
   }
   if (programAddress === ASSOCIATED_TOKEN_PROGRAM_ADDRESS) {

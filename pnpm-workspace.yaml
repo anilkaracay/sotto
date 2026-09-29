@@ -6,6 +6,9 @@ packages:
 
 # Exact versions, resolved at scaffold time (docs/VERSIONS.md). Packages reference them with "catalog:".
 catalog:
+  "@codama/nodes": 1.11.0
+  "@codama/renderers-js": 2.5.0
+  "@codama/visitors-core": 1.11.0
   "@eslint/js": 10.0.1
   "@next/eslint-plugin-next": 16.3.6
   "@playwright/test": 1.63.0

@@ -1,0 +1,791 @@
+{
+  "kind": "rootNode",
+  "standard": "codama",
+  "version": "1.9.2",
+  "program": {
+    "kind": "programNode",
+    "name": "sottoProofs",
+    "publicKey": "4rMKgJWgawaTTdUxaudUXthEExnRZ7AvFvqzsoEAr9jd",
+    "version": "0.1.0",
+    "docs": [
+      "Verifies that a Token-2022 confidential available balance is at least a threshold and writes a public proof record. It never moves tokens and calls no program but the System Program."
+    ],
+    "accounts": [
+      {
+        "kind": "accountNode",
+        "name": "config",
+        "size": 67,
+        "data": {
+          "kind": "structTypeNode",
+          "fields": [
+            {
+              "kind": "structFieldTypeNode",
+              "name": "version",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u8",
+                "endian": "le"
+              }
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "admin",
+              "type": {
+                "kind": "publicKeyTypeNode"
+              }
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "wrappedUsdcMint",
+              "type": {
+                "kind": "publicKeyTypeNode"
+              }
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "paused",
+              "type": {
+                "kind": "booleanTypeNode",
+                "size": {
+                  "kind": "numberTypeNode",
+                  "format": "u8",
+                  "endian": "le"
+                }
+              }
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "bump",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u8",
+                "endian": "le"
+              }
+            }
+          ]
+        },
+        "pda": {
+          "kind": "pdaLinkNode",
+          "name": "config"
+        },
+        "discriminators": [
+          {
+            "kind": "sizeDiscriminatorNode",
+            "size": 67
+          }
+        ]
+      },
+      {
+        "kind": "accountNode",
+        "name": "proofRecord",
+        "size": 194,
+        "data": {
+          "kind": "structTypeNode",
+          "fields": [
+            {
+              "kind": "structFieldTypeNode",
+              "name": "version",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u8",
+                "endian": "le"
+              }
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "tokenAccount",
+              "type": {
+                "kind": "publicKeyTypeNode"
+              }
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "owner",
+              "type": {
+                "kind": "publicKeyTypeNode"
+              }
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "mint",
+              "type": {
+                "kind": "publicKeyTypeNode"
+              }
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "threshold",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u64",
+                "endian": "le"
+              }
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "slot",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u64",
+                "endian": "le"
+              }
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "unixTime",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "i64",
+                "endian": "le"
+              }
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "expiry",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "i64",
+                "endian": "le"
+              }
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "balanceCiphertextHash",
+              "type": {
+                "kind": "fixedSizeTypeNode",
+                "size": 32,
+                "type": {
+                  "kind": "bytesTypeNode"
+                }
+              }
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "counterpartyHash",
+              "type": {
+                "kind": "fixedSizeTypeNode",
+                "size": 32,
+                "type": {
+                  "kind": "bytesTypeNode"
+                }
+              }
+            },
+            {
+              "kind": "structFieldTypeNode",
+              "name": "bump",
+              "type": {
+                "kind": "numberTypeNode",
+                "format": "u8",
+                "endian": "le"
+              }
+            }
+          ]
+        },
+        "pda": {
+          "kind": "pdaLinkNode",
+          "name": "proofRecord"
+        },
+        "discriminators": [
+          {
+            "kind": "sizeDiscriminatorNode",
+            "size": 194
+          }
+        ]
+      }
+    ],
+    "instructions": [
+      {
+        "kind": "instructionNode",
+        "name": "initializeConfig",
+        "docs": [
+          "Creates the config. The signer must be the program's current upgrade authority."
+        ],
+        "optionalAccountStrategy": "programId",
+        "accounts": [
+          {
+            "kind": "instructionAccountNode",
+            "name": "config",
+            "isWritable": true,
+            "isSigner": false,
+            "isOptional": false,
+            "docs": [
+              "The config PDA."
+            ],
+            "defaultValue": {
+              "kind": "pdaValueNode",
+              "pda": {
+                "kind": "pdaLinkNode",
+                "name": "config"
+              }
+            }
+          },
+          {
+            "kind": "instructionAccountNode",
+            "name": "authority",
+            "isWritable": false,
+            "isSigner": true,
+            "isOptional": false,
+            "docs": [
+              "The program's upgrade authority, the admin."
+            ]
+          },
+          {
+            "kind": "instructionAccountNode",
+            "name": "programData",
+            "isWritable": false,
+            "isSigner": false,
+            "isOptional": false,
+            "docs": [
+              "The program's ProgramData account (the programData PDA of the program's own address)."
+            ]
+          },
+          {
+            "kind": "instructionAccountNode",
+            "name": "payer",
+            "isWritable": true,
+            "isSigner": true,
+            "isOptional": false,
+            "docs": [
+              "Pays the config's rent."
+            ]
+          },
+          {
+            "kind": "instructionAccountNode",
+            "name": "systemProgram",
+            "isWritable": false,
+            "isSigner": false,
+            "isOptional": false,
+            "docs": [
+              "The System Program, the only program this one calls."
+            ],
+            "defaultValue": {
+              "kind": "publicKeyValueNode",
+              "publicKey": "11111111111111111111111111111111",
+              "identifier": "systemProgram"
+            }
+          }
+        ],
+        "arguments": [
+          {
+            "kind": "instructionArgumentNode",
+            "name": "discriminator",
+            "defaultValueStrategy": "omitted",
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u8",
+              "endian": "le"
+            },
+            "defaultValue": {
+              "kind": "numberValueNode",
+              "number": 0
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "wrappedUsdcMint",
+            "type": {
+              "kind": "publicKeyTypeNode"
+            }
+          }
+        ],
+        "discriminators": [
+          {
+            "kind": "fieldDiscriminatorNode",
+            "name": "discriminator",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "kind": "instructionNode",
+        "name": "setPaused",
+        "docs": [
+          "Pauses or unpauses new records. The signer must be the config's admin."
+        ],
+        "optionalAccountStrategy": "programId",
+        "accounts": [
+          {
+            "kind": "instructionAccountNode",
+            "name": "config",
+            "isWritable": true,
+            "isSigner": false,
+            "isOptional": false,
+            "docs": [
+              "The config PDA."
+            ],
+            "defaultValue": {
+              "kind": "pdaValueNode",
+              "pda": {
+                "kind": "pdaLinkNode",
+                "name": "config"
+              }
+            }
+          },
+          {
+            "kind": "instructionAccountNode",
+            "name": "admin",
+            "isWritable": false,
+            "isSigner": true,
+            "isOptional": false,
+            "docs": [
+              "The config's admin."
+            ]
+          }
+        ],
+        "arguments": [
+          {
+            "kind": "instructionArgumentNode",
+            "name": "discriminator",
+            "defaultValueStrategy": "omitted",
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u8",
+              "endian": "le"
+            },
+            "defaultValue": {
+              "kind": "numberValueNode",
+              "number": 1
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "paused",
+            "type": {
+              "kind": "booleanTypeNode",
+              "size": {
+                "kind": "numberTypeNode",
+                "format": "u8",
+                "endian": "le"
+              }
+            }
+          }
+        ],
+        "discriminators": [
+          {
+            "kind": "fieldDiscriminatorNode",
+            "name": "discriminator",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "kind": "instructionNode",
+        "name": "verifyBalanceThreshold",
+        "docs": [
+          "Checks that the owner's confidential available balance is at least the threshold, from two verified proof context accounts, and writes the proof record."
+        ],
+        "optionalAccountStrategy": "programId",
+        "accounts": [
+          {
+            "kind": "instructionAccountNode",
+            "name": "config",
+            "isWritable": false,
+            "isSigner": false,
+            "isOptional": false,
+            "docs": [
+              "The config PDA."
+            ],
+            "defaultValue": {
+              "kind": "pdaValueNode",
+              "pda": {
+                "kind": "pdaLinkNode",
+                "name": "config"
+              }
+            }
+          },
+          {
+            "kind": "instructionAccountNode",
+            "name": "owner",
+            "isWritable": false,
+            "isSigner": true,
+            "isOptional": false,
+            "docs": [
+              "The token account's owner."
+            ]
+          },
+          {
+            "kind": "instructionAccountNode",
+            "name": "tokenAccount",
+            "isWritable": false,
+            "isSigner": false,
+            "isOptional": false,
+            "docs": [
+              "The owner's confidential wUSDC account, read only."
+            ]
+          },
+          {
+            "kind": "instructionAccountNode",
+            "name": "equalityContext",
+            "isWritable": false,
+            "isSigner": false,
+            "isOptional": false,
+            "docs": [
+              "The ciphertext commitment equality context, owned by the ZK ElGamal Proof program."
+            ]
+          },
+          {
+            "kind": "instructionAccountNode",
+            "name": "rangeContext",
+            "isWritable": false,
+            "isSigner": false,
+            "isOptional": false,
+            "docs": [
+              "The batched range proof (U64) context, owned by the ZK ElGamal Proof program."
+            ]
+          },
+          {
+            "kind": "instructionAccountNode",
+            "name": "proofRecord",
+            "isWritable": true,
+            "isSigner": false,
+            "isOptional": false,
+            "docs": [
+              "The record PDA of the token account and nonce."
+            ],
+            "defaultValue": {
+              "kind": "pdaValueNode",
+              "pda": {
+                "kind": "pdaLinkNode",
+                "name": "proofRecord"
+              },
+              "seeds": [
+                {
+                  "kind": "pdaSeedValueNode",
+                  "name": "tokenAccount",
+                  "value": {
+                    "kind": "accountValueNode",
+                    "name": "tokenAccount"
+                  }
+                },
+                {
+                  "kind": "pdaSeedValueNode",
+                  "name": "nonce",
+                  "value": {
+                    "kind": "argumentValueNode",
+                    "name": "nonce"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "kind": "instructionAccountNode",
+            "name": "payer",
+            "isWritable": true,
+            "isSigner": true,
+            "isOptional": false,
+            "docs": [
+              "Pays the record's rent."
+            ]
+          },
+          {
+            "kind": "instructionAccountNode",
+            "name": "systemProgram",
+            "isWritable": false,
+            "isSigner": false,
+            "isOptional": false,
+            "docs": [
+              "The System Program, the only program this one calls."
+            ],
+            "defaultValue": {
+              "kind": "publicKeyValueNode",
+              "publicKey": "11111111111111111111111111111111",
+              "identifier": "systemProgram"
+            }
+          }
+        ],
+        "arguments": [
+          {
+            "kind": "instructionArgumentNode",
+            "name": "discriminator",
+            "defaultValueStrategy": "omitted",
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u8",
+              "endian": "le"
+            },
+            "defaultValue": {
+              "kind": "numberValueNode",
+              "number": 2
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "threshold",
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u64",
+              "endian": "le"
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "nonce",
+            "type": {
+              "kind": "fixedSizeTypeNode",
+              "size": 16,
+              "type": {
+                "kind": "bytesTypeNode"
+              }
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "expiry",
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "i64",
+              "endian": "le"
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "counterpartyHash",
+            "type": {
+              "kind": "fixedSizeTypeNode",
+              "size": 32,
+              "type": {
+                "kind": "bytesTypeNode"
+              }
+            }
+          }
+        ],
+        "discriminators": [
+          {
+            "kind": "fieldDiscriminatorNode",
+            "name": "discriminator",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "kind": "instructionNode",
+        "name": "closeProofRecord",
+        "docs": [
+          "Closes an expired record; its rent goes to the owner (X-31)."
+        ],
+        "optionalAccountStrategy": "programId",
+        "accounts": [
+          {
+            "kind": "instructionAccountNode",
+            "name": "proofRecord",
+            "isWritable": true,
+            "isSigner": false,
+            "isOptional": false,
+            "docs": [
+              "The record."
+            ]
+          },
+          {
+            "kind": "instructionAccountNode",
+            "name": "owner",
+            "isWritable": true,
+            "isSigner": true,
+            "isOptional": false,
+            "docs": [
+              "The record's owner."
+            ]
+          }
+        ],
+        "arguments": [
+          {
+            "kind": "instructionArgumentNode",
+            "name": "discriminator",
+            "defaultValueStrategy": "omitted",
+            "type": {
+              "kind": "numberTypeNode",
+              "format": "u8",
+              "endian": "le"
+            },
+            "defaultValue": {
+              "kind": "numberValueNode",
+              "number": 3
+            }
+          }
+        ],
+        "discriminators": [
+          {
+            "kind": "fieldDiscriminatorNode",
+            "name": "discriminator",
+            "offset": 0
+          }
+        ]
+      }
+    ],
+    "pdas": [
+      {
+        "kind": "pdaNode",
+        "name": "config",
+        "seeds": [
+          {
+            "kind": "constantPdaSeedNode",
+            "type": {
+              "kind": "stringTypeNode",
+              "encoding": "utf8"
+            },
+            "value": {
+              "kind": "stringValueNode",
+              "string": "config"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "pdaNode",
+        "name": "proofRecord",
+        "seeds": [
+          {
+            "kind": "constantPdaSeedNode",
+            "type": {
+              "kind": "stringTypeNode",
+              "encoding": "utf8"
+            },
+            "value": {
+              "kind": "stringValueNode",
+              "string": "proof"
+            }
+          },
+          {
+            "kind": "variablePdaSeedNode",
+            "name": "tokenAccount",
+            "type": {
+              "kind": "publicKeyTypeNode"
+            }
+          },
+          {
+            "kind": "variablePdaSeedNode",
+            "name": "nonce",
+            "type": {
+              "kind": "fixedSizeTypeNode",
+              "size": 16,
+              "type": {
+                "kind": "bytesTypeNode"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "kind": "pdaNode",
+        "name": "programData",
+        "docs": [
+          "The program's ProgramData account under the upgradeable loader (v3)."
+        ],
+        "programId": "BPFLoaderUpgradeab1e11111111111111111111111",
+        "seeds": [
+          {
+            "kind": "variablePdaSeedNode",
+            "name": "program",
+            "type": {
+              "kind": "publicKeyTypeNode"
+            }
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "kind": "errorNode",
+        "name": "paused",
+        "code": 0,
+        "message": "The proof program is paused"
+      },
+      {
+        "kind": "errorNode",
+        "name": "zeroThreshold",
+        "code": 1,
+        "message": "The threshold must be above zero"
+      },
+      {
+        "kind": "errorNode",
+        "name": "badExpiry",
+        "code": 2,
+        "message": "The expiry must be after now and at most 365 days away"
+      },
+      {
+        "kind": "errorNode",
+        "name": "wrongTokenProgram",
+        "code": 3,
+        "message": "The token account is not a Token-2022 account"
+      },
+      {
+        "kind": "errorNode",
+        "name": "wrongMint",
+        "code": 4,
+        "message": "The token account is not of the wrapped USDC mint"
+      },
+      {
+        "kind": "errorNode",
+        "name": "wrongOwner",
+        "code": 5,
+        "message": "The token account belongs to someone else"
+      },
+      {
+        "kind": "errorNode",
+        "name": "notConfidential",
+        "code": 6,
+        "message": "The token account has no confidential balance"
+      },
+      {
+        "kind": "errorNode",
+        "name": "notApproved",
+        "code": 7,
+        "message": "The token account's confidential balance is not approved"
+      },
+      {
+        "kind": "errorNode",
+        "name": "wrongProofProgram",
+        "code": 8,
+        "message": "A proof context is not owned by the ZK ElGamal Proof program"
+      },
+      {
+        "kind": "errorNode",
+        "name": "wrongProofType",
+        "code": 9,
+        "message": "A proof context is of another proof type"
+      },
+      {
+        "kind": "errorNode",
+        "name": "wrongContextAuthority",
+        "code": 10,
+        "message": "A proof context belongs to someone else"
+      },
+      {
+        "kind": "errorNode",
+        "name": "pubkeyMismatch",
+        "code": 11,
+        "message": "The equality proof is for another encryption key"
+      },
+      {
+        "kind": "errorNode",
+        "name": "ciphertextMismatch",
+        "code": 12,
+        "message": "The proof does not match the current balance minus the threshold"
+      },
+      {
+        "kind": "errorNode",
+        "name": "rangeShape",
+        "code": 13,
+        "message": "The range proof does not prove one 64 bit amount"
+      },
+      {
+        "kind": "errorNode",
+        "name": "commitmentMismatch",
+        "code": 14,
+        "message": "The range proof is for another commitment"
+      },
+      {
+        "kind": "errorNode",
+        "name": "unauthorized",
+        "code": 15,
+        "message": "The signer may not do this"
+      },
+      {
+        "kind": "errorNode",
+        "name": "notExpired",
+        "code": 16,
+        "message": "The record has not expired yet"
+      }
+    ]
+  }
+}

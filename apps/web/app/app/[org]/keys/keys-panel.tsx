@@ -383,9 +383,10 @@ function Backfill({
     <Card className={styles.s12} data-testid="backfill">
       <h2 className={cards.cardTitle}>Share past records</h2>
       <p className={styles.lead}>
-        These keys are active, and your records from before they were granted are not shared with
-        them yet. Sharing opens your own records in this tab, encrypts each one for the holder only,
-        and asks your wallet to sign the batch. Sotto never sees the amounts.
+        These keys are active, and some of your records in their scope are not shared with them yet,
+        such as the ones from before they were granted. Sharing opens your own records in this tab,
+        encrypts each one for the holder only, and asks your wallet to sign the batch. Sotto never
+        sees the amounts.
       </p>
       {!ownerKey || !unlocked ? (
         <p className={styles.warning} role="status">

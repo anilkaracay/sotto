@@ -3,10 +3,14 @@
 // the database stores only its SHA-256 (as sessions do), so a database copy cannot accept invites. The
 // link expires after 7 days; a new link replaces the open one. Accepting needs a session with the
 // recipient's wallet: it adds the recipient membership, links the recipient to the user and creates
-// the recipient's own_payslips grant (active once the user has a viewing key, 07 section 5).
+// the recipient's own_payslips grant (active once the user has a viewing key, 07 section 5). Since
+// step 2.4 an accountant invite carries a viewing grant (grants.ts, X-37): any signed in wallet other
+// than the owner's can accept it once; it becomes the org's accountant and the grant's viewer, and the
+// grant activates with their viewing key. A grant revoked or expired first withdraws its invite.
 import { createHash, randomBytes } from "node:crypto";
 import {
   grants,
+  insertAccessEvent,
   invites,
   memberships,
   orgs,
@@ -14,6 +18,7 @@ import {
   viewerKeys,
   type Database,
 } from "@sotto/db";
+import type { GrantScope } from "@sotto/sdk/disclosure";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError, apiErrors } from "./errors.ts";
@@ -42,6 +47,13 @@ export const inviteErrors = {
       "This invite has expired; ask the organization for a new link",
     ),
   accepted: () => new ApiError(409, "invite_accepted", "This invite has already been accepted"),
+  withdrawn: () => new ApiError(409, "invite_withdrawn", "The organization withdrew this invite"),
+  own: () =>
+    new ApiError(
+      409,
+      "invite_own",
+      "The organization's owner reads every record already; send this link to its holder",
+    ),
   unavailable: () =>
     new ApiError(409, "invite_unavailable", "This organization cannot take new members right now"),
   wrongWallet: (wallet: string) =>
@@ -90,16 +102,30 @@ export async function createRecipientInvite(
 
 export type InviteView = {
   org: { id: string; displayName: string };
-  status: "open" | "expired" | "accepted" | "unavailable";
+  role: "recipient" | "accountant";
+  status: "open" | "expired" | "accepted" | "unavailable" | "withdrawn";
   /**
-   * Only for a session with the invited wallet (founder, step 1.8.1): the recipient's name, role and
-   * wallet and the link's expiry. Before sign in the page shows only the organization.
+   * A recipient invite's details only for a session with the invited wallet (founder, step 1.8.1):
+   * the recipient's name, role and wallet and the link's expiry; an accountant invite's (step 2.4)
+   * for any signed in session: the holder as the owner named them, the scope and the expiries.
+   * Before sign in the page shows only the organization.
    */
-  details: {
-    role: string;
-    recipient: { displayName: string; roleTitle: string | null; wallet: string };
-    expiresAt: string;
-  } | null;
+  details:
+    | {
+        role: "recipient";
+        recipient: { displayName: string; roleTitle: string | null; wallet: string };
+        expiresAt: string;
+      }
+    | {
+        role: "accountant";
+        holder: { name: string; title: string | null };
+        scope: GrantScope;
+        periodFrom: string | null;
+        periodTo: string | null;
+        grantExpiresAt: string | null;
+        expiresAt: string;
+      }
+    | null;
   /** For a session with another wallet: the wallet the invite is for, and nothing else about it. */
   expectedWallet: string | null;
   /** The signed in user accepted it (the invite page then continues with setup). */
@@ -125,38 +151,67 @@ export async function readInvite(
       recipientName: recipients.displayName,
       recipientRole: recipients.roleTitle,
       recipientWallet: recipients.wallet,
+      grantScope: grants.scope,
+      grantStatus: grants.status,
+      grantFrom: grants.periodFrom,
+      grantTo: grants.periodTo,
+      grantExpiresAt: grants.expiresAt,
+      holderName: grants.holderName,
+      holderTitle: grants.holderTitle,
     })
     .from(invites)
     .innerJoin(orgs, eq(orgs.id, invites.orgId))
     .leftJoin(recipients, eq(recipients.id, invites.recipientId))
+    .leftJoin(grants, and(eq(grants.inviteToken, invites.token), eq(invites.role, "accountant")))
     .where(eq(invites.token, inviteTokenHash(token)))
     .limit(1);
   if (!row) throw inviteErrors.notFound();
+  const accountant = row.role === "accountant";
+  const withdrawn =
+    accountant &&
+    (row.grantScope === null ||
+      row.grantStatus === "revoked" ||
+      row.grantStatus === "expired" ||
+      (row.grantExpiresAt !== null && row.grantExpiresAt <= now));
   const status: InviteView["status"] =
     row.acceptedAt !== null
       ? "accepted"
-      : row.expiresAt <= now
-        ? "expired"
-        : row.orgStatus !== "active"
-          ? "unavailable"
-          : "open";
+      : withdrawn
+        ? "withdrawn"
+        : row.expiresAt <= now
+          ? "expired"
+          : row.orgStatus !== "active"
+            ? "unavailable"
+            : "open";
   const invited = session !== null && row.recipientWallet !== null;
   const yours = invited && session.wallet === row.recipientWallet;
+  let details: InviteView["details"] = null;
+  if (accountant && session !== null && row.grantScope !== null) {
+    details = {
+      role: "accountant",
+      holder: { name: row.holderName ?? "Holder", title: row.holderTitle },
+      scope: row.grantScope,
+      periodFrom: row.grantFrom,
+      periodTo: row.grantTo,
+      grantExpiresAt: row.grantExpiresAt?.toISOString() ?? null,
+      expiresAt: row.expiresAt.toISOString(),
+    };
+  } else if (yours && row.recipientName !== null && row.recipientWallet !== null) {
+    details = {
+      role: "recipient",
+      recipient: {
+        displayName: row.recipientName,
+        roleTitle: row.recipientRole,
+        wallet: row.recipientWallet,
+      },
+      expiresAt: row.expiresAt.toISOString(),
+    };
+  }
   return {
     org: { id: row.orgId, displayName: row.orgName },
+    role: accountant ? "accountant" : "recipient",
     status,
-    details:
-      yours && row.recipientName !== null && row.recipientWallet !== null
-        ? {
-            role: row.role,
-            recipient: {
-              displayName: row.recipientName,
-              roleTitle: row.recipientRole,
-              wallet: row.recipientWallet,
-            },
-            expiresAt: row.expiresAt.toISOString(),
-          }
-        : null,
+    details,
     expectedWallet: invited && !yours ? row.recipientWallet : null,
     acceptedByYou: session !== null && row.acceptedBy === session.userId,
   };
@@ -187,6 +242,9 @@ export async function acceptInvite(
       .where(eq(orgs.id, invite.orgId))
       .limit(1);
     if (org?.status !== "active") throw inviteErrors.unavailable();
+    if (invite.role === "accountant") {
+      return acceptGrantInvite(tx, session, invite, now);
+    }
     if (invite.role !== "recipient" || !invite.recipientId) throw inviteErrors.notFound();
     const [recipient] = await tx
       .select({ id: recipients.id, wallet: recipients.wallet, userId: recipients.userId })
@@ -233,4 +291,73 @@ export async function acceptInvite(
     if (!accepted[0]) throw inviteErrors.accepted();
     return { orgId: invite.orgId, role: invite.role, grant: { status } };
   });
+}
+
+type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+/**
+ * Step 2.4: an accountant invite carries a viewing grant. The session becomes the org's accountant and
+ * the grant's viewer; the grant is active when they already have a viewing key (07 section 5).
+ */
+async function acceptGrantInvite(
+  tx: Transaction,
+  session: Session,
+  invite: typeof invites.$inferSelect,
+  now: Date,
+): Promise<{ orgId: string; role: string; grant: { status: "active" | "pending_viewer_key" } }> {
+  const [grant] = await tx
+    .select()
+    .from(grants)
+    .where(eq(grants.inviteToken, invite.token))
+    .for("update")
+    .limit(1);
+  if (
+    !grant ||
+    grant.status === "revoked" ||
+    grant.status === "expired" ||
+    (grant.expiresAt !== null && grant.expiresAt <= now)
+  ) {
+    throw inviteErrors.withdrawn();
+  }
+  if (grant.viewerUserId !== null) throw inviteErrors.accepted();
+  const [org] = await tx
+    .select({ owner: orgs.ownerUserId })
+    .from(orgs)
+    .where(eq(orgs.id, invite.orgId))
+    .limit(1);
+  if (org?.owner === session.userId) throw inviteErrors.own();
+  await tx
+    .insert(memberships)
+    .values({ orgId: invite.orgId, userId: session.userId, role: "accountant" })
+    .onConflictDoUpdate({
+      target: [memberships.orgId, memberships.userId, memberships.role],
+      set: { removedAt: null },
+    });
+  const [key] = await tx
+    .select({ id: viewerKeys.id })
+    .from(viewerKeys)
+    .where(and(eq(viewerKeys.userId, session.userId), eq(viewerKeys.status, "active")))
+    .limit(1);
+  const status = key ? ("active" as const) : ("pending_viewer_key" as const);
+  await tx
+    .update(grants)
+    .set({ viewerUserId: session.userId, status, activatedAt: key ? now : null })
+    .where(eq(grants.id, grant.id));
+  const accepted = await tx
+    .update(invites)
+    .set({ acceptedBy: session.userId, acceptedAt: now })
+    .where(
+      and(eq(invites.token, invite.token), isNull(invites.acceptedAt), gt(invites.expiresAt, now)),
+    )
+    .returning({ token: invites.token });
+  if (!accepted[0]) throw inviteErrors.accepted();
+  await insertAccessEvent(tx, {
+    orgId: invite.orgId,
+    actorUserId: session.userId,
+    action: key ? "grant_activated" : "grant_accepted",
+    subjectType: "grant",
+    subjectId: grant.id,
+    metadata: { scope: grant.scope, viewerKey: key !== undefined },
+  });
+  return { orgId: invite.orgId, role: "accountant", grant: { status } };
 }

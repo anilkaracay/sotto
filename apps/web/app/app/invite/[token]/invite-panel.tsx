@@ -6,13 +6,17 @@
 // viewing key's registration (it activates the own_payslips grant) and the wUSDC account, which Sotto
 // records so the recipient shows as ready (readiness from chain). Since step 1.8.1 (founder) the page
 // shows only the organization before sign in; the recipient's name, role and wallet appear only to the
-// invited wallet, and another wallet sees only the refusal with the expected address.
+// invited wallet, and another wallet sees only the refusal with the expected address. Since step 2.4 an
+// accountant invite carries a viewing grant (X-37): once signed in, any wallet but the owner's sees
+// the holder's name as the owner gave it, what the grant reads and until when; accepting makes the
+// user the org's accountant, and their viewing key, created on the same page, activates the grant.
 import { Button, Card } from "@sotto/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ApiCallError, callApi } from "../../../../lib/client/api.ts";
 import { formatDate, shortWallet } from "../../../../lib/format.ts";
+import { expiryWords, scopeWords } from "../../../../lib/grant.ts";
 import type { InviteView } from "../../../../lib/server/invites.ts";
 import {
   AccountCard,
@@ -51,6 +55,43 @@ export function InvitePanel({
   const org = invite.org.displayName;
   const details = invite.details;
 
+  if (invite.acceptedByYou && wallet && network && invite.role === "accountant") {
+    return (
+      <ConfidentialProvider
+        wallet={wallet}
+        orgId={invite.org.id}
+        network={network}
+        readAccount={false}
+      >
+        <div className={cards.grid}>
+          <Card data-testid="invite-joined">
+            <h2 className={cards.cardTitle}>You joined {org} as its accountant</h2>
+            <p className={cards.lead}>
+              Your access is read only, never control of funds. {org} shares its records with you
+              encrypted to your viewing key, so only this wallet can read them, and you read them in
+              this tab.
+            </p>
+            {details?.role === "accountant" ? (
+              <dl className={cards.details}>
+                <dt>You can read</dt>
+                <dd>{scopeWords(details.scope, details.periodFrom, details.periodTo)}</dd>
+                <dt>Access</dt>
+                <dd>{expiryWords(details.grantExpiresAt)}</dd>
+              </dl>
+            ) : null}
+            <p className={cards.lead}>
+              {viewerKey
+                ? `Your viewing key is registered, so your access is active. Past records appear once ${org} shares them.`
+                : `Create your viewing key below: your access starts once it is registered.`}
+            </p>
+          </Card>
+          <WalletCard />
+          <ViewingKeyCard viewerKey={viewerKey} />
+        </div>
+      </ConfidentialProvider>
+    );
+  }
+
   if (invite.acceptedByYou && wallet && network) {
     return (
       <ConfidentialProvider wallet={wallet} orgId={invite.org.id} network={network}>
@@ -86,9 +127,28 @@ export function InvitePanel({
   return (
     <div className={`${cards.grid} ${cards.single}`}>
       <Card data-testid="invite-card">
-        <h2 className={cards.cardTitle}>{org} invites you to receive payments in Sotto</h2>
+        <h2 className={cards.cardTitle}>
+          {invite.role === "accountant"
+            ? `${org} invites you to read its payment records in Sotto`
+            : `${org} invites you to receive payments in Sotto`}
+        </h2>
         <InviteState token={token} invite={invite} wallet={wallet} />
-        {details && invite.status === "open" ? (
+        {details?.role === "accountant" && invite.status === "open" ? (
+          <dl className={cards.details} data-testid="invite-details">
+            <dt>Holder</dt>
+            <dd>
+              {details.holder.name}
+              {details.holder.title ? `, ${details.holder.title}` : ""}
+            </dd>
+            <dt>You can read</dt>
+            <dd>{scopeWords(details.scope, details.periodFrom, details.periodTo)}</dd>
+            <dt>Access</dt>
+            <dd>{expiryWords(details.grantExpiresAt)}</dd>
+            <dt>Link valid until</dt>
+            <dd>{formatDate(details.expiresAt)}</dd>
+          </dl>
+        ) : null}
+        {details?.role === "recipient" && invite.status === "open" ? (
           <dl className={cards.details} data-testid="invite-details">
             <dt>Recipient</dt>
             <dd>{details.recipient.displayName}</dd>
@@ -132,6 +192,9 @@ function InviteState({
   if (invite.status === "accepted") {
     return <p className={cards.lead}>This invite has already been accepted.</p>;
   }
+  if (invite.status === "withdrawn") {
+    return <p className={cards.lead}>{org} withdrew this invite.</p>;
+  }
   if (!wallet) {
     // Before sign in: the organization (the card title) and the sign in button, nothing else.
     return (
@@ -159,9 +222,9 @@ function InviteState({
   return (
     <>
       <p className={cards.lead}>
-        Accepting adds you to {org} as a recipient and lets {org} pay you in confidential wUSDC:
-        amounts are encrypted onchain, so only you, {org} and the people {org} shares them with can
-        read them. Then you set up your confidential wUSDC account in this tab.
+        {invite.role === "accountant"
+          ? `Accepting adds you to ${org} as its accountant, with read access only, never control of funds. ${org} shares its records with you encrypted to your viewing key, which you create in this tab next.`
+          : `Accepting adds you to ${org} as a recipient and lets ${org} pay you in confidential wUSDC: amounts are encrypted onchain, so only you, ${org} and the people ${org} shares them with can read them. Then you set up your confidential wUSDC account in this tab.`}
       </p>
       <div className={cards.actions}>
         <Button

@@ -101,6 +101,7 @@ describe("recipient invites", () => {
     const before = (await (await view(token)).json()) as { invite: Record<string, unknown> };
     expect(before.invite).toEqual({
       org: { id: orgId, displayName: "Northwind Labs" },
+      role: "recipient",
       status: "open",
       details: null,
       expectedWallet: null,

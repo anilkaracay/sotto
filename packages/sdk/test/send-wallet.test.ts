@@ -18,6 +18,7 @@ import {
   toPortableInstruction,
   WALLET_CHANGED_TRANSACTION,
   WalletChangedTransactionError,
+  WalletSigningError,
   type SignedMessageComparison,
   type SolanaRpc,
 } from "../src/tx/index.ts";
@@ -130,6 +131,26 @@ describe("wallet signed transactions (06 section 9)", () => {
     expect((error as Error).message).toBe(WALLET_CHANGED_TRANSACTION);
     expect((error as WalletChangedTransactionError).reason).toBe("instruction 1: the data");
     expect(heard).toEqual([{ kind: "changed", reason: "instruction 1: the data" }]);
+    expect(sent).toHaveLength(0);
+  });
+
+  it("Q-15 hands back the wallet's own error when it refuses to sign, after the simulation passed", async () => {
+    const { rpc, sent } = fakeRpc();
+    const refusal = Object.assign(new Error("Transaction blocked"), { name: "WalletSignError" });
+    const wallet = {
+      address: payer.address,
+      modifyAndSignTransactions: async () => {
+        throw refusal;
+      },
+    };
+    const error = await sendWithWallet({
+      rpc,
+      wallet,
+      instructions: [transfer()],
+      version: 0,
+    }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(WalletSigningError);
+    expect((error as WalletSigningError).cause).toBe(refusal);
     expect(sent).toHaveLength(0);
   });
 });

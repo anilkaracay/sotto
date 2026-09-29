@@ -82,7 +82,7 @@ Payslip card, 6 month chart and list: recipient disclosures. "What your colleagu
 - **Locked**: confidential data needs keys. Show a clear "Unlock with your wallet" action. Never show zero.
 - **Loading**: skeletons matching the layout.
 - **Empty**: purposeful copy and the next action.
-- **Error**: specific message and retry. Chain errors are decoded to plain language.
+- **Error**: specific message and retry. Chain errors are decoded to plain language. Since step 2.1 (Q-15, founder 2026-09-29) an error a wallet raises, for any wallet and any request (connect, sign in, a message or a transaction signature), is shown with the wallet's own words after Sotto's explanation: `<wallet name> said: "<error name>: <text> (code <code>)"`, cleaned of control characters and cut at 300 characters (`lib/client/wallet-words.ts`); a transaction the wallet refused after Sotto's simulation passed says so. The words stay in the tab.
 - **Proof program unavailable** (F-19): banner, confidential actions disabled.
 
 ## 5. Proof generation UX

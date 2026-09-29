@@ -177,6 +177,32 @@ test.describe.serial("confidential account on localnet", () => {
     await expect(value(page, "balance-public-wusdc")).toHaveText("5 wUSDC");
     await expect(value(page, "balance-available")).toHaveText("Not set up yet");
 
+    // Q-15 (step 2.1): a wallet whose own check blocks the transaction; Sotto says the transaction
+    // passed its simulation and shows the wallet's words, and nothing is sent.
+    await page.evaluate(() =>
+      (
+        window as unknown as {
+          __sottoTestWallet: { refuseTransactions: (refusal: unknown) => void };
+        }
+      ).__sottoTestWallet.refuseTransactions({
+        name: "WalletSignTransactionError",
+        message: "Unable to verify this transaction. It cannot be signed.",
+      }),
+    );
+    await page.getByRole("button", { name: "Set up the account" }).click();
+    await expect(page.getByTestId("account-card").getByRole("alert")).toContainText(
+      'Your wallet did not sign the transaction, so nothing was sent. Sotto had simulated it on this network and it would have succeeded, so the refusal comes from the wallet itself. Sotto Test Wallet said: "WalletSignTransactionError: Unable to verify this transaction. It cannot be signed."',
+    );
+    await expect(page.getByTestId("account-status")).toHaveText("Not set up");
+    expect(await testWallet<number>(page, "signedTransactions")).toBe(0);
+    await page.evaluate(() =>
+      (
+        window as unknown as {
+          __sottoTestWallet: { refuseTransactions: (refusal: unknown) => void };
+        }
+      ).__sottoTestWallet.refuseTransactions(null),
+    );
+
     // AC-03.3: the second signature matches, one transaction configures the existing account, Sotto
     // records it.
     await page.getByRole("button", { name: "Set up the account" }).click();

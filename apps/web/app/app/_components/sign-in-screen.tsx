@@ -11,6 +11,7 @@ import type { UiWallet, UiWalletAccount } from "@wallet-standard/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { completeSignIn, describeWalletError, requestSignIn } from "../../../lib/client/auth.ts";
+import { fromWallet } from "../../../lib/client/wallet-words.ts";
 import { safeNextPath } from "../../../lib/next-path.ts";
 import { shortWallet } from "../../../lib/format.ts";
 import { Logo } from "./logo.tsx";
@@ -92,21 +93,31 @@ function WalletOption({ wallet }: { wallet: UiWallet }) {
             onClick={async () => {
               setStatus({ busy: false, error: null });
               try {
-                const accounts = await connect();
+                const accounts = await fromWallet(() => connect());
                 setAccount(accounts[0] ?? null);
                 if (!accounts[0])
                   setStatus({ busy: false, error: "The wallet shared no account." });
               } catch (error) {
-                setStatus({ busy: false, error: describeWalletError(error) });
+                setStatus({ busy: false, error: describeWalletError(error, wallet.name) });
               }
             }}
           >
             {isConnecting ? "Connecting…" : "Connect"}
           </Button>
         ) : method === "signIn" ? (
-          <SignInWithSignIn account={account} status={status} setStatus={setStatus} />
+          <SignInWithSignIn
+            account={account}
+            walletName={wallet.name}
+            status={status}
+            setStatus={setStatus}
+          />
         ) : method === "signMessage" ? (
-          <SignInWithMessage account={account} status={status} setStatus={setStatus} />
+          <SignInWithMessage
+            account={account}
+            walletName={wallet.name}
+            status={status}
+            setStatus={setStatus}
+          />
         ) : null}
       </span>
     </li>
@@ -115,6 +126,8 @@ function WalletOption({ wallet }: { wallet: UiWallet }) {
 
 type SignerProps = {
   account: UiWalletAccount;
+  /** For the wallet's own words when it refuses (Q-15). */
+  walletName: string;
   status: Status;
   setStatus: (status: Status) => void;
 };
@@ -123,7 +136,7 @@ type SignerProps = {
  * Runs a sign in flow, then opens /app, which the new session cookie now unlocks, or the app page the
  * visitor came from (`?next=`, for example an invite link; step 1.8).
  */
-function useSignInRunner(setStatus: (status: Status) => void) {
+function useSignInRunner(setStatus: (status: Status) => void, walletName: string) {
   const router = useRouter();
   const next = safeNextPath(useSearchParams().get("next"));
   return async (flow: () => Promise<void>) => {
@@ -133,14 +146,14 @@ function useSignInRunner(setStatus: (status: Status) => void) {
       router.replace(next);
       router.refresh();
     } catch (error) {
-      setStatus({ busy: false, error: describeWalletError(error) });
+      setStatus({ busy: false, error: describeWalletError(error, walletName) });
     }
   };
 }
 
-function SignInWithSignIn({ account, status, setStatus }: SignerProps) {
+function SignInWithSignIn({ account, walletName, status, setStatus }: SignerProps) {
   const signIn = useSignIn(account);
-  const run = useSignInRunner(setStatus);
+  const run = useSignInRunner(setStatus, walletName);
   return (
     <Button
       size="sm"
@@ -149,15 +162,17 @@ function SignInWithSignIn({ account, status, setStatus }: SignerProps) {
         run(async () => {
           const { input } = await requestSignIn(account.address);
           // The wallet adds its own account address to the message.
-          const output = await signIn({
-            domain: input.domain,
-            statement: input.statement,
-            uri: input.uri,
-            version: input.version,
-            nonce: input.nonce,
-            issuedAt: input.issuedAt,
-            expirationTime: input.expirationTime,
-          });
+          const output = await fromWallet(() =>
+            signIn({
+              domain: input.domain,
+              statement: input.statement,
+              uri: input.uri,
+              version: input.version,
+              nonce: input.nonce,
+              issuedAt: input.issuedAt,
+              expirationTime: input.expirationTime,
+            }),
+          );
           await completeSignIn(
             output.account.address,
             new Uint8Array(output.signedMessage),
@@ -171,9 +186,9 @@ function SignInWithSignIn({ account, status, setStatus }: SignerProps) {
   );
 }
 
-function SignInWithMessage({ account, status, setStatus }: SignerProps) {
+function SignInWithMessage({ account, walletName, status, setStatus }: SignerProps) {
   const signMessage = useSignMessage(account);
-  const run = useSignInRunner(setStatus);
+  const run = useSignInRunner(setStatus, walletName);
   return (
     <Button
       size="sm"
@@ -182,7 +197,7 @@ function SignInWithMessage({ account, status, setStatus }: SignerProps) {
         run(async () => {
           const issued = await requestSignIn(account.address);
           const message = new TextEncoder().encode(issued.message);
-          const output = await signMessage({ message });
+          const output = await fromWallet(() => signMessage({ message }));
           await completeSignIn(
             account.address,
             new Uint8Array(output.signedMessage),

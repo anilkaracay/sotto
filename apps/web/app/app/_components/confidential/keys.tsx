@@ -14,6 +14,12 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition, type ReactNode } from "react";
 import { ApiCallError, callApi } from "../../../../lib/client/api.ts";
 import { isWalletCancel } from "../../../../lib/client/transactions.ts";
+import {
+  fromWallet,
+  walletWords,
+  withWalletWords,
+  type WalletWords,
+} from "../../../../lib/client/wallet-words.ts";
 import { CryptoWorkerClient } from "../../../../lib/crypto-worker/client.ts";
 import type { LockReason } from "../../../../lib/crypto-worker/key-session.ts";
 import { unlockKeys, unlockViewingKey } from "../../../../lib/crypto-worker/unlock.ts";
@@ -60,6 +66,19 @@ export function problemText(problem: Problem, detail?: string): ReactNode {
     case "register_failed":
       return detail ?? "The viewing key could not be registered. Try again.";
   }
+}
+
+/** What the wallet said when it refused or cancelled (Q-15), after Sotto's explanation. */
+export function WalletSaid({ words }: { words: WalletWords | null | undefined }) {
+  if (!words) return null;
+  return (
+    <span data-testid="wallet-said">
+      {" "}
+      {words.text
+        ? `${words.wallet} said: "${words.text}"`
+        : `${words.wallet} gave no error message.`}
+    </span>
+  );
 }
 
 /** Why the viewing key signature of an Unlock gave no viewing key. */
@@ -147,7 +166,7 @@ function ConnectWallet({
         onClick={async () => {
           onProblem(null);
           try {
-            const accounts = await connect();
+            const accounts = await fromWallet(() => connect());
             const match = accounts.find((a) => a.address === expected);
             if (match) setAccount(match, wallet);
             else
@@ -156,9 +175,12 @@ function ConnectWallet({
               );
           } catch (error) {
             onProblem(
-              isWalletCancel(error)
-                ? "You cancelled the connection in your wallet."
-                : "The wallet could not connect. Try again.",
+              withWalletWords(
+                isWalletCancel(error)
+                  ? "You cancelled the connection in your wallet."
+                  : "The wallet could not connect. Try again.",
+                walletWords(wallet.name, error),
+              ),
             );
           }
         }}
@@ -194,6 +216,8 @@ export function KeysCard({ className }: { className?: string }) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [viewingProblem, setViewingProblem] = useState<SignProblem | "failed" | null>(null);
+  // The wallet's own words for the signature it refused or cancelled (Q-15).
+  const [said, setSaid] = useState<WalletWords | null>(null);
   const viewingOpen = viewing?.wallet === wallet;
 
   async function unlock() {
@@ -201,10 +225,12 @@ export function KeysCard({ className }: { className?: string }) {
     setBusy(true);
     setProblem(null);
     setViewingProblem(null);
+    setSaid(null);
     try {
       const outcome = await unlockKeys({ wallet, sign: connected.sign, session });
       if (outcome.keys !== "unlocked") setProblem(outcome.keys);
       else if (outcome.viewing !== "unlocked") setViewingProblem(outcome.viewing);
+      setSaid(connected.walletWords());
     } finally {
       setBusy(false);
     }
@@ -215,9 +241,11 @@ export function KeysCard({ className }: { className?: string }) {
     if (!connected) return;
     setBusy(true);
     setViewingProblem(null);
+    setSaid(null);
     try {
       const outcome = await unlockViewingKey({ wallet, sign: connected.sign, session });
       if (outcome !== "unlocked") setViewingProblem(outcome);
+      setSaid(connected.walletWords());
     } finally {
       setBusy(false);
     }
@@ -243,7 +271,12 @@ export function KeysCard({ className }: { className?: string }) {
           </dl>
           {viewingOpen || busy ? null : (
             <p className={styles.warning} data-testid="viewing-missing">
-              {viewingProblem ? `${VIEWING_PROBLEM[viewingProblem]} ` : null}
+              {viewingProblem ? (
+                <>
+                  {VIEWING_PROBLEM[viewingProblem]}
+                  <WalletSaid words={said} />{" "}
+                </>
+              ) : null}
               Your confidential balances are unlocked, but without the viewing key the amounts you
               keep sealed and the payment details shared with you stay closed in this tab.
             </p>
@@ -282,6 +315,7 @@ export function KeysCard({ className }: { className?: string }) {
       {problem ? (
         <p className={styles.problem} role="alert">
           {problemText(problem)}
+          <WalletSaid words={said} />
         </p>
       ) : null}
     </Card>
@@ -300,7 +334,11 @@ export function ViewingKeyCard({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [refreshing, startRefresh] = useTransition();
-  const [problem, setProblem] = useState<{ kind: Problem; detail?: string } | null>(null);
+  const [problem, setProblem] = useState<{
+    kind: Problem;
+    detail?: string;
+    said?: WalletWords | null;
+  } | null>(null);
   // The viewing key the tab unlocked (Unlock asks for it), whose public key needs no new signature.
   const unlockedKey = viewing?.wallet === wallet ? viewing.publicKey : null;
 
@@ -314,7 +352,7 @@ export function ViewingKeyCard({
       if (!publicKey) {
         const derivation = await connected.sign(viewKeyMessage(wallet));
         if (typeof derivation === "string") {
-          setProblem({ kind: derivation });
+          setProblem({ kind: derivation, said: connected.walletWords() });
           return;
         }
         // A worker of its own: it derives the viewing key, returns the public key and ends.
@@ -325,7 +363,7 @@ export function ViewingKeyCard({
       if (viewerKey?.publicKey === publicKey) return;
       const registration = await connected.sign(viewKeyRegistrationMessage(fromBase64(publicKey)));
       if (typeof registration === "string") {
-        setProblem({ kind: registration });
+        setProblem({ kind: registration, said: connected.walletWords() });
         return;
       }
       await callApi("/api/viewer-keys", {
@@ -392,6 +430,7 @@ export function ViewingKeyCard({
       {problem ? (
         <p className={styles.problem} role="alert">
           {problemText(problem.kind, problem.detail)}
+          <WalletSaid words={problem.said} />
         </p>
       ) : null}
     </Card>

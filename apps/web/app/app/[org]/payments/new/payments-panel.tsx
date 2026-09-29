@@ -152,7 +152,7 @@ function usePaymentAttempt(ownerKey: ViewerKeyRecord | null) {
             ? "Your available confidential balance is below this amount. Nothing was sent."
             : error instanceof CryptoWorkerError && error.code === "recipient_not_ready"
               ? "The recipient's account cannot receive a confidential transfer right now. Nothing was sent."
-              : describeTransactionError(error),
+              : describeTransactionError(error, connected.info.name),
       };
     } finally {
       release();
@@ -306,7 +306,10 @@ function PayCard({
     } catch (error) {
       setProgress({
         busy: null,
-        problem: error instanceof ApiCallError ? error.message : describeTransactionError(error),
+        problem:
+          error instanceof ApiCallError
+            ? error.message
+            : describeTransactionError(error, connected?.info.name),
         done: null,
       });
     }

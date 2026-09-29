@@ -43,6 +43,18 @@ export class WalletChangedTransactionError extends Error {
   }
 }
 
+/**
+ * The wallet raised an error instead of signing (Q-15, step 2.1). The transaction had passed Sotto's
+ * simulation, so the refusal is the wallet's; `cause` is the wallet's own error, which the page shows
+ * with the wallet's name next to its explanation.
+ */
+export class WalletSigningError extends Error {
+  constructor(cause: unknown) {
+    super("the wallet did not sign the transaction", { cause });
+    this.name = "WalletSigningError";
+  }
+}
+
 export type WalletSendResult = SendResult & { comparison: SignedMessageComparison };
 
 export async function sendWithWallet(options: {
@@ -75,7 +87,13 @@ export async function sendWithWallet(options: {
       : { priorityFeeCapMicroLamports: options.priorityFeeCapMicroLamports }),
   });
   const built = compileTransaction(message);
-  const [walletSigned] = await wallet.modifyAndSignTransactions([built]);
+  let walletSigned:
+    Awaited<ReturnType<typeof wallet.modifyAndSignTransactions>>[number] | undefined;
+  try {
+    [walletSigned] = await wallet.modifyAndSignTransactions([built]);
+  } catch (error) {
+    throw new WalletSigningError(error);
+  }
   if (!walletSigned) throw new Error("the wallet returned no signed transaction");
   const comparison = compareSignedMessage(built.messageBytes, walletSigned.messageBytes);
   await options.onSignedMessage?.(comparison);

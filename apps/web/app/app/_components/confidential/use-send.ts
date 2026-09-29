@@ -63,7 +63,10 @@ export function useSend() {
       } catch (error) {
         setState({
           busy: null,
-          problem: error instanceof StepError ? error.message : describeTransactionError(error),
+          problem:
+            error instanceof StepError
+              ? error.message
+              : describeTransactionError(error, connected.info.name),
           done: null,
         });
         await refresh();

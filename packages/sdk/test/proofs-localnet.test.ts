@@ -19,8 +19,8 @@ import {
 } from "@solana/kit";
 import { beforeAll, describe, expect, it } from "vitest";
 import { closeProofAccounts } from "../src/confidential/index.ts";
+import { balanceThresholdProofs, type BalanceThresholdProofs } from "../src/proofs/plan.ts";
 import {
-  balanceThresholdProofs,
   counterpartyHash,
   fetchProofRecord,
   findProofRecordPda,
@@ -31,7 +31,6 @@ import {
   recordNonce,
   SOTTO_PROOFS_ERROR__CIPHERTEXT_MISMATCH,
   VERIFY_BALANCE_THRESHOLD_COMPUTE_UNITS,
-  type BalanceThresholdProofs,
 } from "../src/proofs/index.ts";
 import {
   applyLocalnetPending,

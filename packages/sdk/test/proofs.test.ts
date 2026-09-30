@@ -14,6 +14,8 @@ import {
   proofVerifiedEvent,
   randomBytes16,
   recordNonce,
+  sottoProofsErrorCode,
+  SOTTO_PROOFS_ERROR__CIPHERTEXT_MISMATCH,
   SOTTO_PROOFS_PROGRAM_ADDRESS,
 } from "../src/proofs/index.ts";
 
@@ -122,5 +124,25 @@ describe("sotto_proofs client", () => {
       expiry: 1_790_000_000n,
     });
     expect(proofVerifiedEvent(["Program data: AAAA"])).toBeNull();
+  });
+  it("reads the program's error code from a failed simulation or transaction", () => {
+    const program = SOTTO_PROOFS_PROGRAM_ADDRESS;
+    const simulated = {
+      err: { InstructionError: [0n, { Custom: 12n }] },
+      decoded: { programAddress: program },
+    };
+    expect(sottoProofsErrorCode(simulated, program)).toBe(SOTTO_PROOFS_ERROR__CIPHERTEXT_MISMATCH);
+    // Another program's error 12 is not the program's.
+    expect(
+      sottoProofsErrorCode({ ...simulated, decoded: { programAddress: TOKEN } }, program),
+    ).toBeNull();
+    // A landed transaction's error names no program: the first instruction is the program's.
+    expect(sottoProofsErrorCode({ err: { InstructionError: [0, { Custom: 2 }] } }, program)).toBe(
+      2,
+    );
+    expect(
+      sottoProofsErrorCode({ err: { InstructionError: [1, { Custom: 2 }] } }, program),
+    ).toBeNull();
+    expect(sottoProofsErrorCode(new Error("refused"), program)).toBeNull();
   });
 });

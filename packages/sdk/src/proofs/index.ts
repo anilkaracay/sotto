@@ -5,12 +5,6 @@
 // record nonce; the counterparty hash of X-32; and the compute budget of the instruction. The UI flow
 // is step 2.8.
 import { getAddressDecoder, type Address } from "@solana/kit";
-import {
-  confidentialWithdrawPlan,
-  type ConfidentialTransferPlan,
-} from "../confidential/transfer.ts";
-import type { Token } from "@solana-program/token-2022";
-import type { ConfidentialKeyMaterial } from "../keys/index.ts";
 import type { PortableInstruction } from "../tx/portable.ts";
 import { findProgramDataPda, findProofRecordPda } from "./generated/index.ts";
 
@@ -66,56 +60,6 @@ export async function counterpartyHash(salt: Uint8Array, label: string): Promise
   input.set(salt);
   input.set(labelBytes, 16);
   return new Uint8Array(await crypto.subtle.digest("SHA-256", input));
-}
-
-export type BalanceThresholdProofs = {
-  /** The transactions that create and verify the two context accounts, in order (role "proof"). */
-  transactions: ConfidentialTransferPlan["transactions"];
-  equalityContext: Address;
-  rangeContext: Address;
-  /** Closes the context accounts (and the range proof's record account), rent to the payer. */
-  cleanup: PortableInstruction[];
-  signers: ConfidentialTransferPlan["signers"];
-  /** The available balance the proofs were made from, decrypted with the AES key. */
-  availableBefore: bigint;
-};
-
-/**
- * 06 section 8 steps 2 to 6: the proofs that the available balance is at least `threshold`, from the
- * withdraw plan for `threshold` without its withdraw (facts K2). The plan is the version 0 one, whose
- * proofs land in context accounts owned by the owner; `sotto_proofs` reads context accounts only.
- * Throws when the balance is below the threshold (not proven, D-06); nothing is sent here.
- */
-export async function balanceThresholdProofs(input: {
-  owner: Address;
-  token: Address;
-  tokenAccount: Token;
-  mint: Address;
-  decimals: number;
-  threshold: bigint;
-  keys: ConfidentialKeyMaterial;
-  rent: (space: bigint) => Promise<bigint>;
-}): Promise<BalanceThresholdProofs> {
-  const plan = await confidentialWithdrawPlan({
-    owner: input.owner,
-    token: input.token,
-    tokenAccount: input.tokenAccount,
-    mint: input.mint,
-    decimals: input.decimals,
-    amount: input.threshold,
-    keys: input.keys,
-    version: 0,
-    rent: input.rent,
-  });
-  const transactions = plan.transactions.filter((transaction) => transaction.role === "proof");
-  const contexts = contextAccounts(transactions.flatMap((transaction) => transaction.instructions));
-  return {
-    transactions,
-    ...contexts,
-    cleanup: plan.cleanup,
-    signers: plan.signers,
-    availableBefore: plan.availableBefore,
-  };
 }
 
 /** The equality and range context accounts that verification instructions write. */
@@ -183,4 +127,25 @@ export function proofVerifiedEvent(logs: readonly string[]): ProofVerifiedEvent 
     };
   }
   return null;
+}
+
+/**
+ * The sotto_proofs custom error code of a failed simulation (`SimulationFailedError`) or transaction
+ * (`TransactionFailedError`) of a transaction whose first instruction is the program's, or null
+ * (for example `SOTTO_PROOFS_ERROR__CIPHERTEXT_MISMATCH` when the balance changed, 06 section 8).
+ */
+export function sottoProofsErrorCode(error: unknown, programAddress: Address): number | null {
+  const failure = error as {
+    err?: unknown;
+    decoded?: { programAddress?: string };
+  } | null;
+  const instruction = (failure?.err as { InstructionError?: [unknown, unknown] } | undefined)
+    ?.InstructionError;
+  if (!instruction) return null;
+  const custom = (instruction[1] as { Custom?: number | bigint } | null)?.Custom;
+  if (custom === undefined) return null;
+  const program = failure?.decoded?.programAddress;
+  if (program !== undefined ? program !== programAddress : Number(instruction[0]) !== 0)
+    return null;
+  return Number(custom);
 }

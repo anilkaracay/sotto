@@ -50,7 +50,7 @@ export default async function PayrollRunPage({
   ]);
   if (!run) notFound();
   return (
-    <AppShell me={me} network={network.label} nav={ownerNav(orgId, "payroll")}>
+    <AppShell me={me} network={network} nav={ownerNav(orgId, "payroll")}>
       <PageHeader overline={`Payroll run, ${run.period}`} title={run.title} />
       {network.available ? (
         <RunPanel

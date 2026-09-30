@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { PayGroupView, type PayGroupState } from "../app/app/[org]/pay/pay-panel.tsx";
 import { payslipsOf } from "../lib/pay.ts";
 import type { PayView } from "../lib/server/pay.ts";
+import { expectAmountsInside, privacyOn } from "./helpers/amounts.ts";
 
 const ORG = "3f1b6a2e-5c4d-4e8f-9a0b-1c2d3e4f5a6b";
 const LINE = "a0000000-0000-4000-8000-000000000001";
@@ -67,13 +68,15 @@ const line: DisclosurePayloadV1 = {
 
 const render = (state: PayGroupState, grouped = false) =>
   renderToStaticMarkup(
-    <PayGroupView
-      orgName="Northwind"
-      grouped={grouped}
-      state={state}
-      now={new Date("2026-09-30T12:00:00Z")}
-      onRetry={() => undefined}
-    />,
+    privacyOn(
+      <PayGroupView
+        orgName="Northwind"
+        grouped={grouped}
+        state={state}
+        now={new Date("2026-09-30T12:00:00Z")}
+        onRetry={() => undefined}
+      />,
+    ),
   );
 
 describe("my pay (F-12)", () => {
@@ -88,6 +91,7 @@ describe("my pay (F-12)", () => {
       slips: payslipsOf([line], pay),
       unverified: 0,
     });
+    expectAmountsInside(open);
     expect(text(open)).toContain("September 2026 pay Paid 30 Sep 2026 to HmEv…3Srq");
     expect(text(open)).toContain(
       "Net pay Paid 9400 USDC Gross 10200 USDC Tax withheld (800 USDC) You, Northwind and Daniel Osei can read this",

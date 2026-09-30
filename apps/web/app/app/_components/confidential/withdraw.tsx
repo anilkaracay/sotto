@@ -31,8 +31,10 @@ import {
   type CryptoWorkerClient,
 } from "../../../../lib/crypto-worker/client.ts";
 import styles from "./cards.module.css";
+import { PausedNote } from "./paused-note.tsx";
 import { useConfidential } from "./context.tsx";
 import extra from "./confidential.module.css";
+import { Amount, WithAmounts } from "../privacy.tsx";
 
 const ROLE_WORDS: Record<TransferTransactionRole, string> = {
   proof: "verifying a proof",
@@ -43,7 +45,7 @@ const ROLE_WORDS: Record<TransferTransactionRole, string> = {
 type Outcome = { busy: string | null; problem: string | null; done: string | null };
 
 export function WithdrawForm({ onDone }: { onDone?: () => void }) {
-  const { network, connected, vault, refresh, data } = useConfidential();
+  const { network, connected, vault, refresh, data, blocked } = useConfidential();
   const id = useId();
   const [amount, setAmount] = useState("");
   const [unwrap, setUnwrap] = useState(true);
@@ -52,7 +54,8 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
   const decimals = network.decimals ?? 6;
   const available = data.confidential.kind === "decrypted" ? data.confidential.available : null;
   const publicWusdc = data.wusdc?.status === "present" ? data.wusdc.amount : 0n;
-  const canRun = Boolean(connected?.signer && vault.unlocked && network.wrappedMint);
+  // F-19: a confidential withdrawal needs its proofs; unwrapping public wUSDC does not.
+  const canRun = Boolean(connected?.signer && vault.unlocked && network.wrappedMint) && !blocked;
 
   /** Token Wrap `Unwrap` of public wUSDC to USDC (06 section 6, step 3), signed by the wallet. */
   async function sendUnwrap(amount: bigint): Promise<string> {
@@ -240,9 +243,12 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
         Moves wUSDC from your confidential available balance to your public balance, then, if you
         choose, unwraps it to USDC. The withdrawn amount is public onchain; your remaining balance
         stays confidential.
-        {available !== null
-          ? ` Available now: ${formatTokenAmount(available, decimals)} wUSDC.`
-          : null}
+        {available !== null ? (
+          <>
+            {" "}
+            Available now: <Amount>{formatTokenAmount(available, decimals)} wUSDC</Amount>.
+          </>
+        ) : null}
       </p>
       <label className={extra.field} htmlFor={`${id}-amount`}>
         Amount of wUSDC
@@ -251,6 +257,7 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
             id={`${id}-amount`}
             className={extra.input}
             inputMode="decimal"
+            data-amount=""
             autoComplete="off"
             placeholder="0.00"
             value={amount}
@@ -282,10 +289,12 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
             disabled={!connected?.signer || outcome.busy !== null}
             onClick={() => void unwrapPublic(publicWusdc)}
           >
-            Unwrap {formatTokenAmount(publicWusdc, decimals)} public wUSDC
+            Unwrap{" "}
+            <Amount inControl>{formatTokenAmount(publicWusdc, decimals)} public wUSDC</Amount>
           </Button>
         ) : null}
       </div>
+      <PausedNote />
       {!vault.unlocked ? (
         <p className={styles.lead} role="status">
           Unlock your keys first: the withdraw proofs are made in this tab.
@@ -293,17 +302,17 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
       ) : null}
       {outcome.busy ? (
         <div className={extra.done} role="status" data-testid="withdraw-progress">
-          {outcome.busy}
+          <WithAmounts>{outcome.busy}</WithAmounts>
         </div>
       ) : null}
       {outcome.done ? (
         <div className={extra.done} role="status" data-testid="withdraw-done">
-          {outcome.done}
+          <WithAmounts>{outcome.done}</WithAmounts>
         </div>
       ) : null}
       {outcome.problem ? (
         <p className={styles.problem} role="alert" data-testid="withdraw-problem">
-          {outcome.problem}
+          <WithAmounts>{outcome.problem}</WithAmounts>
         </p>
       ) : null}
     </form>

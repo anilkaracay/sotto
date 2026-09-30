@@ -1,6 +1,6 @@
 // The startup verification result as a banner (06 section 0, 09 section 4): when a program or the
-// wrapped mint is unusable, or the network cannot be reached, confidential features are off and the
-// page says why. A missing wrapped mint is offered for creation on the setup page instead.
+// wrapped mint is unusable, confidential features are off and the page says why; an unreachable network
+// is the shell's banner since step 2.9. A missing wrapped mint is offered for creation on the setup page instead.
 import type { NetworkCheck } from "../../../../lib/server/network-view.ts";
 import styles from "./confidential.module.css";
 
@@ -10,7 +10,8 @@ export function networkProblem(check: NetworkCheck, label: string): string | nul
     case "wrapped_missing":
       return null;
     case "unreachable":
-      return `Sotto cannot reach the ${label} network right now, so balances and account actions are unavailable. Your keys still work. Reload the page to try again.`;
+      // The shell says "Network unreachable, retrying" on every page (D-14, step 2.9).
+      return null;
     case "programs_missing":
       return `A Solana program Sotto needs is not available on ${label} (${check.programs.join(", ")}), so confidential features are off.`;
     case "not_configured":

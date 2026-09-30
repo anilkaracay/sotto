@@ -17,7 +17,7 @@ import {
 
 export type SharedAccount = { account: UiWalletAccount; wallet: UiWallet };
 
-type KeySessionValue = {
+export type KeySessionValue = {
   session: KeySession;
   unlocked: Unlocked | null;
   /** The viewing key unlocked in this tab (step 1.8): its wallet and public key. */
@@ -29,7 +29,8 @@ type KeySessionValue = {
   setShared: (shared: SharedAccount | null) => void;
 };
 
-const KeySessionContext = createContext<KeySessionValue | null>(null);
+/** Exported for the component tests, which render key session consumers without the provider. */
+export const KeySessionContext = createContext<KeySessionValue | null>(null);
 
 export function useKeySession(): KeySessionValue {
   const value = useContext(KeySessionContext);

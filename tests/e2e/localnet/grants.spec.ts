@@ -42,7 +42,14 @@ import {
 } from "@solana/kit";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { e2eKeypair, seededKeypair } from "../fixtures.ts";
-import { addTestWallet, clientAddress, openSetup, OVERVIEW_URL, signIn } from "../helpers.ts";
+import {
+  addTestWallet,
+  clientAddress,
+  expectAmountsWrapped,
+  openSetup,
+  OVERVIEW_URL,
+  signIn,
+} from "../helpers.ts";
 
 const bootstrap = readLocalnetBootstrap();
 const rpc = createRetryingRpc(bootstrap.rpcUrl);
@@ -369,6 +376,8 @@ test.describe.serial("viewing grants on localnet", () => {
     const ledger = daniel.getByTestId("ledger-row");
     await expect(ledger).toHaveCount(3);
     await expect(daniel.getByTestId("money-out-total")).toHaveText("7.274086 USDC");
+    // AC-15.1: with the privacy screen on, every amount on the page is inside Amount.
+    await expectAmountsWrapped(daniel, "books");
     const payroll = daniel
       .getByTestId("ledger")
       .getByRole("button", { name: "Payroll", exact: true });
@@ -388,6 +397,7 @@ test.describe.serial("viewing grants on localnet", () => {
     );
     await detail.getByTestId("mark-reconciled").click();
     await expect(detail.getByTestId("detail-reconciliation")).toHaveText("Matched");
+    await expectAmountsWrapped(daniel, "the books' payment drawer");
     await detail.getByRole("button", { name: "Close" }).click();
     await daniel.getByLabel("Search the ledger").fill("");
     // AC-11.4: the export of the rows shown, made in the tab, with its event in the access log.
@@ -453,6 +463,7 @@ test.describe.serial("viewing grants on localnet", () => {
         .first()
         .getByTestId("chain-amount"),
     ).toHaveText("30 wUSDC");
+    await expectAmountsWrapped(page, "overview with what the chain shows");
 
     // AC-10.5, AC-14.1: the events are logged, and no amount or memo is in the log or any request.
     const log = await page.request.get(`/api/orgs/${orgId}/access-log`);
@@ -484,5 +495,6 @@ test.describe.serial("viewing grants on localnet", () => {
     await expect(
       page.locator('[data-testid="log-entry"][data-action="export_created"]'),
     ).toContainText("Daniel Osei exported 3 records to CSV");
+    await expectAmountsWrapped(page, "viewing keys");
   });
 });

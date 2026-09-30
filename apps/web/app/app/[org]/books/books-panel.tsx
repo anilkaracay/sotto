@@ -49,6 +49,7 @@ import { ViewingUnlockCard, WalletCard } from "../../_components/confidential/ke
 import { useKeySession } from "../../_components/key-session.tsx";
 import { MonthBars } from "../../_components/month-bars.tsx";
 import styles from "./books.module.css";
+import { Amount } from "../../_components/privacy.tsx";
 
 type Records = { items: DisclosureItemView[]; manifests: ManifestView[] };
 
@@ -310,7 +311,7 @@ export function BooksScreen({
           <div className={styles.bigd}>
             {rows ? (
               <b className="num" data-testid="money-out-total">
-                {formatUsdc(rangeTotal)}
+                <Amount>{formatUsdc(rangeTotal)}</Amount>
               </b>
             ) : (
               unlockToSee
@@ -337,7 +338,9 @@ export function BooksScreen({
               <div key={entry.category} className={styles.bmr} data-testid="category-row">
                 <div className={styles.bml}>
                   <span>{BOOKS_CATEGORY_LABEL[entry.category]}</span>
-                  <b className="num">{formatUsdc(entry.total)}</b>
+                  <b className="num">
+                    <Amount>{formatUsdc(entry.total)}</Amount>
+                  </b>
                 </div>
                 <div className={styles.bmb}>
                   <span
@@ -489,7 +492,7 @@ export function BooksScreen({
                       </Td>
                       <Td align="right">
                         <span className="num" data-testid="ledger-amount">
-                          {formatUsdc(row.amount)}
+                          <Amount>{formatUsdc(row.amount)}</Amount>
                         </span>
                       </Td>
                     </tr>
@@ -574,7 +577,9 @@ function PaymentDrawer({
       {row ? (
         <div className={styles.drawerBody} data-testid="payment-detail">
           <small className={styles.muted}>Amount</small>
-          <div className={`${styles.big2} num`}>{formatUsdc(row.amount)}</div>
+          <div className={`${styles.big2} num`}>
+            <Amount>{formatUsdc(row.amount)}</Amount>
+          </div>
           <div className={styles.chips}>
             <Chip tone="blue">Decrypted with your key</Chip>
             <Chip tone={matched ? "green" : "amber"} data-testid="detail-reconciliation">
@@ -599,7 +604,9 @@ function PaymentDrawer({
             </div>
             <div>
               <span>Amount</span>
-              <span className="num">{formatUsdc(row.amount)}</span>
+              <span className="num">
+                <Amount>{formatUsdc(row.amount)}</Amount>
+              </span>
               <Chip tone="blue">Sealed</Chip>
             </div>
             <div>

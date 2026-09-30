@@ -25,7 +25,7 @@ export default async function OverviewPage({ params }: { params: Promise<{ org: 
   if (owned.orgStatus !== "active") redirect("/app/onboarding");
   const network = await loadNetworkView();
   return (
-    <AppShell me={me} network={network.label} nav={ownerNav(orgId, "overview")}>
+    <AppShell me={me} network={network} nav={ownerNav(orgId, "overview")}>
       {network.available ? (
         <OverviewPanel
           wallet={me.user.wallet}

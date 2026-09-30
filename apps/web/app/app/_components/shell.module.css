@@ -157,3 +157,37 @@
     transform: none;
   }
 }
+
+/* The privacy screen toggle (design .ib, .ib.on). */
+.ib {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  min-width: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--ink2);
+  font-size: 13.5px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+.ib:hover {
+  background: #fafbfd;
+}
+.ib.on {
+  background: var(--ink);
+  color: #ffffff;
+  box-shadow: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ib {
+    transition: none;
+  }
+}

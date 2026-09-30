@@ -31,6 +31,7 @@ import {
   type AvailableNetwork,
 } from "../../_components/confidential/context.tsx";
 import styles from "./payroll.module.css";
+import { Amount } from "../../_components/privacy.tsx";
 
 export type ViewerKeyRecord = {
   userId: string;
@@ -244,9 +245,13 @@ function NewRunCard({
         <>
           <p className={styles.summary} data-testid="csv-summary">
             {rows.length} {rows.length === 1 ? "line" : "lines"} from {draft?.name},{" "}
-            {invalid === 0
-              ? `${formatUsdc(total)} in total.`
-              : `${invalid} ${invalid === 1 ? "row needs" : "rows need"} a fix before the run can be created.`}
+            {invalid === 0 ? (
+              <>
+                <Amount>{formatUsdc(total)}</Amount> in total.
+              </>
+            ) : (
+              `${invalid} ${invalid === 1 ? "row needs" : "rows need"} a fix before the run can be created.`
+            )}
           </p>
           <div className={styles.scroll}>
             <Table>
@@ -276,7 +281,13 @@ function NewRunCard({
                       </span>
                     </Td>
                     <Td align="right" className="num">
-                      {row.base !== null ? formatUsdc(row.base) : row.amount || "None"}
+                      {row.base !== null ? (
+                        <Amount>{formatUsdc(row.base)}</Amount>
+                      ) : row.amount ? (
+                        <Amount>{row.amount}</Amount>
+                      ) : (
+                        "None"
+                      )}
                     </Td>
                     <Td>{row.memo || <span className={styles.muted}>None</span>}</Td>
                     <Td>

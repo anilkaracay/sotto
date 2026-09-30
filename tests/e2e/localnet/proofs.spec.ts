@@ -31,7 +31,7 @@ import {
 } from "@solana/kit";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { e2eKeypair, seededKeypair } from "../fixtures.ts";
-import { clientAddress, OVERVIEW_URL, signIn } from "../helpers.ts";
+import { clientAddress, expectAmountsWrapped, OVERVIEW_URL, signIn } from "../helpers.ts";
 
 const bootstrap = readLocalnetBootstrap();
 const rpc = createRetryingRpc(bootstrap.rpcUrl);
@@ -178,6 +178,8 @@ test.describe.serial("proof of funds on localnet", () => {
     await expect(certificate).toContainText(/Shared with\s*Harbor Bank/);
     await expect(certificate).toContainText(/Balance disclosed\s*None/);
     await expect(certificate).toContainText(/Sotto program on Solana, slot \d+/);
+    // AC-15.1: with the privacy screen on, every amount on the page is inside Amount.
+    await expectAmountsWrapped(page, "proofs");
     const href = await certificate
       .getByRole("link", { name: "Open the public page" })
       .getAttribute("href");
@@ -205,6 +207,7 @@ test.describe.serial("proof of funds on localnet", () => {
     await expect(row).toContainText("Balance is at least $10");
     await expect(row).toContainText("Proven");
     await expect(row).toContainText("Valid until");
+    await expectAmountsWrapped(page, "proofs with the issued list");
 
     // AC-13.3: a signed out browser, nothing but the link.
     const visitor = await newPage(browser);

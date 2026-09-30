@@ -1,6 +1,7 @@
 // Shared E2E steps: the injected test wallet (test-wallet.js) and sign in through the sign in screen.
 import { fileURLToPath } from "node:url";
 import { expect, type Page } from "@playwright/test";
+import { AMOUNT_TEXT } from "../../apps/web/lib/amount-text.ts";
 
 export const TEST_WALLET = fileURLToPath(new URL("./test-wallet.js", import.meta.url));
 
@@ -56,4 +57,49 @@ export async function signIn(
 export async function openSetup(page: Page): Promise<void> {
   await page.getByRole("navigation").getByRole("link", { name: "Account setup" }).click();
   await expect(page).toHaveURL(SETUP_URL);
+}
+
+/** F-15 (AC-15.1): turns the privacy screen on from the top bar's toggle, unless it is on already. */
+export async function privacyScreenOn(page: Page): Promise<void> {
+  const toggle = page.getByRole("button", { name: "Privacy screen" });
+  if ((await toggle.getAttribute("aria-pressed")) !== "true") await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(toggle).toContainText("Privacy screen on");
+}
+
+/**
+ * F-15 (AC-15.1; step 2.9): with the privacy screen on, fails when the page shows currency formatted
+ * text outside `Amount`, and checks that one amount is blurred and shows on focus. The page's text is
+ * read as the reader sees it (innerText of a copy of the page with every data-amount element taken
+ * out, laid out off screen), so hidden elements, scripts and styles do not count.
+ */
+export async function expectAmountsWrapped(page: Page, where: string): Promise<void> {
+  await privacyScreenOn(page);
+  const outside = await page.evaluate((source) => {
+    const copy = document.body.cloneNode(true) as HTMLElement;
+    for (const element of copy.querySelectorAll("script, style, template, noscript")) {
+      element.remove();
+    }
+    for (const element of copy.querySelectorAll("[data-amount]")) element.replaceWith("•");
+    const host = document.createElement("div");
+    host.setAttribute("aria-hidden", "true");
+    host.style.cssText = "position:absolute;left:-100000px;top:0;width:1440px;";
+    host.append(copy);
+    document.documentElement.append(host);
+    const text = copy.innerText;
+    host.remove();
+    return text.match(new RegExp(source, "g")) ?? [];
+  }, AMOUNT_TEXT.source);
+  expect(outside, `currency formatted text outside Amount on ${where}`).toEqual([]);
+
+  // One amount that takes the focus, in the open drawer if there is one.
+  const dialog = page.getByRole("dialog");
+  const scope = (await dialog.count()) > 0 ? dialog.last() : page.locator("body");
+  const amount = scope.locator('span[data-amount][tabindex="0"]:visible').first();
+  if ((await amount.count()) === 0) return;
+  const filter = () => amount.evaluate((element) => getComputedStyle(element).filter);
+  await expect.poll(filter).toContain("blur(7px)");
+  await amount.focus();
+  await expect.poll(filter).toBe("none");
+  await amount.blur();
 }

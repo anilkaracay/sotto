@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import { CertificateView, IssuedProofsView } from "../app/app/[org]/proofs/proofs-panel.tsx";
 import { VerifyView } from "../app/v/[address]/verify-view.tsx";
 import type { IssuedProof, PublicProofView } from "../lib/server/proofs.ts";
+import { expectAmountsInside, privacyOn } from "./helpers/amounts.ts";
 
 const RECORD = "EsVM5jHqyNVyVypQNRs3UFieQhJx1NBaF2idHHNxTGHy";
 const OWNER = "E425As4SphdVfbkaF9h9V82NuraqufveTjF4xmZPuBPp";
@@ -25,25 +26,27 @@ const noTrueOrFalse = (html: string) => expect(text(html)).not.toMatch(/\b(True|
 describe("proofs page (F-13)", () => {
   it("AC-13.1 shows the certificate of the record just written, with its link", () => {
     const html = renderToStaticMarkup(
-      <CertificateView
-        orgName="Northwind"
-        threshold={100_000_000_000n}
-        label="Hollis Supply Co."
-        origin="https://app.sotto.test"
-        outcome={{
-          kind: "proven",
-          closed: true,
-          stored: null,
-          record: {
-            address: RECORD,
-            threshold: 100_000_000_000n,
-            label: "Hollis Supply Co.",
-            slot: 505_624_879n,
-            expiry: BigInt(Date.UTC(2026, 9, 30) / 1000),
-            signature: "4jBo",
-          },
-        }}
-      />,
+      privacyOn(
+        <CertificateView
+          orgName="Northwind"
+          threshold={100_000_000_000n}
+          label="Hollis Supply Co."
+          origin="https://app.sotto.test"
+          outcome={{
+            kind: "proven",
+            closed: true,
+            stored: null,
+            record: {
+              address: RECORD,
+              threshold: 100_000_000_000n,
+              label: "Hollis Supply Co.",
+              slot: 505_624_879n,
+              expiry: BigInt(Date.UTC(2026, 9, 30) / 1000),
+              signature: "4jBo",
+            },
+          }}
+        />,
+      ),
     );
     expect(text(html)).toContain(
       "Proven The statement holds. The balance stays sealed. Statement Balance is at least $100,000 Shared with Hollis Supply Co. Verified by Sotto program on Solana, slot 505624879 Valid until 30 Oct 2026 Balance disclosed None",
@@ -52,16 +55,19 @@ describe("proofs page (F-13)", () => {
     expect(html).toContain(`href="/v/${RECORD}"`);
     expect(text(html)).toContain("Copy link");
     noTrueOrFalse(html);
+    expectAmountsInside(html);
   });
 
   it("AC-13.2 shows Not proven with the 13 words and that nothing was sent", () => {
     const html = renderToStaticMarkup(
-      <CertificateView
-        orgName="Northwind"
-        threshold={2_500_000_000_000n}
-        label="Northbank"
-        outcome={{ kind: "not_proven" }}
-      />,
+      privacyOn(
+        <CertificateView
+          orgName="Northwind"
+          threshold={2_500_000_000_000n}
+          label="Northbank"
+          outcome={{ kind: "not_proven" }}
+        />,
+      ),
     );
     expect(text(html)).toContain(
       "Not proven This statement could not be proven. Nothing else was revealed. Statement Balance is at least $2,500,000 Shared with Northbank Sent onchain Nothing Balance disclosed None",
@@ -70,6 +76,7 @@ describe("proofs page (F-13)", () => {
     expect(text(html)).not.toContain("Copy link");
     expect(html).not.toContain("/v/");
     noTrueOrFalse(html);
+    expectAmountsInside(html);
   });
 
   it("lists issued proofs with Copy link unless closed and Close only after expiry (X-31)", () => {
@@ -82,15 +89,17 @@ describe("proofs page (F-13)", () => {
       state,
     });
     const html = renderToStaticMarkup(
-      <IssuedProofsView
-        proofs={[proof("valid", "Lender"), proof("expired", "Supplier"), proof("closed", "Bank")]}
-        now={new Date("2026-09-30T10:00:00Z")}
-        copied={null}
-        busy={false}
-        problem={null}
-        onCopy={() => undefined}
-        onClose={() => undefined}
-      />,
+      privacyOn(
+        <IssuedProofsView
+          proofs={[proof("valid", "Lender"), proof("expired", "Supplier"), proof("closed", "Bank")]}
+          now={new Date("2026-09-30T10:00:00Z")}
+          copied={null}
+          busy={false}
+          problem={null}
+          onCopy={() => undefined}
+          onClose={() => undefined}
+        />,
+      ),
     );
     const rows = html.split('data-testid="issued-row"').slice(1).map(text);
     expect(rows[0]).toContain(
@@ -102,6 +111,7 @@ describe("proofs page (F-13)", () => {
     expect(rows[2]).not.toContain("Copy link");
     expect(text(html)).toContain("Issued proofs 3 issued");
     noTrueOrFalse(html);
+    expectAmountsInside(html);
   });
 });
 

@@ -40,6 +40,7 @@ import { useSend } from "../../_components/confidential/use-send.ts";
 import { SkyArt } from "../../_components/sky-art.tsx";
 import { runProof, type ProofRunOutcome } from "./proof-run.ts";
 import styles from "./proofs.module.css";
+import { Amount, WithAmounts } from "../../_components/privacy.tsx";
 
 type Stage =
   | { kind: "idle" }
@@ -53,6 +54,8 @@ export function ProofsPanel(props: {
   network: AvailableNetwork;
   program: string;
   proofs: IssuedProof[];
+  /** The sotto_proofs config is paused (14 section 7): no new record can be written. */
+  paused: boolean;
 }) {
   return (
     <ConfidentialProvider
@@ -66,14 +69,16 @@ export function ProofsPanel(props: {
   );
 }
 
-function Proofs(props: {
+/** Exported for the component tests (F-19). */
+export function Proofs(props: {
   orgId: string;
   orgName: string;
   network: AvailableNetwork;
   program: string;
   proofs: IssuedProof[];
+  paused: boolean;
 }) {
-  const { connected, vault } = useConfidential();
+  const { connected, vault, blocked } = useConfidential();
   const router = useRouter();
   const [stage, setStage] = useState<Stage>({ kind: "idle" });
 
@@ -107,10 +112,20 @@ function Proofs(props: {
 
   return (
     <div className={styles.grid}>
+      {props.paused ? (
+        <p className={styles.pausedBanner} role="alert" data-testid="proofs-paused">
+          <b>Verification paused</b> The Sotto proof program is paused while an issue is looked
+          into, so no new proof can be recorded right now. Proofs already issued stay onchain; their
+          public pages say that verification is paused. Payments are not affected.
+        </p>
+      ) : null}
       <Builder
         running={stage.kind === "running"}
         again={stage.kind === "done"}
         ready={Boolean(connected?.signer && vault.unlocked && props.network.wrappedMint)}
+        stopped={
+          blocked ?? (props.paused ? "Paused while the Sotto proof program is paused." : null)
+        }
         onProve={prove}
       />
       <CertificateCard orgName={props.orgName} stage={stage} />
@@ -123,10 +138,13 @@ function Proofs(props: {
   );
 }
 
-function Builder(props: {
+/** Exported for the component tests (F-19). */
+export function Builder(props: {
   running: boolean;
   again: boolean;
   ready: boolean;
+  /** Why proving is paused (F-19, or the program's pause), or null. */
+  stopped: string | null;
   onProve: (input: { threshold: bigint; label: string; validityDays: number }) => void;
 }) {
   const id = useId();
@@ -167,7 +185,7 @@ function Builder(props: {
             aria-pressed={choice === index}
             onClick={() => setChoice(index)}
           >
-            {chip.label}
+            <Amount inControl>{chip.label}</Amount>
           </button>
         ))}
         <button
@@ -184,6 +202,7 @@ function Builder(props: {
           <span>Custom amount (US dollars)</span>
           <input
             inputMode="decimal"
+            data-amount=""
             value={custom}
             placeholder="250000"
             onChange={(event) => setCustom(event.target.value)}
@@ -223,12 +242,16 @@ function Builder(props: {
       <button
         type="button"
         className={styles.wb}
-        disabled={!props.ready || props.running}
+        disabled={!props.ready || props.running || props.stopped !== null}
         onClick={submit}
       >
         {props.running ? "Proving" : props.again ? "Generate another" : "Generate proof"}
       </button>
-      {!props.ready ? (
+      {props.stopped ? (
+        <p className={styles.darkProblem} role="status" data-testid="action-paused">
+          {props.stopped}
+        </p>
+      ) : !props.ready ? (
         <p className={styles.dnote} role="status">
           Unlock your keys below to prove: the proofs are made in this tab.
         </p>
@@ -252,7 +275,9 @@ function CertificateCard({ orgName, stage }: { orgName: string; stage: Stage }) 
           <div className={styles.czph} role="status">
             <span className={styles.spin} aria-hidden="true" />
             <b>Generating a range proof</b>
-            <small data-testid="proof-progress">{stage.text}</small>
+            <small data-testid="proof-progress">
+              <WithAmounts>{stage.text}</WithAmounts>
+            </small>
           </div>
         ) : (
           <CertificateView
@@ -284,7 +309,7 @@ export function CertificateView(props: {
           <span>Proof of funds, {props.orgName}</span>
         </div>
         <p className={styles.certProblem} role="alert">
-          {outcome.message}
+          <WithAmounts>{outcome.message}</WithAmounts>
         </p>
       </div>
     );
@@ -330,7 +355,9 @@ export function CertificateView(props: {
       <dl className={styles.cf}>
         <div>
           <dt>Statement</dt>
-          <dd data-testid="certificate-statement">{statementWords(props.threshold)}</dd>
+          <dd data-testid="certificate-statement">
+            <WithAmounts>{statementWords(props.threshold)}</WithAmounts>
+          </dd>
         </div>
         <div>
           <dt>Shared with</dt>
@@ -471,7 +498,9 @@ export function IssuedProofsView(props: {
                 <Td>
                   <b>{proof.counterpartyLabel}</b>
                 </Td>
-                <Td>{statementWords(BigInt(proof.threshold))}</Td>
+                <Td>
+                  <WithAmounts>{statementWords(BigInt(proof.threshold))}</WithAmounts>
+                </Td>
                 <Td>
                   <Chip tone="green">{PROVEN}</Chip>
                 </Td>

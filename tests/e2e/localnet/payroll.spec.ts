@@ -34,7 +34,14 @@ import {
 } from "@solana/kit";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { e2eKeypair, seededKeypair } from "../fixtures.ts";
-import { addTestWallet, clientAddress, openSetup, OVERVIEW_URL, signIn } from "../helpers.ts";
+import {
+  addTestWallet,
+  clientAddress,
+  expectAmountsWrapped,
+  openSetup,
+  OVERVIEW_URL,
+  signIn,
+} from "../helpers.ts";
 
 const bootstrap = readLocalnetBootstrap();
 const rpc = createRetryingRpc(bootstrap.rpcUrl);
@@ -243,6 +250,8 @@ test.describe.serial("payroll runs on localnet", () => {
       "Enter an amount above zero with at most 6 decimals.",
     );
     await expect(page.getByRole("button", { name: "Create run" })).toBeDisabled();
+    // AC-15.1: with the privacy screen on, every amount on the page is inside Amount.
+    await expectAmountsWrapped(page, "payroll with a CSV");
 
     // AC-08.2: a recipient not ready and one on the deny list block the run before any signature.
     await uploadCsv(page, "blocked.csv", [
@@ -352,6 +361,7 @@ test.describe.serial("payroll runs on localnet", () => {
     const total = PEOPLE.reduce((sum, _, index) => sum + amountOf(index), 0n);
     expect((await balancesOf(owner)).available).toBe(ownerBefore.available - total);
     await expect(page.getByTestId("run-total-amount")).toHaveText(`${format(total)} USDC`);
+    await expectAmountsWrapped(page, "a settled payroll run");
 
     // AC-08.6: a self disclosure for every line, and Maya's own.
     const disclosures = (await (
@@ -381,6 +391,7 @@ test.describe.serial("payroll runs on localnet", () => {
     await expect(maya.getByTestId("payslip-net")).toHaveText(`${format(amountOf(0))} USDC`);
     await expect(maya.getByTestId("payslip-gross")).toHaveText(`${format(GROSS)} USDC`);
     await expect(maya.getByTestId("payslip-tax")).toHaveText(`(${format(TAX)} USDC)`);
+    await expectAmountsWrapped(maya, "my pay with a payslip");
     // AC-12.3: the payslip PDF, made in the tab.
     const downloading = maya.waitForEvent("download");
     await received.getByTestId("payslip-pdf").click();

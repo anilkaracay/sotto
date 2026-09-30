@@ -4,6 +4,7 @@
 // zero; wUSDC amounts carry the "devnet test wrap" label (13 A25, D-01). Presentational only: the
 // values come from chain reads (context.tsx), never from local arithmetic (AC-04.4).
 import { formatTokenAmount } from "@sotto/sdk/confidential/public";
+import { Amount } from "../privacy.tsx";
 import type { PublicTokenBalance, TokenAccountState } from "@sotto/sdk/confidential/public";
 import { Card, Chip } from "@sotto/ui";
 import type { ConfidentialView } from "./context.tsx";
@@ -84,7 +85,9 @@ function BalanceCard({
       <div className={styles.figure} data-testid={`${testId}-value`}>
         {value.state === "amount" ? (
           <>
-            <b className="num">{value.text}</b> <span className={styles.unit}>{unit}</span>
+            <Amount>
+              <b className="num">{value.text}</b> <span className={styles.unit}>{unit}</span>
+            </Amount>
           </>
         ) : value.state === "locked" ? (
           <span className={styles.muted}>Unlock to see</span>

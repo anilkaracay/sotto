@@ -35,6 +35,7 @@ import {
   useConfidential,
   type AvailableNetwork,
 } from "../../../_components/confidential/context.tsx";
+import { PausedNote } from "../../../_components/confidential/paused-note.tsx";
 import { KeysCard, WalletCard } from "../../../_components/confidential/keys.tsx";
 import { useKeySession } from "../../../_components/key-session.tsx";
 import cards from "../../../_components/confidential/cards.module.css";
@@ -46,6 +47,7 @@ import {
   type RunLine,
   type ViewerKeyRecord,
 } from "./payroll-run.ts";
+import { Amount, WithAmounts } from "../../../_components/privacy.tsx";
 
 type Progress = { busy: string | null; problem: string | null; done: string | null };
 const IDLE: Progress = { busy: null, problem: null, done: null };
@@ -81,7 +83,8 @@ function transferOf(line: PayrollLineView): string | null {
   return finalized?.transferSignature ?? line.attempts.at(-1)?.transferSignature ?? null;
 }
 
-function RunView(props: {
+/** Exported for the component tests (F-19). */
+export function RunView(props: {
   orgId: string;
   run: PayrollRunView;
   you: { displayName: string | null };
@@ -89,7 +92,7 @@ function RunView(props: {
   ownerKey: ViewerKeyRecord | null;
 }) {
   const { orgId, ownerKey, viewerKeys } = props;
-  const { wallet, network, connected, vault } = useConfidential();
+  const { wallet, network, connected, vault, blocked } = useConfidential();
   const { session, viewing } = useKeySession();
   const router = useRouter();
   const [view, setView] = useState(props.run);
@@ -197,7 +200,7 @@ function RunView(props: {
   }
 
   async function run() {
-    if (!connected || !ownerKey || !network.wrappedMint || !canAct) return;
+    if (!connected || !ownerKey || !network.wrappedMint || !canAct || blocked) return;
     setProgress({
       busy: "Checking every recipient's account, screening and approvals…",
       problem: null,
@@ -358,7 +361,7 @@ function RunView(props: {
           <>
             <div className={styles.big}>
               <b className="num" data-testid="run-total-amount">
-                {formatUsdc(total)}
+                <Amount>{formatUsdc(total)}</Amount>
               </b>
               <small>
                 {lines} {lines === 1 ? "line" : "lines"}, by team
@@ -375,7 +378,9 @@ function RunView(props: {
                 const height = max > 0n ? Number((amount * 1000n) / max) / 10 : 0;
                 return (
                   <div key={team} className={styles.col}>
-                    <span className={styles.barValue}>{formatUsdc(amount)}</span>
+                    <span className={styles.barValue}>
+                      <Amount>{formatUsdc(amount)}</Amount>
+                    </span>
                     <div
                       className={`${styles.bar} ${index === 0 ? styles.on : ""}`}
                       style={{
@@ -438,12 +443,13 @@ function RunView(props: {
         <Button
           variant="blue"
           className={styles.runButton}
-          disabled={!actionable || !canAct || progress.busy !== null}
+          disabled={!actionable || !canAct || progress.busy !== null || blocked !== null}
           onClick={() => void run()}
           data-testid="run-button"
         >
           {progress.busy ? "Settling" : button}
         </Button>
+        {actionable ? <PausedNote /> : null}
         {actionable && !canAct ? (
           <p className={styles.approvalNote}>
             {!ownerKey
@@ -453,17 +459,17 @@ function RunView(props: {
         ) : null}
         {progress.busy ? (
           <p className={styles.status} role="status" data-testid="run-progress">
-            {progress.busy}
+            <WithAmounts>{progress.busy}</WithAmounts>
           </p>
         ) : null}
         {progress.done ? (
           <p className={styles.done} role="status" data-testid="run-done">
-            {progress.done}
+            <WithAmounts>{progress.done}</WithAmounts>
           </p>
         ) : null}
         {progress.problem ? (
           <p className={styles.problem} role="alert" data-testid="run-problem">
-            {progress.problem}
+            <WithAmounts>{progress.problem}</WithAmounts>
           </p>
         ) : null}
         {missingRecords.length > 0 && !settling && canAct ? (
@@ -524,7 +530,7 @@ function RunView(props: {
                         <span className={styles.muted}>Not readable with this key</span>
                       ) : (
                         <span className="num" data-testid="line-amount">
-                          {formatUsdc(BigInt(secret.amount))}
+                          <Amount>{formatUsdc(BigInt(secret.amount))}</Amount>
                         </span>
                       )}
                     </Td>

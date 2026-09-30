@@ -35,7 +35,7 @@ export default async function BooksPage({ params }: { params: Promise<{ org: str
     problem = error.message;
   }
   return (
-    <AppShell me={me} network={network.label} nav={accountantNav(orgId)}>
+    <AppShell me={me} network={network} nav={accountantNav(orgId)}>
       {books && network.available ? (
         <BooksPanel wallet={me.user.wallet} you={session.userId} books={books} network={network} />
       ) : (

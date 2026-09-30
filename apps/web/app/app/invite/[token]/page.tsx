@@ -60,7 +60,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   );
   if (me) {
     return (
-      <AppShell me={me} network={network.label}>
+      <AppShell me={me} network={network}>
         <PageHeader overline={invite.org.displayName} title="Your invite" />
         {panel}
       </AppShell>

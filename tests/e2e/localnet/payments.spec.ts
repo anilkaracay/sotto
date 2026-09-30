@@ -42,7 +42,15 @@ import {
 } from "@solana/kit";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { e2eKeypair, seededKeypair } from "../fixtures.ts";
-import { addTestWallet, clientAddress, openSetup, OVERVIEW_URL, signIn } from "../helpers.ts";
+import {
+  addTestWallet,
+  clientAddress,
+  expectAmountsWrapped,
+  openSetup,
+  OVERVIEW_URL,
+  privacyScreenOn,
+  signIn,
+} from "../helpers.ts";
 
 const bootstrap = readLocalnetBootstrap();
 const rpc = createRetryingRpc(bootstrap.rpcUrl);
@@ -297,6 +305,8 @@ test.describe.serial("single confidential payment on localnet", () => {
     const row = page.getByTestId("payment-row").first();
     await expect(row).toHaveAttribute("data-status", "settled");
     await expect(row.getByTestId("payment-amount")).toHaveText("12.345678 USDC");
+    // AC-15.1: with the privacy screen on, every amount on the page is inside Amount.
+    await expectAmountsWrapped(page, "payments");
 
     // AC-06.4: the owner's self disclosure and the recipient's, under the owner's manifest.
     const me = (await (await page.request.get("/api/me")).json()) as { user: { id: string } };
@@ -336,6 +346,7 @@ test.describe.serial("single confidential payment on localnet", () => {
     await expect(activity.getByTestId("activity-amount")).toHaveText("12.345678 USDC");
     await expect(activity).toContainText(MEMO);
     await expect(activity).toContainText("Supplier");
+    await expectAmountsWrapped(page, "overview");
   });
 
   test("AC-09.1 withdraws and unwraps from the overview's drawer and from the recipient's pay page", async ({
@@ -352,6 +363,8 @@ test.describe.serial("single confidential payment on localnet", () => {
     await unlock(page);
     const ownerBefore = await balancesOf(owner);
     const ownerUsdcBefore = await publicUsdcOf(owner);
+    // AC-15.1: the privacy screen is on before the drawer opens (the drawer makes the rest inert).
+    await privacyScreenOn(page);
     await page.getByTestId("open-withdraw").click();
     const drawer = page.getByRole("dialog", { name: "Withdraw" });
     await drawer.getByLabel("Amount of wUSDC").fill("2");
@@ -363,6 +376,7 @@ test.describe.serial("single confidential payment on localnet", () => {
     const ownerAfter = await balancesOf(owner);
     expect(ownerAfter.available).toBe(ownerBefore.available + ownerBefore.pending - 2n * USDC);
     expect(await publicUsdcOf(owner)).toBe(ownerUsdcBefore + 2n * USDC);
+    await expectAmountsWrapped(page, "the overview's withdraw drawer");
 
     // The recipient: /app opens the pay page; the payment opens with the viewing key in the tab.
     const recipient = await newPage(browser);
@@ -396,6 +410,7 @@ test.describe.serial("single confidential payment on localnet", () => {
     expect(mayaAfter.pending).toBe(0n);
     expect(mayaAfter.available).toBe(mayaBefore.available + mayaBefore.pending - 5n * USDC);
     expect(await publicUsdcOf(maya)).toBe(mayaUsdcBefore + 5n * USDC);
+    await expectAmountsWrapped(recipient, "my pay after a withdrawal");
     await recipient.context().close();
   });
 });

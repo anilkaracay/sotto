@@ -42,12 +42,14 @@ import {
 } from "../../_components/confidential/context.tsx";
 import { KeysCard, WalletCard } from "../../_components/confidential/keys.tsx";
 import { NetworkBanner } from "../../_components/confidential/network-banner.tsx";
+import { PausedNote } from "../../_components/confidential/paused-note.tsx";
 import { StepError, useSend } from "../../_components/confidential/use-send.ts";
 import { WithdrawForm } from "../../_components/confidential/withdraw.tsx";
 import { useKeySession } from "../../_components/key-session.tsx";
 import { MonthBars } from "../../_components/month-bars.tsx";
 import { SkyArt } from "../../_components/sky-art.tsx";
 import styles from "./pay.module.css";
+import { Amount, WithAmounts } from "../../_components/privacy.tsx";
 
 const DECIMALS = 6;
 
@@ -88,8 +90,9 @@ export function PayPanel(props: {
 }
 
 /** 06 section 4, step 3: a pending balance is applied from fresh account state, with the keys. */
-function ApplyPending() {
-  const { vault, data, network } = useConfidential();
+/** Exported for the component tests (F-19). */
+export function ApplyPending() {
+  const { vault, data, network, blocked } = useConfidential();
   const sending = useSend();
   const pending = data.confidential.kind === "decrypted" ? data.confidential.pending : 0n;
   if (pending <= 0n && !sending.done) return null;
@@ -98,15 +101,17 @@ function ApplyPending() {
     <div className={styles.apply}>
       {pending > 0n ? (
         <p className={cards.lead}>
-          {formatTokenAmount(pending, network.decimals ?? DECIMALS)} wUSDC is in your pending
-          balance. Apply it to your available balance to use it.
+          <Amount>{formatTokenAmount(pending, network.decimals ?? DECIMALS)} wUSDC</Amount> is in
+          your pending balance. Apply it to your available balance to use it.
         </p>
       ) : null}
       {pending > 0n ? (
         <div className={cards.actions}>
           <Button
             variant="line"
-            disabled={!sending.canSend || sending.busy !== null || !vault.unlocked || !token}
+            disabled={
+              !sending.canSend || sending.busy !== null || !vault.unlocked || !token || !!blocked
+            }
             onClick={() => {
               if (!token) return;
               void sending.send({
@@ -126,22 +131,23 @@ function ApplyPending() {
           >
             Apply pending balance
           </Button>
+          <PausedNote />
         </div>
       ) : null}
       {sending.busy ? (
         <div className={extra.done} role="status">
-          {sending.busy}
+          <WithAmounts>{sending.busy}</WithAmounts>
         </div>
       ) : null}
       {sending.done ? (
         <div className={extra.done} role="status" data-testid="apply-done">
-          {sending.done.text} Transaction{" "}
+          <WithAmounts>{sending.done.text}</WithAmounts> Transaction{" "}
           <span className="mono">{sending.done.signature.slice(0, 12)}…</span>
         </div>
       ) : null}
       {sending.problem ? (
         <p className={cards.problem} role="alert">
-          {sending.problem}
+          <WithAmounts>{sending.problem}</WithAmounts>
         </p>
       ) : null}
     </div>
@@ -356,20 +362,20 @@ export function PayGroupView({
               <span className={styles.paid}>Paid</span>
             </div>
             <b className={`${styles.sgb} num`} data-testid="payslip-net">
-              {formatUsdc(latest.net)}
+              <Amount>{formatUsdc(latest.net)}</Amount>
             </b>
             {latest.gross !== null && latest.tax !== null ? (
               <div className={styles.sg2}>
                 <div>
                   <small>Gross</small>
                   <b className="num" data-testid="payslip-gross">
-                    {formatUsdc(latest.gross)}
+                    <Amount>{formatUsdc(latest.gross)}</Amount>
                   </b>
                 </div>
                 <div>
                   <small>Tax withheld</small>
                   <b className="num" data-testid="payslip-tax">
-                    ({formatUsdc(latest.tax)})
+                    <Amount>({formatUsdc(latest.tax)})</Amount>
                   </b>
                 </div>
               </div>
@@ -436,7 +442,7 @@ export function PayGroupView({
                   </small>
                 </div>
                 <span className={`${styles.amount} num`} data-testid="received-amount">
-                  {formatUsdc(slip.net)}
+                  <Amount>{formatUsdc(slip.net)}</Amount>
                 </span>
                 <Button
                   variant="line"

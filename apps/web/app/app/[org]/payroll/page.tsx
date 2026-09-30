@@ -36,7 +36,7 @@ export default async function PayrollPage({ params }: { params: Promise<{ org: s
     loadNetworkView(),
   ]);
   return (
-    <AppShell me={me} network={network.label} nav={ownerNav(orgId, "payroll")}>
+    <AppShell me={me} network={network} nav={ownerNav(orgId, "payroll")}>
       <PageHeader overline={owned.orgName} title="Payroll" />
       {network.available ? (
         <PayrollPanel

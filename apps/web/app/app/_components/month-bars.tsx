@@ -3,6 +3,7 @@
 // and total. The totals come from records opened in the tab; this component only draws them.
 import { monthLabel } from "../../../lib/books.ts";
 import styles from "./month-bars.module.css";
+import { Amount } from "./privacy.tsx";
 
 export function MonthBars({
   totals,
@@ -37,7 +38,9 @@ export function MonthBars({
                 {on ? (
                   <span className={styles.gtag}>
                     <small>{monthLabel(entry.month, true)}</small>
-                    <b className="num">{format(entry.total)}</b>
+                    <b className="num">
+                      <Amount>{format(entry.total)}</Amount>
+                    </b>
                   </span>
                 ) : null}
               </div>

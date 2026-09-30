@@ -20,6 +20,7 @@ Read in this order. Each document states what it owns. If two documents seem to 
 | 14 | `13-COPY-CORRECTIONS.md` | Design copy that must change before launch | 6 |
 | 15 | `14-ENVIRONMENTS-DEPLOY.md` | Localnet, devnet, mainnet, runbooks | 6 |
 | 16 | `RESOLUTIONS-0.1.md` | Record of step 0.1 decisions (already applied to the documents above) | Record |
+| 17 | `15-POST-HACKATHON.md` | The post-hackathon roadmap, built only from what the documents above record (step 2.11); it owns nothing and follows them | Record |
 
 Files that grow during the build (append only, never rewrite history):
 

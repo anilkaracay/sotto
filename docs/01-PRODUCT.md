@@ -98,7 +98,7 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 ### F-12 Recipient: My pay
 - AC-12.1 Shows the recipient's payslips from recipient disclosures (gross, tax withheld, net if provided by the payroll CSV extension columns `gross,tax`; otherwise net only).
 - AC-12.2 "What your colleagues see" shows the public view of their incoming payments.
-- AC-12.3 Payslip PDF is generated in the browser.
+- AC-12.3 Payslip PDF is generated in the browser. A payment outside category payroll is not a payslip: it shows the amount received and its PDF is a payment receipt (founder, 2026-09-30, 13 A49).
 
 ### F-13 Proof of funds
 - AC-13.1 Owner chooses threshold and counterparty label. The browser generates the equality and range proofs, verifies them into context state accounts, and calls `sotto_proofs::verify_balance_threshold`. On success a `ProofRecord` exists onchain.

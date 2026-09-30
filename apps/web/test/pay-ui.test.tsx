@@ -136,7 +136,7 @@ describe("my pay (F-12)", () => {
     });
     expectAmountsInside(html);
     expect(text(html)).toContain(
-      "September design work Payment from Northwind, paid 12 Sep 2026 to HmEv…3Srq Amount received Paid 7.5 USDC You and Northwind can read this",
+      "September design work Payment from Northwind Paid 12 Sep 2026 to HmEv…3Srq Amount received Paid 7.5 USDC You and Northwind can read this",
     );
     expect(text(html)).toContain("Last 6 months Received, USDC");
     expect(text(html)).toContain(

@@ -365,8 +365,11 @@ export function PayGroupView({
                 : payslipTitle(latest)}
           </h3>
           <p>
+            {latest && !latestIsPayslip ? (
+              <span className={styles.from}>Payment from {orgName}</span>
+            ) : null}
             {latest
-              ? `${latestIsPayslip ? "Paid" : `Payment from ${orgName}, paid`} ${formatDate(latest.date)} to ${shortWallet(pay.recipient.wallet)}`
+              ? `Paid ${formatDate(latest.date)} to ${shortWallet(pay.recipient.wallet)}`
               : sealed === 0
                 ? `No payment from ${orgName} yet.`
                 : `${sealed === 1 ? "1 payment is" : `${sealed} payments are`} sealed to your viewing key. Unlock your keys to read ${sealed === 1 ? "it" : "them"} in this tab.`}

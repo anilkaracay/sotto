@@ -86,7 +86,11 @@ export function payslipLines(document: PayslipDocument): { size: number; text: s
     lines.push({ size: 14, text: `Amount received: ${formatUsdc(slip.net)}` });
   }
   lines.push({ size: 11, text: "" });
-  if (slip.signature) lines.push({ size: 9, text: `Solana transaction: ${slip.signature}` });
+  // The signature on its own line: with its label it ran past the page's right edge.
+  if (slip.signature) {
+    lines.push({ size: 9, text: "Solana transaction:" });
+    lines.push({ size: 9, text: slip.signature });
+  }
   lines.push({
     size: 9,
     text: "Paid in confidential wUSDC on Solana: the amount is encrypted onchain.",

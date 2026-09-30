@@ -162,7 +162,8 @@ describe("my pay in the tab (F-12)", () => {
       "Tax withheld: 800 USDC",
       "Net pay: 9400 USDC",
       "",
-      "Solana transaction: 5Kq9Wm2r",
+      "Solana transaction:",
+      "5Kq9Wm2r",
       "Paid in confidential wUSDC on Solana: the amount is encrypted onchain.",
       "Made in your browser from your own sealed payment record. Sotto never saw these amounts.",
     ]);

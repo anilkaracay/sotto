@@ -13,6 +13,7 @@ import {
   BalanceCards,
   type BalanceCardsProps,
 } from "../app/app/_components/confidential/balances.tsx";
+import { expectAmountsInside, privacyOn } from "./helpers/amounts.ts";
 
 const OWNER = address("EQMW3o1DVsB72Ej1RRRmHLW1XaEpbjLKrMHUbS8cRLZC");
 const MINT = address("AhJfP4JJBaHWRtXRiaScZUC7SMm4RqUPSb3g9H5RT8Bd");
@@ -43,16 +44,18 @@ const usdc = (amount: bigint): PublicTokenBalance => ({
 
 function render(props: Partial<BalanceCardsProps>) {
   return renderToStaticMarkup(
-    <BalanceCards
-      decimals={6}
-      wrapLabel="devnet test wrap"
-      loading={false}
-      error={null}
-      confidential={{ kind: "locked", configured: true }}
-      wusdc={wusdc(15_000_000n)}
-      usdc={usdc(75_000_000n)}
-      {...props}
-    />,
+    privacyOn(
+      <BalanceCards
+        decimals={6}
+        wrapLabel="devnet test wrap"
+        loading={false}
+        error={null}
+        confidential={{ kind: "locked", configured: true }}
+        wusdc={wusdc(15_000_000n)}
+        usdc={usdc(75_000_000n)}
+        {...props}
+      />,
+    ),
   );
 }
 
@@ -108,6 +111,7 @@ describe("balance cards", () => {
       },
     });
     expect(card(html, "balance-available")).toMatchObject({ state: "amount", value: "10 wUSDC" });
+    expectAmountsInside(html);
     expect(card(html, "balance-pending")).toMatchObject({ state: "amount", value: "2.5 wUSDC" });
     expect(card(html, "balance-public-wusdc")).toMatchObject({ value: "15 wUSDC" });
     expect(card(html, "balance-public-usdc")).toMatchObject({ value: "75 USDC" });

@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { BooksScreen } from "../app/app/[org]/books/books-panel.tsx";
 import { ledgerRows } from "../lib/books.ts";
 import type { BooksPaymentView, BooksView } from "../lib/server/books.ts";
+import { expectAmountsInside, privacyOn } from "./helpers/amounts.ts";
 
 const ORG = "3f1b6a2e-5c4d-4e8f-9a0b-1c2d3e4f5a6b";
 const OWNER_WALLET = "7SSpLJh516AbWiV5GM7ooZFTHoQN64pdohYxbDs3Gq4L";
@@ -71,14 +72,16 @@ const record = (subject: string, amount: string, counterparty: string, memo: str
 
 const render = (rows: ReturnType<typeof ledgerRows> | null) =>
   renderToStaticMarkup(
-    <BooksScreen
-      books={books}
-      payments={payments}
-      rows={rows}
-      unverified={0}
-      problem={null}
-      onReconcile={async () => undefined}
-    />,
+    privacyOn(
+      <BooksScreen
+        books={books}
+        payments={payments}
+        rows={rows}
+        unverified={0}
+        problem={null}
+        onReconcile={async () => undefined}
+      />,
+    ),
   );
 
 describe("the accountant's Books screen (F-11)", () => {
@@ -103,6 +106,7 @@ describe("the accountant's Books screen (F-11)", () => {
       payments,
     );
     const open = render(rows);
+    expectAmountsInside(open);
     expect(text(open)).toContain("Money out, Aug to Sep 2026 Decrypted for you 65600 USDC");
     // The latest month is selected: its bar is lit and the ledger shows its rows.
     expect(text(open)).toContain("September 2026 38000 USDC");

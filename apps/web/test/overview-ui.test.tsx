@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ActivityView, type ActivityState } from "../app/app/[org]/overview/activity.tsx";
 import type { ActivityPaymentView } from "../lib/server/activity.ts";
+import { expectAmountsInside, privacyOn } from "./helpers/amounts.ts";
 
 const ORG = "3f1b6a2e-5c4d-4e8f-9a0b-1c2d3e4f5a6b";
 const text = (html: string) =>
@@ -40,14 +41,16 @@ function render(
   options: { unlocked?: boolean; secrets?: Parameters<typeof ActivityView>[0]["secrets"] } = {},
 ) {
   return renderToStaticMarkup(
-    <ActivityView
-      orgId={ORG}
-      state={state}
-      unlocked={options.unlocked ?? false}
-      secrets={options.secrets ?? {}}
-      unverified={0}
-      onRetry={() => undefined}
-    />,
+    privacyOn(
+      <ActivityView
+        orgId={ORG}
+        state={state}
+        unlocked={options.unlocked ?? false}
+        secrets={options.secrets ?? {}}
+        unverified={0}
+        onRetry={() => undefined}
+      />,
+    ),
   );
 }
 
@@ -99,6 +102,15 @@ describe("overview recent activity", () => {
     );
     expect(open).not.toContain("once you unlock");
     expect(open).toContain("Maya Chen Invoice 7 Supplier Settled Only you 12.345678 USDC");
+    expectAmountsInside(
+      render(
+        { kind: "loaded", payments },
+        {
+          unlocked: true,
+          secrets: { [id]: { amount: "12345678", memo: "Invoice 7", category: "supplier" } },
+        },
+      ),
+    );
   });
 
   it("names a payment that does not open with this key, and a payment screening blocked", () => {

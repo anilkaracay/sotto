@@ -20,7 +20,7 @@ import { createRetryingRpc } from "@sotto/sdk/tx";
 import { address, createKeyPairSignerFromBytes, getBase58Decoder } from "@solana/kit";
 import { expect, test, type Page } from "@playwright/test";
 import { E2E_ADMIN_WALLET, E2E_KEYPAIR_SEED, e2eKeypair } from "../fixtures.ts";
-import { openSetup, OVERVIEW_URL, signIn } from "../helpers.ts";
+import { expectAmountsWrapped, openSetup, OVERVIEW_URL, signIn } from "../helpers.ts";
 
 const bootstrap = readLocalnetBootstrap();
 const rpc = createRetryingRpc(bootstrap.rpcUrl);
@@ -249,6 +249,8 @@ test.describe.serial("confidential account on localnet", () => {
     await expect(value(page, "balance-pending")).toHaveText("0 wUSDC");
     await expect(value(page, "balance-available")).toHaveText("30 wUSDC");
     expect(await testWallet<number>(page, "signedTransactions")).toBe(5);
+    // AC-15.1: with the privacy screen on, every amount on the page is inside Amount.
+    await expectAmountsWrapped(page, "account setup");
 
     // AC-04.4: the page shows what the chain holds, decrypted here with the owner's keys.
     const keys = await deriveStandardKeys(address(wallet), keySignature);

@@ -7,6 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ChainView, type ChainState } from "../app/app/[org]/overview/chain-panel.tsx";
 import type { ChainActivityView } from "../lib/server/chain-activity.ts";
+import { expectAmountsInside, privacyOn } from "./helpers/amounts.ts";
 
 const ORG_ACCOUNT = "HmEvErXi8iX36Qi9ow6qb7MAUijbiHSUXx7Tiqvq3Srq";
 const RECIPIENT = "3tsDBjBsSycu8Hp1XtQqGqGixNXgWQFyRKRfSXp2sDb6";
@@ -38,7 +39,7 @@ function row(
 
 const render = (state: ChainState) =>
   renderToStaticMarkup(
-    <ChainView state={state} wrapLabel="devnet test wrap" onRetry={() => undefined} />,
+    privacyOn(<ChainView state={state} wrapLabel="devnet test wrap" onRetry={() => undefined} />),
   );
 
 describe("what the chain shows (AC-05.3)", () => {
@@ -55,6 +56,7 @@ describe("what the chain shows (AC-05.3)", () => {
         row("account_setup"),
       ],
     });
+    expectAmountsInside(html);
     const shown = text(html);
     expect(shown).toContain("Confidential transfer out HmEv…3Srq → 3tsD…sDb6 5Kq9Wm2r… Sealed");
     expect(shown).toContain("Withdrawal to the public balance HmEv…3Srq 5Kq9Wm2r… 3 wUSDC");

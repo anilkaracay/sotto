@@ -12,7 +12,14 @@ import { createRetryingRpc } from "@sotto/sdk/tx";
 import { address } from "@solana/kit";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { e2eKeypair, seededKeypair } from "../fixtures.ts";
-import { addTestWallet, clientAddress, openSetup, OVERVIEW_URL, signIn } from "../helpers.ts";
+import {
+  addTestWallet,
+  clientAddress,
+  expectAmountsWrapped,
+  openSetup,
+  OVERVIEW_URL,
+  signIn,
+} from "../helpers.ts";
 
 const bootstrap = readLocalnetBootstrap();
 const rpc = createRetryingRpc(bootstrap.rpcUrl);
@@ -111,6 +118,8 @@ test.describe.serial("recipients on localnet", () => {
     );
     await expect(page.getByTestId("amounts-sealed-note")).toHaveCount(0);
     await expect(row(page, RECIPIENT.address)).toContainText("Monthly, first week");
+    // AC-15.1: with the privacy screen on, every amount on the page is inside Amount.
+    await expectAmountsWrapped(page, "recipients");
 
     await row(page, RECIPIENT.address).getByRole("button", { name: "Invite link" }).click();
     const link = page.getByTestId("invite-link");

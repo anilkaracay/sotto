@@ -22,7 +22,8 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { admins } from "@sotto/db";
+import { setTimeout as delay } from "node:timers/promises";
+import { admins, clusterHealth } from "@sotto/db";
 import { createTestDatabase } from "@sotto/db/testing";
 import { E2E_ADMIN_WALLET } from "./fixtures.ts";
 
@@ -61,23 +62,6 @@ if (localnet) {
 const database = await createTestDatabase();
 // The fixed keypair wallet of the keys spec is a Sotto admin, so the spec approves its own org.
 await database.db.insert(admins).values({ wallet: E2E_ADMIN_WALLET });
-const web = spawn(
-  process.execPath,
-  [join(WEB, "node_modules", "next", "dist", "bin", "next"), "start", "-p", String(PORT)],
-  {
-    cwd: WEB,
-    stdio: "inherit",
-    env: {
-      ...process.env,
-      NODE_ENV: "production",
-      DATABASE_URL: database.url,
-      SESSION_SECRET: randomBytes(32).toString("hex"),
-      NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,
-      ...chain,
-    },
-  },
-);
-
 let worker: ChildProcess | null = null;
 let workerDir: string | null = null;
 if (bootstrap) {
@@ -98,6 +82,38 @@ if (bootstrap) {
     },
   });
 }
+
+// Step 2.9 (F-19): every /app page shows the proof program banner until the worker's first verdict
+// is stored, so on localnet the web starts once that verdict is in cluster_health.
+if (bootstrap) {
+  const deadline = Date.now() + 120_000;
+  while ((await database.db.select().from(clusterHealth).limit(1)).length === 0) {
+    if (Date.now() > deadline) {
+      console.error("error: the worker stored no proof program verdict within 120 seconds");
+      worker?.kill("SIGTERM");
+      await database.drop().catch(() => {});
+      process.exit(1);
+    }
+    await delay(500);
+  }
+}
+
+const web = spawn(
+  process.execPath,
+  [join(WEB, "node_modules", "next", "dist", "bin", "next"), "start", "-p", String(PORT)],
+  {
+    cwd: WEB,
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      NODE_ENV: "production",
+      DATABASE_URL: database.url,
+      SESSION_SECRET: randomBytes(32).toString("hex"),
+      NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,
+      ...chain,
+    },
+  },
+);
 
 let stopping = false;
 async function stop(code: number): Promise<void> {

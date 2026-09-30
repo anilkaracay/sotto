@@ -79,6 +79,7 @@ describe("consumeRateLimit", () => {
       writeIp: { name: "write-ip", limit: 120, windowSeconds: 60, by: "ip" },
       rpcSession: { name: "rpc-session", limit: 600, windowSeconds: 60, by: "session" },
       publicReadIp: { name: "public-read-ip", limit: 60, windowSeconds: 60, by: "ip" },
+      waitlistIp: { name: "waitlist-ip", limit: 10, windowSeconds: 3600, by: "ip" },
     });
   });
 });

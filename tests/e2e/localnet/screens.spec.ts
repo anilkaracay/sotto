@@ -2,12 +2,13 @@
 // explainer, a refused viewing key signature, the determinism refusal, a wallet that refuses the
 // account setup, the setup, the funding in two signatures, the overview locked and unlocked, the
 // withdraw drawer, and New payment blocked by screening, in progress, settled and refused by the
-// wallet; a recipient meets the pay page locked, with a pending balance and after applying it; the
-// recovery guide last. Each state is checked for its words and saved as a full page screenshot at
+// wallet; a recipient meets the pay page locked, with a pending balance and after applying it, holding
+// a payslip (category payroll) and a payment (category supplier) in one list, and saves the PDF of
+// each (13 A49); the recovery guide last. Each state is checked for its words and saved as a full page screenshot at
 // 1440 to this test's output directory and, once the run passes, to .demo-shots/screens/<UTC time>/
 // (git ignored), for the founder's approval of the design pass. Runs in the localnet job of
 // scripts/ci-local.sh against the bootstrapped validator, never devnet.
-import { copyFile, mkdir } from "node:fs/promises";
+import { copyFile, mkdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { associatedTokenAccount } from "@sotto/sdk/confidential/public";
 import { confidentialKeysMessage, deriveStandardKeys, viewKeyMessage } from "@sotto/sdk/keys";
@@ -324,13 +325,25 @@ test("the account and money screens in every state, for the design pass (13 A36 
   await expect(recipient.getByTestId("viewing-key-status")).toHaveText("Registered");
   await recipient.context().close();
 
-  // A39: New payment, blocked by screening, in progress, settled, then refused by the wallet.
+  // A39: New payment, blocked by screening, in progress, settled, then refused by the wallet. First a
+  // payment of category payroll, so the recipient's pay page holds a payslip and a payment (A49).
   await page.getByRole("link", { name: "Payments" }).click();
   await expect(page).toHaveURL(/\/payments\/new$/);
   const pay = page.getByTestId("pay-card");
   await expect(pay).toContainText("A confidential wUSDC payment");
   const label = (name: string, address: string) =>
     `${name} · ${address.slice(0, 4)}…${address.slice(-4)}`;
+  await pay.getByLabel("Recipient").selectOption({ label: label("Maya Chen", RECIPIENT.address) });
+  await pay.getByLabel("Amount (USDC)").fill("2");
+  await pay.getByLabel("Memo").fill("October advance");
+  await pay.getByLabel("Category").selectOption("payroll");
+  await pay.getByRole("button", { name: "Pay" }).click();
+  await expect(page.getByTestId("payment-done")).toContainText(
+    "Paid 2 USDC to Maya Chen. Settled onchain",
+    { timeout: 180_000 },
+  );
+  await page.goto(page.url());
+  await unlock(page);
   await pay.getByLabel("Recipient").selectOption({ label: label("Maya Chen", RECIPIENT.address) });
   await pay.getByLabel("Amount (USDC)").fill("7.5");
   await pay.getByLabel("Memo").fill("September design work");
@@ -379,7 +392,53 @@ test("the account and money screens in every state, for the design pass (13 A36 
   await shoot(reader, "19-pay-locked");
   await unlock(reader);
   await expect(reader.getByTestId("withdraw-card")).toContainText("is in your pending balance");
+  // A49: the supplier payment, the latest, reads as a payment; the payroll one as a payslip.
+  const group = reader.getByTestId("pay-group").first();
+  await expect(
+    group.getByTestId("payslip-card").getByRole("heading", { name: "September design work" }),
+  ).toBeVisible();
+  await expect(group.getByTestId("payslip-card")).toContainText(
+    "Payment from Northwind Screens Ltd, paid",
+  );
+  await expect(group.getByTestId("payslip-card")).toContainText("Amount received");
+  await expect(group.getByTestId("payslip-card")).not.toContainText("Net pay");
+  const received = group.getByTestId("received-card");
+  await expect(received.getByRole("heading")).toHaveText("Payslips and payments");
+  const rows = received.getByTestId("received-row");
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toHaveAttribute("data-label", "payment");
+  await expect(rows.nth(0)).toContainText("September design work");
+  await expect(rows.nth(0).getByTestId("received-label")).toContainText(
+    "Payment from Northwind Screens Ltd · Paid",
+  );
+  await expect(rows.nth(0).getByTestId("received-label")).toContainText("· Supplier");
+  await expect(rows.nth(1)).toHaveAttribute("data-label", "payslip");
+  await expect(rows.nth(1)).toContainText("October advance");
+  await expect(rows.nth(1).getByTestId("received-label")).toContainText("Payslip · Paid");
+  await expect(group.getByTestId("pay-history")).toContainText("Received, USDC");
   await shoot(reader, "20-pay-pending");
+  // Each row's PDF, made in the tab, kept with the screenshots for the founder.
+  for (const [index, name, words] of [
+    [
+      0,
+      "20-pay-payment-receipt",
+      ["(Payment receipt: September design work) Tj", "(Amount received: 7.5 USDC) Tj"],
+    ],
+    [1, "20-pay-payslip", ["(Payslip: October advance) Tj", "(Net pay: 2 USDC) Tj"]],
+  ] as const) {
+    const downloading = reader.waitForEvent("download");
+    await rows.nth(index).getByTestId("payslip-pdf").click();
+    const download = await downloading;
+    expect(download.suggestedFilename()).toMatch(
+      index === 0 ? /^payment-receipt-\d{4}-\d{2}-\d{2}\.pdf$/ : /^payslip-\d{4}-\d{2}-\d{2}\.pdf$/,
+    );
+    const path = test.info().outputPath(`${name}.pdf`);
+    await download.saveAs(path);
+    const pdf = await readFile(path, "latin1");
+    for (const word of words) expect(pdf).toContain(word);
+    if (index === 0) expect(pdf).not.toMatch(/Payslip|Net pay|Gross|Tax withheld/);
+    shots.push(path);
+  }
   await reader.getByRole("button", { name: "Apply pending balance" }).click();
   await expect(reader.getByTestId("apply-done")).toContainText(
     "Applied your pending balance to your available balance.",

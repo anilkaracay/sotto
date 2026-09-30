@@ -768,17 +768,8 @@ body:has(> main.theme-landing) {
 .theme-landing .u-acct {
   background-image: url(/landing/people/acct.jpg);
 }
-.theme-landing .u-board {
-  background-image: url(/landing/people/board.jpg);
-}
 .theme-landing .u-auditor {
   background-image: url(/landing/people/auditor.jpg);
-}
-.theme-landing .u-ak {
-  background-image: url(/landing/people/ak.jpg);
-}
-.theme-landing .u-se {
-  background-image: url(/landing/people/se.jpg);
 }
 .theme-landing .u-anyone {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><rect width='40' height='40' fill='%23E6EDF7'/><g fill='none' stroke='%232A3852' stroke-width='1.6'><circle cx='20' cy='20' r='9'/><path d='M11 20h18M20 11c2.6 2.8 3.8 5.8 3.8 9s-1.2 6.2-3.8 9c-2.6-2.8-3.8-5.8-3.8-9s1.2-6.2 3.8-9z'/></g></svg>");
@@ -1733,6 +1724,12 @@ body:has(> main.theme-landing) {
   font-weight: 500;
   cursor: pointer;
   transition: transform 0.3s ease;
+}
+.theme-landing span.cpy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
 }
 .theme-landing .cpy:active {
   transform: scale(0.96);
@@ -4612,6 +4609,17 @@ body:has(> main.theme-landing) {
   .theme-landing .rr {
     grid-template-columns: 72px minmax(0, 1fr) auto;
     gap: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  /* The record's value column keeps to its own track: the short address goes, a sealed pill shrinks. */
+  .theme-landing .rval em {
+    display: none;
+  }
+  .theme-landing .rval .amt {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
   }
   .theme-landing .fqb {
     grid-template-columns: minmax(0, 1fr) 34px;
@@ -4620,6 +4628,16 @@ body:has(> main.theme-landing) {
   .theme-landing .fqb .fqi,
   .theme-landing .fqb .fqc {
     display: none;
+  }
+  /* The open answer lines up with its question, which loses the number column on a phone. */
+  .theme-landing .fab {
+    padding: 0 22px 22px;
+  }
+  /* The sharing preview's reader rows grow with a wrapped name. */
+  .theme-landing .mrow {
+    height: auto;
+    min-height: 60px;
+    padding: 10px 0;
   }
   .theme-landing .thd,
   .theme-landing .trw {
@@ -4655,5 +4673,106 @@ body:has(> main.theme-landing) {
   }
   .theme-landing .kicker > span {
     display: none;
+  }
+}
+
+/* Step 3.1 (founder's review): the story is a 320vh section whose words and cards move with the
+   scroll through view timelines. Where a browser cannot drive it (no animation-timeline) or the
+   reader asks for less motion, it renders its final state at its natural height, with no pinned
+   stage and no empty scroll, and without the progress bar that would not move. */
+@supports not (animation-timeline: view()) {
+  .theme-landing .story {
+    height: auto;
+  }
+  .theme-landing .stick {
+    position: relative;
+    height: auto;
+    min-height: 0;
+    padding: 140px 0;
+  }
+  .theme-landing .sprog {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .theme-landing .story {
+    height: auto;
+  }
+  .theme-landing .stick {
+    position: relative;
+    height: auto;
+    min-height: 0;
+    padding: 140px 0;
+  }
+  .theme-landing .sprog {
+    display: none;
+  }
+}
+
+/* Step 3.1 (founder's review, phone width): no text under 12px, no tap target under 40px, nothing
+   clipped at 390 or 360. The floating nav keeps the logo and Request access; the SDK grid stacks and
+   its code scrolls inside its own pane; the map's amount chips give way on the narrowest screens. */
+@media (max-width: 720px) {
+  .theme-landing .snav nav {
+    display: none;
+  }
+  .theme-landing .dgrid8 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .theme-landing .ihd {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .theme-landing .pane pre {
+    overflow-x: auto;
+  }
+  .theme-landing .hand .drag,
+  .theme-landing .pins i,
+  .theme-landing .coin,
+  .theme-landing .fct {
+    font-size: 12px;
+  }
+  .theme-landing .ks,
+  .theme-landing .op,
+  .theme-landing .itab,
+  .theme-landing .fb8,
+  .theme-landing .snav .b {
+    min-height: 40px;
+  }
+  .theme-landing .logo,
+  .theme-landing .slogo {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+  }
+  .theme-landing .fcols a,
+  .theme-landing .fbase a {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+  }
+}
+@media (max-width: 420px) {
+  .theme-landing .mchip {
+    display: none;
+  }
+  /* The hero's payroll rows: a name and a role on one line each, the sealed amount sized to itself. */
+  .theme-landing .thd,
+  .theme-landing .trw {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    padding: 0 18px;
+  }
+  .theme-landing .trw .pp {
+    gap: 10px;
+  }
+  .theme-landing .trw .pp > div {
+    min-width: 0;
+  }
+  .theme-landing .trw .pp div b,
+  .theme-landing .trw .pp div span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }

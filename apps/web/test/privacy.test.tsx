@@ -86,7 +86,7 @@ describe("the privacy screen (F-15)", () => {
     );
     expect(css).toMatch(/\.root\[data-privacy="on"\] \.amount \{\s*filter: blur\(7px\);/);
     expect(css).toContain('.root[data-privacy="on"] .amount:hover');
-    expect(css).toContain('.root[data-privacy="on"] .amount:focus-visible');
+    expect(css).toContain('.root[data-privacy="on"] .amount:focus,');
     expect(css).toMatch(
       /@media \(prefers-reduced-motion: reduce\) \{\s*\.amount \{\s*transition: none;/,
     );

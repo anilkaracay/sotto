@@ -1,5 +1,6 @@
 /* The privacy screen (design .m, .ct.priv .m): amounts blur to 7px at 60 percent opacity; the one under
-   the pointer or the focus shows. No motion when the reader asks for less. */
+   the pointer or the focus shows (any focus, a click or a program's too; the outline only for the
+   keyboard). No motion when the reader asks for less. */
 .root {
   display: contents;
 }
@@ -14,9 +15,9 @@
   opacity: 0.6;
 }
 .root[data-privacy="on"] .amount:hover,
-.root[data-privacy="on"] .amount:focus-visible,
+.root[data-privacy="on"] .amount:focus,
 .root[data-privacy="on"] button:hover .amount,
-.root[data-privacy="on"] button:focus-visible .amount {
+.root[data-privacy="on"] button:focus .amount {
   filter: none;
   opacity: 1;
 }

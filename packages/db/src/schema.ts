@@ -703,6 +703,39 @@ export const reconciliations = pgTable("reconciliations", {
 });
 
 /**
+ * Step 2.8 (F-13, X-32): the proofs of funds an org issued. The record itself is onchain (sotto_proofs,
+ * 05 section 3); this row holds what stays offchain by design, the counterparty label and the 16 byte
+ * salt of its hash, with copies of the record's public threshold and expiry for the issued list. The
+ * threshold is public onchain, so it is allowed here (ENGINEERING-RULES.md rule 4, 08 section 1).
+ */
+export const proofRecords = pgTable(
+  "proof_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id),
+    cluster: clusterName("cluster").notNull(),
+    recordAddress: text("record_address").notNull().unique(),
+    thresholdBaseUnits: bigint("threshold_base_units", { mode: "bigint" }).notNull(),
+    counterpartyLabel: text("counterparty_label").notNull(),
+    counterpartySalt: bytea("counterparty_salt").notNull(),
+    expiry: timestamptz("expiry").notNull(),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "proof_records_record_address_base58",
+      sql`${t.recordAddress} ~ ${sql.raw(`'${BASE58_ADDRESS}'`)}`,
+    ),
+    check("proof_records_salt_16_bytes", sql`octet_length(${t.counterpartySalt}) = 16`),
+    check("proof_records_threshold_positive", sql`${t.thresholdBaseUnits} > 0`),
+    check("proof_records_label_length", sql`char_length(${t.counterpartyLabel}) between 1 and 120`),
+    index("proof_records_org_created_idx").on(t.orgId, t.createdAt),
+  ],
+);
+
+/**
  * Fixed window rate limit counters (08 section 6), shared by every server instance. `key` is an HMAC
  * of the limited subject (session or IP), never the raw value (apps/web/lib/server/rate-limit.ts).
  */

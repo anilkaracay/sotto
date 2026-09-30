@@ -11,6 +11,8 @@
     "./approvals": "./src/approvals/index.ts",
     "./chain": "./src/chain/activity.ts",
     "./proofs": "./src/proofs/index.ts",
+    "./proofs/plan": "./src/proofs/plan.ts",
+    "./attestation": "./src/attestation/index.ts",
     "./confidential/public": "./src/confidential/public.ts",
     "./disclosure": "./src/disclosure/index.ts",
     "./disclosure/seal": "./src/disclosure/seal.ts",

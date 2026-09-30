@@ -104,6 +104,12 @@ export function eventWords(
         detail: month ? `${scope}, ${month}` : scope,
       };
     }
+    case "proof_issued":
+      // AC-14.1 (step 2.8): who issued a proof of funds for whom; never the threshold.
+      return {
+        title: `${actor} issued a proof of funds for ${event.subject.label ?? "a counterparty"}`,
+        detail: null,
+      };
     case "reconciliation_updated":
       return {
         title: `${actor} marked a payment to ${event.subject.label ?? "a recipient"} as ${meta.status === "matched" ? "matched" : "needing a receipt"}`,

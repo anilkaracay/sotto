@@ -78,6 +78,7 @@ describe("consumeRateLimit", () => {
       writeSession: { name: "write-session", limit: 60, windowSeconds: 60, by: "session" },
       writeIp: { name: "write-ip", limit: 120, windowSeconds: 60, by: "ip" },
       rpcSession: { name: "rpc-session", limit: 600, windowSeconds: 60, by: "session" },
+      publicReadIp: { name: "public-read-ip", limit: 60, windowSeconds: 60, by: "ip" },
     });
   });
 });

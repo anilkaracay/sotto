@@ -6,7 +6,8 @@
 // Since step 1.9 --localnet also runs the worker's job loop on that validator and database (payment
 // settlement, the proof program check, readiness, attestations with the bootstrap's SAS signer). The
 // worker runs from a copy without apps/worker/.env.local, whose values would win over this
-// environment (14 section 2), as the worker's start test does.
+// environment (14 section 2), as the worker's start test does. Since step 2.8 the web also gets the
+// ledger's sotto_proofs program and SAS credential and schema, for the proofs page and /v/<address>.
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import {
@@ -38,6 +39,7 @@ type Bootstrap = {
   rpcUrl: string;
   usdcMint: string;
   sas: { signerKeypair: string; credential: string; schema: string };
+  sottoProofs: { programId: string } | null;
 };
 
 const localnet = process.argv.includes("--localnet");
@@ -50,6 +52,10 @@ if (localnet) {
   chain.RPC_URL = bootstrap.rpcUrl;
   chain.NEXT_PUBLIC_CLUSTER = "localnet";
   chain.LOCALNET_USDC_MINT = bootstrap.usdcMint;
+  // Step 2.8: the ledger's sotto_proofs and SAS addresses, for the proofs page and /v/<address>.
+  chain.LOCALNET_SAS_CREDENTIAL = bootstrap.sas.credential;
+  chain.LOCALNET_SAS_SCHEMA = bootstrap.sas.schema;
+  if (bootstrap.sottoProofs) chain.LOCALNET_SOTTO_PROOFS_PROGRAM = bootstrap.sottoProofs.programId;
 }
 
 const database = await createTestDatabase();

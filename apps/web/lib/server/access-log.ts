@@ -7,6 +7,7 @@ import {
   grants,
   payments,
   payrollRuns,
+  proofRecords,
   recipients,
   users,
   type Database,
@@ -58,7 +59,7 @@ export async function listAccessLog(
       rows.filter((row) => row.event.subjectType === type).map((row) => row.event.subjectId),
     ),
   ];
-  const [grantLabels, paymentLabels, runLabels] = await Promise.all([
+  const [grantLabels, paymentLabels, runLabels, proofLabels] = await Promise.all([
     [...ids("grant"), ...ids("export")].length
       ? db
           .select({
@@ -88,6 +89,14 @@ export async function listAccessLog(
           .from(payrollRuns)
           .where(and(eq(payrollRuns.orgId, orgId), inArray(payrollRuns.id, ids("payroll_run"))))
       : Promise.resolve([]),
+    ids("proof").length
+      ? db
+          .select({ id: proofRecords.recordAddress, label: proofRecords.counterpartyLabel })
+          .from(proofRecords)
+          .where(
+            and(eq(proofRecords.orgId, orgId), inArray(proofRecords.recordAddress, ids("proof"))),
+          )
+      : Promise.resolve([]),
   ]);
   const label = (type: string, id: string): string | null => {
     if (type === "grant" || type === "export") {
@@ -96,6 +105,7 @@ export async function listAccessLog(
     }
     if (type === "payment") return paymentLabels.find((row) => row.id === id)?.name ?? null;
     if (type === "payroll_run") return runLabels.find((row) => row.id === id)?.title ?? null;
+    if (type === "proof") return proofLabels.find((row) => row.id === id)?.label ?? null;
     return null;
   };
   return rows.map(({ event, actorName, actorWallet }) => ({

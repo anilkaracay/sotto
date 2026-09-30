@@ -32,8 +32,8 @@ import {
   wrapAndDepositTransactions,
 } from "@sotto/sdk/confidential/public";
 import { confidentialKeysMessage, deriveStandardKeys } from "@sotto/sdk/keys";
+import { balanceThresholdProofs } from "@sotto/sdk/proofs/plan";
 import {
-  balanceThresholdProofs,
   counterpartyHash,
   fetchProofRecord,
   findProofRecordPda,

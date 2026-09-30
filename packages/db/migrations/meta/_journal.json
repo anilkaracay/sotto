@@ -64,6 +64,13 @@
       "when": 1790700066489,
       "tag": "0008_indexer_cursor_slot",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790748906619,
+      "tag": "0009_proof_records",
+      "breakpoints": true
     }
   ]
 }

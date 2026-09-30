@@ -346,3 +346,19 @@ node scripts/proof-of-funds-devnet.ts                        # one real proof of
 SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/sdk test:localnet   # includes proofs-localnet (after the bootstrap deployed the program)
 ```
 
+## Step 2.8 (2026-09-30): proof of funds and the public verification page
+
+No new package versions.
+
+| Item | Version | Resolved on | Source | Notes |
+|---|---|---|---|---|
+| Database migration | `0009_proof_records` | 2026-09-30 | `packages/db/migrations` (drizzle-kit 0.31.11 generate) | The `proof_records` table of 08 section 2 with checks for the address, the 16 byte salt, a positive threshold and the label length |
+| New SDK entries | `@sotto/sdk/attestation`, `@sotto/sdk/proofs/plan` | 2026-09-30 | `packages/sdk/package.json` | The business attestation reader without sas-lib (D-24); the balance threshold proofs, split from `@sotto/sdk/proofs`, which now loads no cryptography |
+| Web server variables | `LOCALNET_SOTTO_PROOFS_PROGRAM`, `LOCALNET_SAS_CREDENTIAL`, `LOCALNET_SAS_SCHEMA` | 2026-09-30 | `apps/web/lib/server/cluster.ts`, `tests/e2e/server.ts` | Localnet only, server only (14 section 2) |
+
+Commands:
+
+```sh
+pnpm build && scripts/db-local.sh test-up && pnpm --filter @sotto/e2e exec playwright test --config playwright.localnet.config.ts localnet/proofs.spec.ts   # after localnet.sh and the bootstrap
+```
+

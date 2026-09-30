@@ -25,6 +25,7 @@ import {
   getSchemaEncoder,
   SOLANA_ATTESTATION_SERVICE_PROGRAM_ADDRESS,
 } from "sas-lib";
+import { attestationAddress, decodeBusinessAttestation } from "@sotto/sdk/attestation";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   BUSINESS_SCHEMA_DESCRIPTION,
@@ -336,6 +337,60 @@ describe("account decoders and attestation data", () => {
 });
 
 describe("SAS errors", () => {
+  it("agree with the SDK's reader of the public proof page (step 2.8, without sas-lib)", async () => {
+    const decoded = decodeSchemaAccount(businessSchemaBytes(credential));
+    const data = encodeAttestationData(decoded, {
+      org_id: "8c1d9a52-0000-4000-8000-000000000000",
+      legal_name: "Northwind Labs Ltd, Şişli",
+      country: "TR",
+      verified_at: 1_790_000_000n,
+      level: 1,
+    });
+    const bytes = new Uint8Array(
+      getAttestationEncoder().encode({
+        discriminator: 2,
+        nonce: owner as never,
+        credential: credential as never,
+        schema: schema as never,
+        data,
+        signer: signer.address as never,
+        expiry: 1_821_536_000n,
+        tokenAccount: SYSTEM_PROGRAM as never,
+      }),
+    );
+    expect(decodeBusinessAttestation(bytes)).toEqual({
+      nonce: owner,
+      credential,
+      schema,
+      signer: signer.address,
+      expiry: 1_821_536_000n,
+      tokenAccount: SYSTEM_PROGRAM,
+      data: {
+        orgId: "8c1d9a52-0000-4000-8000-000000000000",
+        legalName: "Northwind Labs Ltd, Şişli",
+        country: "TR",
+        verifiedAt: 1_790_000_000n,
+        level: 1,
+      },
+    });
+    expect(
+      await attestationAddress({
+        sasProgram: SAS_PROGRAM_ADDRESS,
+        credential,
+        schema,
+        nonce: owner,
+      }),
+    ).toBe(await deriveAttestationAddress(credential, schema, owner));
+    // A schema account, truncated bytes and trailing bytes are refused.
+    expect(() => decodeBusinessAttestation(businessSchemaBytes(credential))).toThrow(
+      "not an attestation account",
+    );
+    expect(() => decodeBusinessAttestation(bytes.subarray(0, bytes.length - 1))).toThrow(
+      "ends early",
+    );
+    expect(() => decodeBusinessAttestation(new Uint8Array([...bytes, 0]))).toThrow("trailing");
+  });
+
   it("read the custom code of a failed instruction", () => {
     expect(customErrorCode({ InstructionError: [0n, { Custom: 2n }] })).toBe(2);
     expect(customErrorCode({ InstructionError: [1, { Custom: 5 }] })).toBe(5);

@@ -93,6 +93,15 @@ describe("viewing keys page (F-10, F-14)", () => {
       detail: "1 record deleted",
     });
     expect(eventWords(event("grant_backfilled", { items: 12 }), OWNER).detail).toBe("12 records");
+    // Two keys of one holder are told apart by what they read.
+    expect(eventWords(event("grant_activated", { scope: "own_payslips" }), OWNER)).toEqual({
+      title: "Daniel Osei's viewing key is active",
+      detail: "Own payslips",
+    });
+    expect(eventWords(event("grant_activated", { scope: "all_payments" }), OWNER).detail).toBe(
+      "Every amount",
+    );
+    expect(eventWords(event("grant_activated", {}), OWNER).detail).toBeNull();
     expect(eventWords(event("payroll_run_settled", { lines: 24 }, null), OWNER).title).toBe(
       "Daniel Osei settled on Solana",
     );

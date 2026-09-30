@@ -42,7 +42,15 @@ export function eventWords(
     case "grant_accepted":
       return { title: `${subject} accepted the invite`, detail: "Waiting for their viewing key" };
     case "grant_activated":
-      return { title: `${subject}'s viewing key is active`, detail: null };
+      // The scope tells two keys of one holder apart, such as a recipient's own payslips and the
+      // key they hold as the accountant (step 3.6).
+      return {
+        title: `${subject}'s viewing key is active`,
+        detail:
+          typeof meta.scope === "string"
+            ? scopeWords(meta.scope as GrantScopeName, null, null)
+            : null,
+      };
     case "grant_backfilled":
       return {
         title: `${actor} shared past records with ${subject}`,

@@ -252,7 +252,8 @@ async function step(name: string, screenshot: string, body: () => Promise<Page>)
   });
 }
 
-test.use({ extraHTTPHeaders: { "x-forwarded-for": "198.51.100.50" } });
+// A click that cannot happen fails within a minute instead of waiting out the test.
+test.use({ extraHTTPHeaders: { "x-forwarded-for": "198.51.100.50" }, actionTimeout: 60_000 });
 
 test("the hackathon acceptance scenario runs end to end on localnet, amounts never leave the browsers", async ({
   page,
@@ -298,9 +299,13 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
       // The E2E admin wallet may own an organization of another spec: any app page after sign in.
       await signIn(admin, e2eKeypair(), /\/app(?!\/sign-in)(\/.*)?$/);
       await admin.goto("/app/admin");
+      // Specs run in parallel and another spec's admin may approve this organization first.
       const row = admin.getByRole("row").filter({ hasText: LEGAL_NAME });
-      await row.getByRole("button", { name: "Approve" }).click();
-      await row.getByRole("button", { name: "Confirm approve" }).click();
+      const approve = row.getByRole("button", { name: "Approve" });
+      if (await approve.isVisible()) {
+        await approve.click();
+        await row.getByRole("button", { name: "Confirm approve" }).click();
+      }
       await expect(admin.getByRole("row").filter({ hasText: LEGAL_NAME })).toHaveCount(0);
       await admin.context().close();
       // The worker issues the attestation; the status page shows its address once it is onchain.

@@ -1,0 +1,120 @@
+/* The public proof page (step 2.8): no approved design, so it takes the certificate of the design's
+   Proofs screen (.cert, .cth, .cres, .stamp, .cf) on the app theme (13 A51). */
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  min-height: 100vh;
+  padding: 40px 16px 60px;
+  background: linear-gradient(180deg, #eaf2fd, #f6f9fe 40%, #ffffff);
+}
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 560px;
+}
+.network {
+  font-size: 12.5px;
+  color: var(--faint);
+}
+.cert {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  padding: 26px;
+  border: 1.5px solid transparent;
+  border-radius: 22px;
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    linear-gradient(135deg, #9ec0ff, #e4d6ff 35%, #beefd9 65%, #9ec0ff) border-box;
+  box-shadow: 0 40px 80px -40px rgba(11, 40, 90, 0.45);
+}
+.cth {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--faint);
+}
+.title {
+  margin-top: 18px;
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+.detail {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.cres {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+.stamp {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #3a4b6a, #0b1830);
+}
+.stamp.yes {
+  background: radial-gradient(circle at 35% 30%, #3fd39a, #0e9a64);
+  box-shadow: 0 12px 26px -10px rgba(14, 154, 100, 0.7);
+}
+.cres b {
+  display: block;
+  font-size: 36px;
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+}
+.cres b.yesText {
+  color: #0b8a58;
+}
+.cres small {
+  display: block;
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.cf {
+  margin: 18px 0 0;
+  border-top: 1px solid var(--line);
+}
+.cf div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+}
+.cf dt {
+  flex: none;
+  color: var(--faint);
+}
+.cf dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+  text-align: right;
+}
+.foot {
+  max-width: 560px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--faint);
+  text-align: center;
+}

@@ -20,7 +20,7 @@ import { createRetryingRpc } from "@sotto/sdk/tx";
 import { address, createKeyPairSignerFromBytes, getBase58Decoder } from "@solana/kit";
 import { expect, test, type Page } from "@playwright/test";
 import { E2E_ADMIN_WALLET, E2E_KEYPAIR_SEED, e2eKeypair } from "../fixtures.ts";
-import { expectAmountsWrapped, openSetup, OVERVIEW_URL, signIn } from "../helpers.ts";
+import { approveOrg, expectAmountsWrapped, openSetup, OVERVIEW_URL, signIn } from "../helpers.ts";
 
 const bootstrap = readLocalnetBootstrap();
 const rpc = createRetryingRpc(bootstrap.rpcUrl);
@@ -104,10 +104,7 @@ test.describe.serial("confidential account on localnet", () => {
     await page.getByLabel("Contact email").fill("ops@setup.example");
     await page.getByRole("button", { name: "Send for review" }).click();
     await expect(page.getByTestId("org-status")).toHaveText("In review");
-    await page.goto("/app/admin");
-    await page.getByRole("button", { name: "Approve" }).click();
-    await page.getByRole("button", { name: "Confirm approve" }).click();
-    await expect(page.getByText("No organization is waiting for review.")).toBeVisible();
+    await approveOrg(page, "Localnet Setup Ltd");
 
     // /app opens the overview (step 1.10); the account card sends a new owner to Account setup.
     await page.goto("/app");
@@ -291,7 +288,12 @@ test.describe.serial("confidential account on localnet", () => {
     await unlock(page);
     await expect(value(page, "balance-available")).toHaveText("30 wUSDC");
     expect(page.workers()).toHaveLength(1);
-    const signatures = (await testWallet<string[]>(page, "signedMessages")).length;
+    // Key signatures only: the overview's daily balance snapshot signs its manifest (step 2.12).
+    const keyMessages = async () =>
+      (await testWallet<string[]>(page, "signedMessages")).filter(
+        (text) => text.startsWith("solana-conf-bal") || text.startsWith("sotto-view-key"),
+      ).length;
+    const signatures = await keyMessages();
 
     // In-app navigation keeps the keys: the overview decrypts without a new signature (AC-05.1).
     await page.getByRole("link", { name: "Overview" }).click();
@@ -305,7 +307,7 @@ test.describe.serial("confidential account on localnet", () => {
     );
     await openSetup(page);
     await expect(value(page, "balance-available")).toHaveText("30 wUSDC");
-    expect((await testWallet<string[]>(page, "signedMessages")).length).toBe(signatures);
+    expect(await keyMessages()).toBe(signatures);
     expect(page.workers()).toHaveLength(1);
 
     // The Lock button ends the keys and the crypto worker.

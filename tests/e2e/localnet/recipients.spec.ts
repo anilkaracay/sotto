@@ -14,6 +14,8 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 import { e2eKeypair, seededKeypair } from "../fixtures.ts";
 import {
   addTestWallet,
+  ANY_APP_PAGE,
+  approveOrg,
   clientAddress,
   expectAmountsWrapped,
   openSetup,
@@ -65,11 +67,8 @@ test.describe.serial("recipients on localnet", () => {
 
     // The E2E admin wallet approves it in its own session.
     const admin = await newPage(browser);
-    await signIn(admin, e2eKeypair());
-    await admin.goto("/app/admin");
-    await admin.getByRole("button", { name: "Approve" }).click();
-    await admin.getByRole("button", { name: "Confirm approve" }).click();
-    await expect(admin.getByText("No organization is waiting for review.")).toBeVisible();
+    await signIn(admin, e2eKeypair(), ANY_APP_PAGE);
+    await approveOrg(admin, "Recipients Test Ltd");
     await admin.context().close();
 
     // The owner's viewing key, which default amounts are sealed to.

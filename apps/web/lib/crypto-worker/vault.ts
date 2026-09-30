@@ -30,6 +30,7 @@ import type {
   StatusResult,
   TransferChunkResult,
   TransferPlanResult,
+  BalanceProofsResult,
   UnlockResult,
   ViewingResult,
   WorkerErrorCode,
@@ -40,16 +41,23 @@ import type {
 
 export type VaultModules = typeof import("@sotto/sdk/keys") &
   typeof import("@sotto/sdk/confidential") &
-  typeof import("@sotto/sdk/disclosure/seal");
+  typeof import("@sotto/sdk/disclosure/seal") &
+  Pick<typeof import("@sotto/sdk/proofs/plan"), "balanceThresholdProofs">;
 
 /** The SDK modules the vault needs, loaded together (the worker calls this on the first request). */
 export async function loadVaultModules(): Promise<VaultModules> {
-  const [keys, confidential, seal] = await Promise.all([
+  const [keys, confidential, seal, proofs] = await Promise.all([
     import("@sotto/sdk/keys"),
     import("@sotto/sdk/confidential"),
     import("@sotto/sdk/disclosure/seal"),
+    import("@sotto/sdk/proofs/plan"),
   ]);
-  return { ...keys, ...confidential, ...seal };
+  return {
+    ...keys,
+    ...confidential,
+    ...seal,
+    balanceThresholdProofs: proofs.balanceThresholdProofs,
+  };
 }
 
 export class VaultError extends Error {
@@ -341,6 +349,37 @@ export function createVault(load: () => Promise<VaultModules>, options: VaultOpt
     };
   }
 
+  /** Step 2.8: the proofs of a balance threshold (06 section 8); below it, insufficient_balance. */
+  async function balanceProofs(
+    request: Extract<WorkerRequest, { type: "balanceProofs" }>,
+  ): Promise<BalanceProofsResult> {
+    const loaded = await sdk();
+    const { owner, keys } = held();
+    const rent = options.rent;
+    if (!rent) throw new VaultError("failed", "The worker has no way to ask for rent");
+    const proofs = await loaded.balanceThresholdProofs({
+      owner: address(owner),
+      token: address(request.token),
+      tokenAccount: loaded.decodeToken2022Account(new Uint8Array(request.account)),
+      mint: address(request.mint),
+      decimals: request.decimals,
+      threshold: BigInt(request.threshold),
+      keys,
+      rent,
+    });
+    const planId = crypto.randomUUID();
+    plans.set(planId, proofs.signers);
+    return {
+      planId,
+      transactions: proofs.transactions,
+      equalityContext: proofs.equalityContext,
+      rangeContext: proofs.rangeContext,
+      cleanup: proofs.cleanup,
+      signers: proofs.signers.map((signer) => signer.address),
+      availableBefore: proofs.availableBefore,
+    };
+  }
+
   /** Step 1.9: the plan's signatures over a transaction the wallet signed, for the signers it needs. */
   async function cosign(planId: string, wire: Uint8Array): Promise<CosignResult> {
     const signers = plans.get(planId);
@@ -404,6 +443,8 @@ export function createVault(load: () => Promise<VaultModules>, options: VaultOpt
         return withdrawPlan(request);
       case "transferChunk":
         return transferChunk(request);
+      case "balanceProofs":
+        return balanceProofs(request);
       case "cosign":
         return cosign(request.planId, new Uint8Array(request.transaction));
       case "endPlan":

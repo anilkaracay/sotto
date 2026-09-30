@@ -22,6 +22,7 @@ import type {
   StatusResult,
   TransferChunkResult,
   TransferPlanResult,
+  BalanceProofsResult,
   UnlockResult,
   ViewingResult,
   WorkerErrorCode,
@@ -274,6 +275,36 @@ export class CryptoWorkerClient {
         amount: input.amount.toString(),
         version: input.version,
       })) as TransferPlanResult;
+    } finally {
+      this.rentReader = null;
+    }
+  }
+
+  /**
+   * Step 2.8: the proofs that the available balance is at least `threshold` (06 section 8), from the
+   * account data the page just read. Below the threshold it fails with insufficient_balance before any
+   * proof is made (AC-13.2).
+   */
+  async balanceProofs(
+    input: {
+      token: string;
+      account: Uint8Array;
+      mint: string;
+      decimals: number;
+      threshold: bigint;
+    },
+    rent: (space: bigint) => Promise<bigint>,
+  ): Promise<BalanceProofsResult> {
+    this.rentReader = rent;
+    try {
+      return (await this.request({
+        type: "balanceProofs",
+        token: input.token,
+        account: new Uint8Array(input.account).buffer,
+        mint: input.mint,
+        decimals: input.decimals,
+        threshold: input.threshold.toString(),
+      })) as BalanceProofsResult;
     } finally {
       this.rentReader = null;
     }

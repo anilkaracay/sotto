@@ -66,6 +66,20 @@ export type WorkerRequest =
       lines: { destinationToken: string; destinationAccount: ArrayBuffer; amount: string }[];
       version: 0 | 1;
     }
+  /**
+   * Step 2.8: the proofs that the available balance is at least `threshold` (06 section 8), from the
+   * account data just read; the withdraw plan's proof part, never its withdraw.
+   */
+  | {
+      id: number;
+      type: "balanceProofs";
+      token: string;
+      account: ArrayBuffer;
+      mint: string;
+      decimals: number;
+      /** Base units, as a decimal string. */
+      threshold: string;
+    }
   /** Step 1.9: the plan's own signatures over a transaction the wallet signed (wire bytes). */
   | { id: number; type: "cosign"; planId: string; transaction: ArrayBuffer }
   /** Step 1.9: drops the plan's keypairs once it is done. */
@@ -103,6 +117,17 @@ export type TransferPlanResult = {
   /** Base units, decrypted for the integrity check after settlement. */
   availableBefore: bigint;
 };
+/** Step 2.8: the proof transactions of a balance threshold and the two context accounts they write. */
+export type BalanceProofsResult = {
+  planId: string;
+  transactions: SendableTransaction[];
+  equalityContext: string;
+  rangeContext: string;
+  cleanup: PortableInstruction[];
+  signers: string[];
+  /** Base units, decrypted: the balance the proofs were made from. */
+  availableBefore: bigint;
+};
 /** Step 2.3: a chunk's plans in order, and the available balance after the last line (base units). */
 export type TransferChunkResult = { plans: TransferPlanResult[]; availableAfter: bigint };
 export type CosignResult = { signatures: Record<string, Uint8Array> };
@@ -121,6 +146,7 @@ export type WorkerResult =
   | OpenSealedResult
   | TransferPlanResult
   | TransferChunkResult
+  | BalanceProofsResult
   | CosignResult
   | EndPlanResult;
 

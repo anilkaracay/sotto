@@ -589,7 +589,7 @@ describe("confidential transfers in the vault (step 1.9)", () => {
     });
 
     const planned = await request(3, "7500000");
-    if (!("ok" in planned) || !planned.ok || !("planId" in planned.result)) {
+    if (!("ok" in planned) || !planned.ok || !("variant" in planned.result)) {
       throw new Error("no transfer plan");
     }
     const plan = planned.result;
@@ -722,7 +722,7 @@ describe("confidential transfers in the vault (step 1.9)", () => {
       [0, "record"],
     ] as const) {
       const planned = await request(3 + version, "3000000", version);
-      if (!("ok" in planned) || !planned.ok || !("planId" in planned.result)) {
+      if (!("ok" in planned) || !planned.ok || !("variant" in planned.result)) {
         throw new Error("no withdraw plan");
       }
       const plan = planned.result;
@@ -743,6 +743,62 @@ describe("confidential transfers in the vault (step 1.9)", () => {
     expect(await request(20, "20000001", 1)).toMatchObject({
       error: { code: "insufficient_balance" },
     });
+  });
+
+  it("AC-13.1 AC-13.2 builds the proofs of a balance threshold with two context accounts, and refuses one above the balance before any proof", async () => {
+    const vault = createVault(loadVaultModules, { rent: async () => 1_000_000n });
+    const owner = await testWallet(CLI_SEED);
+    const signature = await owner.sign(confidentialKeysMessage());
+    const keys = await deriveStandardKeys(owner.address, signature);
+    const account = encodeToken2022Account(
+      encryptedTokenAccount({
+        owner: owner.address,
+        mint: MINT,
+        keys,
+        available: 20_000_000n,
+        pending: 0n,
+      }),
+    );
+    const request = (id: number, threshold: string) =>
+      vault.handle({
+        id,
+        type: "balanceProofs",
+        token: address("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"),
+        account: account.slice().buffer,
+        mint: MINT,
+        decimals: 6,
+        threshold,
+      });
+    expect(await request(1, "7000000")).toMatchObject({ error: { code: "not_unlocked" } });
+    await vault.handle({
+      id: 2,
+      type: "unlock",
+      wallet: owner.address,
+      signature: new Uint8Array(signature).buffer,
+    });
+    const built = await request(3, "7000000");
+    if (!("ok" in built) || !built.ok || !("equalityContext" in built.result)) {
+      throw new Error("no proofs");
+    }
+    const proofs = built.result;
+    expect(proofs.availableBefore).toBe(20_000_000n);
+    expect(proofs.transactions.every((transaction) => transaction.role === "proof")).toBe(true);
+    expect(proofs.transactions.length).toBeGreaterThanOrEqual(2);
+    expect(proofs.equalityContext).not.toBe(proofs.rangeContext);
+    expect(proofs.cleanup.map((instruction) => instruction.accounts[0]?.address)).toEqual(
+      expect.arrayContaining([proofs.equalityContext, proofs.rangeContext]),
+    );
+    expect(proofs.signers).not.toContain(owner.address);
+    const serialized = JSON.stringify(proofs, (_, value: unknown) =>
+      typeof value === "bigint" ? value.toString() : value,
+    );
+    for (const secret of [signature, keys.elgamalSecretKey, keys.aeKey]) {
+      expect(serialized).not.toContain(hex(secret));
+      expect(serialized).not.toContain(b64(secret));
+    }
+    await vault.handle({ id: 4, type: "endPlan", planId: proofs.planId });
+    // AC-13.2: above the balance nothing is built.
+    expect(await request(5, "20000001")).toMatchObject({ error: { code: "insufficient_balance" } });
   });
 
   it("AC-08.4 builds a payroll chunk's plans in order, each from the balance the line ahead leaves, with its own signers", async () => {

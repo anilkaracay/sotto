@@ -85,10 +85,10 @@ node_steps() {
   fi
 }
 
-# Playwright against the production build just made (docs/11-TESTING.md); the browser download is
-# cached after the first run.
+# Playwright against the production build just made (docs/11-TESTING.md); Firefox for the landing's
+# fallback without scroll timelines (step 3.1). The browser download is cached after the first run.
 e2e_steps() {
-  run pnpm --filter @sotto/e2e exec playwright install chromium &&
+  run pnpm --filter @sotto/e2e exec playwright install chromium firefox &&
     run pnpm --filter @sotto/e2e e2e
 }
 

@@ -185,8 +185,10 @@ function NewRunCard({
         Upload a CSV with the header <code className="mono">{CSV_COLUMNS.join(",")}</code>, and
         optionally <code className="mono">{CSV_EXTENSION_COLUMNS.join(",")}</code> for payslips.
         Amounts are in USDC with at most 6 decimals. Each row must be a recipient you already added.
-        The file is read in this tab; the amounts and memos are encrypted in this tab to your
-        viewing key, and Sotto stores them sealed.
+        Save the file as CSV UTF-8; a value with a comma, a double quote or a line break goes in
+        double quotes, with each double quote in it written as two. The file is read in this tab;
+        the amounts and memos are encrypted in this tab to your viewing key, and Sotto stores them
+        sealed.
       </p>
       {!ownerKey ? (
         <p className={styles.warning} role="status">

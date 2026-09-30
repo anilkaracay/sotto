@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   blockedReason,
   csvRecords,
+  readCsvRecords,
   filledTicks,
   gaugeTicks,
   lineStatusChip,
@@ -53,6 +54,84 @@ describe("payroll CSV (AC-08.1)", () => {
     expect(csvRecords('﻿a,"b,c","say ""hi"""\r\nd,,e\n\n')).toEqual([
       ["a", "b,c", 'say "hi"'],
       ["d", "", "e"],
+    ]);
+  });
+
+  it("AC-08.1 keeps commas, doubled quotes and line breaks inside a quoted value (RFC 4180)", () => {
+    expect(csvRecords('a,"Salary, October","He said ""paid""","two\nlines","x\r\ny"\n')).toEqual([
+      ["a", "Salary, October", 'He said "paid"', "two\nlines", "x\r\ny"],
+    ]);
+    // An empty quoted value and a quoted value at the end of the file without a line end.
+    expect(csvRecords('"",b\n"c"')).toEqual([["", "b"], ["c"]]);
+  });
+
+  it("AC-08.1 accepts UTF-8 with or without a byte order mark, and CRLF or LF line ends", () => {
+    const rows = ["wallet,amount", "Çağrı Öztürk,1", "Zoë,2"];
+    const expected = [
+      ["wallet", "amount"],
+      ["Çağrı Öztürk", "1"],
+      ["Zoë", "2"],
+    ];
+    for (const text of [
+      rows.join("\n"),
+      rows.join("\r\n"),
+      `\uFEFF${rows.join("\r\n")}\r\n`,
+      `\uFEFF${rows.join("\n")}\n`,
+      `${rows[0]}\r\n${rows[1]}\n${rows[2]}`,
+    ]) {
+      expect(csvRecords(text)).toEqual(expected);
+    }
+    // A byte order mark is skipped only at the start of the file.
+    expect(csvRecords("a\n\uFEFFb")).toEqual([["a"], ["\uFEFFb"]]);
+  });
+
+  it("AC-08.1 marks a record that breaks the quoting rules instead of splitting it silently", () => {
+    expect(readCsvRecords('a,b"c,d\ne,"f"g,h\ni,"never closed\nj,k')).toEqual([
+      { values: ["a", 'b"c', "d"], problem: { column: 1, kind: "stray" } },
+      { values: ["e", "fg", "h"], problem: { column: 1, kind: "trailing" } },
+      { values: ["i", "never closed\nj,k"], problem: { column: 1, kind: "unclosed" } },
+    ]);
+  });
+
+  it("AC-08.1 reports a malformed row as a row error with a clear message", () => {
+    const csv = [
+      HEADER,
+      `${MAYA},9400.50,"Salary, October",Maya Chen,Design,US`,
+      `${IDRIS},100,Salary, October,,,`,
+      `${LUCIA},300,Bonus "Q3",,,`,
+      `${UNKNOWN},5,"Bonus"Q3,,,`,
+      `${UNKNOWN},6,"Bonus,,,`,
+    ].join("\r\n");
+    const { rows, fileErrors } = parsePayrollCsv(csv, recipients);
+    expect(fileErrors).toEqual([]);
+    expect(rows).toHaveLength(5);
+    expect(rows[0]).toMatchObject({ memo: "Salary, October", errors: [] });
+    // The unquoted comma shifts the values, so later columns fail too; the first error says why.
+    expect(rows[1]?.errors[0]).toBe(
+      "This row has 7 values; the header has 6. Put a value that contains a comma in double quotes.",
+    );
+    expect(rows[2]?.errors).toEqual([
+      'The memo value has a double quote inside it but does not start with one. Put the whole value in double quotes and write each quote in it as two ("").',
+    ]);
+    expect(rows[3]?.errors[0]).toBe(
+      'The memo value has text after its closing double quote. Put the whole value in double quotes and write each quote in it as two ("").',
+    );
+    expect(rows[4]?.errors[0]).toBe(
+      "The memo value opens a double quote that is never closed, so the rest of the file was read into it. Close the quote.",
+    );
+    // A quoted memo with a line break is read whole; the memo rule refuses the control character.
+    const broken = parsePayrollCsv(`${HEADER}\n${MAYA},1,"Salary\nOctober",,,`, recipients);
+    expect(broken.rows).toHaveLength(1);
+    expect(broken.rows[0]?.errors).toEqual(["Memo: Remove the control characters."]);
+  });
+
+  it("AC-08.1 refuses a file that is not UTF-8 and a header that breaks the quoting rules", () => {
+    // The browser decodes a Windows-1252 file as UTF-8 and turns its accented bytes into U+FFFD.
+    expect(parsePayrollCsv(`${HEADER}\n${MAYA},1,Caf\uFFFD,,,`, recipients).fileErrors).toEqual([
+      'The file is not UTF-8 text. Save it as "CSV UTF-8" in your spreadsheet and upload it again.',
+    ]);
+    expect(parsePayrollCsv(`wallet,"amount\n${MAYA},1`, recipients).fileErrors).toEqual([
+      "Value 2 opens a double quote that is never closed, so the rest of the file was read into it. Close the quote.",
     ]);
   });
 

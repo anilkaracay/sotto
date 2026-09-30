@@ -273,9 +273,10 @@ export function Developers({ v }: { v: LandingView }) {
               <rect x="3" y="6" width="18" height="13" rx="3" />
               <path d="M3 10h18M16 14.5h2" />
             </Icon>
-            {/* 13 L17 with Q-15: the flows are verified end to end with Solflare. */}
+            {/* 13 L17 with Q-15 (founder, 2026-09-30): Backpack blocks the account setup, so the
+                landing names only the wallets tested and implies no other. */}
             <b>Wallet Standard</b>
-            <span>Tested end to end with Solflare</span>
+            <span>Tested with Solflare and Phantom.</span>
           </div>
           <div>
             <Icon>

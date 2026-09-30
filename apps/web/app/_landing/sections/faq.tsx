@@ -205,7 +205,7 @@ export function Faq({ v }: { v: LandingView }) {
             <div className="fa">
               <div>
                 <div className="fab">
-                  <p>{"Today they connect any Solana wallet. Email claim is coming."}</p>
+                  <p>{"Today they connect a Solana wallet. Email claim is coming."}</p>
                 </div>
               </div>
             </div>

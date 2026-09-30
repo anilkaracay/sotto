@@ -132,7 +132,8 @@ describe("the landing (AC-17.1)", () => {
     ]) {
       expect(code).not.toContain(gone);
     }
-    expect(text).toContain("Tested end to end with Solflare");
+    expect(text).toContain("Tested with Solflare and Phantom.");
+    expect(text).not.toMatch(/Backpack|any Solana wallet|Any Solana wallet|embedded or hardware/);
     expect(text).not.toMatch(/one transaction/i);
   });
 
@@ -141,7 +142,7 @@ describe("the landing (AC-17.1)", () => {
       "During the beta, Sotto runs on Solana devnet with devnet USDC, wrapped one to one by a test deployment of Solana's Token Wrap program. Mainnet assets are not decided yet.",
     );
     expect(text).toContain("Devnet USDC during the beta");
-    expect(text).toContain("Today they connect any Solana wallet. Email claim is coming.");
+    expect(text).toContain("Today they connect a Solana wallet. Email claim is coming.");
     expect(text).not.toContain("maya@northwind.com");
     expect(text).toContain("Daniel and your auditor, each with their own scope");
     expect(text).toContain("It gets an external audit before public mainnet.");

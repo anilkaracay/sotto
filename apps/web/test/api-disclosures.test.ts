@@ -74,6 +74,27 @@ function payload(org: string, kind: DisclosurePayloadV1["kind"]): DisclosurePayl
   };
 }
 
+/** Step 2.12: a day's balance snapshot, available in `amount` and pending in `pending`. */
+function snapshotPayload(org: string, day: string): DisclosurePayloadV1 {
+  return {
+    v: 1,
+    org,
+    kind: "balance_snapshot",
+    direction: "in",
+    category: "other",
+    subject: day,
+    amount: "32199481",
+    currency: "USDC",
+    memo: null,
+    gross: null,
+    tax: null,
+    counterparty: null,
+    signatures: [],
+    created_at: `${day}T08:00:00.000Z`,
+    pending: "1500000",
+  };
+}
+
 /** The subjects items name in each org: a settled single payment and payroll line to the recipient. */
 const subjectsOf = new Map<string, { payment: string; line: string }>();
 
@@ -225,17 +246,24 @@ async function item(
 ): Promise<Item & { keys: Awaited<ReturnType<typeof viewerKeypair>> }> {
   const keys = await viewerKeypair();
   const known = subjectsOf.get(orgId);
+  // Step 2.12: a balance snapshot names today's UTC day and holds its pending balance.
+  if (kind === "balance_snapshot") {
+    const day = subject ?? new Date().toISOString().slice(0, 10);
+    return {
+      id: randomUUID(),
+      viewerUserId,
+      grantId,
+      kind,
+      subject: day,
+      ciphertext: await sealPayload(snapshotPayload(orgId, day), keys.publicKey),
+      keys,
+    };
+  }
   const body = {
     ...payload(orgId, kind),
     subject:
       subject ??
-      (kind === "payment"
-        ? known?.payment
-        : kind === "payroll_line"
-          ? known?.line
-          : kind === "balance_snapshot"
-            ? "2026-09-29"
-            : "2026-09") ??
+      (kind === "payment" ? known?.payment : kind === "payroll_line" ? known?.line : "2026-09") ??
       randomUUID(),
   };
   return {
@@ -442,6 +470,63 @@ describe("disclosures", () => {
         ),
       ),
     ).toMatchObject({ code: "disclosure_not_allowed" });
+  });
+
+  it("AC-05.2 keeps at most one balance snapshot of the owner per UTC day, for the owner only", async () => {
+    const { owner, orgId, accountant, grantId, recipient } = await setUp();
+    const refused = async (entries: Item[]) =>
+      errorOf(await post(owner.cookie, orgId, await batch(owner, orgId, entries)));
+    const today = new Date().toISOString().slice(0, 10);
+    const first = await item(orgId, owner.userId, null, "balance_snapshot");
+    expect((await post(owner.cookie, orgId, await batch(owner, orgId, [first]))).status).toBe(201);
+    // A second one the same day, from another tab or a replay with new ids.
+    expect(
+      await refused([await item(orgId, owner.userId, null, "balance_snapshot")]),
+    ).toMatchObject({ code: "snapshot_exists" });
+    // Two for one day in one batch.
+    const day = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    expect(
+      await refused([
+        await item(orgId, owner.userId, null, "balance_snapshot", day),
+        await item(orgId, owner.userId, null, "balance_snapshot", day),
+      ]),
+    ).toMatchObject({ code: "snapshot_exists" });
+    // Yesterday's is still allowed (a device's clock around midnight), a week ago is not.
+    expect(
+      (
+        await post(
+          owner.cookie,
+          orgId,
+          await batch(owner, orgId, [
+            await item(orgId, owner.userId, null, "balance_snapshot", day),
+          ]),
+        )
+      ).status,
+    ).toBe(201);
+    const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
+    expect(
+      await refused([await item(orgId, owner.userId, null, "balance_snapshot", weekAgo)]),
+    ).toMatchObject({ code: "snapshot_date" });
+    expect(
+      await refused([
+        { ...(await item(orgId, owner.userId, null, "balance_snapshot")), subject: "2026-9-1" },
+      ]),
+    ).toMatchObject({ code: "snapshot_date" });
+    // D-27: no grant holder receives snapshots in the hackathon build, even with every amount.
+    expect(
+      await refused([await item(orgId, accountant.userId, grantId, "balance_snapshot")]),
+    ).toMatchObject({ code: "disclosure_not_allowed" });
+    expect(
+      await refused([await item(orgId, recipient.userId, null, "balance_snapshot")]),
+    ).toMatchObject({ code: "disclosure_not_allowed" });
+    const listed = (await (await get(owner.cookie, orgId, "?kind=balance_snapshot")).json()) as {
+      items: { subject: string }[];
+    };
+    expect(listed.items.map((row) => row.subject).sort()).toEqual([day, today].sort());
+    const one = (await (
+      await get(owner.cookie, orgId, "?kind=balance_snapshot&limit=1")
+    ).json()) as { items: unknown[] };
+    expect(one.items).toHaveLength(1);
   });
 
   it("filters the caller's items by kind and creation date", async () => {

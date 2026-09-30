@@ -3,7 +3,7 @@
 // since step 2.5 chain_activity and reconciliations. Golden rule (08 section 1): no plaintext amount,
 // balance or key material in any column; amounts exist only as ciphertext (private_blob,
 // disclosures.ciphertext), except the amounts that are public onchain (ENGINEERING-RULES.md rule 4).
-// test/golden-rule.test.ts checks the column names. Later steps add proof_records and waitlist.
+// test/golden-rule.test.ts checks the column names. Step 2.8 adds proof_records and step 3.2 waitlist.
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -749,3 +749,26 @@ export const rateLimits = pgTable("rate_limits", {
   windowStart: timestamptz("window_start").notNull(),
   count: integer("count").notNull(),
 });
+
+/**
+ * Step 3.2 (F-17, AC-17.2): request access from the landing, one row per work email (lowercased),
+ * with the company and the time the visitor ticked the consent box. No confirmation email in the
+ * hackathon build: double opt in by email is Post-hackathon with D-19 (13 L24, 15).
+ */
+export const waitlist = pgTable(
+  "waitlist",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull().unique(),
+    company: text("company").notNull(),
+    consentAt: timestamptz("consent_at").notNull(),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "waitlist_email_shape",
+      sql`char_length(${t.email}) between 3 and 254 and ${t.email} = lower(${t.email}) and position('@' in ${t.email}) > 1`,
+    ),
+    check("waitlist_company_length", sql`char_length(${t.company}) between 1 and 120`),
+  ],
+);

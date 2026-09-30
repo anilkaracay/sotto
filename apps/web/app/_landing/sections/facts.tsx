@@ -4,18 +4,21 @@
 const FACTS = [
   {
     // VERIFICATION-LOG.md, "Manual devnet run (Phase 1 exit)", step 6: the transfer is one version 1
-    // transaction of 10 instructions; again in "Manual devnet run (Phase 2 exit)", steps 2 and 3.
-    text: "A confidential payment is one Solana transaction with a version 1 wallet.",
+    // transaction of 10 instructions; again in "Manual devnet run (Phase 2 exit)", steps 2 and 3, with
+    // Solflare for both accounts.
+    text: "A confidential payment is one Solana transaction in Solflare.",
     source: "Measured on Solana devnet, September 2026",
   },
   {
-    // VERIFICATION-LOG.md, step 2.3: the SDK's 24 line payroll run in three wallet calls.
-    text: "A 24 person payroll run takes 3 wallet approvals with a version 1 wallet.",
-    source: "Measured on a local Solana validator, September 2026",
+    // VERIFICATION-LOG.md, step 2.3: the SDK's 24 line payroll run in three wallet calls, with the
+    // test wallet declaring version 1. Not measured in Solflare, so no wallet is named (founder,
+    // 2026-09-30).
+    text: "A 24 person payroll run takes 3 wallet approvals.",
+    source: "Measured on a local Solana validator with a test wallet, September 2026",
   },
   {
     // VERIFICATION-LOG.md, step 2.7: the verification instruction costs 13142 compute units.
-    text: "Verifying a proof of funds onchain takes about 13,000 compute units.",
+    text: "Verifying a proof of funds onchain costs about 13,000 compute units.",
     source: "The Sotto program on Solana devnet, September 2026",
   },
   {

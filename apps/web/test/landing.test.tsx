@@ -38,13 +38,18 @@ describe("the landing (AC-17.1)", () => {
       expect(text).not.toContain(gone);
     }
     for (const fact of [
-      "A confidential payment is one Solana transaction with a version 1 wallet.",
-      "A 24 person payroll run takes 3 wallet approvals with a version 1 wallet.",
-      "Verifying a proof of funds onchain takes about 13,000 compute units.",
+      "A confidential payment is one Solana transaction in Solflare.",
+      "A 24 person payroll run takes 3 wallet approvals.",
+      "Verifying a proof of funds onchain costs about 13,000 compute units.",
       "No amount or memo reaches Sotto's servers in plaintext.",
     ]) {
       expect(text).toContain(fact);
     }
+    // Plain words for a business reader; a wallet is named only where the log measured it.
+    expect(text).toContain(
+      "Measured on a local Solana validator with a test wallet, September 2026",
+    );
+    expect(text).not.toContain("version 1 wallet");
   });
 
   it("AC-17.1 says Proven and at least, never True, False or above (L3, L5, L26)", () => {
@@ -137,7 +142,7 @@ describe("the landing (AC-17.1)", () => {
     expect(text).not.toMatch(/one transaction/i);
   });
 
-  it("AC-17.1 answers the FAQ with what the build does (L8, L9, L10, L21, L22)", () => {
+  it("AC-17.1 answers the FAQ with what the build does (L8, L9, L10, L21, L22, D-05)", () => {
     expect(text).toContain(
       "During the beta, Sotto runs on Solana devnet with devnet USDC, wrapped one to one by a test deployment of Solana's Token Wrap program. Mainnet assets are not decided yet.",
     );
@@ -145,6 +150,11 @@ describe("the landing (AC-17.1)", () => {
     expect(text).toContain("Today they connect a Solana wallet. Email claim is coming.");
     expect(text).not.toContain("maya@northwind.com");
     expect(text).toContain("Daniel and your auditor, each with their own scope");
+    // D-05: revoking stops access from then on and cannot erase what was already viewed.
+    expect(text).toContain(
+      "Revoking stops access from then on; it cannot erase what was already viewed.",
+    );
+    expect(text).not.toContain("revoke it at any time");
     expect(text).toContain("It gets an external audit before public mainnet.");
     expect(text).toContain("During the beta, screening uses a deny list.");
     expect(text).not.toContain("sanctions lists");

@@ -11,8 +11,11 @@
 // sees only the organization, what the grant reads and until when, never the holder's name, an amount,
 // a payment or a recipient (founder, 2026-09-29; no wallet is known before the holder accepts);
 // accepting, which the owner's own wallet cannot, makes the user the org's accountant, and their
-// viewing key, created on the same page, activates the grant.
-import { Button, Card } from "@sotto/ui";
+// viewing key, created on the same page, activates the grant. Design pass C (step 3.6, 13 A38, A43):
+// the organization's initials beside the invite's title, what the invite offers before the button
+// that accepts it, and the three steps after joining numbered as on the setup page.
+import { Button, Card, initials } from "@sotto/ui";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -104,9 +107,24 @@ export function InvitePanel({
               To receive confidential payments from {org}, finish three steps in this tab:
             </p>
             <ol className={styles.steps}>
-              <li>Unlock your keys with your wallet: two signatures, one after the other.</li>
-              <li>Create your viewing key, so {org} can share your payment details with you.</li>
-              <li>Set up your confidential wUSDC account.</li>
+              <li>
+                <span className={styles.stepNo} aria-hidden="true">
+                  01
+                </span>
+                Unlock your keys with your wallet: two signatures, one after the other.
+              </li>
+              <li>
+                <span className={styles.stepNo} aria-hidden="true">
+                  02
+                </span>
+                Create your viewing key, so {org} can share your payment details with you.
+              </li>
+              <li>
+                <span className={styles.stepNo} aria-hidden="true">
+                  03
+                </span>
+                Set up your confidential wUSDC account.
+              </li>
             </ol>
             <p className={cards.lead}>
               The payments {org} sends you appear on{" "}
@@ -128,38 +146,48 @@ export function InvitePanel({
   return (
     <div className={`${cards.grid} ${cards.single}`}>
       <Card data-testid="invite-card">
-        <h2 className={cards.cardTitle}>
-          {invite.role === "accountant"
-            ? `${org} invites you to read its payment records in Sotto`
-            : `${org} invites you to receive payments in Sotto`}
-        </h2>
-        <InviteState token={token} invite={invite} wallet={wallet} />
-        {details?.role === "accountant" && invite.status === "open" ? (
-          <dl className={cards.details} data-testid="invite-details">
-            <dt>You can read</dt>
-            <dd>{scopeWords(details.scope, details.periodFrom, details.periodTo)}</dd>
-            <dt>Access</dt>
-            <dd>{expiryWords(details.grantExpiresAt)}</dd>
-            <dt>Link valid until</dt>
-            <dd>{formatDate(details.expiresAt)}</dd>
-          </dl>
-        ) : null}
-        {details?.role === "recipient" && invite.status === "open" ? (
-          <dl className={cards.details} data-testid="invite-details">
-            <dt>Recipient</dt>
-            <dd>{details.recipient.displayName}</dd>
-            {details.recipient.roleTitle ? (
-              <>
-                <dt>Role</dt>
-                <dd>{details.recipient.roleTitle}</dd>
-              </>
-            ) : null}
-            <dt>Wallet</dt>
-            <dd className="mono">{details.recipient.wallet}</dd>
-            <dt>Link valid until</dt>
-            <dd>{formatDate(details.expiresAt)}</dd>
-          </dl>
-        ) : null}
+        <div className={styles.title}>
+          <span className={styles.orgMark} aria-hidden="true">
+            {initials(org)}
+          </span>
+          <h2 className={cards.cardTitle}>
+            {invite.role === "accountant"
+              ? `${org} invites you to read its payment records in Sotto`
+              : `${org} invites you to receive payments in Sotto`}
+          </h2>
+        </div>
+        <InviteState
+          token={token}
+          invite={invite}
+          wallet={wallet}
+          details={
+            details?.role === "accountant" && invite.status === "open" ? (
+              <dl className={cards.details} data-testid="invite-details">
+                <dt>You can read</dt>
+                <dd>{scopeWords(details.scope, details.periodFrom, details.periodTo)}</dd>
+                <dt>Access</dt>
+                <dd>{expiryWords(details.grantExpiresAt)}</dd>
+                <dt>Link valid until</dt>
+                <dd>{formatDate(details.expiresAt)}</dd>
+              </dl>
+            ) : details?.role === "recipient" && invite.status === "open" ? (
+              <dl className={cards.details} data-testid="invite-details">
+                <dt>Recipient</dt>
+                <dd>{details.recipient.displayName}</dd>
+                {details.recipient.roleTitle ? (
+                  <>
+                    <dt>Role</dt>
+                    <dd>{details.recipient.roleTitle}</dd>
+                  </>
+                ) : null}
+                <dt>Wallet</dt>
+                <dd className="mono">{details.recipient.wallet}</dd>
+                <dt>Link valid until</dt>
+                <dd>{formatDate(details.expiresAt)}</dd>
+              </dl>
+            ) : null
+          }
+        />
       </Card>
     </div>
   );
@@ -169,10 +197,13 @@ function InviteState({
   token,
   invite,
   wallet,
+  details,
 }: {
   token: string;
   invite: InviteView;
   wallet: string | null;
+  /** What the invite offers, shown to the wallet that may accept it, before the button. */
+  details: ReactNode;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -222,6 +253,7 @@ function InviteState({
           ? `Accepting adds you to ${org} as its accountant, with read access only, never control of funds. ${org} shares its records with you encrypted to your viewing key, which you create in this tab next.`
           : `Accepting adds you to ${org} as a recipient and lets ${org} pay you in confidential wUSDC: amounts are encrypted onchain, so only you, ${org} and the people ${org} shares them with can read them. Then you set up your confidential wUSDC account in this tab.`}
       </p>
+      {details}
       <div className={cards.actions}>
         <Button
           variant="blue"

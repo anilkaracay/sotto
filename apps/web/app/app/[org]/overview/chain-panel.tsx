@@ -60,6 +60,46 @@ function accounts(row: ChainActivityView): string {
   return row.type.endsWith("_in") ? `${other} → ${own}` : `${own} → ${other}`;
 }
 
+/**
+ * A glyph per kind of event (design pass C, step 3.6, 13 A44): out and in as arrows, the confidential
+ * steps with the design's lock, wraps as the swap, a sealed transfer in blue, a public one in grey.
+ */
+const KIND_ICON: Record<ChainActivityView["type"], { path: string; tone: "blue" | "grey" }> = {
+  account_setup: { path: "M6 11V8a6 6 0 0112 0v3M5 11h14v10H5z", tone: "blue" },
+  deposit: { path: "M12 5v14M5 12h14", tone: "blue" },
+  apply_pending: { path: "M5 12l5 5L20 7", tone: "blue" },
+  transfer_out: { path: "M7 17L17 7M9 7h8v8", tone: "blue" },
+  transfer_in: { path: "M17 7L7 17M15 17H7V9", tone: "blue" },
+  withdraw: { path: "M5 12h14", tone: "grey" },
+  wrap: { path: "M4 8h13l-3-3M20 16H7l3 3", tone: "grey" },
+  unwrap: { path: "M20 8H7l3-3M4 16h13l-3 3", tone: "grey" },
+  public_transfer_out: { path: "M7 17L17 7M9 7h8v8", tone: "grey" },
+  public_transfer_in: { path: "M17 7L7 17M15 17H7V9", tone: "grey" },
+};
+
+function KindIcon({ type }: { type: ChainActivityView["type"] }) {
+  const icon = KIND_ICON[type];
+  return (
+    <span
+      className={`${styles.kindIcon} ${icon.tone === "grey" ? styles.kindPublic : ""}`}
+      aria-hidden="true"
+    >
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d={icon.path} />
+      </svg>
+    </span>
+  );
+}
+
 export function ChainView({
   state,
   wrapLabel,
@@ -73,6 +113,11 @@ export function ChainView({
     <Card className={styles.wide} data-testid="chain-panel">
       <div className={styles.head}>
         <h2 className={cards.cardTitle}>What the chain shows</h2>
+        {state.kind === "loaded" && state.activity.length > 0 ? (
+          <small className={styles.muted}>
+            {state.activity.length === 1 ? "1 event" : `${state.activity.length} events`}
+          </small>
+        ) : null}
       </div>
       <p className={cards.lead}>
         Anyone can see this on Solana: the accounts, the times and what happened. Confidential
@@ -117,7 +162,12 @@ export function ChainView({
                       {row.blockTime ? formatDate(row.blockTime) : `Slot ${row.slot}`}
                     </span>
                   </Td>
-                  <Td>{CHAIN_TYPE_WORDS[row.type]}</Td>
+                  <Td>
+                    <span className={styles.chainKind}>
+                      <KindIcon type={row.type} />
+                      {CHAIN_TYPE_WORDS[row.type]}
+                    </span>
+                  </Td>
                   <Td>
                     <span className="mono">{accounts(row)}</span>
                   </Td>

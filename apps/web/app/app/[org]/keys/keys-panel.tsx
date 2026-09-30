@@ -16,7 +16,20 @@
 //   and a preview; granting shows the invite link once.
 import { buildManifest, manifestMessage } from "@sotto/sdk/disclosure";
 import { verifyViewKeyRegistration } from "@sotto/sdk/keys/public";
-import { Button, Card, Chip, Drawer, PageHeader, Table, Td, Th } from "@sotto/ui";
+import {
+  Button,
+  Card,
+  Chip,
+  Drawer,
+  Field,
+  initials,
+  Input,
+  PageHeader,
+  Person,
+  Table,
+  Td,
+  Th,
+} from "@sotto/ui";
 import { useId, useState } from "react";
 import { eventWords, whenWords } from "../../../../lib/access-log.ts";
 import { ApiCallError, callApi } from "../../../../lib/client/api.ts";
@@ -39,6 +52,7 @@ import type { AccessEventView } from "../../../../lib/server/access-log.ts";
 import type { DisclosureItemView, ManifestView } from "../../../../lib/server/disclosures.ts";
 import type { GrantView } from "../../../../lib/server/grants.ts";
 import cards from "../../_components/confidential/cards.module.css";
+import notices from "../../_components/confidential/confidential.module.css";
 import {
   ConfidentialProvider,
   useConfidential,
@@ -135,7 +149,7 @@ function KeysView(props: Props) {
         ) : shared ? (
           <Card className={styles.s12} data-testid="backfill">
             <h2 className={cards.cardTitle}>Share past records</h2>
-            <p className={styles.done} role="status" data-testid="backfill-message">
+            <p className={notices.result} role="status" data-testid="backfill-message">
               {shared}
             </p>
           </Card>
@@ -188,7 +202,7 @@ export function Coverage({
             return (
               <div key={grant.id} className={styles.coverRow} data-testid="coverage-row">
                 <span className={styles.avatar} aria-hidden="true">
-                  {grant.holder.name.slice(0, 1).toUpperCase()}
+                  {initials(grant.holder.name)}
                 </span>
                 <div className={styles.coverName}>
                   <b>{grant.holder.name}</b>
@@ -389,17 +403,18 @@ function Backfill({
         sees the amounts.
       </p>
       {!ownerKey || !unlocked ? (
-        <p className={styles.warning} role="status">
+        <p className={cards.warning} role="status">
           Unlock your keys below first: your records open with your viewing key in this tab.
         </p>
       ) : null}
       <div className={styles.backfillList}>
         {grants.map((grant) => (
           <div key={grant.id} className={styles.backfillRow} data-testid="backfill-row">
-            <span>
-              <b>{grant.holder.name}</b> {grant.missing}{" "}
-              {grant.missing === 1 ? "record" : "records"} in scope
-            </span>
+            <Person
+              name={grant.holder.name}
+              detail={`${grant.missing} ${grant.missing === 1 ? "record" : "records"} in scope`}
+              size={36}
+            />
             <Button
               variant="blue"
               size="sm"
@@ -412,12 +427,12 @@ function Backfill({
         ))}
       </div>
       {shared ? (
-        <p className={styles.done} role="status" data-testid="backfill-message">
+        <p className={notices.result} role="status" data-testid="backfill-message">
           {shared}
         </p>
       ) : null}
       {problem ? (
-        <p className={styles.problem} role="alert" data-testid="backfill-problem">
+        <p className={cards.problem} role="alert" data-testid="backfill-problem">
           {problem}
         </p>
       ) : null}
@@ -500,10 +515,11 @@ function KeysTable({ grants, onChange }: { grants: GrantView[]; onChange: () => 
                     data-status={grant.status}
                   >
                     <Td>
-                      <span className={styles.person}>
-                        <b>{grant.holder.name}</b>
-                        <small>{grant.holder.title ?? (automatic ? "Recipient" : "")}</small>
-                      </span>
+                      <Person
+                        name={grant.holder.name}
+                        detail={grant.holder.title ?? (automatic ? "Recipient" : "")}
+                        size={38}
+                      />
                     </Td>
                     <Td>
                       <Chip tone={grant.scope === "own_payslips" ? "neutral" : "blue"}>
@@ -512,7 +528,7 @@ function KeysTable({ grants, onChange }: { grants: GrantView[]; onChange: () => 
                     </Td>
                     <Td className="num">{expiryWords(grant.expiresAt)}</Td>
                     <Td className={styles.muted}>{lastUsedWords(grant.lastUsedAt)}</Td>
-                    <Td align="right">
+                    <Td align="right" className={styles.keyEnd}>
                       <div className={styles.rowEnd}>
                         <Chip tone={chip.tone} data-testid="key-status">
                           {chip.label}
@@ -545,9 +561,10 @@ function KeysTable({ grants, onChange }: { grants: GrantView[]; onChange: () => 
                         <div
                           className={styles.confirm}
                           role="alertdialog"
+                          aria-label={`Revoke ${grant.holder.name}'s key`}
                           data-testid="revoke-confirm"
                         >
-                          <p>{REVOKE_COPY}</p>
+                          <p className={`${cards.warning} ${styles.confirmText}`}>{REVOKE_COPY}</p>
                           <div className={styles.confirmActions}>
                             <Button
                               variant="line"
@@ -581,7 +598,7 @@ function KeysTable({ grants, onChange }: { grants: GrantView[]; onChange: () => 
         </div>
       )}
       {problem ? (
-        <p className={styles.problem} role="alert">
+        <p className={cards.problem} role="alert">
           {problem}
         </p>
       ) : null}
@@ -627,32 +644,37 @@ function AccessLog({ events, you }: { events: AccessEventView[]; you: string }) 
 }
 
 function InviteLink({ url, expiresAt }: { url: string; expiresAt: string }) {
+  const id = useId();
   const [copied, setCopied] = useState(false);
   return (
     <div className={styles.link} data-testid="grant-invite">
-      <label className={styles.label}>
-        Invite link, shown once
-        <input
-          className={`${styles.control} mono`}
-          readOnly
-          value={url}
-          data-testid="grant-invite-link"
-        />
-      </label>
-      <div className={styles.linkRow}>
-        <small className={styles.muted}>
-          Valid until {formatDate(expiresAt)}. Send it to the holder yourself.
-        </small>
-        <Button
-          variant="line"
-          size="sm"
-          onClick={() => {
-            void navigator.clipboard?.writeText(url).then(() => setCopied(true));
-          }}
-        >
-          {copied ? "Copied" : "Copy"}
-        </Button>
-      </div>
+      <Field
+        label="Invite link, shown once"
+        htmlFor={`${id}-link`}
+        hint={`Valid until ${formatDate(expiresAt)}. Send it to the holder yourself.`}
+      >
+        <div className={styles.linkField}>
+          {/* Two lines, so the whole link shows in the drawer's width. */}
+          <textarea
+            id={`${id}-link`}
+            className={styles.linkText}
+            readOnly
+            rows={2}
+            value={url}
+            data-testid="grant-invite-link"
+            onFocus={(event) => event.currentTarget.select()}
+          />
+          <Button
+            variant="line"
+            size="sm"
+            onClick={() => {
+              void navigator.clipboard?.writeText(url).then(() => setCopied(true));
+            }}
+          >
+            {copied ? "Copied" : "Copy"}
+          </Button>
+        </div>
+      </Field>
     </div>
   );
 }
@@ -677,7 +699,13 @@ function GrantDrawer({
   const [expiry, setExpiry] = useState<GrantExpiryChoiceName>("end_of_quarter");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const [created, setCreated] = useState<{ url: string; expiresAt: string } | null>(null);
+  const [created, setCreated] = useState<{
+    url: string;
+    expiresAt: string;
+    holder: string;
+    reads: string;
+    until: string;
+  } | null>(null);
 
   function close() {
     setCreated(null);
@@ -710,7 +738,12 @@ function GrantDrawer({
           },
         },
       );
-      setCreated(response.invite);
+      setCreated({
+        ...response.invite,
+        holder: name.trim(),
+        reads: scopeWords(scope, scope === "period" ? from : null, scope === "period" ? to : null),
+        until: expiryWords(previewExpiry(expiry)),
+      });
       setName("");
       setTitle("");
       onGranted();
@@ -752,7 +785,25 @@ function GrantDrawer({
     >
       {created ? (
         <div className={styles.drawerBody}>
-          <p className={styles.lead}>
+          <div className={styles.fieldLabel}>Granted</div>
+          <div className={styles.preview}>
+            <div>
+              <span>Holder</span>
+              <span>{created.holder}</span>
+              <Chip tone="amber">Invite sent</Chip>
+            </div>
+            <div>
+              <span>Reads</span>
+              <span>{created.reads}</span>
+              <Chip tone="blue">Sealed for others</Chip>
+            </div>
+            <div>
+              <span>Until</span>
+              <span>{created.until}</span>
+              <span />
+            </div>
+          </div>
+          <p className={notices.info}>
             The key waits for its holder. They open the link, sign in with their wallet, accept and
             create their viewing key; then share your past records with them here.
           </p>
@@ -762,27 +813,23 @@ function GrantDrawer({
         <div className={styles.drawerBody}>
           <div className={styles.fieldLabel}>Who</div>
           <div className={styles.twoFields}>
-            <label className={styles.label} htmlFor={`${id}-name`}>
-              Name
-              <input
+            <Field label="Name" htmlFor={`${id}-name`}>
+              <Input
                 id={`${id}-name`}
-                className={styles.control}
                 value={name}
                 maxLength={120}
                 onChange={(event) => setName(event.target.value)}
               />
-            </label>
-            <label className={styles.label} htmlFor={`${id}-title`}>
-              Role, optional
-              <input
+            </Field>
+            <Field label="Role, optional" htmlFor={`${id}-title`}>
+              <Input
                 id={`${id}-title`}
-                className={styles.control}
                 value={title}
                 maxLength={80}
                 placeholder="Accountant, external"
                 onChange={(event) => setTitle(event.target.value)}
               />
-            </label>
+            </Field>
           </div>
           <div className={styles.fieldLabel}>Can read</div>
           <div className={styles.pick}>
@@ -800,26 +847,22 @@ function GrantDrawer({
           </div>
           {scope === "period" ? (
             <div className={styles.twoFields}>
-              <label className={styles.label} htmlFor={`${id}-from`}>
-                From
-                <input
+              <Field label="From" htmlFor={`${id}-from`}>
+                <Input
                   id={`${id}-from`}
-                  className={styles.control}
                   type="date"
                   value={from}
                   onChange={(event) => setFrom(event.target.value)}
                 />
-              </label>
-              <label className={styles.label} htmlFor={`${id}-to`}>
-                To, included
-                <input
+              </Field>
+              <Field label="To, included" htmlFor={`${id}-to`}>
+                <Input
                   id={`${id}-to`}
-                  className={styles.control}
                   type="date"
                   value={to}
                   onChange={(event) => setTo(event.target.value)}
                 />
-              </label>
+              </Field>
             </div>
           ) : null}
           <div className={styles.fieldLabel}>Expires</div>
@@ -855,7 +898,7 @@ function GrantDrawer({
             </div>
           </div>
           {problem ? (
-            <p className={styles.problem} role="alert">
+            <p className={cards.problem} role="alert">
               {problem}
             </p>
           ) : null}

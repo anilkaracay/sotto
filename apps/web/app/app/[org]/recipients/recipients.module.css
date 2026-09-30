@@ -1,5 +1,6 @@
-/* The recipients page, built on the app tokens: no approved design exists for it (13 A38); the table
-   follows the design's recipients table in the payroll page. */
+/* The recipients page (13 A38; design pass C, step 3.6): no approved design exists for it, so it
+   speaks the design's language: the shared fields of packages/ui, the design's table with a person
+   per row (.pp), the chips, and the notices of design pass B for the invite link. */
 /* The wallet and keys cards, one above the other in the right column. */
 .side {
   display: flex;
@@ -12,36 +13,77 @@
   min-width: 0;
   overflow-x: auto;
 }
+/* The card head (design .ch): the title and the count (design .cnt8). */
 .head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
-.person b {
-  display: block;
-  font-weight: 500;
+.count {
+  font-size: 13px;
+  color: var(--faint);
 }
-.person small,
+.sealedNote.sealedNote {
+  margin: -4px 0 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
 .muted {
   color: var(--faint);
   font-size: 12.5px;
 }
-/* The design table keeps cells on one line; the reason wraps within the status column. */
+.wide {
+  grid-column: 1 / -1;
+}
+.mono {
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+}
+/* The status column: the chip with whether they joined, and the reason under it, wrapping within the
+   column while the rest of the design table keeps one line. */
 .readiness {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
   width: 280px;
+  padding: 10px 0;
   white-space: normal;
+}
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 .reason {
   display: block;
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--muted);
+}
+.joined,
+.invited {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.joined::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+}
+.invited::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d39a2c;
 }
 .rowActions {
   display: flex;
@@ -49,81 +91,40 @@
   justify-content: flex-end;
   gap: 8px;
 }
+/* The invite link, shown once: an information notice across the table under its recipient. */
 .linkRow td {
-  background: var(--soft);
+  padding-top: 4px;
+  padding-bottom: 14px;
+  white-space: normal;
 }
-.link {
+.link.link {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 0;
+}
+.link b {
+  font-weight: 500;
+  color: var(--ink);
+}
+.link small {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.linkField {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.linkInput {
-  flex: 1;
-  min-width: 0;
-  height: 38px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 10px;
-  box-shadow: 0 0 0 1px var(--line);
+.linkField input {
+  height: 40px;
   background: var(--surface);
-  font: inherit;
-  font-size: 13px;
-  font-family: var(--font-mono);
 }
-.form {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px 16px;
-  margin-top: 16px;
-}
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-.wide {
-  grid-column: 1 / -1;
-}
-.label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--ink2);
-}
-.control {
-  height: 42px;
-  width: 100%;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 12px;
-  background: var(--surface);
-  box-shadow: 0 0 0 1px var(--line);
-  font: inherit;
-  font-size: 14px;
-  color: var(--ink);
-}
-.control:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--blue);
-}
-.control:disabled {
+.empty.empty {
+  padding: 28px 20px;
+  border-radius: 16px;
   background: var(--soft);
-}
-.hint {
-  font-size: 12.5px;
-  color: var(--faint);
-}
-.error {
-  font-size: 12.5px;
-  color: #b4232a;
-}
-.formActions {
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 10px;
-}
-.empty {
-  padding: 18px 4px;
+  text-align: center;
   font-size: 14px;
   color: var(--muted);
 }

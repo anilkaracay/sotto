@@ -2,8 +2,9 @@
 
 // The admin console's client part: status filters, the organization table and the review actions.
 // Every action asks for a second click to confirm. No approved design exists for this screen; it is
-// built on the app tokens (13 A35).
-import { Button, Card, Chip, PageHeader, Table, Td, Th, type ChipTone } from "@sotto/ui";
+// built on the app tokens (13 A35), and since design pass C (step 3.6) in the design's language: each
+// business with its mark, the card head with the count, and the empty state of the other pages.
+import { Button, Card, Chip, PageHeader, Person, Table, Td, Th, type ChipTone } from "@sotto/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -74,6 +75,12 @@ export function AdminConsole({
         ))}
       </nav>
       <Card>
+        <div className={styles.head}>
+          <h2 className={styles.title}>Organizations</h2>
+          <small className={styles.count}>
+            {orgs.length === 1 ? "1 organization" : `${orgs.length} organizations`}
+          </small>
+        </div>
         {orgs.length === 0 ? (
           <p className={styles.empty}>
             {filter === "pending_review"
@@ -150,13 +157,19 @@ function OrgRow({ org }: { org: AdminOrg }) {
   return (
     <tr data-testid="admin-org-row">
       <Td>
-        <b className={styles.name}>{org.displayName}</b>
-        <small className={styles.sub}>
-          {org.legalName} ·{" "}
-          <a href={org.website} target="_blank" rel="noopener noreferrer">
-            {org.website.replace(/^https?:\/\//, "")}
-          </a>
-        </small>
+        <Person
+          name={org.displayName}
+          business
+          size={38}
+          detail={
+            <>
+              {org.legalName} ·{" "}
+              <a href={org.website} target="_blank" rel="noopener noreferrer">
+                {org.website.replace(/^https?:\/\//, "")}
+              </a>
+            </>
+          }
+        />
       </Td>
       <Td>{countryName(org.country)}</Td>
       <Td>{org.registrationNo}</Td>
@@ -171,7 +184,10 @@ function OrgRow({ org }: { org: AdminOrg }) {
         <Chip tone={STATUS[org.status].tone}>{STATUS[org.status].label}</Chip>
       </Td>
       <Td>
-        <span className="mono" title={org.attestationAddress ?? undefined}>
+        <span
+          className={org.attestationAddress ? "mono" : styles.none}
+          title={org.attestationAddress ?? undefined}
+        >
           {attestationText(org)}
         </span>
       </Td>

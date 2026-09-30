@@ -264,3 +264,24 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* What the chain shows (design pass C, step 3.6, 13 A44): a glyph per kind of event. */
+.chainKind {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.kindIcon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: #eef3ff;
+  color: #1a45c4;
+}
+.kindPublic {
+  background: var(--soft);
+  color: var(--muted);
+}

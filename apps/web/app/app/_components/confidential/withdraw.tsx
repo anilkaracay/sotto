@@ -301,12 +301,12 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
         </p>
       ) : null}
       {outcome.busy ? (
-        <div className={extra.done} role="status" data-testid="withdraw-progress">
+        <div className={extra.progress} role="status" data-testid="withdraw-progress">
           <WithAmounts>{outcome.busy}</WithAmounts>
         </div>
       ) : null}
       {outcome.done ? (
-        <div className={extra.done} role="status" data-testid="withdraw-done">
+        <div className={extra.result} role="status" data-testid="withdraw-done">
           <WithAmounts>{outcome.done}</WithAmounts>
         </div>
       ) : null}

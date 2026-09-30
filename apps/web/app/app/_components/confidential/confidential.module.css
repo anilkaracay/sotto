@@ -1,16 +1,22 @@
 /* The confidential account parts of the org pages (setup, overview), built on the app tokens: no
    approved design exists for them (13 A37); the balance figures follow the design's card label and
    figure (.lbl2, .bmv). Two classes where the theme's paragraph reset would win. */
+/* Step 3.5: the four balances in one card, the design's KPI language (.kpi): the available balance
+   first and largest, the others after a hairline, each with its note and the devnet label as a tag. */
 .balances {
   grid-column: 1 / -1;
   min-width: 0;
+  padding: 22px 26px 24px;
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(11, 24, 48, 0.04);
 }
 .balancesHead {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 8px 2px 12px;
+  margin-bottom: 18px;
 }
 .sectionTitle {
   font-size: 17px;
@@ -18,18 +24,37 @@
   letter-spacing: -0.02em;
 }
 .status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 13px;
   color: var(--faint);
 }
+.status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 3px rgba(14, 154, 100, 0.14);
+}
 .balanceGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: minmax(0, 1.35fr) repeat(3, minmax(0, 1fr));
 }
 .balanceCard {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  padding: 0 22px;
+  border-left: 1px solid var(--line);
+}
+.balanceCard:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.balanceCard:last-child {
+  padding-right: 0;
 }
 .balanceHead {
   display: flex;
@@ -39,24 +64,28 @@
   min-height: 26px;
 }
 .balanceLabel {
-  font-size: 15px;
-  color: var(--ink2);
+  font-size: 14px;
+  color: var(--muted);
 }
 .figure {
   display: flex;
   align-items: baseline;
   gap: 8px;
   min-height: 48px;
-  margin: 10px 0 14px;
+  margin: 8px 0 10px;
 }
 .figure b {
-  font-size: 34px;
+  font-size: 30px;
   font-weight: 500;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.045em;
   overflow-wrap: anywhere;
 }
+.balanceCard:first-child .figure b {
+  font-size: 44px;
+  letter-spacing: -0.05em;
+}
 .unit {
-  font-size: 15px;
+  font-size: 14px;
   color: var(--faint);
 }
 .muted {
@@ -72,12 +101,26 @@
 }
 .balanceCard .balanceNote {
   margin-top: auto;
+  padding-top: 14px;
   font-size: 12.5px;
   line-height: 1.45;
   color: var(--faint);
 }
 .wrapLabel {
   color: var(--amber);
+  font-weight: 500;
+}
+/* The devnet label of a wUSDC figure (13 A25), a tag under the figure. */
+.wrapTag {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #fff4e0;
+  color: var(--amber);
+  font-size: 12px;
   font-weight: 500;
 }
 .banner {
@@ -89,13 +132,15 @@
   font-size: 14px;
   line-height: 1.5;
 }
+/* The drawer's fields (design .drawer .fl): the label above, a tall soft control, a blue ring on
+   focus. */
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-top: 16px;
-  font-size: 13.5px;
-  color: var(--ink2);
+  gap: 8px;
+  margin-top: 18px;
+  font-size: 13px;
+  color: var(--muted);
 }
 .amountRow {
   display: flex;
@@ -105,19 +150,29 @@
 .input {
   flex: 1;
   min-width: 0;
-  height: 42px;
-  padding: 0 14px;
+  height: 48px;
+  padding: 0 16px;
   border: 0;
-  border-radius: 12px;
-  box-shadow: 0 0 0 1px var(--line);
-  background: var(--surface);
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px var(--line);
+  background: var(--soft);
   color: var(--ink);
   font: inherit;
-  font-size: 15px;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  transition:
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+.input:hover {
+  box-shadow: inset 0 0 0 1px #d5dce6;
 }
 .input:focus-visible {
-  outline: 2px solid var(--blue);
-  outline-offset: 1px;
+  outline: 0;
+  background: var(--surface);
+  box-shadow:
+    inset 0 0 0 1.5px var(--blue),
+    0 0 0 4px rgba(31, 91, 232, 0.12);
 }
 .steps {
   display: flex;
@@ -125,23 +180,117 @@
   gap: 10px;
   margin-top: 16px;
 }
-.done {
+/* Progress, results and information as notices (cards.module.css .warning, .problem), step 3.5:
+   progress in blue with a turning ring, a result in green with a check, information in blue with an
+   i; a note under a form stays quiet text. */
+/* Doubled, as cards.module.css .warning: the theme's paragraph reset would take the margin. */
+.progress.progress,
+.result.result,
+.info.info {
+  position: relative;
+  margin-top: 14px;
+  padding: 12px 14px 12px 42px;
+  border-radius: 14px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.progress,
+.info {
+  background: #eef3fe;
+  color: #1c46b8;
+  box-shadow: inset 0 0 0 1px rgba(31, 91, 232, 0.12);
+}
+.result {
+  background: #eaf7f1;
+  color: #0b6b46;
+  box-shadow: inset 0 0 0 1px rgba(14, 154, 100, 0.14);
+}
+.progress::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 15px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid rgba(31, 91, 232, 0.25);
+  border-top-color: var(--blue);
+  animation: spin 0.9s linear infinite;
+}
+.result::before,
+.info::before {
+  content: "";
+  position: absolute;
+  top: 13px;
+  left: 14px;
+  width: 17px;
+  height: 17px;
+  background: currentColor;
+  -webkit-mask: var(--notice-icon) center / contain no-repeat;
+  mask: var(--notice-icon) center / contain no-repeat;
+}
+.result {
+  --notice-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M8 12.5l2.7 2.7L16 9.8'/%3E%3C/svg%3E");
+}
+.info {
+  --notice-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5M12 8h.01'/%3E%3C/svg%3E");
+}
+.note.note {
   margin-top: 12px;
   font-size: 13px;
+  line-height: 1.5;
   color: var(--muted);
   overflow-wrap: anywhere;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .prompt {
   grid-column: 1 / -1;
 }
-/* Step 1.10: the unwrap choice of the withdraw form. */
+/* Step 1.10: the unwrap choice of the withdraw form, since step 3.5 the design's toggle (.tgl) on
+   the native checkbox. */
 .check {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  font-size: 13.5px;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 14px;
   color: var(--ink2);
+  cursor: pointer;
+}
+.check input {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 22px;
+  margin: 0;
+  border-radius: 999px;
+  background: #d6dce5;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.check input::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(11, 24, 48, 0.2);
+  transition: transform 0.2s var(--ease-out);
+}
+.check input:checked {
+  background: var(--green);
+}
+.check input:checked::after {
+  transform: translateX(14px);
 }
 
 /* F-19 (step 2.9): next to a confidential action paused while the proof program is unavailable. */

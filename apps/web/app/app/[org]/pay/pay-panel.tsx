@@ -135,12 +135,12 @@ export function ApplyPending() {
         </div>
       ) : null}
       {sending.busy ? (
-        <div className={extra.done} role="status">
+        <div className={extra.progress} role="status">
           <WithAmounts>{sending.busy}</WithAmounts>
         </div>
       ) : null}
       {sending.done ? (
-        <div className={extra.done} role="status" data-testid="apply-done">
+        <div className={extra.result} role="status" data-testid="apply-done">
           <WithAmounts>{sending.done.text}</WithAmounts> Transaction{" "}
           <span className="mono">{sending.done.signature.slice(0, 12)}…</span>
         </div>

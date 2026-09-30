@@ -29,6 +29,7 @@ const SIGNATURE =
   "5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UjKdiSZkQUW";
 
 function payload(kind: DisclosurePayloadV1["kind"]): DisclosurePayloadV1 {
+  if (kind === "balance_snapshot") return snapshotPayload();
   return {
     v: 1,
     org: ORG,
@@ -77,6 +78,27 @@ describe("canonical JSON (07 section 2)", () => {
   });
 });
 
+/** Step 2.12: a day's balance, available in `amount` and pending in `pending`. */
+function snapshotPayload(): DisclosurePayloadV1 {
+  return {
+    v: 1,
+    org: ORG,
+    kind: "balance_snapshot",
+    direction: "in",
+    category: "other",
+    subject: "2026-09-30",
+    amount: "32199481",
+    currency: "USDC",
+    memo: null,
+    gross: null,
+    tax: null,
+    counterparty: null,
+    signatures: [],
+    created_at: "2026-09-30T08:00:00.000Z",
+    pending: "1500000",
+  };
+}
+
 describe("payload version 1 (07 section 3)", () => {
   it("accepts every kind exactly and refuses extra, missing or malformed fields", () => {
     for (const kind of DISCLOSURE_KINDS)
@@ -97,6 +119,31 @@ describe("payload version 1 (07 section 3)", () => {
     ]) {
       expect(() => validatePayload(bad)).toThrow(DisclosureError);
     }
+  });
+
+  it("AC-05.2 takes a balance snapshot with its pending balance, its ISO date and no flow fields", () => {
+    expect(validatePayload(snapshotPayload())).toEqual(snapshotPayload());
+    const base = snapshotPayload() as unknown as Record<string, unknown>;
+    const withoutPending = Object.fromEntries(
+      Object.entries(base).filter(([key]) => key !== "pending"),
+    );
+    for (const bad of [
+      withoutPending,
+      { ...base, pending: "1.5" },
+      { ...base, subject: "2026-09" },
+      { ...base, subject: "2026-13-01" },
+      { ...base, direction: "out" },
+      { ...base, category: "payroll" },
+      { ...base, memo: "September" },
+      { ...base, counterparty: "Maya Chen" },
+      { ...base, signatures: [SIGNATURE] },
+    ]) {
+      expect(() => validatePayload(bad)).toThrow(DisclosureError);
+    }
+    // No other kind carries a pending balance.
+    expect(() => validatePayload({ ...payload("payment"), pending: "1" })).toThrow(
+      "unknown fields: pending",
+    );
   });
 });
 

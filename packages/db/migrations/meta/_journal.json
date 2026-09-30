@@ -71,6 +71,13 @@
       "when": 1790748906619,
       "tag": "0009_proof_records",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790760818814,
+      "tag": "0010_balance_snapshot_per_day",
+      "breakpoints": true
     }
   ]
 }

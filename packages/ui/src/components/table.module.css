@@ -37,6 +37,7 @@
 .table td:last-child {
   padding-right: 0;
 }
-.right {
+/* As specific as the cell rules above, which otherwise keep a right aligned column's header left. */
+.table .right {
   text-align: right;
 }

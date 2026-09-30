@@ -23,7 +23,7 @@ test("AC-17.1 serves the landing with its corrected copy and no console error", 
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Private books.");
   await expect(page.getByText("Beta on Solana devnet").first()).toBeVisible();
   await expect(page.getByTestId("landing-facts")).toContainText(
-    "A confidential payment is one Solana transaction with a version 1 wallet.",
+    "A confidential payment is one Solana transaction in Solflare.",
   );
   await expect(page.getByText("Built for Colosseum's Crypto World's Fair")).toBeVisible();
   const body = await page.locator("body").innerText();

@@ -163,7 +163,7 @@ export function Faq({ v }: { v: LandingView }) {
                 <div className="fab">
                   <p>
                     {
-                      "You, and anyone you hand a viewing key to. A key covers every amount, one period or payroll only, and you can revoke it at any time."
+                      "You, and anyone you hand a viewing key to. A key covers every amount, one period or payroll only. Revoking stops access from then on; it cannot erase what was already viewed."
                     }
                   </p>
                   <div className="fx">

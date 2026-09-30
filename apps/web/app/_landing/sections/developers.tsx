@@ -38,7 +38,7 @@ export const SAMPLES: Sample[] = [
     // 07 section 4 and VERIFICATION-LOG.md step 2.3: 10 lines per wallet approval with a version 1
     // wallet, so a 24 line run takes 3.
     output: [
-      "Up to 10 lines per wallet approval with a version 1 wallet",
+      "Up to 10 lines per wallet approval",
       "Every line settles on Solana",
       "Each signature kept before its transaction is sent",
     ],

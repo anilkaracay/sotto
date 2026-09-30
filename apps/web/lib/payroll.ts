@@ -60,45 +60,98 @@ export type CsvRow = {
 
 export type ParsedCsv = { rows: CsvRow[]; fileErrors: string[]; extension: boolean };
 
-/** RFC 4180 records: commas, double quoted fields with "" for a quote, CRLF or LF line ends. */
-export function csvRecords(text: string): string[][] {
-  const input = text.startsWith("﻿") ? text.slice(1) : text;
-  const records: string[][] = [];
-  let record: string[] = [];
+/** A value that breaks the quoting rules of RFC 4180, by its position in the record (from 0). */
+export type CsvQuoteProblem = {
+  column: number;
+  /** stray: a double quote inside a value that does not start with one; trailing: text after a
+   * value's closing quote; unclosed: a quote never closed before the end of the file. */
+  kind: "stray" | "trailing" | "unclosed";
+};
+
+export type CsvRecord = { values: string[]; problem: CsvQuoteProblem | null };
+
+const BOM = "\uFEFF";
+
+/**
+ * RFC 4180 records (AC-08.1): values separated by commas, a value in double quotes may hold commas,
+ * line breaks and "" for a quote; records end with CRLF or LF; a UTF-8 byte order mark is skipped.
+ * A record that breaks the quoting rules keeps its first problem instead of being split silently.
+ */
+export function readCsvRecords(text: string): CsvRecord[] {
+  const input = text.startsWith(BOM) ? text.slice(1) : text;
+  const records: CsvRecord[] = [];
+  let values: string[] = [];
   let field = "";
-  let quoted = false;
+  let problem: CsvQuoteProblem | null = null;
+  // start: nothing read in this value yet; plain: an unquoted value; quoted: inside quotes;
+  // closed: after a value's closing quote.
+  let state: "start" | "plain" | "quoted" | "closed" = "start";
+  const note = (kind: CsvQuoteProblem["kind"]) => {
+    problem ??= { column: values.length, kind };
+  };
+  const endValue = () => {
+    values.push(field);
+    field = "";
+    state = "start";
+  };
+  const endRecord = () => {
+    endValue();
+    records.push({ values, problem });
+    values = [];
+    problem = null;
+  };
   for (let i = 0; i < input.length; i++) {
-    const char = input[i];
-    if (quoted) {
+    const char = input[i] ?? "";
+    if (state === "quoted") {
       if (char === '"' && input[i + 1] === '"') {
         field += '"';
         i++;
       } else if (char === '"') {
-        quoted = false;
+        state = "closed";
       } else {
         field += char;
       }
-    } else if (char === '"' && field === "") {
-      quoted = true;
     } else if (char === ",") {
-      record.push(field);
-      field = "";
+      endValue();
     } else if (char === "\n" || char === "\r") {
       if (char === "\r" && input[i + 1] === "\n") i++;
-      record.push(field);
-      records.push(record);
-      record = [];
-      field = "";
+      endRecord();
+    } else if (char === '"' && state === "start") {
+      state = "quoted";
     } else {
+      if (char === '"' && state === "plain") note("stray");
+      if (state === "closed") note("trailing");
       field += char;
+      state = state === "closed" ? "closed" : "plain";
     }
   }
-  if (field !== "" || record.length > 0) {
-    record.push(field);
-    records.push(record);
-  }
+  if (state === "quoted") note("unclosed");
+  if (field !== "" || values.length > 0 || state !== "start") endRecord();
   // Blank lines carry no row.
-  return records.filter((values) => !(values.length === 1 && values[0]?.trim() === ""));
+  return records.filter(
+    (record) =>
+      record.problem !== null || !(record.values.length === 1 && record.values[0]?.trim() === ""),
+  );
+}
+
+/** The values of each record (readCsvRecords without the problems). */
+export function csvRecords(text: string): string[][] {
+  return readCsvRecords(text).map((record) => record.values);
+}
+
+const QUOTE_FIX = 'Put the whole value in double quotes and write each quote in it as two ("").';
+
+/** A row error for a quoting problem, naming the column. */
+export function csvQuoteMessage(problem: CsvQuoteProblem, header: readonly string[]): string {
+  const column = header[problem.column];
+  const which = column ? `The ${column} value` : `Value ${problem.column + 1}`;
+  if (problem.kind === "unclosed") {
+    return `${which} opens a double quote that is never closed, so the rest of the file was read into it. Close the quote.`;
+  }
+  if (problem.kind === "trailing") {
+    return `${which} has text after its closing double quote. ${QUOTE_FIX}`;
+  }
+  return `${which} has a double quote inside it but does not start with one. ${QUOTE_FIX}`;
 }
 
 function amountOrZero(text: string): bigint | null {
@@ -113,13 +166,27 @@ const normalized = (name: string) => name.trim().replace(/\s+/g, " ").toLocaleLo
  * wallet is "Add this recipient first". A wallet may appear once per run.
  */
 export function parsePayrollCsv(text: string, recipients: readonly CsvRecipient[]): ParsedCsv {
-  const records = csvRecords(text);
+  // The browser reads the file as UTF-8 and turns bytes that are not UTF-8 into U+FFFD.
+  if (text.includes("\uFFFD")) {
+    return {
+      rows: [],
+      fileErrors: [
+        'The file is not UTF-8 text. Save it as "CSV UTF-8" in your spreadsheet and upload it again.',
+      ],
+      extension: false,
+    };
+  }
+  const read = readCsvRecords(text);
+  const records = read.map((record) => record.values);
   const header = records[0]?.map((value) => value.trim().toLowerCase()) ?? [];
   const base = [...CSV_COLUMNS] as string[];
   const withExtension = [...CSV_COLUMNS, ...CSV_EXTENSION_COLUMNS] as string[];
   const extension = header.join(",") === withExtension.join(",");
   if (records.length === 0) {
     return { rows: [], fileErrors: ["The file is empty."], extension: false };
+  }
+  if (read[0]?.problem) {
+    return { rows: [], fileErrors: [csvQuoteMessage(read[0].problem, [])], extension: false };
   }
   if (!extension && header.join(",") !== base.join(",")) {
     return {
@@ -131,6 +198,7 @@ export function parsePayrollCsv(text: string, recipients: readonly CsvRecipient[
     };
   }
   const data = records.slice(1);
+  const problems = read.slice(1).map((record) => record.problem);
   if (data.length === 0) {
     return { rows: [], fileErrors: ["The file has no payroll rows."], extension };
   }
@@ -160,8 +228,15 @@ export function parsePayrollCsv(text: string, recipients: readonly CsvRecipient[
       warning: null,
     };
     const errors = parsed.errors;
-    if (values.length !== columns) {
-      errors.push(`This row has ${values.length} values; the header has ${columns}.`);
+    const problem = problems[index];
+    if (problem) {
+      // A quoting problem explains the row better than the count of values it caused.
+      errors.push(csvQuoteMessage(problem, extension ? withExtension : base));
+    } else if (values.length !== columns) {
+      // More values than columns is most often a comma in a value that is not in quotes.
+      const hint =
+        values.length > columns ? " Put a value that contains a comma in double quotes." : "";
+      errors.push(`This row has ${values.length} values; the header has ${columns}.${hint}`);
     }
     if (!parsed.wallet || !isAddress(parsed.wallet)) {
       errors.push("Enter a Solana wallet address.");

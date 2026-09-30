@@ -8,6 +8,8 @@
 // worker runs from a copy without apps/worker/.env.local, whose values would win over this
 // environment (14 section 2), as the worker's start test does. Since step 2.8 the web also gets the
 // ledger's sotto_proofs program and SAS credential and schema, for the proofs page and /v/<address>.
+// Since step 3.6 --localnet writes the database's address to .localnet/e2e-database-url (git ignored,
+// removed on stop) for the sharing screens spec, which shows the paused proof program banner.
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import {
@@ -19,6 +21,7 @@ import {
   readFileSync,
   rmSync,
   symlinkSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -61,6 +64,10 @@ if (localnet) {
 }
 
 const database = await createTestDatabase();
+const DATABASE_URL_FILE = fileURLToPath(
+  new URL("../../.localnet/e2e-database-url", import.meta.url),
+);
+if (bootstrap) writeFileSync(DATABASE_URL_FILE, `${database.url}\n`, { mode: 0o600 });
 // The fixed keypair wallet of the keys spec is a Sotto admin, so the spec approves its own org.
 await database.db.insert(admins).values({ wallet: E2E_ADMIN_WALLET });
 // Step 2.10: on localnet the web's and the worker's output also goes to .localnet/e2e-server.log
@@ -112,6 +119,7 @@ if (bootstrap) {
     if (Date.now() > deadline) {
       console.error("error: the worker stored no proof program verdict within 120 seconds");
       worker?.kill("SIGTERM");
+      rmSync(DATABASE_URL_FILE, { force: true });
       await database.drop().catch(() => {});
       process.exit(1);
     }
@@ -145,6 +153,7 @@ async function stop(code: number): Promise<void> {
   web.kill("SIGTERM");
   worker?.kill("SIGTERM");
   if (workerDir) rmSync(workerDir, { recursive: true, force: true });
+  rmSync(DATABASE_URL_FILE, { force: true });
   await database.drop().catch(() => {});
   process.exit(code);
 }

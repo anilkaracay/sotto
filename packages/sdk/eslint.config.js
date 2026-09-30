@@ -1,3 +1,4 @@
 import config from "@sotto/config/eslint";
 
-export default config;
+// The Codama client of sotto_proofs is generated (scripts/generate-proofs-client.ts), not edited.
+export default [{ ignores: ["src/proofs/generated/**"] }, ...config];

@@ -10,6 +10,7 @@
     "./confidential": "./src/confidential/index.ts",
     "./approvals": "./src/approvals/index.ts",
     "./chain": "./src/chain/activity.ts",
+    "./proofs": "./src/proofs/index.ts",
     "./confidential/public": "./src/confidential/public.ts",
     "./disclosure": "./src/disclosure/index.ts",
     "./disclosure/seal": "./src/disclosure/seal.ts",

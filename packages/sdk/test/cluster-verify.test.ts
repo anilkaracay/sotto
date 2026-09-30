@@ -67,7 +67,7 @@ function fakeRpc(accounts: Map<string, Account>, v1 = true) {
 
 async function world(mint: Account | null, programsExecutable = true) {
   const accounts = new Map<string, Account>();
-  for (const program of Object.values(devnet.programs)) {
+  for (const program of [...Object.values(devnet.programs), devnet.sottoProofs?.program ?? ""]) {
     accounts.set(program, {
       owner: address("BPFLoaderUpgradeab1e11111111111111111111111"),
       executable: programsExecutable,
@@ -97,6 +97,7 @@ describe("startup verification (06 section 0)", () => {
     });
     expect(check.programs.map((p) => p.name).sort()).toEqual([
       "sas",
+      "sottoProofs",
       "token2022",
       "tokenWrap",
       "zkElGamalProof",

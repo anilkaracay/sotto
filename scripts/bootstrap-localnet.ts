@@ -1,15 +1,18 @@
 // Bootstraps a local validator started by scripts/localnet.sh (14 section 4, step 1.6): a USDC-like
 // SPL Token mint (6 decimals), its wrapped Token-2022 mint through the Sotto Token Wrap deployment
 // that localnet.sh loads, the escrow of unwrapped tokens, and the SAS credential and schema through
-// the worker's bootstrap:sas with a throwaway signer (sas-lib stays in apps/worker, D-24). It checks
-// the result with the startup verification (06 section 0) and writes .localnet/bootstrap.json. It
+// the worker's bootstrap:sas with a throwaway signer (sas-lib stays in apps/worker, D-24), and, when
+// its SBF build exists (target/deploy/sotto_proofs.so, cargo-build-sbf --arch v3), the sotto_proofs
+// program under a throwaway program keypair with the payer as upgrade authority and its config for
+// the wrapped mint (step 2.7). It checks the result with the startup verification (06 section 0) and
+// writes .localnet/bootstrap.json. It
 // refuses any cluster whose genesis hash is devnet's or mainnet's. The keypairs it creates hold only
 // localnet SOL and live in .localnet/bootstrap (git ignored).
 //
 // Usage: node scripts/bootstrap-localnet.ts [--url http://127.0.0.1:8899]
 import { execFileSync } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
@@ -25,6 +28,11 @@ import {
   type AvailableClusterConfig,
 } from "@sotto/sdk/cluster";
 import { verifyCluster } from "@sotto/sdk/cluster/verify";
+import {
+  findConfigPda,
+  getInitializeConfigInstructionAsync,
+  programDataAddress,
+} from "@sotto/sdk/proofs";
 import {
   createRetryingRpc,
   sendWithKeypairSigners,
@@ -87,6 +95,56 @@ function bootstrapSas(signerPath: string): { credential: Address; schema: Addres
     throw new Error(`bootstrap:sas did not finish:\n${output}`);
   }
   return { credential: credential as Address, schema: schema as Address };
+}
+
+/**
+ * Deploys the sotto_proofs build under a new program keypair, the payer as upgrade authority, and
+ * creates its config for the wrapped mint. Returns null when the program has not been built.
+ */
+async function deploySottoProofs(
+  rpc: SolanaRpc,
+  url: string,
+  payer: { signer: KeyPairSigner; path: string },
+  wrappedUsdcMint: Address,
+): Promise<{ programId: Address; config: Address; programKeypair: string } | null> {
+  const so = join(ROOT, "target", "deploy", "sotto_proofs.so");
+  if (!existsSync(so)) return null;
+  const program = await newKeypairFile("sotto-proofs-program.json");
+  execFileSync(
+    "solana",
+    [
+      "program",
+      "deploy",
+      so,
+      "--program-id",
+      program.path,
+      "--keypair",
+      payer.path,
+      "--upgrade-authority",
+      payer.path,
+      "--url",
+      url,
+    ],
+    { stdio: "ignore" },
+  );
+  const programAddress = program.signer.address;
+  // A program deployed in a slot runs from the next one ("Program is not deployed" before that).
+  const deployed = await rpc.getSlot({ commitment: "confirmed" }).send();
+  while ((await rpc.getSlot({ commitment: "confirmed" }).send()) <= deployed + 1n) {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  const initialize = await getInitializeConfigInstructionAsync(
+    {
+      authority: payer.signer,
+      programData: await programDataAddress(programAddress),
+      payer: payer.signer,
+      wrappedUsdcMint,
+    },
+    { programAddress },
+  );
+  await sendWithKeypairSigners({ rpc, feePayer: payer.signer, instructions: [initialize] });
+  const [config] = await findConfigPda({ programAddress });
+  return { programId: programAddress, config, programKeypair: program.path };
 }
 
 async function main(): Promise<void> {
@@ -153,6 +211,7 @@ async function main(): Promise<void> {
 
   const sasSigner = await newKeypairFile("sas-signer.json");
   const sas = bootstrapSas(sasSigner.path);
+  const sottoProofs = await deploySottoProofs(rpc, values.url, payer, wrapped.wrappedMint);
 
   const record = {
     createdAt: new Date().toISOString(),
@@ -166,6 +225,7 @@ async function main(): Promise<void> {
     wrappedUsdcMint: wrapped.wrappedMint,
     escrow: escrow.escrow,
     sas: { signer: sasSigner.signer.address, signerKeypair: sasSigner.path, ...sas },
+    sottoProofs,
     startupCheck: { confidentialEnabled: check.confidentialEnabled, v1: check.v1 },
   };
   writeFileSync(join(ROOT, ".localnet", "bootstrap.json"), `${JSON.stringify(record, null, 2)}\n`);
@@ -176,6 +236,11 @@ async function main(): Promise<void> {
   console.log(`escrow:           ${escrow.escrow}`);
   console.log(`sas credential:   ${sas.credential}`);
   console.log(`sas schema:       ${sas.schema}`);
+  console.log(
+    sottoProofs
+      ? `sotto_proofs:     ${sottoProofs.programId} (config ${sottoProofs.config})`
+      : "sotto_proofs:     not built (target/deploy/sotto_proofs.so), not deployed",
+  );
   console.log(`startup check:    confidential enabled, v1 ${check.v1 ? "yes" : "no"}`);
   console.log("LOCALNET BOOTSTRAP OK (.localnet/bootstrap.json)");
 }

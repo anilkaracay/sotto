@@ -1,5 +1,6 @@
 // Startup verification (06 section 0), for every app load and worker start on the active cluster:
-// 1. the cluster's programs are executable accounts;
+// 1. the cluster's programs are executable accounts, sotto_proofs included where the cluster config
+//    names its deployment (devnet since step 2.7; localnet deploys it per ledger);
 // 2. the wrapped USDC mint, derived from (USDC mint, Token-2022) under the cluster's Token Wrap program,
 //    exists and has ConfidentialTransferMint with no auditor (facts C2);
 // 3. the RPC answers getLatestBlockhash and a getBlock with maxSupportedTransactionVersion 1.
@@ -33,6 +34,7 @@ async function checkPrograms(
   config: AvailableClusterConfig,
 ): Promise<ProgramCheck[]> {
   const entries = Object.entries(config.programs) as [string, Address][];
+  if (config.sottoProofs) entries.push(["sottoProofs", config.sottoProofs.program]);
   const { value } = await rpc
     .getMultipleAccounts(
       entries.map(([, address]) => address),

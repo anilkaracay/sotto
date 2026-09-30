@@ -104,7 +104,7 @@ pnpm lint          # turbo run lint (ESLint per package) and prettier --check .
 pnpm typecheck     # turbo run typecheck (tsc --noEmit; web runs next typegen first)
 pnpm test          # turbo run test (Vitest per package)
 pnpm build         # turbo run build (Next.js production build)
-pnpm program:build # cargo-build-sbf --manifest-path programs/sotto_proofs/Cargo.toml -- --locked
+pnpm program:build # cargo-build-sbf --manifest-path programs/sotto_proofs/Cargo.toml --arch v3 -- --locked (--arch v3 since step 2.7)
 pnpm program:test  # cargo test --locked -p sotto_proofs
 scripts/localnet.sh        # foreground validator (fetches the Token Wrap .so first)
 scripts/localnet-smoke.sh  # against a running localnet
@@ -322,4 +322,27 @@ No new package versions.
 |---|---|---|---|---|
 | Database migration | `0008_indexer_cursor_slot` | 2026-09-29 | `packages/db/migrations` (drizzle-kit 0.31.11 generate) | `token_accounts.indexed_slot`, the slot of the index-accounts cursor |
 | Local validator ledger size | `--limit-ledger-size 200000` | 2026-09-29 | `scripts/localnet.sh`; `solana-test-validator --help` 4.2.2 (default 10000 shreds in root slots) | With the default, a full e2e run outlived the oldest transactions and the indexer's cursor was pruned (facts M5) |
+
+## Step 2.7 (2026-09-29): sotto_proofs on devnet
+
+Resolved with `cargo update -p sotto_proofs` against the crates `spl-token-2022` 11.1.0 resolves (D-16), then pinned exactly in `programs/sotto_proofs/Cargo.toml`. The G4 probe (`programs/g4_probe`) left the workspace.
+
+| Item | Version | Resolved on | Source | Notes |
+|---|---|---|---|---|
+| `sotto_proofs` dependencies | `bytemuck` 1.25.2, `solana-account-info` 3.1.1, `solana-address` 2.8.0, `solana-clock` 3.2.1, `solana-cpi` 3.1.0, `solana-define-syscall` 4.0.1, `solana-instruction` 3.5.1, `solana-program-entrypoint` 3.1.1, `solana-program-error` 3.0.1, `solana-rent` 3.1.0, `solana-sdk-ids` 3.1.0, `solana-sha256-hasher` 3.1.0, `solana-system-interface` 3.3.0, `solana-sysvar` 3.1.1, `solana-zk-elgamal-proof-interface` 0.1.3, `solana-zk-sdk-pod` 0.1.2, `spl-token-2022-interface` 3.1.2, `spl-token-confidential-transfer-ciphertext-arithmetic` 0.5.1 | 2026-09-29 | crates.io, Cargo.lock | `bytemuck` moved from the G4 pin 1.25.0 to 1.25.2, which `solana-runtime` 4.3.0 requires. Off chain builds add the `curve25519` feature of `solana-address` (the PDA functions; onchain they are syscalls) |
+| `sotto_proofs` dev-dependencies | `solana-program-test` 4.3.0 (feature `agave-unstable-api`), `spl-token-confidential-transfer-proof-generation` 0.6.1, `solana-zk-sdk` 7.0.1, `proptest` 1.11.0, `tokio` 1.53.1, `solana-account` 4.7.0, `solana-keypair` 3.1.2, `solana-signer` 3.0.1, `solana-signature` 3.6.0, `solana-transaction` 4.3.0, `solana-transaction-error` 3.4.0, `solana-instruction-error` 2.5.0, `solana-program-pack` 3.1.0, `solana-system-interface` 3.3.0 (feature `bincode`), `serde_json` 1.0.151 | 2026-09-29 | crates.io, Cargo.lock | `solana-program-test` 4.2.2 and LiteSVM 0.17.0 conflict with `solana-address` 2.8.0 (facts N3). The runtime's ZK ElGamal Proof program in 4.3.0 is on `solana-zk-sdk` 7.0.1, as the proof generation crate is |
+| Codama | `@codama/nodes` 1.11.0, `@codama/visitors-core` 1.11.0, `@codama/renderers-js` 2.5.0 | 2026-09-29 | https://registry.npmjs.org (dist-tag `latest`) | devDependencies of `@sotto/scripts` (catalog). The renderer uses `@solana/codecs-strings` ^8 and writes a kit 8 client with `rootOnly` imports (`@solana/kit`, `@solana/kit/program-client-core`) |
+| New SDK entry | `@sotto/sdk/proofs` | 2026-09-29 | `packages/sdk/package.json` | The generated client plus the proof of funds helpers (06 section 8) |
+| `sotto_proofs` on devnet | program `4rMKgJWgawaTTdUxaudUXthEExnRZ7AvFvqzsoEAr9jd`, config `Gxhkhq4QDvv2y2GK7ZjHF1J8rThwsSdfxDziMCdWFnFe` | 2026-09-29 | `scripts/deploy-program.sh`, `scripts/init-proofs-config.ts` | 44360 bytes, SHA-256 `63c4002c3db312f82632ba7723725b906c30b9833593cb5de723d6cab92f32d8`, `--max-len` 133120, upgrade authority wallet A, slot 505623980 (facts N1) |
+
+Commands:
+
+```sh
+pnpm program:build && pnpm program:test                      # the SBF v3 build, then the Rust tests (they load target/deploy/sotto_proofs.so)
+pnpm --filter @sotto/scripts generate:proofs-client          # the IDL JSON and the generated client, from scripts/proofs-idl.ts
+scripts/deploy-program.sh --cluster devnet                   # dry run: every check and the cost; --yes deploys
+node scripts/init-proofs-config.ts --cluster devnet          # the config for the devnet wrapped mint
+node scripts/proof-of-funds-devnet.ts                        # one real proof of funds from a throwaway owner
+SOTTO_LOCALNET_RPC_URL=http://127.0.0.1:8899 pnpm --filter @sotto/sdk test:localnet   # includes proofs-localnet (after the bootstrap deployed the program)
+```
 

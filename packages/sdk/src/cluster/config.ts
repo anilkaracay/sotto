@@ -37,6 +37,11 @@ export interface AvailableClusterConfig {
   readonly usdcMint: Address | null;
   /** Null on localnet: derived and created at bootstrap. */
   readonly wrappedUsdcMint: Address | null;
+  /**
+   * The sotto_proofs deployment and its config PDA (docs/05-ONCHAIN-PROGRAM.md, step 2.7, facts N1).
+   * Null on localnet: scripts/bootstrap-localnet.ts deploys it per ledger (.localnet/bootstrap.json).
+   */
+  readonly sottoProofs: { readonly program: Address; readonly config: Address } | null;
 }
 
 export interface UnavailableClusterConfig {
@@ -79,6 +84,7 @@ export const clusters: Readonly<Record<ClusterName, ClusterConfig>> = {
     tokenWrapLabel: DEVNET_TEST_WRAP_LABEL,
     usdcMint: null,
     wrappedUsdcMint: null,
+    sottoProofs: null,
   },
   devnet: {
     name: "devnet",
@@ -95,6 +101,10 @@ export const clusters: Readonly<Record<ClusterName, ClusterConfig>> = {
     tokenWrapLabel: DEVNET_TEST_WRAP_LABEL,
     usdcMint: address("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
     wrappedUsdcMint: address("AhJfP4JJBaHWRtXRiaScZUC7SMm4RqUPSb3g9H5RT8Bd"),
+    sottoProofs: {
+      program: address("4rMKgJWgawaTTdUxaudUXthEExnRZ7AvFvqzsoEAr9jd"),
+      config: address("Gxhkhq4QDvv2y2GK7ZjHF1J8rThwsSdfxDziMCdWFnFe"),
+    },
   },
   mainnet: {
     name: "mainnet",

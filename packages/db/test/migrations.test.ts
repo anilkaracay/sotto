@@ -305,4 +305,26 @@ describe("constraints", () => {
     );
     expect(count?.count).toBe("3");
   });
+
+  it("AC-13.1 keep a proof record's 16 byte salt, a positive threshold and a short label (step 2.8, X-32)", async () => {
+    let n = 0;
+    const record = (salt: Buffer, threshold: bigint, label: string, address?: string) =>
+      sql`insert into proof_records (org_id, cluster, record_address, threshold_base_units, counterparty_label, counterparty_salt, expiry)
+          values (${orgId}, 'devnet', ${address ?? `EsVM5jHqyNVyVypQNRs3UFieQhJx1NBaF2idHHNxT${"GHy"[n++ % 3]}${n}`}, ${threshold}, ${label}, ${salt}, now())`;
+    const salt = Buffer.alloc(16, 7);
+    expect(await violation(record(Buffer.alloc(15), 1n, "Lender"))).toBe(
+      "proof_records_salt_16_bytes",
+    );
+    expect(await violation(record(salt, 0n, "Lender"))).toBe("proof_records_threshold_positive");
+    expect(await violation(record(salt, 1n, ""))).toBe("proof_records_label_length");
+    expect(await violation(record(salt, 1n, "x".repeat(121)))).toBe("proof_records_label_length");
+    expect(await violation(record(salt, 1n, "Lender", "not an address"))).toBe(
+      "proof_records_record_address_base58",
+    );
+    const address = "DFqVbjLfr1edLKBrmGB6tATRc2vvEqdRr5DVubyhqGXf";
+    await test.db.execute(record(salt, 100_000_000_000n, "Harbor Bank", address));
+    expect(await violation(record(salt, 1n, "Lender", address))).toBe(
+      "proof_records_record_address_unique",
+    );
+  });
 });

@@ -198,7 +198,7 @@ Tests connect to `postgresql://postgres@127.0.0.1:56433/postgres` (no secret; ov
 | Item | Version | Resolved on | Source | Notes |
 |---|---|---|---|---|
 | `@solana/wallet-standard-util` | 1.1.4 | 2026-09-27 | https://registry.npmjs.org/@solana/wallet-standard-util (dist-tag `latest`, published 2026-09-10) | Sign-In With Solana text (`createSignInMessageText`) and parser (`parseSignInMessage`) in `apps/web`; brings `@noble/curves` 1.9.7. Signatures are verified with `@solana/kit` (WebCrypto) |
-| `@playwright/test` | 1.63.0 | 2026-09-27 | https://registry.npmjs.org/@playwright/test (dist-tag `latest`, published 2026-09-04) | `tests/e2e`. Browser: Chrome for Testing 153.0.8010.12 (playwright chromium v1243) and its headless shell, installed with `playwright install chromium` into `~/Library/Caches/ms-playwright` |
+| `@playwright/test` | 1.63.0 | 2026-09-27 | https://registry.npmjs.org/@playwright/test (dist-tag `latest`, published 2026-09-04) | `tests/e2e`. Browser: Chrome for Testing 153.0.8010.12 (playwright chromium v1243) and its headless shell, installed with `playwright install chromium` into `~/Library/Caches/ms-playwright`. Since step 3.1 also Firefox 155.0 (playwright firefox v1543, `playwright install firefox`) for the landing's check without scroll timelines; WebKit 26.6 (playwright webkit v2359) was used once for the founder's review screenshots, not in CI |
 | Geist, Geist Mono | variable fonts from Google Fonts through `next/font/google` | 2026-09-27 | next 16.3.6 `dist/compiled/@next/font/dist/google/font-data.json` (both listed, weights 100 to 900 and variable) | Downloaded at build time; the design loads Geist 300 to 700 and Geist Mono 400 and 500 |
 
 Commands:

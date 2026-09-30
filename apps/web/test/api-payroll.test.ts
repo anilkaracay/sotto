@@ -395,6 +395,15 @@ describe("payroll runs", () => {
     });
     expect(((await stopped.json()) as { run: RunView }).run.status).toBe("partially_settled");
     expect(logs.some((entry) => entry.includes('"event":"payroll_run_stopped"'))).toBe(true);
+    // The runs list counts the lines that settled (the worker settles them at finality).
+    await test.db.update(payments).set({ status: "settled" }).where(eq(payments.id, first.id));
+    const listed = await runs.GET(
+      jsonRequest(`/api/orgs/${orgId}/payroll-runs`, "GET", owner.cookie),
+      params({ id: orgId }),
+    );
+    expect(((await listed.json()) as { runs: unknown[] }).runs).toMatchObject([
+      { id: run.id, status: "partially_settled", lineCount: 2, settled: 1 },
+    ]);
 
     // A run stopped before any line landed is not paid.
     const other = await draftRun(owner.cookie, orgId, people);

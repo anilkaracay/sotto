@@ -575,21 +575,37 @@ export async function listRuns(
 ): Promise<PayrollRunSummary[]> {
   await requireMoneyAccess(db, session, orgId, ["owner"]);
   const rows = await db
-    .select({
-      run: payrollRuns,
-      settled: sql<number>`(select count(*)::int from ${payments} where ${payments.runId} = ${payrollRuns.id} and ${payments.status} = 'settled')`,
-    })
+    .select()
     .from(payrollRuns)
     .where(eq(payrollRuns.orgId, orgId))
     .orderBy(desc(payrollRuns.createdAt))
     .limit(100);
-  return rows.map(({ run, settled }) => ({
+  // The settled lines per run, grouped. A correlated subquery in the select list lost its table
+  // names and compared a payment's run with its own id, so every run read 0 settled (step 3.6).
+  const counts =
+    rows.length === 0
+      ? []
+      : await db
+          .select({ runId: payments.runId, settled: sql<number>`count(*)::int` })
+          .from(payments)
+          .where(
+            and(
+              inArray(
+                payments.runId,
+                rows.map((run) => run.id),
+              ),
+              eq(payments.status, "settled"),
+            ),
+          )
+          .groupBy(payments.runId);
+  const settledOf = new Map(counts.map((row) => [row.runId, Number(row.settled)]));
+  return rows.map((run) => ({
     id: run.id,
     title: run.title,
     period: run.period,
     status: run.status,
     lineCount: run.lineCount,
-    settled: Number(settled),
+    settled: settledOf.get(run.id) ?? 0,
     createdAt: run.createdAt.toISOString(),
     executedAt: run.executedAt?.toISOString() ?? null,
   }));

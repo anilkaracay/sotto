@@ -385,7 +385,8 @@ test.describe.serial("payroll runs on localnet", () => {
     await expect(received).toHaveAttribute("data-state", "opened");
     await expect(received.getByTestId("received-amount")).toHaveText(`${format(amountOf(0))} USDC`);
     await expect(received).toContainText(MEMO);
-    await expect(received).toContainText("Payroll");
+    await expect(received).toContainText("Payslip · Paid");
+    await expect(received).toHaveAttribute("data-label", "payslip");
     // AC-12.1: the latest payslip with its net, gross and tax withheld, opened in the tab.
     await expect(maya.getByTestId("payslip-net")).toHaveText(`${format(amountOf(0))} USDC`);
     await expect(maya.getByTestId("payslip-gross")).toHaveText(`${format(GROSS)} USDC`);
@@ -396,6 +397,7 @@ test.describe.serial("payroll runs on localnet", () => {
     await received.getByTestId("payslip-pdf").click();
     const pdf = await readFile((await (await downloading).path()) as string, "latin1");
     expect(pdf.startsWith("%PDF-1.4\n")).toBe(true);
+    expect(pdf).toContain("(Payslip: ");
     expect(pdf).toContain(`(Net pay: ${format(amountOf(0))} USDC) Tj`);
     expect(pdf).toContain(`(Gross pay: ${format(GROSS)} USDC) Tj`);
     expect(pdf).toContain(`(Tax withheld: ${format(TAX)} USDC) Tj`);

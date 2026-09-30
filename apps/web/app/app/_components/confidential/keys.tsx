@@ -25,6 +25,7 @@ import type { LockReason } from "../../../../lib/crypto-worker/key-session.ts";
 import { unlockKeys, unlockViewingKey } from "../../../../lib/crypto-worker/unlock.ts";
 import { formatDate, shortWallet } from "../../../../lib/format.ts";
 import { useKeySession } from "../key-session.tsx";
+import privacy from "../privacy.module.css";
 import styles from "./cards.module.css";
 import { useConfidential, type SignProblem } from "./context.tsx";
 
@@ -74,9 +75,11 @@ export function WalletSaid({ words }: { words: WalletWords | null | undefined })
   return (
     <span data-testid="wallet-said">
       {" "}
-      {words.text
-        ? `${words.wallet} said: "${words.text}"`
-        : `${words.wallet} gave no error message.`}
+      <span className={privacy.walletWords}>
+        {words.text
+          ? `${words.wallet} said: "${words.text}"`
+          : `${words.wallet} gave no error message.`}
+      </span>
     </span>
   );
 }

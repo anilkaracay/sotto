@@ -68,3 +68,23 @@ export function withWalletWords(explanation: string, words: WalletWords | null):
     ? `${explanation} ${words.wallet} said: "${words.text}"`
     : `${explanation} ${words.wallet} gave no error message.`;
 }
+
+/**
+ * Step 3.5 (13 A41): a message cut where the wallet's own words are, so a page can set them apart.
+ * The parts joined are the message unchanged. The words are `<wallet> said: "<text>"` or
+ * `<wallet> gave no error message.`, starting after the sentence before them.
+ */
+export function splitWalletWords(message: string): { text: string; wallet: boolean }[] {
+  const found =
+    /(?:^|(?<=[.:!?] ))([^."]+? said: "(?:[^"\\]|\\.)*"|[^."]+? gave no error message\.)/.exec(
+      message,
+    );
+  if (!found) return [{ text: message, wallet: false }];
+  const start = found.index + (found[0].length - (found[1] ?? "").length);
+  const end = start + (found[1] ?? "").length;
+  return [
+    { text: message.slice(0, start), wallet: false },
+    { text: message.slice(start, end), wallet: true },
+    { text: message.slice(end), wallet: false },
+  ].filter((part) => part.text !== "");
+}

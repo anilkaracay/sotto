@@ -1,9 +1,11 @@
 // The payslip PDF (F-12, AC-12.3; step 2.6), made in the recipient's tab from their own opened record,
-// never on the server: one A4 page of text in the standard Helvetica font (PDF 1.4, no embedded font,
+// never on the server; a record outside category payroll gives a payment receipt instead, with the
+// amount received and no gross or tax (13 A49): one A4 page of text in the standard Helvetica font (PDF 1.4, no embedded font,
 // no dependency). Text outside Latin-1, which Helvetica's WinAnsi encoding cannot show, is written
 // without its accents where Unicode decomposes it and as "?" otherwise.
 import { formatDate } from "./format.ts";
-import { formatUsdc, payslipTitle, type Payslip } from "./pay.ts";
+import { BOOKS_CATEGORY_LABEL } from "./books.ts";
+import { formatUsdc, isPayslip, payslipTitle, type Payslip } from "./pay.ts";
 
 export type PayslipDocument = {
   orgName: string;
@@ -54,12 +56,13 @@ function literal(text: string): string {
     .replace(/[\r\n]+/g, " ")})`;
 }
 
-/** The lines of the payslip: the size of their font and their text. */
+/** The lines of the payslip or the payment receipt: the size of their font and their text. */
 export function payslipLines(document: PayslipDocument): { size: number; text: string }[] {
   const { slip } = document;
+  const payslip = isPayslip(slip);
   const lines: { size: number; text: string }[] = [
-    { size: 20, text: `Payslip: ${payslipTitle(slip)}` },
-    { size: 12, text: document.orgName },
+    { size: 20, text: `${payslip ? "Payslip" : "Payment receipt"}: ${payslipTitle(slip)}` },
+    { size: 12, text: payslip ? document.orgName : `Payment from ${document.orgName}` },
     { size: 12, text: "" },
     {
       size: 11,
@@ -68,15 +71,26 @@ export function payslipLines(document: PayslipDocument): { size: number; text: s
     { size: 11, text: `Wallet: ${document.wallet}` },
     { size: 11, text: `Paid on: ${formatDate(slip.date)}` },
   ];
-  if (slip.memo) lines.push({ size: 11, text: `Memo: ${slip.memo}` });
-  lines.push({ size: 11, text: "" });
-  if (slip.gross !== null && slip.tax !== null) {
-    lines.push({ size: 11, text: `Gross pay: ${formatUsdc(slip.gross)}` });
-    lines.push({ size: 11, text: `Tax withheld: ${formatUsdc(slip.tax)}` });
+  if (payslip) {
+    if (slip.memo) lines.push({ size: 11, text: `Memo: ${slip.memo}` });
+    lines.push({ size: 11, text: "" });
+    if (slip.gross !== null && slip.tax !== null) {
+      lines.push({ size: 11, text: `Gross pay: ${formatUsdc(slip.gross)}` });
+      lines.push({ size: 11, text: `Tax withheld: ${formatUsdc(slip.tax)}` });
+    }
+    lines.push({ size: 14, text: `Net pay: ${formatUsdc(slip.net)}` });
+  } else {
+    // The memo is the receipt's title already.
+    lines.push({ size: 11, text: `Category: ${BOOKS_CATEGORY_LABEL[slip.category]}` });
+    lines.push({ size: 11, text: "" });
+    lines.push({ size: 14, text: `Amount received: ${formatUsdc(slip.net)}` });
   }
-  lines.push({ size: 14, text: `Net pay: ${formatUsdc(slip.net)}` });
   lines.push({ size: 11, text: "" });
-  if (slip.signature) lines.push({ size: 9, text: `Solana transaction: ${slip.signature}` });
+  // The signature on its own line: with its label it ran past the page's right edge.
+  if (slip.signature) {
+    lines.push({ size: 9, text: "Solana transaction:" });
+    lines.push({ size: 9, text: slip.signature });
+  }
   lines.push({
     size: 9,
     text: "Paid in confidential wUSDC on Solana: the amount is encrypted onchain.",
@@ -91,7 +105,7 @@ export function payslipLines(document: PayslipDocument): { size: number; text: s
 const bytes = (text: string): Uint8Array<ArrayBuffer> =>
   Uint8Array.from(text, (char) => char.charCodeAt(0));
 
-/** AC-12.3: the payslip as the bytes of a one page PDF. */
+/** AC-12.3: the payslip or the payment receipt as the bytes of a one page PDF. */
 export function payslipPdf(document: PayslipDocument): Uint8Array<ArrayBuffer> {
   let y = 790;
   const content = ["BT"];

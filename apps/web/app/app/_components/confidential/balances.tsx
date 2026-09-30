@@ -6,7 +6,7 @@
 import { formatTokenAmount } from "@sotto/sdk/confidential/public";
 import { Amount } from "../privacy.tsx";
 import type { PublicTokenBalance, TokenAccountState } from "@sotto/sdk/confidential/public";
-import { Card, Chip } from "@sotto/ui";
+import { Chip } from "@sotto/ui";
 import type { ConfidentialView } from "./context.tsx";
 import styles from "./confidential.module.css";
 
@@ -77,7 +77,7 @@ function BalanceCard({
   value: CardValue;
 }) {
   return (
-    <Card className={styles.balanceCard} data-testid={testId} data-state={value.state}>
+    <div className={styles.balanceCard} data-testid={testId} data-state={value.state}>
       <div className={styles.balanceHead}>
         <span className={styles.balanceLabel}>{label}</span>
         {value.state === "locked" ? <Chip tone="amber">Locked</Chip> : null}
@@ -97,18 +97,13 @@ function BalanceCard({
           <span className={styles.muted}>{value.text}</span>
         )}
       </div>
-      <p className={styles.balanceNote}>
-        {note}
-        {wrapLabel ? (
-          <>
-            {" · "}
-            <span className={styles.wrapLabel} data-testid="wrap-label">
-              {wrapLabel}
-            </span>
-          </>
-        ) : null}
-      </p>
-    </Card>
+      {wrapLabel ? (
+        <span className={styles.wrapTag} data-testid="wrap-label">
+          {wrapLabel}
+        </span>
+      ) : null}
+      <p className={styles.balanceNote}>{note}</p>
+    </div>
   );
 }
 

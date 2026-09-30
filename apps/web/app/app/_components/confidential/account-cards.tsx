@@ -58,12 +58,12 @@ function Outcome({ state, network }: { state: SendState; network: string }) {
   return (
     <>
       {state.busy ? (
-        <div className={extra.done} role="status">
+        <div className={extra.progress} role="status">
           <WithAmounts>{state.busy}</WithAmounts>
         </div>
       ) : null}
       {state.done ? (
-        <div className={extra.done} role="status" data-testid="step-done">
+        <div className={extra.result} role="status" data-testid="step-done">
           <WithAmounts>{state.done.text}</WithAmounts> Transaction{" "}
           {network === "devnet" ? (
             <a
@@ -506,7 +506,9 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
 
   return (
     <Card data-testid="funding-card">
-      <h2 className={styles.cardTitle}>Fund your account</h2>
+      <div className={styles.head}>
+        <h2 className={styles.cardTitle}>Fund your account</h2>
+      </div>
       <PausedNote />
       {promptNeeded && decrypted ? (
         <ApplyPromptNotice
@@ -575,19 +577,19 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
             ) : null}
           </div>
           {amount !== null && publicUsdc !== null && amount > publicUsdc ? (
-            <div className={extra.done} data-testid="amount-limits">
+            <div className={extra.note} data-testid="amount-limits">
               {shown} is more than your public USDC.
             </div>
           ) : null}
           {!vault.unlocked ? (
-            <div className={extra.done}>
+            <div className={extra.note}>
               Unlock your keys to fund: step 2 applies the deposit with your keys.
             </div>
           ) : null}
         </>
       )}
       {split ? (
-        <div className={extra.done} role="status" data-testid="funding-split">
+        <div className={extra.info} role="status" data-testid="funding-split">
           {split}
         </div>
       ) : null}

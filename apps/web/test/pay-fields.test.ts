@@ -2,10 +2,12 @@
 // own opened record, with the gross and the tax only when the payroll CSV gave them (AC-12.1); the net
 // pay of the last 6 months; who can read a payslip in words; the organizations grouped with the page's
 // first; and the payslip PDF made in the tab (AC-12.3): a valid one page PDF whose text holds the
-// payslip, with text outside Latin-1 written without accents.
+// payslip, with text outside Latin-1 written without accents. Only category payroll is a payslip; any
+// other category is a payment, and its PDF a payment receipt without gross or tax.
 import type { DisclosurePayloadV1 } from "@sotto/sdk/disclosure";
 import { describe, expect, it } from "vitest";
 import {
+  isPayslip,
   lastMonths,
   netByMonth,
   payOrgs,
@@ -115,6 +117,7 @@ describe("my pay in the tab (F-12)", () => {
       "2026-01",
       "2026-02",
     ]);
+    expect(slips.map(isPayslip)).toEqual([true, false]);
     expect(readersWords("Northwind", [])).toBe("You and Northwind can read this");
     expect(readersWords("Northwind", ["Daniel Osei"])).toBe(
       "You, Northwind and Daniel Osei can read this",
@@ -159,7 +162,8 @@ describe("my pay in the tab (F-12)", () => {
       "Tax withheld: 800 USDC",
       "Net pay: 9400 USDC",
       "",
-      "Solana transaction: 5Kq9Wm2r",
+      "Solana transaction:",
+      "5Kq9Wm2r",
       "Paid in confidential wUSDC on Solana: the amount is encrypted onchain.",
       "Made in your browser from your own sealed payment record. Sotto never saw these amounts.",
     ]);
@@ -183,5 +187,43 @@ describe("my pay in the tab (F-12)", () => {
     expect(pdf).toContain("(Paid to: Elif Aydin, Design lead) Tj");
     expect(pdf).toContain("(Net pay: 9400 USDC) Tj");
     expect(latin1("Łódź café, Şişli, 日本")).toBe("Lódz café, Sisli, ??");
+  });
+
+  it("AC-12.3 makes a payment receipt, not a payslip, for every category but payroll", () => {
+    const slip = payslipsOf(records, pay)[1];
+    if (!slip) throw new Error("no payment");
+    const document = {
+      orgName: "Northwind",
+      recipientName: "Maya Chen",
+      roleTitle: null,
+      wallet: pay.recipient.wallet,
+      slip: { ...slip, gross: 2_000_000n, tax: 750_000n },
+    };
+    expect(payslipLines(document).map((line) => line.text)).toEqual([
+      "Payment receipt: Invoice 7",
+      "Payment from Northwind",
+      "",
+      "Paid to: Maya Chen",
+      `Wallet: ${pay.recipient.wallet}`,
+      "Paid on: 15 Jul 2026",
+      "Category: Supplier",
+      "",
+      "Amount received: 1.25 USDC",
+      "",
+      "Paid in confidential wUSDC on Solana: the amount is encrypted onchain.",
+      "Made in your browser from your own sealed payment record. Sotto never saw these amounts.",
+    ]);
+    for (const category of ["payouts", "software", "other"] as const) {
+      const [title] = payslipLines({ ...document, slip: { ...slip, category, memo: null } });
+      expect(title?.text).toBe("Payment receipt: Payment");
+    }
+    const payroll = payslipLines({ ...document, slip: { ...slip, category: "payroll" } });
+    expect(payroll[0]?.text).toBe("Payslip: Invoice 7");
+    expect(payroll.map((line) => line.text)).toContain("Net pay: 1.25 USDC");
+    const pdf = new TextDecoder("latin1").decode(payslipPdf(document));
+    expect(pdf).toContain("(Payment receipt: Invoice 7) Tj");
+    expect(pdf).toContain("(Amount received: 1.25 USDC) Tj");
+    expect(pdf).not.toContain("Payslip");
+    expect(pdf).not.toContain("Gross");
   });
 });

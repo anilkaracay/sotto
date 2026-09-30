@@ -30,6 +30,7 @@ import {
 import { payability, READINESS_LABEL, type Readiness } from "../../../../../lib/recipient.ts";
 import type { PaymentView } from "../../../../../lib/server/payments.ts";
 import cards from "../../../_components/confidential/cards.module.css";
+import notice from "../../../_components/confidential/confidential.module.css";
 import {
   ConfidentialProvider,
   useConfidential,
@@ -202,12 +203,12 @@ function Outcome({ progress }: { progress: Progress }) {
   return (
     <>
       {progress.busy ? (
-        <p className={styles.status} role="status" data-testid="payment-progress">
+        <p className={notice.progress} role="status" data-testid="payment-progress">
           <WithAmounts>{progress.busy}</WithAmounts>
         </p>
       ) : null}
       {progress.done ? (
-        <p className={styles.done} role="status" data-testid="payment-done">
+        <p className={notice.result} role="status" data-testid="payment-done">
           <WithAmounts>{progress.done}</WithAmounts>
         </p>
       ) : null}

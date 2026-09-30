@@ -87,6 +87,10 @@
   line-height: 1.5;
   color: rgba(255, 255, 255, 0.88);
 }
+/* A payment's "Payment from <org>", on its own line above the date. */
+.from {
+  display: block;
+}
 .slip {
   position: absolute;
   left: 26px;

@@ -59,10 +59,11 @@ function render(props: Partial<BalanceCardsProps>) {
   );
 }
 
-/** The state and the visible text of one card's value. */
+/** The state and the visible text of one card's value, and its note with the devnet label. */
 function card(html: string, id: string) {
   const match = new RegExp(
-    `data-testid="${id}" data-state="([a-z]+)"[\\s\\S]*?data-testid="${id}-value">([\\s\\S]*?)</div>[\\s\\S]*?<p[^>]*>([\\s\\S]*?)</p>`,
+    // Since step 3.5 the devnet label is a tag between the figure and the note; both count here.
+    `data-testid="${id}" data-state="([a-z]+)"[\\s\\S]*?data-testid="${id}-value">([\\s\\S]*?)</div>([\\s\\S]*?)</p>`,
   ).exec(html);
   if (!match) throw new Error(`card ${id} not found`);
   const text = (fragment: string) =>

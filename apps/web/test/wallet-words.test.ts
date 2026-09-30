@@ -12,6 +12,7 @@ import {
 } from "../lib/client/transactions.ts";
 import {
   fromWallet,
+  splitWalletWords,
   walletWords,
   WalletRequestError,
   withWalletWords,
@@ -108,5 +109,52 @@ describe("the wallet's own words (Q-15)", () => {
     expect(describeWalletError(new TypeError("Failed to fetch"), "Solflare")).toBe(
       "Sign in could not be completed. Check your connection and try again.",
     );
+  });
+});
+
+// Step 3.5 (13 A41): the page sets the wallet's words apart from Sotto's explanation; the message
+// itself does not change.
+describe("the wallet's words set apart (13 A41)", () => {
+  const joined = (message: string) =>
+    splitWalletWords(message)
+      .map((part) => part.text)
+      .join("");
+  const words = (message: string) =>
+    splitWalletWords(message)
+      .filter((part) => part.wallet)
+      .map((part) => part.text);
+
+  it("finds the words after Sotto's explanation, before what follows, and keeps the message whole", () => {
+    const failed = withWalletWords(
+      "Step 1 of 5 (verifying a proof) failed: You cancelled in your wallet. Nothing was sent.",
+      walletWords("Solflare", named("WalletSignTransactionError", "User rejected the request.")),
+    ).concat(" Sotto closed the proof accounts this attempt created.");
+    expect(words(failed)).toEqual([
+      'Solflare said: "WalletSignTransactionError: User rejected the request."',
+    ]);
+    expect(joined(failed)).toBe(failed);
+    const blocked = withWalletWords(
+      SETUP_BLOCKED,
+      walletWords(
+        "Sotto Test Wallet",
+        named("Error", "Unable to verify this transaction. It cannot be signed."),
+      ),
+    );
+    expect(words(blocked)).toEqual([
+      'Sotto Test Wallet said: "Unable to verify this transaction. It cannot be signed."',
+    ]);
+    expect(joined(blocked)).toBe(blocked);
+  });
+
+  it("finds a wallet that gave no message, and leaves a message without the wallet's words alone", () => {
+    const silent = withWalletWords("Sign in was cancelled in your wallet.", {
+      wallet: "Phantom",
+      text: "",
+    });
+    expect(words(silent)).toEqual(["Phantom gave no error message."]);
+    expect(joined(silent)).toBe(silent);
+    expect(splitWalletWords("Your wallet changed this transaction. It was not sent.")).toEqual([
+      { text: "Your wallet changed this transaction. It was not sent.", wallet: false },
+    ]);
   });
 });

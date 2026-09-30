@@ -1,5 +1,7 @@
-/* The cards of the confidential pages (setup, overview, invite), built on the app tokens: no design
-   exists for the keys, account and funding parts or the invite page (13 A36, A37, A38). */
+/* The cards of the confidential pages (setup, overview, invite, payments, pay), on the app tokens. No
+   design exists for the keys, account and funding parts or the invite page (13 A36, A37, A38); step
+   3.5 gives them the design's language: the card head of .c, the drawer's Preview table for details
+   (.pv8 rows), its fields, and notices with an icon for warnings, problems and results. */
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
@@ -18,11 +20,58 @@
 .viewingCard {
   min-width: 0;
 }
+
+/* Step 3.5: the setup page as a guided page. The balances first, then the three steps on the left
+   (numbered, in the order they are done) and what the account is made of on the right. */
+.setup {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.setup > .full {
+  grid-column: 1 / -1;
+}
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.step {
+  position: relative;
+  min-width: 0;
+}
+.stepNo {
+  position: absolute;
+  top: 26px;
+  left: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: var(--soft);
+  color: var(--ink2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  pointer-events: none;
+}
+.step > section > .head {
+  padding-left: 40px;
+}
+.step.current .stepNo {
+  background: var(--blue);
+  color: #ffffff;
+}
+
 .head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: 28px;
 }
 .cardTitle {
   font-size: 17px;
@@ -30,54 +79,100 @@
   letter-spacing: -0.02em;
 }
 /* Two classes: the theme resets paragraph margins with .theme-app :is(h1, ..., p). */
-.grid .lead {
+.lead.lead {
   margin-top: 10px;
   font-size: 14px;
-  line-height: 1.55;
+  line-height: 1.6;
   color: var(--muted);
-}
-.grid .warning {
-  margin-top: 12px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: #fff4e0;
-  color: #8a5200;
-  font-size: 13.5px;
-  line-height: 1.5;
 }
 .actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
   margin-top: 18px;
 }
-.grid .problem {
+
+/* Notices: a tinted block with its icon, for a warning, a problem, and (confidential.module.css
+   .done) progress and results. */
+/* Doubled: the theme's paragraph reset (.theme-app :is(p), 0,1,1) would take the margin. */
+.warning.warning,
+.problem.problem {
+  position: relative;
   margin-top: 14px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: #ffecec;
-  color: #b4232a;
+  padding: 12px 14px 12px 42px;
+  border-radius: 14px;
   font-size: 13.5px;
-  line-height: 1.5;
+  line-height: 1.55;
+}
+.warning::before,
+.problem::before {
+  content: "";
+  position: absolute;
+  top: 13px;
+  left: 14px;
+  width: 17px;
+  height: 17px;
+  background: currentColor;
+  -webkit-mask: var(--notice-icon) center / contain no-repeat;
+  mask: var(--notice-icon) center / contain no-repeat;
+}
+.warning {
+  --notice-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z'/%3E%3Cpath d='M12 8v4M12 16h.01'/%3E%3C/svg%3E");
+  background: #fff6e6;
+  color: #8a5200;
+  box-shadow: inset 0 0 0 1px rgba(178, 106, 0, 0.12);
+}
+.problem {
+  --notice-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7.5v5M12 16h.01'/%3E%3C/svg%3E");
+  background: #fff1f1;
+  color: #a61e25;
+  box-shadow: inset 0 0 0 1px rgba(229, 72, 77, 0.14);
+  overflow-wrap: anywhere;
 }
 .link {
   color: inherit;
   font-weight: 500;
 }
+
+/* The drawer's Preview table (design .pv8): hairline rows in a rounded box, the label faint. */
 .details {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
-  gap: 10px 20px;
   margin: 16px 0 0;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px var(--line);
   font-size: 14px;
+  overflow: hidden;
+}
+.details dt,
+.details dd {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+}
+.details dt:first-of-type,
+.details dt:first-of-type + dd {
+  border-top: 0;
 }
 .details dt {
+  padding-right: 18px;
   color: var(--faint);
+  font-size: 13px;
 }
 .details dd {
   margin: 0;
   min-width: 0;
   overflow-wrap: anywhere;
+  color: var(--ink);
 }
+.details dd:global(.mono) {
+  font-size: 12.5px;
+  letter-spacing: -0.01em;
+}
+
 .wallets {
   display: flex;
   flex-direction: column;
@@ -90,9 +185,10 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  min-height: 56px;
   padding: 10px 12px;
-  border-radius: 14px;
-  box-shadow: 0 0 0 1px var(--line);
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 .walletName {
   flex: 1;
@@ -104,4 +200,10 @@
   height: 28px;
   border-radius: 8px;
   flex: none;
+}
+
+@media (max-width: 1100px) {
+  .setup {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

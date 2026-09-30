@@ -1,0 +1,44 @@
+// The landing's facts row (F-17, step 3.1), on the design's .srcs layout. 13 L11 (founder,
+// 2026-09-30): the design's three market statistics are removed and replaced by facts Sotto measured,
+// each taken only from docs/VERIFICATION-LOG.md, whose place is named next to it.
+const FACTS = [
+  {
+    // VERIFICATION-LOG.md, "Manual devnet run (Phase 1 exit)", step 6: the transfer is one version 1
+    // transaction of 10 instructions; again in "Manual devnet run (Phase 2 exit)", steps 2 and 3.
+    text: "A confidential payment is one Solana transaction with a version 1 wallet.",
+    source: "Measured on Solana devnet, September 2026",
+  },
+  {
+    // VERIFICATION-LOG.md, step 2.3: the SDK's 24 line payroll run in three wallet calls.
+    text: "A 24 person payroll run takes 3 wallet approvals with a version 1 wallet.",
+    source: "Measured on a local Solana validator, September 2026",
+  },
+  {
+    // VERIFICATION-LOG.md, step 2.7: the verification instruction costs 13142 compute units.
+    text: "Verifying a proof of funds onchain takes about 13,000 compute units.",
+    source: "The Sotto program on Solana devnet, September 2026",
+  },
+  {
+    // VERIFICATION-LOG.md, step 2.10: the acceptance spec checks every request, console line and
+    // server log line; and "Manual devnet run (Phase 2 exit)", "Nothing in plaintext".
+    text: "No amount or memo reaches Sotto's servers in plaintext.",
+    source: "Checked by an end to end test on every build",
+  },
+];
+
+export function Facts() {
+  return (
+    <section style={{ padding: "20px 0 110px" }} aria-label="Measured facts">
+      <div className="w5">
+        <div className="srcs four" style={{ marginTop: "0" }} data-testid="landing-facts">
+          {FACTS.map((fact) => (
+            <p key={fact.text}>
+              {fact.text}
+              <small>{fact.source}</small>
+            </p>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

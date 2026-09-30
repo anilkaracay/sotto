@@ -117,7 +117,7 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 
 ### F-17 Marketing site
 - AC-17.1 The landing page matches `design/sotto-landing.html` with the copy corrections applied.
-- AC-17.2 The "Request access" form has "Work email" and "Company" fields and stores both in the waitlist table with double opt in. Confirmation emails are sent through Resend (DEFAULT).
+- AC-17.2 The "Request access" form has "Work email" and "Company" fields and an explicit consent checkbox, stores both in the waitlist table once the box is ticked, and shows "Thanks, we will be in touch". The hackathon build sends no email: double opt in with a confirmation email (through Resend, DEFAULT) is Post-hackathon, together with D-19 (founder, 2026-09-30; 15).
 
 ### F-18 Privacy score (Post-hackathon, D-27)
 Computed per org per quarter, 0 to 100, compared with the previous quarter, shown with its breakdown:

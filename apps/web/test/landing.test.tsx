@@ -163,8 +163,12 @@ describe("the landing (AC-17.1)", () => {
 
   it("AC-17.1 closes with the devnet request form and the footer rows (L24, L25, L28, D-23)", () => {
     expect(text).toContain("The beta runs on Solana devnet.");
-    expect(html).toContain('id="v8email"');
-    expect(html).toContain('id="v8company"');
+    expect(html).toMatch(
+      /<input[^>]*type="email"[^>]*autoComplete="email"|<input[^>]*autocomplete="email"/i,
+    );
+    expect(html).toMatch(/autocomplete="organization"/i);
+    expect(text).toContain("Work email");
+    expect(text).toContain("Company");
     expect(text).toContain("Built for Colosseum's Crypto World's Fair");
     expect(links.map((link) => link.label)).not.toEqual(
       expect.arrayContaining(["Privacy", "Terms", "Docs", "GitHub", "Revenue"]),
@@ -172,5 +176,32 @@ describe("the landing (AC-17.1)", () => {
     for (const label of ["Privacy", "Terms"]) {
       expect(links.some((link) => link.label === label)).toBe(false);
     }
+  });
+});
+
+describe("request access on the landing (AC-17.2)", () => {
+  it("AC-17.2 asks for the work email, the company and an explicit consent, with no email promised", async () => {
+    const { CONSENT_TEXT, RequestAccessForm, requestProblem } =
+      await import("../app/_landing/request-access.tsx");
+    const { ApiCallError } = await import("../lib/client/api.ts");
+    const form = renderToStaticMarkup(<RequestAccessForm />);
+    expect(form).toContain('type="checkbox"');
+    expect(form).toContain(CONSENT_TEXT);
+    expect(form).not.toMatch(/disabled=""/);
+    expect(form).not.toMatch(/confirm|inbox|email you/i);
+    expect(requestProblem(new ApiCallError(429, "rate_limited", "Too many requests"))).toBe(
+      "Too many requests from this network. Try again later.",
+    );
+    expect(
+      requestProblem(
+        new ApiCallError(400, "invalid_request", "Invalid request: email: Invalid email address"),
+      ),
+    ).toBe("Enter your work email.");
+    expect(
+      requestProblem(
+        new ApiCallError(400, "invalid_request", "Invalid request: consent: Tick the box"),
+      ),
+    ).toBe("Tick the box to agree that Sotto stores your details.");
+    expect(requestProblem(new Error("offline"))).toBe("Sotto could not be reached. Try again.");
   });
 });

@@ -19,6 +19,8 @@ export const RATE_LIMITS = {
   rpcSession: { name: "rpc-session", limit: 600, windowSeconds: 60, by: "session" },
   /** Step 2.8: the public proof verification (no session), which reads the chain per request. */
   publicReadIp: { name: "public-read-ip", limit: 60, windowSeconds: 60, by: "ip" },
+  /** Step 3.2: request access from the landing, a few per address and hour. */
+  waitlistIp: { name: "waitlist-ip", limit: 10, windowSeconds: 3600, by: "ip" },
 } as const satisfies Record<string, RateLimitPolicy>;
 
 export type RateLimitResult = { allowed: boolean; count: number; retryAfterSeconds: number };

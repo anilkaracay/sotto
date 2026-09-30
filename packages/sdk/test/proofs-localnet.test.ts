@@ -262,7 +262,9 @@ describe.skipIf(!RPC_URL)("sotto_proofs on localnet (step 2.7)", () => {
   it("closes the record after its expiry, the rent to the owner (X-31)", async () => {
     const proofs = await prove(THRESHOLD);
     const nonce = await recordNonce(owner.wusdc as Address, programAddress);
-    const expiry = (await now()) + 3n;
+    // Far enough ahead that the verification lands before it on a busy machine: at 3 seconds the
+    // program refused it with BadExpiry once (step 3.1's ci:local:full, 2026-09-30).
+    const expiry = (await now()) + 15n;
     await sendWithWallet({
       rpc,
       wallet: owner.wallet,

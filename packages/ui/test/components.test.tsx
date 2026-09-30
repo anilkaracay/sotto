@@ -10,7 +10,9 @@ import {
   FieldActions,
   FieldGrid,
   Input,
+  initials,
   PageHeader,
+  Person,
   Select,
   Table,
   Td,
@@ -37,6 +39,16 @@ describe("app theme (09 section 2)", () => {
 });
 
 describe("components", () => {
+  it("Person shows initials in the avatar, the name and the line under it", () => {
+    expect(initials("Maya Chen")).toBe("MC");
+    expect(initials("  daniel  van der Berg ")).toBe("DB");
+    expect(initials("Northwind")).toBe("N");
+    expect(html(<Person name="Maya Chen" detail="Design lead" size={34} />)).toBe(
+      '<span class="person"><span class="avatar" style="width:34px;height:34px" aria-hidden="true">MC</span><span class="text"><b>Maya Chen</b><small>Design lead</small></span></span>',
+    );
+    expect(html(<Person name="Northwind Ltd" business />)).toContain('class="avatar business"');
+  });
+
   it("Field puts the label above its control, then the hint and the problem (13 A35)", () => {
     const markup = html(
       <FieldGrid>

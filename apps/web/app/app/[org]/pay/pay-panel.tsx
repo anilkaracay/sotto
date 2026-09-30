@@ -5,7 +5,9 @@
 // grouped (the page's own first), the latest payslip (net, and gross and tax withheld when the payroll
 // CSV gave them, and who can read it), the net pay of the last 6 months, the payslips, and "What your
 // colleagues see" (the organization's transfers into the recipient's account as the chain shows them,
-// never an amount); then the recipient's balances and withdraw (F-09). Every amount is the recipient's
+// never an amount); then the recipient's balances and withdraw (F-09). A record of category payroll
+// reads as a payslip; any other category as a payment from the organization, with the amount
+// received and no gross or tax, and both kinds share one list, each row labelled (13 A49). Every amount is the recipient's
 // own record, trusted only when its manifest names the organization, carries its owner's signature and
 // lists the item for this recipient (I-9), and opened with the viewing key in this tab; the public
 // view comes from chain_activity through the pay endpoint. Nothing opens before the unlock, and no
@@ -22,6 +24,7 @@ import { browserRpc } from "../../../../lib/client/rpc.ts";
 import { formatDate, shortWallet } from "../../../../lib/format.ts";
 import {
   formatUsdc,
+  isPayslip,
   lastMonths,
   netByMonth,
   payslipsOf,
@@ -287,7 +290,7 @@ function downloadPayslip(orgName: string, pay: PayView, slip: Payslip) {
   const url = URL.createObjectURL(new Blob([pdf], { type: "application/pdf" }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = `payslip-${slip.date.slice(0, 10)}.pdf`;
+  link.download = `${isPayslip(slip) ? "payslip" : "payment-receipt"}-${slip.date.slice(0, 10)}.pdf`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -336,6 +339,14 @@ export function PayGroupView({
   }
   const { pay, slips, sealed, unverified } = state;
   const latest = slips?.[0] ?? null;
+  const latestIsPayslip = latest ? isPayslip(latest) : true;
+  const payslipCount = slips?.filter(isPayslip).length ?? 0;
+  const listTitle =
+    !slips || payslipCount === slips.length
+      ? "Payslips"
+      : payslipCount === 0
+        ? "Payments"
+        : "Payslips and payments";
   const months = lastMonths(now);
   const history = slips ? netByMonth(slips, months) : [];
   const litMonth = slips?.find((slip) => months.includes(slip.month))?.month ?? null;
@@ -346,10 +357,16 @@ export function PayGroupView({
       <section className={`${styles.s7} ${styles.sky}`} data-testid="payslip-card">
         <SkyArt className={styles.skyArt} />
         <div className={styles.skyText}>
-          <h3>{latest ? `${payslipTitle(latest)} pay` : "Your pay"}</h3>
+          <h3>
+            {!latest
+              ? "Your pay"
+              : latestIsPayslip
+                ? `${payslipTitle(latest)} pay`
+                : payslipTitle(latest)}
+          </h3>
           <p>
             {latest
-              ? `Paid ${formatDate(latest.date)} to ${shortWallet(pay.recipient.wallet)}`
+              ? `${latestIsPayslip ? "Paid" : `Payment from ${orgName}, paid`} ${formatDate(latest.date)} to ${shortWallet(pay.recipient.wallet)}`
               : sealed === 0
                 ? `No payment from ${orgName} yet.`
                 : `${sealed === 1 ? "1 payment is" : `${sealed} payments are`} sealed to your viewing key. Unlock your keys to read ${sealed === 1 ? "it" : "them"} in this tab.`}
@@ -358,13 +375,13 @@ export function PayGroupView({
         {latest ? (
           <div className={styles.slip}>
             <div className={styles.sg1}>
-              <span>Net pay</span>
+              <span>{latestIsPayslip ? "Net pay" : "Amount received"}</span>
               <span className={styles.paid}>Paid</span>
             </div>
             <b className={`${styles.sgb} num`} data-testid="payslip-net">
               <Amount>{formatUsdc(latest.net)}</Amount>
             </b>
-            {latest.gross !== null && latest.tax !== null ? (
+            {latestIsPayslip && latest.gross !== null && latest.tax !== null ? (
               <div className={styles.sg2}>
                 <div>
                   <small>Gross</small>
@@ -390,7 +407,9 @@ export function PayGroupView({
       <Card tone="dark" className={styles.s5} data-testid="pay-history">
         <div className={styles.cardHead}>
           <h3>Last 6 months</h3>
-          <span className={styles.darkChip}>Net, USDC</span>
+          <span className={styles.darkChip}>
+            {slips && payslipCount < slips.length ? "Received, USDC" : "Net, USDC"}
+          </span>
         </div>
         {slips ? (
           <MonthBars totals={history} selected={litMonth} format={formatUsdc} testId="pay-bar" />
@@ -401,7 +420,7 @@ export function PayGroupView({
 
       <Card className={styles.s7} data-testid="received-card">
         <div className={styles.head}>
-          <h3>Payslips</h3>
+          <h3>{listTitle}</h3>
           <small className={styles.muted}>From {orgName}</small>
         </div>
         {unverified > 0 ? (
@@ -430,15 +449,17 @@ export function PayGroupView({
                 data-testid="received-row"
                 data-state="opened"
                 data-kind={slip.kind}
+                data-label={isPayslip(slip) ? "payslip" : "payment"}
               >
                 <span className={styles.slipIcon} aria-hidden="true">
-                  {slip.kind === "payroll_line" ? "PAY" : "USDC"}
+                  {isPayslip(slip) ? "PAY" : "USDC"}
                 </span>
                 <div>
                   <b>{payslipTitle(slip)}</b>
-                  <small>
-                    Paid {formatDate(slip.date)} · {BOOKS_CATEGORY_LABEL[slip.category]}
-                    {slip.kind === "payroll_line" && slip.memo ? ` · ${slip.memo}` : ""}
+                  <small data-testid="received-label">
+                    {isPayslip(slip)
+                      ? `Payslip · Paid ${formatDate(slip.date)}${slip.kind === "payroll_line" && slip.memo ? ` · ${slip.memo}` : ""}`
+                      : `Payment from ${orgName} · Paid ${formatDate(slip.date)} · ${BOOKS_CATEGORY_LABEL[slip.category]}`}
                   </small>
                 </div>
                 <span className={`${styles.amount} num`} data-testid="received-amount">

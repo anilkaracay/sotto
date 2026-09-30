@@ -2,7 +2,8 @@
 // A payslip is the recipient's own record of a payment to them, verified against the org owner's
 // manifest (I-9) and opened with their viewing key in this tab: the net amount always, and the gross
 // and the tax withheld when the payroll CSV gave them (`gross,tax`). The months and totals are sums
-// of those records.
+// of those records. Only a record of category payroll reads as a payslip; every other category reads
+// as a payment received, without gross or tax (founder, 2026-09-30; 13 A49).
 import { formatTokenAmount } from "@sotto/sdk/confidential/public";
 import type { DisclosurePayloadV1 } from "@sotto/sdk/disclosure";
 import { monthLabel } from "./books.ts";
@@ -68,9 +69,14 @@ export function netByMonth(slips: readonly Payslip[], months: readonly string[])
   }));
 }
 
-/** "September 2026" for a payroll line, the memo or "Payment" for a single payment. */
+/** A payroll record reads as a payslip; supplier, payouts, software and other as a payment. */
+export function isPayslip(slip: Pick<Payslip, "category">): boolean {
+  return slip.category === "payroll";
+}
+
+/** "September 2026" for a payroll line, the memo or "Payment" for anything else. */
 export function payslipTitle(slip: Payslip): string {
-  if (slip.kind === "payroll_line") return monthLabel(slip.month, true);
+  if (slip.kind === "payroll_line" && isPayslip(slip)) return monthLabel(slip.month, true);
   return slip.memo ?? "Payment";
 }
 

@@ -13,6 +13,7 @@ import { randomBytes } from "node:crypto";
 import {
   cpSync,
   copyFileSync,
+  createWriteStream,
   existsSync,
   mkdtempSync,
   readFileSync,
@@ -62,6 +63,24 @@ if (localnet) {
 const database = await createTestDatabase();
 // The fixed keypair wallet of the keys spec is a Sotto admin, so the spec approves its own org.
 await database.db.insert(admins).values({ wallet: E2E_ADMIN_WALLET });
+// Step 2.10: on localnet the web's and the worker's output also goes to .localnet/e2e-server.log
+// (git ignored, new each run), where the acceptance spec checks that no log line holds an amount or a
+// memo of its scenario (I-2).
+const serverLog = bootstrap
+  ? createWriteStream(new URL("../../.localnet/e2e-server.log", import.meta.url), { flags: "w" })
+  : null;
+function tee(child: ChildProcess): ChildProcess {
+  child.stdout?.on("data", (chunk: Buffer) => {
+    process.stdout.write(chunk);
+    serverLog?.write(chunk);
+  });
+  child.stderr?.on("data", (chunk: Buffer) => {
+    process.stderr.write(chunk);
+    serverLog?.write(chunk);
+  });
+  return child;
+}
+
 let worker: ChildProcess | null = null;
 let workerDir: string | null = null;
 if (bootstrap) {
@@ -69,18 +88,20 @@ if (bootstrap) {
   cpSync(join(WORKER, "src"), join(workerDir, "src"), { recursive: true });
   copyFileSync(join(WORKER, "package.json"), join(workerDir, "package.json"));
   symlinkSync(join(WORKER, "node_modules"), join(workerDir, "node_modules"), "dir");
-  worker = spawn(process.execPath, [join(workerDir, "src", "index.ts")], {
-    stdio: "inherit",
-    env: {
-      PATH: process.env.PATH ?? "",
-      RPC_URL: bootstrap.rpcUrl,
-      DATABASE_URL: database.url,
-      SAS_SIGNER_KEYPAIR: bootstrap.sas.signerKeypair,
-      SAS_CREDENTIAL_ADDRESS: bootstrap.sas.credential,
-      SAS_SCHEMA_ADDRESS: bootstrap.sas.schema,
-      LOCALNET_USDC_MINT: bootstrap.usdcMint,
-    },
-  });
+  worker = tee(
+    spawn(process.execPath, [join(workerDir, "src", "index.ts")], {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: {
+        PATH: process.env.PATH ?? "",
+        RPC_URL: bootstrap.rpcUrl,
+        DATABASE_URL: database.url,
+        SAS_SIGNER_KEYPAIR: bootstrap.sas.signerKeypair,
+        SAS_CREDENTIAL_ADDRESS: bootstrap.sas.credential,
+        SAS_SCHEMA_ADDRESS: bootstrap.sas.schema,
+        LOCALNET_USDC_MINT: bootstrap.usdcMint,
+      },
+    }),
+  );
 }
 
 // Step 2.9 (F-19): every /app page shows the proof program banner until the worker's first verdict
@@ -98,21 +119,23 @@ if (bootstrap) {
   }
 }
 
-const web = spawn(
-  process.execPath,
-  [join(WEB, "node_modules", "next", "dist", "bin", "next"), "start", "-p", String(PORT)],
-  {
-    cwd: WEB,
-    stdio: "inherit",
-    env: {
-      ...process.env,
-      NODE_ENV: "production",
-      DATABASE_URL: database.url,
-      SESSION_SECRET: randomBytes(32).toString("hex"),
-      NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,
-      ...chain,
+const web = tee(
+  spawn(
+    process.execPath,
+    [join(WEB, "node_modules", "next", "dist", "bin", "next"), "start", "-p", String(PORT)],
+    {
+      cwd: WEB,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: {
+        ...process.env,
+        NODE_ENV: "production",
+        DATABASE_URL: database.url,
+        SESSION_SECRET: randomBytes(32).toString("hex"),
+        NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,
+        ...chain,
+      },
     },
-  },
+  ),
 );
 
 let stopping = false;

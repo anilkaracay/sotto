@@ -7,6 +7,7 @@
 // key material nor an amount.
 import { createContext, useContext, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import { splitAmounts } from "../../../lib/amount-text.ts";
+import { splitWalletWords } from "../../../lib/client/wallet-words.ts";
 import styles from "./privacy.module.css";
 
 export const PRIVACY_STORAGE_KEY = "sotto.privacy-screen";
@@ -98,7 +99,19 @@ export function WithAmounts({ children }: { children: string | null | undefined 
   return (
     <>
       {splitAmounts(children).map((part, index) =>
-        part.amount ? <Amount key={index}>{part.text}</Amount> : part.text,
+        part.amount ? (
+          <Amount key={index}>{part.text}</Amount>
+        ) : (
+          splitWalletWords(part.text).map((piece, at) =>
+            piece.wallet ? (
+              <span key={`${index}-${at}`} className={styles.walletWords}>
+                {piece.text}
+              </span>
+            ) : (
+              piece.text
+            ),
+          )
+        ),
       )}
     </>
   );

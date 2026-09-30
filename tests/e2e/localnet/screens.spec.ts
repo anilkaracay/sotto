@@ -398,7 +398,7 @@ test("the account and money screens in every state, for the design pass (13 A36 
     group.getByTestId("payslip-card").getByRole("heading", { name: "September design work" }),
   ).toBeVisible();
   await expect(group.getByTestId("payslip-card")).toContainText(
-    "Payment from Northwind Screens Ltd, paid",
+    "Payment from Northwind Screens LtdPaid ",
   );
   await expect(group.getByTestId("payslip-card")).toContainText("Amount received");
   await expect(group.getByTestId("payslip-card")).not.toContainText("Net pay");

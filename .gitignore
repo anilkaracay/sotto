@@ -48,3 +48,6 @@ next-env.d.ts
 # Local files, never committed.
 apps/web/AGENTS.md
 apps/web/CLAUDE.md
+
+# Step 2.10: the acceptance spec copies its screenshots here after a pass (for the demo plan).
+.demo-shots/

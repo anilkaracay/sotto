@@ -10,10 +10,12 @@
 // the privacy screen on, no amount on the overview is readable. Across the run: no request, browser
 // console line or server log line holds an amount or memo of the scenario (I-2), no browser context
 // logs an error or warning, the health banner never shows, and every balance shown equals the chain
-// read here. A full page screenshot per step goes to this test's output directory (git ignored), and
-// the step times to the report. Only the wallets' SOL and USDC come from the local faucet, as a
+// read here. A full page screenshot per step goes to this test's output directory (git ignored) and,
+// once the run passes, to .demo-shots/<UTC time>/ (git ignored, never cleared by Playwright); the step
+// times go to the report. The memos hold a comma, so the payroll CSV quotes them (RFC 4180). Only the wallets' SOL and USDC come from the local faucet, as a
 // devnet faucet would give them. Runs in the localnet job of scripts/ci-local.sh, never on devnet.
-import { readFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import { decodeBusinessAttestation } from "@sotto/sdk/attestation";
 import { decryptTokenAccount } from "@sotto/sdk/confidential";
 import {
@@ -63,21 +65,21 @@ const PEOPLE = [
     team: "Design",
     net: 1_937_153n,
     tax: 484_288n,
-    memo: "Salary ref 7301",
+    memo: "Salary, ref 7301",
   },
   {
     name: "Idris Kaya",
     team: "Engineering",
     net: 2_604_179n,
     tax: 651_044n,
-    memo: "Salary ref 7302",
+    memo: "Salary, ref 7302",
   },
   {
     name: "Lena Novak",
     team: "Growth",
     net: 3_259_187n,
     tax: 814_796n,
-    memo: "Salary ref 7303",
+    memo: "Salary, ref 7303",
   },
 ].map((person, index) => ({
   ...person,
@@ -237,7 +239,36 @@ function expectCleanSoFar(step: string) {
   expect(watch.problems, `console errors or warnings by ${step}`).toEqual([]);
 }
 
+/** A CSV value as RFC 4180 writes it: in double quotes, with each quote doubled, when it needs them. */
+const csvValue = (value: string) =>
+  /[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+
+/** One RFC 4180 line (no line breaks in its values) split into its values. */
+function csvLine(line: string): string[] {
+  const values: string[] = [];
+  let value = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (quoted && char === '"' && line[i + 1] === '"') {
+      value += '"';
+      i++;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === "," && !quoted) {
+      values.push(value);
+      value = "";
+    } else {
+      value += char;
+    }
+  }
+  values.push(value);
+  return values;
+}
+
+const DEMO_SHOTS = fileURLToPath(new URL("../../../.demo-shots/", import.meta.url));
 const timings: { step: string; seconds: number }[] = [];
+const screenshots: string[] = [];
 
 async function step(name: string, screenshot: string, body: () => Promise<Page>) {
   await test.step(name, async () => {
@@ -247,6 +278,7 @@ async function step(name: string, screenshot: string, body: () => Promise<Page>)
     const path = test.info().outputPath(screenshot);
     await shown.screenshot({ path, fullPage: true });
     await test.info().attach(screenshot, { path, contentType: "image/png" });
+    screenshots.push(path);
     timings.push({ step: name, seconds: Math.round((Date.now() - started) / 100) / 10 });
     expectCleanSoFar(name);
   });
@@ -423,7 +455,7 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
       "wallet,amount,memo,name,team,country,gross,tax",
       ...PEOPLE.map(
         (entry, index) =>
-          `${people[index]?.address},${show(entry.net)},${entry.memo},,,,${show(entry.gross)},${show(entry.tax)}`,
+          `${people[index]?.address},${show(entry.net)},${csvValue(entry.memo)},,,,${show(entry.gross)},${show(entry.tax)}`,
       ),
     ];
     await page.getByLabel("Payroll CSV").setInputFiles({
@@ -533,8 +565,14 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
       );
       const lines = exported.slice(1).filter((line) => line !== "");
       expect(lines).toHaveLength(3);
-      expect(lines.map((line) => line.split(",")[4]).sort()).toEqual(
+      // The memos hold a comma: the export quotes them, so each row still has its nine values.
+      const records = lines.map(csvLine);
+      for (const record of records) expect(record).toHaveLength(9);
+      expect(records.map((record) => record[4]).sort()).toEqual(
         PEOPLE.map((entry) => show(entry.net)).sort(),
+      );
+      expect(records.map((record) => record[2]).sort()).toEqual(
+        PEOPLE.map((entry) => entry.memo).sort(),
       );
       await expect(daniel.getByTestId("export-result")).toContainText("Exported 3 rows to CSV");
       return daniel;
@@ -643,4 +681,14 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
     body: JSON.stringify({ steps: timings, totalSeconds: total }, null, 2),
     contentType: "application/json",
   });
+
+  // The run passed: the screenshots also go where Playwright never clears them, for the demo plan.
+  const stamp = new Date()
+    .toISOString()
+    .replace(/\.\d+Z$/, "Z")
+    .replaceAll(":", "-");
+  const shots = `${DEMO_SHOTS}${stamp}`;
+  await mkdir(shots, { recursive: true });
+  for (const path of screenshots) await copyFile(path, `${shots}/${path.split("/").pop()}`);
+  console.log(`acceptance scenario screenshots: ${shots}`);
 });

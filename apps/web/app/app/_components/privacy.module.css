@@ -1,0 +1,35 @@
+/* The privacy screen (design .m, .ct.priv .m): amounts blur to 7px at 60 percent opacity; the one under
+   the pointer or the focus shows. No motion when the reader asks for less. */
+.root {
+  display: contents;
+}
+.amount {
+  border-radius: 4px;
+  transition:
+    filter 0.45s ease,
+    opacity 0.45s ease;
+}
+.root[data-privacy="on"] .amount {
+  filter: blur(7px);
+  opacity: 0.6;
+}
+.root[data-privacy="on"] .amount:hover,
+.root[data-privacy="on"] .amount:focus-visible,
+.root[data-privacy="on"] button:hover .amount,
+.root[data-privacy="on"] button:focus-visible .amount {
+  filter: none;
+  opacity: 1;
+}
+.root[data-privacy="on"] .amount:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+/* An amount typed or prefilled in a field (data-amount): blurred until the field has the focus. */
+.root[data-privacy="on"] input[data-amount]:not(:focus) {
+  filter: blur(6px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .amount {
+    transition: none;
+  }
+}

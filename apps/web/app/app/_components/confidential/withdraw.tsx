@@ -34,6 +34,7 @@ import styles from "./cards.module.css";
 import { PausedNote } from "./paused-note.tsx";
 import { useConfidential } from "./context.tsx";
 import extra from "./confidential.module.css";
+import { Amount, WithAmounts } from "../privacy.tsx";
 
 const ROLE_WORDS: Record<TransferTransactionRole, string> = {
   proof: "verifying a proof",
@@ -242,9 +243,12 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
         Moves wUSDC from your confidential available balance to your public balance, then, if you
         choose, unwraps it to USDC. The withdrawn amount is public onchain; your remaining balance
         stays confidential.
-        {available !== null
-          ? ` Available now: ${formatTokenAmount(available, decimals)} wUSDC.`
-          : null}
+        {available !== null ? (
+          <>
+            {" "}
+            Available now: <Amount>{formatTokenAmount(available, decimals)} wUSDC</Amount>.
+          </>
+        ) : null}
       </p>
       <label className={extra.field} htmlFor={`${id}-amount`}>
         Amount of wUSDC
@@ -253,6 +257,7 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
             id={`${id}-amount`}
             className={extra.input}
             inputMode="decimal"
+            data-amount=""
             autoComplete="off"
             placeholder="0.00"
             value={amount}
@@ -284,7 +289,8 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
             disabled={!connected?.signer || outcome.busy !== null}
             onClick={() => void unwrapPublic(publicWusdc)}
           >
-            Unwrap {formatTokenAmount(publicWusdc, decimals)} public wUSDC
+            Unwrap{" "}
+            <Amount inControl>{formatTokenAmount(publicWusdc, decimals)} public wUSDC</Amount>
           </Button>
         ) : null}
       </div>
@@ -296,17 +302,17 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
       ) : null}
       {outcome.busy ? (
         <div className={extra.done} role="status" data-testid="withdraw-progress">
-          {outcome.busy}
+          <WithAmounts>{outcome.busy}</WithAmounts>
         </div>
       ) : null}
       {outcome.done ? (
         <div className={extra.done} role="status" data-testid="withdraw-done">
-          {outcome.done}
+          <WithAmounts>{outcome.done}</WithAmounts>
         </div>
       ) : null}
       {outcome.problem ? (
         <p className={styles.problem} role="alert" data-testid="withdraw-problem">
-          {outcome.problem}
+          <WithAmounts>{outcome.problem}</WithAmounts>
         </p>
       ) : null}
     </form>

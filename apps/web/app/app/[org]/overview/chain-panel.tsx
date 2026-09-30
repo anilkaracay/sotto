@@ -8,6 +8,7 @@ import { Button, Card, Chip, Table, Td, Th } from "@sotto/ui";
 import { useEffect, useState } from "react";
 import { chainAmountWords, CHAIN_TYPE_WORDS } from "../../../../lib/chain-activity.ts";
 import { callApi } from "../../../../lib/client/api.ts";
+import { WithAmounts } from "../../_components/privacy.tsx";
 import { formatDate, shortWallet } from "../../../../lib/format.ts";
 import type { ChainActivityView } from "../../../../lib/server/chain-activity.ts";
 import cards from "../../_components/confidential/cards.module.css";
@@ -133,7 +134,7 @@ export function ChainView({
                         className={amount.kind === "public" ? "num" : styles.muted}
                         data-testid="chain-amount"
                       >
-                        {amount.text}
+                        <WithAmounts>{amount.text}</WithAmounts>
                       </span>
                     )}
                   </Td>

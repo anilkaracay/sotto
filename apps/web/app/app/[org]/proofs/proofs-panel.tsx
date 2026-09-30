@@ -40,6 +40,7 @@ import { useSend } from "../../_components/confidential/use-send.ts";
 import { SkyArt } from "../../_components/sky-art.tsx";
 import { runProof, type ProofRunOutcome } from "./proof-run.ts";
 import styles from "./proofs.module.css";
+import { Amount, WithAmounts } from "../../_components/privacy.tsx";
 
 type Stage =
   | { kind: "idle" }
@@ -184,7 +185,7 @@ export function Builder(props: {
             aria-pressed={choice === index}
             onClick={() => setChoice(index)}
           >
-            {chip.label}
+            <Amount inControl>{chip.label}</Amount>
           </button>
         ))}
         <button
@@ -201,6 +202,7 @@ export function Builder(props: {
           <span>Custom amount (US dollars)</span>
           <input
             inputMode="decimal"
+            data-amount=""
             value={custom}
             placeholder="250000"
             onChange={(event) => setCustom(event.target.value)}
@@ -273,7 +275,9 @@ function CertificateCard({ orgName, stage }: { orgName: string; stage: Stage }) 
           <div className={styles.czph} role="status">
             <span className={styles.spin} aria-hidden="true" />
             <b>Generating a range proof</b>
-            <small data-testid="proof-progress">{stage.text}</small>
+            <small data-testid="proof-progress">
+              <WithAmounts>{stage.text}</WithAmounts>
+            </small>
           </div>
         ) : (
           <CertificateView
@@ -305,7 +309,7 @@ export function CertificateView(props: {
           <span>Proof of funds, {props.orgName}</span>
         </div>
         <p className={styles.certProblem} role="alert">
-          {outcome.message}
+          <WithAmounts>{outcome.message}</WithAmounts>
         </p>
       </div>
     );
@@ -351,7 +355,9 @@ export function CertificateView(props: {
       <dl className={styles.cf}>
         <div>
           <dt>Statement</dt>
-          <dd data-testid="certificate-statement">{statementWords(props.threshold)}</dd>
+          <dd data-testid="certificate-statement">
+            <WithAmounts>{statementWords(props.threshold)}</WithAmounts>
+          </dd>
         </div>
         <div>
           <dt>Shared with</dt>
@@ -492,7 +498,9 @@ export function IssuedProofsView(props: {
                 <Td>
                   <b>{proof.counterpartyLabel}</b>
                 </Td>
-                <Td>{statementWords(BigInt(proof.threshold))}</Td>
+                <Td>
+                  <WithAmounts>{statementWords(BigInt(proof.threshold))}</WithAmounts>
+                </Td>
                 <Td>
                   <Chip tone="green">{PROVEN}</Chip>
                 </Td>

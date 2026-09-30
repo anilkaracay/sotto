@@ -31,6 +31,7 @@ import { KeysCard, WalletCard } from "../../_components/confidential/keys.tsx";
 import { useKeySession } from "../../_components/key-session.tsx";
 import { ReadinessCell } from "./readiness-cell.tsx";
 import styles from "./recipients.module.css";
+import { Amount } from "../../_components/privacy.tsx";
 
 export type OwnerViewerKey = { publicKey: string; signature: string };
 
@@ -186,6 +187,7 @@ function AddRecipientCard({ viewerKey }: { viewerKey: OwnerViewerKey | null }) {
         onChange={(event) => set(name)(event.target.value)}
         aria-invalid={errors[name] ? true : undefined}
         disabled={(name === "amount" || name === "notes") && !viewerKey}
+        data-amount={name === "amount" ? "" : undefined}
       />
       {options.hint ? <small className={styles.hint}>{options.hint}</small> : null}
       {errors[name] ? <small className={styles.error}>{errors[name]}</small> : null}
@@ -341,7 +343,7 @@ function RecipientsTable({ recipients }: { recipients: RecipientView[] }) {
           <span className={styles.muted}>No amount</span>
         ) : (
           <span className="num" data-testid="default-amount">
-            {formatTokenAmount(BigInt(value.default_amount), DECIMALS)} USDC
+            <Amount>{formatTokenAmount(BigInt(value.default_amount), DECIMALS)} USDC</Amount>
           </span>
         )}
         {value.notes ? <small className={styles.muted}> · {value.notes}</small> : null}

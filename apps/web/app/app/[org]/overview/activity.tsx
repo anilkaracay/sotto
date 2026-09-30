@@ -28,6 +28,7 @@ import cards from "../../_components/confidential/cards.module.css";
 import { useConfidential } from "../../_components/confidential/context.tsx";
 import { useKeySession } from "../../_components/key-session.tsx";
 import styles from "./overview.module.css";
+import { Amount } from "../../_components/privacy.tsx";
 
 /** The design's table shows the latest few; the payments page lists them all. */
 const SHOWN = 8;
@@ -282,7 +283,9 @@ export function ActivityView({
                     <Td align="right">
                       {readable ? (
                         <span className="num" data-testid="activity-amount">
-                          {formatTokenAmount(BigInt(readable.amount), DECIMALS)} USDC
+                          <Amount>
+                            {formatTokenAmount(BigInt(readable.amount), DECIMALS)} USDC
+                          </Amount>
                         </span>
                       ) : secret === "unreadable" ? (
                         <span className={styles.muted}>Not readable with this key</span>

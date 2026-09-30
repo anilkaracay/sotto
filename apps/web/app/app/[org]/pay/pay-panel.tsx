@@ -49,6 +49,7 @@ import { useKeySession } from "../../_components/key-session.tsx";
 import { MonthBars } from "../../_components/month-bars.tsx";
 import { SkyArt } from "../../_components/sky-art.tsx";
 import styles from "./pay.module.css";
+import { Amount, WithAmounts } from "../../_components/privacy.tsx";
 
 const DECIMALS = 6;
 
@@ -100,8 +101,8 @@ export function ApplyPending() {
     <div className={styles.apply}>
       {pending > 0n ? (
         <p className={cards.lead}>
-          {formatTokenAmount(pending, network.decimals ?? DECIMALS)} wUSDC is in your pending
-          balance. Apply it to your available balance to use it.
+          <Amount>{formatTokenAmount(pending, network.decimals ?? DECIMALS)} wUSDC</Amount> is in
+          your pending balance. Apply it to your available balance to use it.
         </p>
       ) : null}
       {pending > 0n ? (
@@ -135,18 +136,18 @@ export function ApplyPending() {
       ) : null}
       {sending.busy ? (
         <div className={extra.done} role="status">
-          {sending.busy}
+          <WithAmounts>{sending.busy}</WithAmounts>
         </div>
       ) : null}
       {sending.done ? (
         <div className={extra.done} role="status" data-testid="apply-done">
-          {sending.done.text} Transaction{" "}
+          <WithAmounts>{sending.done.text}</WithAmounts> Transaction{" "}
           <span className="mono">{sending.done.signature.slice(0, 12)}…</span>
         </div>
       ) : null}
       {sending.problem ? (
         <p className={cards.problem} role="alert">
-          {sending.problem}
+          <WithAmounts>{sending.problem}</WithAmounts>
         </p>
       ) : null}
     </div>
@@ -361,20 +362,20 @@ export function PayGroupView({
               <span className={styles.paid}>Paid</span>
             </div>
             <b className={`${styles.sgb} num`} data-testid="payslip-net">
-              {formatUsdc(latest.net)}
+              <Amount>{formatUsdc(latest.net)}</Amount>
             </b>
             {latest.gross !== null && latest.tax !== null ? (
               <div className={styles.sg2}>
                 <div>
                   <small>Gross</small>
                   <b className="num" data-testid="payslip-gross">
-                    {formatUsdc(latest.gross)}
+                    <Amount>{formatUsdc(latest.gross)}</Amount>
                   </b>
                 </div>
                 <div>
                   <small>Tax withheld</small>
                   <b className="num" data-testid="payslip-tax">
-                    ({formatUsdc(latest.tax)})
+                    <Amount>({formatUsdc(latest.tax)})</Amount>
                   </b>
                 </div>
               </div>
@@ -441,7 +442,7 @@ export function PayGroupView({
                   </small>
                 </div>
                 <span className={`${styles.amount} num`} data-testid="received-amount">
-                  {formatUsdc(slip.net)}
+                  <Amount>{formatUsdc(slip.net)}</Amount>
                 </span>
                 <Button
                   variant="line"

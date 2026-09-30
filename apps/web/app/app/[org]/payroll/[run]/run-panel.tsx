@@ -47,6 +47,7 @@ import {
   type RunLine,
   type ViewerKeyRecord,
 } from "./payroll-run.ts";
+import { Amount, WithAmounts } from "../../../_components/privacy.tsx";
 
 type Progress = { busy: string | null; problem: string | null; done: string | null };
 const IDLE: Progress = { busy: null, problem: null, done: null };
@@ -360,7 +361,7 @@ export function RunView(props: {
           <>
             <div className={styles.big}>
               <b className="num" data-testid="run-total-amount">
-                {formatUsdc(total)}
+                <Amount>{formatUsdc(total)}</Amount>
               </b>
               <small>
                 {lines} {lines === 1 ? "line" : "lines"}, by team
@@ -377,7 +378,9 @@ export function RunView(props: {
                 const height = max > 0n ? Number((amount * 1000n) / max) / 10 : 0;
                 return (
                   <div key={team} className={styles.col}>
-                    <span className={styles.barValue}>{formatUsdc(amount)}</span>
+                    <span className={styles.barValue}>
+                      <Amount>{formatUsdc(amount)}</Amount>
+                    </span>
                     <div
                       className={`${styles.bar} ${index === 0 ? styles.on : ""}`}
                       style={{
@@ -456,17 +459,17 @@ export function RunView(props: {
         ) : null}
         {progress.busy ? (
           <p className={styles.status} role="status" data-testid="run-progress">
-            {progress.busy}
+            <WithAmounts>{progress.busy}</WithAmounts>
           </p>
         ) : null}
         {progress.done ? (
           <p className={styles.done} role="status" data-testid="run-done">
-            {progress.done}
+            <WithAmounts>{progress.done}</WithAmounts>
           </p>
         ) : null}
         {progress.problem ? (
           <p className={styles.problem} role="alert" data-testid="run-problem">
-            {progress.problem}
+            <WithAmounts>{progress.problem}</WithAmounts>
           </p>
         ) : null}
         {missingRecords.length > 0 && !settling && canAct ? (
@@ -527,7 +530,7 @@ export function RunView(props: {
                         <span className={styles.muted}>Not readable with this key</span>
                       ) : (
                         <span className="num" data-testid="line-amount">
-                          {formatUsdc(BigInt(secret.amount))}
+                          <Amount>{formatUsdc(BigInt(secret.amount))}</Amount>
                         </span>
                       )}
                     </Td>

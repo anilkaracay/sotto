@@ -5,6 +5,8 @@
 // switcher, which lists the user's own memberships and never impersonates anyone (09 section 1, 13 A9).
 // An owned organization links to its onboarding status and a recipient membership of an active org
 // to its pay page (step 1.10); Sotto admins also get the business review console. Signing out ends the tab's keys.
+// Step 2.9: the design's privacy screen toggle (F-15) and, on every /app page, the proof program
+// banner (F-19) or, when the network cannot be reached, "Network unreachable, retrying" (D-14).
 import { Chip, TopNav, type TopNavItem } from "@sotto/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -17,6 +19,7 @@ import type { NetworkView } from "../../../lib/server/network-view.ts";
 import { HealthBanner } from "./health-banner.tsx";
 import { useKeySession } from "./key-session.tsx";
 import { Logo } from "./logo.tsx";
+import { usePrivacy } from "./privacy.tsx";
 import styles from "./shell.module.css";
 
 const ROLE_LABEL: Record<MeView["memberships"][number]["role"], string> = {
@@ -40,6 +43,7 @@ export function AppShell({
 }) {
   const router = useRouter();
   const keys = useKeySession();
+  const privacy = usePrivacy();
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const menuId = useId();
@@ -77,6 +81,31 @@ export function AppShell({
           <TopNav items={nav} link={Link} />
         </div>
         <div className={styles.right}>
+          <button
+            type="button"
+            className={privacy.on ? `${styles.ib} ${styles.on}` : styles.ib}
+            aria-label="Privacy screen"
+            aria-pressed={privacy.on}
+            title="Blur amounts on this screen"
+            data-testid="privacy-toggle"
+            onClick={privacy.toggle}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z" />
+              <circle cx="12" cy="12" r="2.5" />
+            </svg>
+            <span>{privacy.on ? "Privacy screen on" : "Privacy screen"}</span>
+          </button>
           <Chip tone="blue" data-testid="network-label">
             {network.label}
           </Chip>

@@ -40,6 +40,7 @@ import { PausedNote } from "../../../_components/confidential/paused-note.tsx";
 import { useKeySession } from "../../../_components/key-session.tsx";
 import styles from "./payments.module.css";
 import { runPayment, type PaymentRunOutcome, type ViewerKeyRecord } from "./payment-run.ts";
+import { Amount, WithAmounts } from "../../../_components/privacy.tsx";
 
 export type PayableRecipient = {
   id: string;
@@ -202,17 +203,17 @@ function Outcome({ progress }: { progress: Progress }) {
     <>
       {progress.busy ? (
         <p className={styles.status} role="status" data-testid="payment-progress">
-          {progress.busy}
+          <WithAmounts>{progress.busy}</WithAmounts>
         </p>
       ) : null}
       {progress.done ? (
         <p className={styles.done} role="status" data-testid="payment-done">
-          {progress.done}
+          <WithAmounts>{progress.done}</WithAmounts>
         </p>
       ) : null}
       {progress.problem ? (
         <p className={cards.problem} role="alert" data-testid="payment-problem">
-          {progress.problem}
+          <WithAmounts>{progress.problem}</WithAmounts>
         </p>
       ) : null}
     </>
@@ -376,6 +377,7 @@ export function PayCard({
             id={`${id}-amount`}
             className={styles.control}
             inputMode="decimal"
+            data-amount=""
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
             aria-invalid={errors.amount ? true : undefined}
@@ -470,7 +472,7 @@ function PaymentsTable({
       return <span className={styles.muted}>Not readable with this key</span>;
     return (
       <span className="num" data-testid="payment-amount">
-        {formatTokenAmount(BigInt(value.amount), DECIMALS)} USDC
+        <Amount>{formatTokenAmount(BigInt(value.amount), DECIMALS)} USDC</Amount>
       </span>
     );
   };

@@ -37,6 +37,7 @@ import extra from "./confidential.module.css";
 import { useConfidential, type SignProblem } from "./context.tsx";
 import { PausedNote } from "./paused-note.tsx";
 import { StepError, useSend, type SendState } from "./use-send.ts";
+import { Amount, WithAmounts } from "../privacy.tsx";
 
 export type RecordedAccount = { address: string; applyFlagged: boolean };
 
@@ -58,12 +59,12 @@ function Outcome({ state, network }: { state: SendState; network: string }) {
     <>
       {state.busy ? (
         <div className={extra.done} role="status">
-          {state.busy}
+          <WithAmounts>{state.busy}</WithAmounts>
         </div>
       ) : null}
       {state.done ? (
         <div className={extra.done} role="status" data-testid="step-done">
-          {state.done.text} Transaction{" "}
+          <WithAmounts>{state.done.text}</WithAmounts> Transaction{" "}
           {network === "devnet" ? (
             <a
               className={styles.link}
@@ -80,7 +81,7 @@ function Outcome({ state, network }: { state: SendState; network: string }) {
       ) : null}
       {state.problem ? (
         <p className={styles.problem} role="alert">
-          {state.problem}
+          <WithAmounts>{state.problem}</WithAmounts>
         </p>
       ) : null}
     </>
@@ -534,6 +535,7 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
                 id={inputId}
                 className={extra.input}
                 inputMode="decimal"
+                data-amount=""
                 autoComplete="off"
                 placeholder="0.00"
                 value={text}
@@ -562,7 +564,8 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
             </Button>
             {publicWusdc ? (
               <Button variant="line" disabled={!idle} onClick={depositPublic}>
-                Deposit {formatTokenAmount(publicWusdc, decimals)} public wUSDC
+                Deposit{" "}
+                <Amount inControl>{formatTokenAmount(publicWusdc, decimals)} public wUSDC</Amount>
               </Button>
             ) : null}
             {decrypted && decrypted.pending > 0n && !promptNeeded ? (

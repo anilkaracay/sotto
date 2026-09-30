@@ -28,6 +28,8 @@ export async function addTestWallet(page: Page, keypair?: number[]): Promise<voi
 /** An owner's org pages: the overview, where /app sends the owner of an active org (step 1.10). */
 export const OVERVIEW_URL = /\/app\/([0-9a-f-]{36})\/overview$/;
 export const SETUP_URL = /\/app\/([0-9a-f-]{36})\/setup$/;
+/** Any app page but the sign in screen: where the E2E admin lands, whatever it owns (step 2.12). */
+export const ANY_APP_PAGE = /\/app(?!\/sign-in)(\/.*)?$/;
 
 /**
  * Signs in with the injected test wallet and returns its address. Sign in opens /app, which sends a
@@ -102,4 +104,17 @@ export async function expectAmountsWrapped(page: Page, where: string): Promise<v
   await amount.focus();
   await expect.poll(filter).toBe("none");
   await amount.blur();
+}
+
+/**
+ * The E2E admin approves one organization by its legal name, on a page signed in as the admin. The
+ * localnet specs run in parallel, so other organizations may be waiting for review at the same time;
+ * each spec approves only its own (step 2.12).
+ */
+export async function approveOrg(admin: Page, legalName: string): Promise<void> {
+  await admin.goto("/app/admin");
+  const row = admin.getByRole("row").filter({ hasText: legalName });
+  await row.getByRole("button", { name: "Approve" }).click();
+  await row.getByRole("button", { name: "Confirm approve" }).click();
+  await expect(admin.getByRole("row").filter({ hasText: legalName })).toHaveCount(0);
 }

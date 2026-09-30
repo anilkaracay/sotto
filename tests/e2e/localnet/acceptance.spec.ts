@@ -38,6 +38,8 @@ import { expect, test, type Browser, type BrowserContext, type Page } from "@pla
 import { e2eKeypair, seededKeypair } from "../fixtures.ts";
 import {
   addTestWallet,
+  ANY_APP_PAGE,
+  approveOrg,
   clientAddress,
   expectAmountsWrapped,
   openSetup,
@@ -270,15 +272,32 @@ const DEMO_SHOTS = fileURLToPath(new URL("../../../.demo-shots/", import.meta.ur
 const timings: { step: string; seconds: number }[] = [];
 const screenshots: string[] = [];
 
+/**
+ * A full page screenshot once the page's finite animations ended (the month bars grow for about a
+ * second; a picture taken earlier shows them, and their month tags, still squashed).
+ */
+async function shoot(page: Page, name: string) {
+  await page.mouse.move(0, 0);
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every(
+        (animation) =>
+          animation.playState !== "running" ||
+          animation.effect?.getTiming().iterations === Infinity,
+      ),
+  );
+  const path = test.info().outputPath(name);
+  await page.screenshot({ path, fullPage: true });
+  await test.info().attach(name, { path, contentType: "image/png" });
+  screenshots.push(path);
+}
+
 async function step(name: string, screenshot: string, body: () => Promise<Page>) {
   await test.step(name, async () => {
     const started = Date.now();
     const shown = await body();
-    await shown.mouse.move(0, 0);
-    const path = test.info().outputPath(screenshot);
-    await shown.screenshot({ path, fullPage: true });
-    await test.info().attach(screenshot, { path, contentType: "image/png" });
-    screenshots.push(path);
+    await shoot(shown, screenshot);
     timings.push({ step: name, seconds: Math.round((Date.now() - started) / 100) / 10 });
     expectCleanSoFar(name);
   });
@@ -329,16 +348,8 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
       await expect(page.getByTestId("org-status")).toHaveText("In review");
       const admin = await newPage(browser, "admin");
       // The E2E admin wallet may own an organization of another spec: any app page after sign in.
-      await signIn(admin, e2eKeypair(), /\/app(?!\/sign-in)(\/.*)?$/);
-      await admin.goto("/app/admin");
-      // Specs run in parallel and another spec's admin may approve this organization first.
-      const row = admin.getByRole("row").filter({ hasText: LEGAL_NAME });
-      const approve = row.getByRole("button", { name: "Approve" });
-      if (await approve.isVisible()) {
-        await approve.click();
-        await row.getByRole("button", { name: "Confirm approve" }).click();
-      }
-      await expect(admin.getByRole("row").filter({ hasText: LEGAL_NAME })).toHaveCount(0);
+      await signIn(admin, e2eKeypair(), ANY_APP_PAGE);
+      await approveOrg(admin, LEGAL_NAME);
       await admin.context().close();
       // The worker issues the attestation; the status page shows its address once it is onchain.
       await expect(async () => {
@@ -640,7 +651,26 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
     async () => {
       await go(page, "Overview");
       await expect(page).toHaveURL(OVERVIEW_URL);
-      await expectBalancesFromChain(page, owner);
+      const chain = await expectBalancesFromChain(page, owner);
+      // AC-05.2: the balance growth card, from today's snapshot (written at the first unlock on the
+      // overview, after the run) and the public flows since: one bar, this month's balance.
+      const growth = page.getByTestId("balance-growth");
+      await expect(growth.getByTestId("growth-bar")).toHaveCount(1);
+      await expect(growth.getByTestId("growth-bar-none")).toHaveCount(0);
+      await expect(growth).toContainText(`${show(chain.available + chain.pending)} wUSDC`);
+      const today = new Date();
+      const month = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ")[
+        today.getUTCMonth()
+      ];
+      await expect(growth.getByTestId("growth-starts")).toHaveText(
+        `Balance history starts on ${today.getUTCDate()} ${month} ${today.getUTCFullYear()}`,
+      );
+      // At most one snapshot a day, though the overview was unlocked twice.
+      const snapshots = (await (
+        await page.request.get(`/api/orgs/${orgId}/disclosures?kind=balance_snapshot`)
+      ).json()) as { items: unknown[] };
+      expect(snapshots.items).toHaveLength(1);
+      await shoot(page, "08a-balance-growth.png");
       await privacyScreenOn(page);
       await expectAmountsWrapped(page, "overview");
       await page.mouse.move(0, 0);

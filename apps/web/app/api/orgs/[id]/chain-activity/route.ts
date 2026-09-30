@@ -1,9 +1,11 @@
 // GET /api/orgs/:id/chain-activity?limit=10 (owner, active org; AC-05.3; step 2.5): what the chain shows
-// about the org's accounts, newest first, from chain_activity only.
+// about the org's accounts, newest first, from chain_activity only. Since step 2.12 (AC-05.2)
+// ?flows=public&since=YYYY-MM-DD returns only deposits and withdrawals since that day, oldest first.
 import { apiRoute } from "../../../../../lib/server/api-route.ts";
 import {
   chainActivityQuerySchema,
   listChainActivity,
+  listPublicFlows,
 } from "../../../../../lib/server/chain-activity.ts";
 import { apiErrors } from "../../../../../lib/server/errors.ts";
 
@@ -23,9 +25,13 @@ export const GET = apiRoute(
         `Invalid request: ${issue?.path.join(".") || "query"}: ${issue?.message ?? "invalid"}`,
       );
     }
-    return Response.json(
-      { activity: await listChainActivity(database(), session, orgId, query.data.limit) },
-      { headers: { "cache-control": "no-store" } },
-    );
+    if (query.data.flows === "public" && !query.data.since) {
+      throw apiErrors.invalidRequest("Invalid request: since: required with flows=public");
+    }
+    const activity =
+      query.data.flows === "public" && query.data.since
+        ? await listPublicFlows(database(), session, orgId, query.data.since)
+        : await listChainActivity(database(), session, orgId, query.data.limit);
+    return Response.json({ activity }, { headers: { "cache-control": "no-store" } });
   },
 );

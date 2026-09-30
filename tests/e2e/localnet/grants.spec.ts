@@ -44,6 +44,8 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 import { e2eKeypair, seededKeypair } from "../fixtures.ts";
 import {
   addTestWallet,
+  ANY_APP_PAGE,
+  approveOrg,
   clientAddress,
   expectAmountsWrapped,
   openSetup,
@@ -203,11 +205,8 @@ test.describe.serial("viewing grants on localnet", () => {
     await page.getByRole("button", { name: "Send for review" }).click();
     await expect(page.getByTestId("org-status")).toHaveText("In review");
     const admin = await newPage(browser);
-    await signIn(admin, e2eKeypair());
-    await admin.goto("/app/admin");
-    await admin.getByRole("button", { name: "Approve" }).click();
-    await admin.getByRole("button", { name: "Confirm approve" }).click();
-    await expect(admin.getByText("No organization is waiting for review.")).toBeVisible();
+    await signIn(admin, e2eKeypair(), ANY_APP_PAGE);
+    await approveOrg(admin, "Grants Test Ltd");
     await admin.context().close();
     await page.goto("/app");
     await expect(page).toHaveURL(OVERVIEW_URL);

@@ -85,6 +85,8 @@ export const disclosureQuerySchema = z
     kind: z.enum(DISCLOSURE_KINDS).optional(),
     from: z.iso.date().optional(),
     to: z.iso.date().optional(),
+    /** Step 2.12: fewer than the 1000 items a page returns at most (whether an older item exists). */
+    limit: z.coerce.number().int().min(1).max(1000).optional(),
   })
   .strict();
 
@@ -99,7 +101,67 @@ export const disclosureErrors = {
       "An item is for a viewer or a kind this organization does not share with",
     ),
   exists: () => new ApiError(409, "disclosure_exists", "An item with this id already exists"),
+  snapshotExists: () =>
+    new ApiError(409, "snapshot_exists", "Today's balance snapshot is already saved"),
+  snapshotDate: () =>
+    new ApiError(
+      422,
+      "snapshot_date",
+      "A balance snapshot names today's date in UTC, give or take a day for the device's clock",
+    ),
 };
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const DAY_MS = 86_400_000;
+
+/**
+ * Step 2.12 (AC-05.2, 07 section 6): a balance snapshot is the owner's own item only (grant holders
+ * do not receive snapshots in the hackathon build, D-27), names a UTC day within one day of the
+ * server's (a device's clock may be off around midnight), and there is at most one per day.
+ */
+async function checkSnapshots(
+  db: Database,
+  orgId: string,
+  ownerUserId: string,
+  items: z.infer<typeof disclosurePostSchema>["items"],
+  now: Date,
+): Promise<void> {
+  const snapshots = items.filter((item) => item.kind === "balance_snapshot");
+  if (snapshots.length === 0) return;
+  const today = Date.parse(`${now.toISOString().slice(0, 10)}T00:00:00.000Z`);
+  for (const item of snapshots) {
+    if (item.grantId !== null || item.viewerUserId !== ownerUserId) {
+      throw disclosureErrors.notAllowed();
+    }
+    const day = ISO_DATE.test(item.subject) ? Date.parse(`${item.subject}T00:00:00.000Z`) : NaN;
+    if (!Number.isFinite(day) || Math.abs(day - today) > DAY_MS) {
+      throw disclosureErrors.snapshotDate();
+    }
+  }
+  const days = snapshots.map((item) => item.subject);
+  if (new Set(days).size !== days.length) throw disclosureErrors.snapshotExists();
+  const [found] = await db
+    .select({ id: disclosures.id })
+    .from(disclosures)
+    .where(
+      and(
+        eq(disclosures.orgId, orgId),
+        eq(disclosures.viewerUserId, ownerUserId),
+        eq(disclosures.kind, "balance_snapshot"),
+        isNull(disclosures.grantId),
+        inArray(disclosures.subject, days),
+      ),
+    )
+    .limit(1);
+  if (found) throw disclosureErrors.snapshotExists();
+}
+
+/** The Postgres error of a unique index, here the one snapshot per day index (a race of two tabs). */
+const isUniqueViolation = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  ((error as { code?: unknown }).code === "23505" ||
+    isUniqueViolation((error as { cause?: unknown }).cause));
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -193,6 +255,8 @@ export async function createDisclosures(
     }
   }
 
+  await checkSnapshots(db, orgId, owner.userId, input.items, now);
+
   // Every viewer must be allowed: the owner, a current recipient for the recipient kinds, or an active
   // grant that covers the kind.
   const grantIds = [
@@ -282,52 +346,57 @@ export async function createDisclosures(
     input.items.every((item) => item.grantId !== null) &&
     new Set(input.items.map((item) => item.grantId)).size === 1;
 
-  return db.transaction(async (tx) => {
-    const [stored] = await tx
-      .insert(manifests)
-      .values({
-        orgId,
-        signerWallet: owner.wallet,
-        manifest,
-        signature: Buffer.from(input.signature, "base64"),
-      })
-      .returning({ id: manifests.id });
-    if (!stored) throw apiErrors.internal();
-    const inserted = await tx
-      .insert(disclosures)
-      .values(
-        input.items.map((item) => ({
-          id: item.id,
+  return db
+    .transaction(async (tx) => {
+      const [stored] = await tx
+        .insert(manifests)
+        .values({
           orgId,
-          grantId: item.grantId,
-          viewerUserId: item.viewerUserId,
-          kind: item.kind,
-          subject: item.subject,
-          ciphertext: Buffer.from(ciphertexts.get(item.id) ?? new Uint8Array()),
+          signerWallet: owner.wallet,
+          manifest,
+          signature: Buffer.from(input.signature, "base64"),
+        })
+        .returning({ id: manifests.id });
+      if (!stored) throw apiErrors.internal();
+      const inserted = await tx
+        .insert(disclosures)
+        .values(
+          input.items.map((item) => ({
+            id: item.id,
+            orgId,
+            grantId: item.grantId,
+            viewerUserId: item.viewerUserId,
+            kind: item.kind,
+            subject: item.subject,
+            ciphertext: Buffer.from(ciphertexts.get(item.id) ?? new Uint8Array()),
+            manifestId: stored.id,
+          })),
+        )
+        .onConflictDoNothing({ target: disclosures.id })
+        .returning({ id: disclosures.id });
+      if (inserted.length !== input.items.length) throw disclosureErrors.exists();
+      // AC-14.1: the batch, metadata only (counts and kinds, never a payload).
+      const firstGrant = input.items[0]?.grantId ?? null;
+      await insertAccessEvent(tx, {
+        orgId,
+        actorUserId: session.userId,
+        action: backfill ? "grant_backfilled" : "disclosure_batch_created",
+        subjectType: backfill ? "grant" : "manifest",
+        subjectId: backfill && firstGrant ? firstGrant : stored.id,
+        metadata: {
           manifestId: stored.id,
-        })),
-      )
-      .onConflictDoNothing({ target: disclosures.id })
-      .returning({ id: disclosures.id });
-    if (inserted.length !== input.items.length) throw disclosureErrors.exists();
-    // AC-14.1: the batch, metadata only (counts and kinds, never a payload).
-    const firstGrant = input.items[0]?.grantId ?? null;
-    await insertAccessEvent(tx, {
-      orgId,
-      actorUserId: session.userId,
-      action: backfill ? "grant_backfilled" : "disclosure_batch_created",
-      subjectType: backfill ? "grant" : "manifest",
-      subjectId: backfill && firstGrant ? firstGrant : stored.id,
-      metadata: {
-        manifestId: stored.id,
-        items: inserted.length,
-        kinds: [...new Set(input.items.map((item) => item.kind))],
-        viewers: new Set(input.items.map((item) => item.viewerUserId)).size,
-        grants: grantIds.length,
-      },
+          items: inserted.length,
+          kinds: [...new Set(input.items.map((item) => item.kind))],
+          viewers: new Set(input.items.map((item) => item.viewerUserId)).size,
+          grants: grantIds.length,
+        },
+      });
+      return { manifestId: stored.id, count: inserted.length };
+    })
+    .catch((error: unknown) => {
+      if (isUniqueViolation(error)) throw disclosureErrors.snapshotExists();
+      throw error;
     });
-    return { manifestId: stored.id, count: inserted.length };
-  });
 }
 
 /**
@@ -391,7 +460,7 @@ export async function listDisclosures(
       ),
     )
     .orderBy(asc(disclosures.createdAt))
-    .limit(1000);
+    .limit(query.limit ?? 1000);
   const rows = found.map((row) => row.disclosure);
   // X-24: a viewer's successful fetch is the last use of their active grants in this org.
   await db

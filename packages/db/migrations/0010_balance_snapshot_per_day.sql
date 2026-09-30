@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "disclosures_one_balance_snapshot_per_day" ON "disclosures" USING btree ("org_id","viewer_user_id","subject") WHERE "disclosures"."kind" = 'balance_snapshot' and "disclosures"."grant_id" is null;

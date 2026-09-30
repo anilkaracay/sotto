@@ -54,7 +54,7 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 
 ### F-05 Balances and treasury
 - AC-05.1 Overview shows: confidential available balance (owner only, decrypted locally), public wUSDC, public USDC, pending.
-- AC-05.2 Balance history chart is computed in the browser from the owner's self disclosures plus public deposit and withdraw amounts (see `07-SELECTIVE-DISCLOSURE.md` section 6). No server side balance series exists in plaintext. Scheduled for Phase 2 (`12-MILESTONES.md`).
+- AC-05.2 Balance history chart is computed in the browser from the owner's self disclosures plus public deposit and withdraw amounts (see `07-SELECTIVE-DISCLOSURE.md` section 6). No server side balance series exists in plaintext. Built in step 2.12: one bar per month over the last six months from the owner's daily balance snapshots (at most one per UTC day, written when the owner unlocks on the overview, sealed to the owner only), adjusted by the public deposits and withdrawals after the month's last snapshot; never extrapolated; a shorter history shows only its months with the day it starts (09 section 3).
 - AC-05.3 "What the chain shows" panel lists the org's recent onchain activity from public data only: addresses, times, instruction types, and "sealed" for confidential amounts.
 
 ### F-06 Single confidential payment

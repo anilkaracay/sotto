@@ -455,6 +455,48 @@ describe("accountant books (F-11)", () => {
     expect((await read(accountant)).status).toBe(403);
   });
 
+  it("AC-05.2 gives the owner the public deposits and withdrawals since a day, oldest first, for the balance history", async () => {
+    const { owner, orgId, grantTo } = await setUp();
+    const row = (signature: string, at: string, type: "deposit" | "withdraw", amount: bigint) => ({
+      orgId,
+      tokenAccount: ORG_ACCOUNT,
+      signature,
+      slot: BigInt(Date.parse(at) / 1000),
+      blockTime: new Date(at),
+      instructionIndex: 0,
+      instructionType: type,
+      publicAmountBaseUnits: amount,
+    });
+    const early = randomSignature();
+    const late = randomSignature();
+    const old = randomSignature();
+    await test.db
+      .insert(chainActivity)
+      .values([
+        row(late, "2026-09-20T10:00:00.000Z", "withdraw", 3_000_000n),
+        row(early, "2026-09-02T10:00:00.000Z", "deposit", 20_000_000n),
+        row(old, "2026-02-01T10:00:00.000Z", "deposit", 1_000_000n),
+      ]);
+    const read = (user: KeyUser, query: string) =>
+      readChain(
+        jsonRequest(`/api/orgs/${orgId}/chain-activity${query}`, "GET", user.cookie),
+        params({ id: orgId }),
+      );
+    const { activity } = (await (await read(owner, "?flows=public&since=2026-09-01")).json()) as {
+      activity: { signature: string; type: string; publicAmount: string; blockTime: string }[];
+    };
+    // Only deposits and withdrawals since the day (the setUp's transfers are left out), oldest first.
+    expect(activity.map((entry) => [entry.signature, entry.type, entry.publicAmount])).toEqual([
+      [early, "deposit", "20000000"],
+      [late, "withdraw", "3000000"],
+    ]);
+    expect(activity[0]?.blockTime).toBe("2026-09-02T10:00:00.000Z");
+    expect((await read(owner, "?flows=public")).status).toBe(400);
+    expect((await read(owner, "?flows=all&since=2026-09-01")).status).toBe(400);
+    const { accountant } = await grantTo({ scope: "all_payments" });
+    expect((await read(accountant, "?flows=public&since=2026-09-01")).status).toBe(403);
+  });
+
   it("lists payroll lines with single payments on the overview, with who can read each amount", async () => {
     const { owner, orgId, person, all, store, grantTo } = await setUp();
     const every = await grantTo({ scope: "all_payments" });

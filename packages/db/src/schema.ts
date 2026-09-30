@@ -607,6 +607,11 @@ export const disclosures = pgTable(
   (t) => [
     index("disclosures_viewer_org_idx").on(t.viewerUserId, t.orgId),
     index("disclosures_grant_id_idx").on(t.grantId),
+    // Step 2.12 (AC-05.2, 07 section 6): at most one balance snapshot of the owner per UTC day, the
+    // day being the snapshot's subject.
+    uniqueIndex("disclosures_one_balance_snapshot_per_day")
+      .on(t.orgId, t.viewerUserId, t.subject)
+      .where(sql`${t.kind} = 'balance_snapshot' and ${t.grantId} is null`),
   ],
 );
 

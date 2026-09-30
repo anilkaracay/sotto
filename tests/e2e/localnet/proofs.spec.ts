@@ -31,7 +31,14 @@ import {
 } from "@solana/kit";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { e2eKeypair, seededKeypair } from "../fixtures.ts";
-import { clientAddress, expectAmountsWrapped, OVERVIEW_URL, signIn } from "../helpers.ts";
+import {
+  ANY_APP_PAGE,
+  approveOrg,
+  clientAddress,
+  expectAmountsWrapped,
+  OVERVIEW_URL,
+  signIn,
+} from "../helpers.ts";
 
 const bootstrap = readLocalnetBootstrap();
 const rpc = createRetryingRpc(bootstrap.rpcUrl);
@@ -128,11 +135,8 @@ test.describe.serial("proof of funds on localnet", () => {
     await page.getByRole("button", { name: "Send for review" }).click();
     await expect(page.getByTestId("org-status")).toHaveText("In review");
     const admin = await newPage(browser);
-    await signIn(admin, e2eKeypair());
-    await admin.goto("/app/admin");
-    await admin.getByRole("button", { name: "Approve" }).click();
-    await admin.getByRole("button", { name: "Confirm approve" }).click();
-    await expect(admin.getByText("No organization is waiting for review.")).toBeVisible();
+    await signIn(admin, e2eKeypair(), ANY_APP_PAGE);
+    await approveOrg(admin, "Proofs Test Ltd");
     await admin.context().close();
 
     await page.goto("/app");

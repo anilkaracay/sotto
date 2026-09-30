@@ -4691,6 +4691,11 @@ body:has(> main.theme-landing) {
   text-align: left;
   cursor: pointer;
 }
+@media (max-width: 720px) {
+  .theme-landing .fconsent {
+    min-height: 40px;
+  }
+}
 .theme-landing .fconsent input {
   width: 16px;
   height: 16px;

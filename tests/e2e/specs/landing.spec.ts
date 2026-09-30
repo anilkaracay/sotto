@@ -70,8 +70,9 @@ async function phoneAudit(page: Page, width: number) {
       const ownText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim());
       const box = el.getBoundingClientRect();
       if (ownText && parseFloat(getComputedStyle(el).fontSize) < 12) small.push(label);
-      // Layout size, not the painted box: the hero card eases in with a transform.
-      const target = el as HTMLElement;
+      // Layout size, not the painted box: the hero card eases in with a transform. A box inside
+      // its label is tapped through the label.
+      const target = (el.matches("label input") ? el.closest("label") : el) as HTMLElement;
       if (el.matches("a, button, input") && (target.offsetWidth < 40 || target.offsetHeight < 40)) {
         taps.push(
           `${label || el.getAttribute("aria-label")} ${target.offsetWidth}x${target.offsetHeight}`,

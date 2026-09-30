@@ -4,13 +4,16 @@
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  height: 190px;
+  height: 250px;
   margin-top: 6px;
 }
+/* The top padding is the lit bar's tag room: a bar of the highest month reaches the padding's edge and
+   its tag sits in it, inside the chart (13 A54). */
 .gbars {
   display: grid;
   gap: 14px;
   align-items: end;
+  padding-top: 72px;
   background-image: repeating-linear-gradient(
     180deg,
     rgba(255, 255, 255, 0.06) 0 1px,
@@ -58,6 +61,16 @@
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   transform: translateX(-50%);
   white-space: nowrap;
+}
+/* On the first and last columns the tag keeps to the bar's outer edge, inside the card. */
+.gtag.start {
+  left: 0;
+  transform: none;
+}
+.gtag.end {
+  right: 0;
+  left: auto;
+  transform: none;
 }
 .gtag small {
   font-size: 11.5px;

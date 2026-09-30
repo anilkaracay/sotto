@@ -2,14 +2,17 @@
 // active org. Step 1.7 built its balance cards (AC-05.1): the confidential available and pending
 // balances, decrypted in this tab for the owner only after an explicit unlock, and the public wUSDC
 // and USDC balances. Step 1.10 adds the welcome, the confidential account card, the recent activity
-// and withdraw (F-09). Only for the owner of an active org (AC-02.2).
+// and withdraw (F-09). Step 2.12 the balance growth card, with the owner's viewing key for the daily
+// balance snapshot (AC-05.2). Only for the owner of an active org (AC-02.2).
 import { PageHeader } from "@sotto/ui";
 import { notFound, redirect } from "next/navigation";
 import { ownerNav } from "../../../../lib/org-nav.ts";
 import { currentSession } from "../../../../lib/server/current-session.ts";
 import { getDb } from "../../../../lib/server/db.ts";
+import { ApiError } from "../../../../lib/server/errors.ts";
 import { loadMe } from "../../../../lib/server/me.ts";
 import { loadNetworkView } from "../../../../lib/server/network-view.ts";
+import { readViewerKey } from "../../../../lib/server/viewer-keys.ts";
 import { AppShell } from "../../_components/app-shell.tsx";
 import { OverviewPanel } from "./overview-panel.tsx";
 
@@ -19,11 +22,19 @@ export default async function OverviewPage({ params }: { params: Promise<{ org: 
   const session = await currentSession();
   if (!session) redirect("/app/sign-in");
   const { org: orgId } = await params;
-  const me = await loadMe(getDb(), session);
+  const db = getDb();
+  const me = await loadMe(db, session);
   const owned = me.memberships.find((m) => m.orgId === orgId && m.role === "owner");
   if (!owned) notFound();
   if (owned.orgStatus !== "active") redirect("/app/onboarding");
-  const network = await loadNetworkView();
+  const [network, ownerKey] = await Promise.all([
+    loadNetworkView(),
+    // Step 2.12: the owner's viewing key for the daily balance snapshot; none before registration.
+    readViewerKey(db, session, session.userId).catch((error: unknown) => {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
+    }),
+  ]);
   return (
     <AppShell me={me} network={network} nav={ownerNav(orgId, "overview")}>
       {network.available ? (
@@ -34,6 +45,16 @@ export default async function OverviewPage({ params }: { params: Promise<{ org: 
           orgName={owned.orgName}
           displayName={me.user.displayName}
           network={network}
+          ownerKey={
+            ownerKey
+              ? {
+                  userId: ownerKey.userId,
+                  wallet: ownerKey.wallet,
+                  publicKey: ownerKey.publicKey,
+                  signature: ownerKey.signature,
+                }
+              : null
+          }
         />
       ) : (
         <>

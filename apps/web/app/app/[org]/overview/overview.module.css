@@ -222,3 +222,45 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Balance growth (step 2.12, AC-05.2): the design's dark card (.dkc) with its month bars. */
+.darkHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.darkHead h3 {
+  font-size: 22px;
+  font-weight: 450;
+  letter-spacing: -0.03em;
+}
+.darkChip {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 12.5px;
+  color: #c7d0de;
+}
+.darkEmpty {
+  padding: 18px 0 8px;
+  font-size: 13.5px;
+  color: #a9b4c7;
+}
+.darkNote {
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: #a9b4c7;
+}
+.darkRetry {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #ffffff;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

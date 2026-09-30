@@ -31,6 +31,7 @@ import {
   type CryptoWorkerClient,
 } from "../../../../lib/crypto-worker/client.ts";
 import styles from "./cards.module.css";
+import { PausedNote } from "./paused-note.tsx";
 import { useConfidential } from "./context.tsx";
 import extra from "./confidential.module.css";
 
@@ -43,7 +44,7 @@ const ROLE_WORDS: Record<TransferTransactionRole, string> = {
 type Outcome = { busy: string | null; problem: string | null; done: string | null };
 
 export function WithdrawForm({ onDone }: { onDone?: () => void }) {
-  const { network, connected, vault, refresh, data } = useConfidential();
+  const { network, connected, vault, refresh, data, blocked } = useConfidential();
   const id = useId();
   const [amount, setAmount] = useState("");
   const [unwrap, setUnwrap] = useState(true);
@@ -52,7 +53,8 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
   const decimals = network.decimals ?? 6;
   const available = data.confidential.kind === "decrypted" ? data.confidential.available : null;
   const publicWusdc = data.wusdc?.status === "present" ? data.wusdc.amount : 0n;
-  const canRun = Boolean(connected?.signer && vault.unlocked && network.wrappedMint);
+  // F-19: a confidential withdrawal needs its proofs; unwrapping public wUSDC does not.
+  const canRun = Boolean(connected?.signer && vault.unlocked && network.wrappedMint) && !blocked;
 
   /** Token Wrap `Unwrap` of public wUSDC to USDC (06 section 6, step 3), signed by the wallet. */
   async function sendUnwrap(amount: bigint): Promise<string> {
@@ -286,6 +288,7 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
           </Button>
         ) : null}
       </div>
+      <PausedNote />
       {!vault.unlocked ? (
         <p className={styles.lead} role="status">
           Unlock your keys first: the withdraw proofs are made in this tab.

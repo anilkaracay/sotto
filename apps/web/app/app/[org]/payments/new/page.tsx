@@ -39,7 +39,7 @@ export default async function NewPaymentPage({ params }: { params: Promise<{ org
     loadNetworkView(),
   ]);
   return (
-    <AppShell me={me} network={network.label} nav={ownerNav(orgId, "payments")}>
+    <AppShell me={me} network={network} nav={ownerNav(orgId, "payments")}>
       <PageHeader overline={owned.orgName} title="Payments" />
       {network.available ? (
         <PaymentsPanel

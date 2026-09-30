@@ -11,7 +11,7 @@ import { currentSession } from "../../../../lib/server/current-session.ts";
 import { getDb } from "../../../../lib/server/db.ts";
 import { loadMe } from "../../../../lib/server/me.ts";
 import { loadNetworkView } from "../../../../lib/server/network-view.ts";
-import { listProofs } from "../../../../lib/server/proofs.ts";
+import { listProofs, proofsPaused } from "../../../../lib/server/proofs.ts";
 import { AppShell } from "../../_components/app-shell.tsx";
 import { ProofsPanel } from "./proofs-panel.tsx";
 
@@ -28,9 +28,14 @@ export default async function ProofsPage({ params }: { params: Promise<{ org: st
   if (owned.orgStatus !== "active") redirect("/app/onboarding");
   const [cluster, network] = await Promise.all([serverCluster(), loadNetworkView()]);
   const program = cluster?.sottoProofs?.program ?? null;
-  const { proofs } = program ? await listProofs(db, session, orgId, serverRpc()) : { proofs: [] };
+  const [{ proofs }, paused] = program
+    ? await Promise.all([
+        listProofs(db, session, orgId, serverRpc()),
+        proofsPaused(serverRpc(), cluster),
+      ])
+    : [{ proofs: [] }, false];
   return (
-    <AppShell me={me} network={network.label} nav={ownerNav(orgId, "proofs")}>
+    <AppShell me={me} network={network} nav={ownerNav(orgId, "proofs")}>
       <PageHeader overline="Proofs" title="Prove it, without showing it" />
       {network.available && program ? (
         <ProofsPanel
@@ -40,6 +45,7 @@ export default async function ProofsPage({ params }: { params: Promise<{ org: st
           network={network}
           program={program}
           proofs={proofs}
+          paused={paused}
         />
       ) : (
         <p role="status">

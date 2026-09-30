@@ -53,6 +53,7 @@ import { browserRpc } from "../../../../lib/client/rpc.ts";
 import { isWalletCancel } from "../../../../lib/client/transactions.ts";
 import { walletInfo, type WalletInfo } from "../../../../lib/client/wallet-report.ts";
 import { walletWords, type WalletWords } from "../../../../lib/client/wallet-words.ts";
+import { PROGRAM_BLOCKED } from "../../../../lib/health.ts";
 import type { NetworkView } from "../../../../lib/server/network-view.ts";
 import { useKeySession } from "../key-session.tsx";
 
@@ -118,7 +119,7 @@ export type AccountData = {
   confidential: ConfidentialView;
 };
 
-type ContextValue = {
+export type ContextValue = {
   wallet: string;
   orgId: string;
   network: AvailableNetwork;
@@ -132,9 +133,15 @@ type ContextValue = {
   connected: Connected | null;
   data: AccountData;
   refresh: () => Promise<void>;
+  /**
+   * F-19 (step 2.9): why confidential actions are paused (the ZK ElGamal Proof program is unavailable),
+   * or null. Every confidential action is disabled with these words; public ones keep working.
+   */
+  blocked: string | null;
 };
 
-const ConfidentialContext = createContext<ContextValue | null>(null);
+/** Exported for the component tests, which render confidential actions without a wallet. */
+export const ConfidentialContext = createContext<ContextValue | null>(null);
 
 /** Holds the wallet's words of the last refused signature (Q-15), set and read outside rendering. */
 class WalletWordsBox {
@@ -314,7 +321,19 @@ export function ConfidentialProvider({
     if (id === request.current) setData(next);
   }, [ready, readAccount, read]);
 
-  const base = { wallet, orgId, network, wallets, setAccount, ready, vault, data, refresh };
+  const blocked = network.proofProgram.status === "unavailable" ? PROGRAM_BLOCKED : null;
+  const base = {
+    wallet,
+    orgId,
+    network,
+    wallets,
+    setAccount,
+    ready,
+    vault,
+    data,
+    refresh,
+    blocked,
+  };
   if (!account || !uiWallet) {
     return (
       <ConfidentialContext.Provider value={{ ...base, connected: null }}>

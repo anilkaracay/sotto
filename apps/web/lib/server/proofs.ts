@@ -168,6 +168,15 @@ export async function readPublicProof(
   };
 }
 
+/** Whether the cluster's sotto_proofs config is paused (14 section 7), for the owner's proofs page. */
+export async function proofsPaused(
+  rpc: SolanaRpc,
+  cluster: ServerCluster | null,
+): Promise<boolean> {
+  if (!cluster?.sottoProofs) return false;
+  return readPaused(rpc, cluster.sottoProofs.program, cluster.sottoProofs.config);
+}
+
 /** The counterparty label the owner gave a record, if Sotto stored it (display only). */
 export function labelLookup(db: Database) {
   return async (recordAddress: string): Promise<string | null> => {

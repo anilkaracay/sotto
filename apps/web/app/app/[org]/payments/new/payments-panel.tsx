@@ -36,6 +36,7 @@ import {
   type AvailableNetwork,
 } from "../../../_components/confidential/context.tsx";
 import { KeysCard, WalletCard } from "../../../_components/confidential/keys.tsx";
+import { PausedNote } from "../../../_components/confidential/paused-note.tsx";
 import { useKeySession } from "../../../_components/key-session.tsx";
 import styles from "./payments.module.css";
 import { runPayment, type PaymentRunOutcome, type ViewerKeyRecord } from "./payment-run.ts";
@@ -218,14 +219,15 @@ function Outcome({ progress }: { progress: Progress }) {
   );
 }
 
-function PayCard({
+/** Exported for the component tests (F-19). */
+export function PayCard({
   recipients,
   ownerKey,
 }: {
   recipients: PayableRecipient[];
   ownerKey: ViewerKeyRecord | null;
 }) {
-  const { wallet, orgId, vault, connected } = useConfidential();
+  const { wallet, orgId, vault, connected, blocked } = useConfidential();
   const { viewing } = useKeySession();
   const id = useId();
   const { progress, setProgress, attempt } = usePaymentAttempt(ownerKey);
@@ -260,7 +262,8 @@ function PayCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chosen?.id, viewingOpen]);
 
-  const ready = Boolean(connected?.signer && vault.unlocked && ownerKey);
+  // F-19: a confidential payment is paused while the proof program is unavailable.
+  const ready = Boolean(connected?.signer && vault.unlocked && ownerKey) && !blocked;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -415,6 +418,7 @@ function PayCard({
             {progress.busy ? "Paying…" : "Pay"}
           </Button>
         </div>
+        <PausedNote />
       </form>
       <Outcome progress={progress} />
     </Card>
@@ -430,7 +434,7 @@ function PaymentsTable({
   recipients: PayableRecipient[];
   ownerKey: ViewerKeyRecord | null;
 }) {
-  const { wallet, vault, network } = useConfidential();
+  const { wallet, vault, network, blocked } = useConfidential();
   const { session, viewing } = useKeySession();
   const unlocked = viewing?.wallet === wallet;
   const [opened, setOpened] = useState<Record<string, PaymentPrivate | "unreadable">>({});
@@ -547,7 +551,8 @@ function PaymentsTable({
                           !unlocked ||
                           !secret ||
                           secret === "unreadable" ||
-                          progress.busy !== null
+                          progress.busy !== null ||
+                          blocked !== null
                         }
                         onClick={() => {
                           if (secret && secret !== "unreadable") {

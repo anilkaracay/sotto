@@ -1,0 +1,24 @@
+/* The shell's banner (F-19, D-14; step 2.9), on the app tokens: amber for the paused program, blue grey
+   while the network is retried. */
+.banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 16px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: #fff7e6;
+  box-shadow: inset 0 0 0 1px #f4d9a0;
+  color: #5a3d00;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.banner b {
+  font-size: 14px;
+  font-weight: 600;
+}
+.retrying {
+  background: #eef3fa;
+  box-shadow: inset 0 0 0 1px #d5deeb;
+  color: #223453;
+}

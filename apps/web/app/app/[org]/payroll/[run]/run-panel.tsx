@@ -35,6 +35,7 @@ import {
   useConfidential,
   type AvailableNetwork,
 } from "../../../_components/confidential/context.tsx";
+import { PausedNote } from "../../../_components/confidential/paused-note.tsx";
 import { KeysCard, WalletCard } from "../../../_components/confidential/keys.tsx";
 import { useKeySession } from "../../../_components/key-session.tsx";
 import cards from "../../../_components/confidential/cards.module.css";
@@ -81,7 +82,8 @@ function transferOf(line: PayrollLineView): string | null {
   return finalized?.transferSignature ?? line.attempts.at(-1)?.transferSignature ?? null;
 }
 
-function RunView(props: {
+/** Exported for the component tests (F-19). */
+export function RunView(props: {
   orgId: string;
   run: PayrollRunView;
   you: { displayName: string | null };
@@ -89,7 +91,7 @@ function RunView(props: {
   ownerKey: ViewerKeyRecord | null;
 }) {
   const { orgId, ownerKey, viewerKeys } = props;
-  const { wallet, network, connected, vault } = useConfidential();
+  const { wallet, network, connected, vault, blocked } = useConfidential();
   const { session, viewing } = useKeySession();
   const router = useRouter();
   const [view, setView] = useState(props.run);
@@ -197,7 +199,7 @@ function RunView(props: {
   }
 
   async function run() {
-    if (!connected || !ownerKey || !network.wrappedMint || !canAct) return;
+    if (!connected || !ownerKey || !network.wrappedMint || !canAct || blocked) return;
     setProgress({
       busy: "Checking every recipient's account, screening and approvals…",
       problem: null,
@@ -438,12 +440,13 @@ function RunView(props: {
         <Button
           variant="blue"
           className={styles.runButton}
-          disabled={!actionable || !canAct || progress.busy !== null}
+          disabled={!actionable || !canAct || progress.busy !== null || blocked !== null}
           onClick={() => void run()}
           data-testid="run-button"
         >
           {progress.busy ? "Settling" : button}
         </Button>
+        {actionable ? <PausedNote /> : null}
         {actionable && !canAct ? (
           <p className={styles.approvalNote}>
             {!ownerKey

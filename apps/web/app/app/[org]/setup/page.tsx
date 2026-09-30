@@ -38,7 +38,7 @@ export default async function SetupPage({ params }: { params: Promise<{ org: str
     ? await readOrgTokenAccount(db, session.userId, orgId, network.cluster)
     : null;
   return (
-    <AppShell me={me} network={network.label} nav={ownerNav(orgId, "setup")}>
+    <AppShell me={me} network={network} nav={ownerNav(orgId, "setup")}>
       <PageHeader overline={owned.orgName} title="Account setup" />
       {network.available ? (
         <SetupPanel

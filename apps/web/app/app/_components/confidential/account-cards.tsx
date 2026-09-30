@@ -35,6 +35,7 @@ import { ApplyPromptNotice, applyPromptNeeded } from "./apply-prompt.tsx";
 import styles from "./cards.module.css";
 import extra from "./confidential.module.css";
 import { useConfidential, type SignProblem } from "./context.tsx";
+import { PausedNote } from "./paused-note.tsx";
 import { StepError, useSend, type SendState } from "./use-send.ts";
 
 export type RecordedAccount = { address: string; applyFlagged: boolean };
@@ -175,7 +176,7 @@ export function WrappedMintCard() {
 }
 
 export function AccountCard({ recorded }: { recorded: RecordedAccount | null }) {
-  const { wallet, orgId, network, ready, vault, connected, data } = useConfidential();
+  const { wallet, orgId, network, ready, vault, connected, data, blocked } = useConfidential();
   const router = useRouter();
   const sending = useSend();
   const [problem, setProblem] = useState<string | null>(null);
@@ -321,12 +322,13 @@ export function AccountCard({ recorded }: { recorded: RecordedAccount | null }) 
           <div className={styles.actions}>
             <Button
               variant="blue"
-              disabled={!sending.canSend || checking || sending.busy !== null}
+              disabled={!sending.canSend || checking || sending.busy !== null || blocked !== null}
               onClick={setUp}
             >
               {checking ? "Waiting for your wallet…" : "Set up the account"}
             </Button>
           </div>
+          <PausedNote />
         </>
       ) : status.kind === "configured" ? (
         <>
@@ -384,7 +386,7 @@ export function AccountCard({ recorded }: { recorded: RecordedAccount | null }) 
 }
 
 export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) {
-  const { wallet, network, ready, vault, data, connected } = useConfidential();
+  const { wallet, network, ready, vault, data, connected, blocked } = useConfidential();
   const sending = useSend();
   const [text, setText] = useState("");
   const [split, setSplit] = useState<string | null>(null);
@@ -395,7 +397,8 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
   const publicUsdc = data.usdc?.status === "present" ? data.usdc.amount : null;
   const publicWusdc = data.wusdc?.status === "present" ? data.wusdc.amount : null;
   const decrypted = data.confidential.kind === "decrypted" ? data.confidential : null;
-  const idle = sending.canSend && sending.busy === null;
+  // F-19: deposits and applying are confidential actions, paused while the proof program is down.
+  const idle = sending.canSend && sending.busy === null && blocked === null;
   const owner = createNoopSigner(address(wallet));
   const shown = amount === null ? "" : formatTokenAmount(amount, decimals);
 
@@ -503,6 +506,7 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
   return (
     <Card data-testid="funding-card">
       <h2 className={styles.cardTitle}>Fund your account</h2>
+      <PausedNote />
       {promptNeeded && decrypted ? (
         <ApplyPromptNotice
           credits={decrypted.credits}

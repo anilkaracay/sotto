@@ -31,7 +31,7 @@ export default async function PayPage({ params }: { params: Promise<{ org: strin
   const title = first ? `Your pay, ${first}` : "Your pay";
   if (membership.orgStatus !== "active") {
     return (
-      <AppShell me={me} network={(await loadNetworkView()).label}>
+      <AppShell me={me} network={await loadNetworkView()}>
         <PageHeader overline={membership.orgName} title={title} />
         <p role="status">
           {membership.orgName} is not active in Sotto right now, so its payments are not available.
@@ -54,7 +54,7 @@ export default async function PayPage({ params }: { params: Promise<{ org: strin
     ? `${membership.orgName}, ${recipient.roleTitle}`
     : membership.orgName;
   return (
-    <AppShell me={me} network={network.label} nav={recipientNav(orgId)}>
+    <AppShell me={me} network={network} nav={recipientNav(orgId)}>
       <PageHeader overline={overline} title={title} />
       {network.available ? (
         <PayPanel

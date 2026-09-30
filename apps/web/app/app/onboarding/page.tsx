@@ -6,7 +6,7 @@ import { currentSession } from "../../../lib/server/current-session.ts";
 import { getDb } from "../../../lib/server/db.ts";
 import { loadMe } from "../../../lib/server/me.ts";
 import { ownedOrg } from "../../../lib/server/orgs.ts";
-import { currentNetworkLabel } from "../../../lib/network.ts";
+import { loadNetworkView } from "../../../lib/server/network-view.ts";
 import { AppShell } from "../_components/app-shell.tsx";
 import { OrgOnboarding } from "./org-onboarding.tsx";
 
@@ -18,7 +18,7 @@ export default async function OnboardingPage() {
   const db = getDb();
   const [me, org] = await Promise.all([loadMe(db, session), ownedOrg(db, session.userId)]);
   return (
-    <AppShell me={me} network={currentNetworkLabel()}>
+    <AppShell me={me} network={await loadNetworkView()}>
       <OrgOnboarding
         org={
           org

@@ -34,7 +34,7 @@ export default async function RecipientsPage({ params }: { params: Promise<{ org
     loadNetworkView(),
   ]);
   return (
-    <AppShell me={me} network={network.label} nav={ownerNav(orgId, "recipients")}>
+    <AppShell me={me} network={network} nav={ownerNav(orgId, "recipients")}>
       <PageHeader overline={owned.orgName} title="Recipients" />
       {network.available ? (
         <RecipientsPanel

@@ -13,6 +13,8 @@ import { signOut } from "../../../lib/client/auth.ts";
 import { shortWallet } from "../../../lib/format.ts";
 import { orgStatusLabel } from "../../../lib/org.ts";
 import type { MeView } from "../../../lib/server/me.ts";
+import type { NetworkView } from "../../../lib/server/network-view.ts";
+import { HealthBanner } from "./health-banner.tsx";
 import { useKeySession } from "./key-session.tsx";
 import { Logo } from "./logo.tsx";
 import styles from "./shell.module.css";
@@ -32,7 +34,7 @@ export function AppShell({
   children,
 }: {
   me: MeView;
-  network: string;
+  network: NetworkView;
   nav?: readonly TopNavItem[];
   children: ReactNode;
 }) {
@@ -76,7 +78,7 @@ export function AppShell({
         </div>
         <div className={styles.right}>
           <Chip tone="blue" data-testid="network-label">
-            {network}
+            {network.label}
           </Chip>
           <button
             ref={button}
@@ -197,7 +199,10 @@ export function AppShell({
           </div>
         ) : null}
       </header>
-      <main className={styles.body}>{children}</main>
+      <main className={styles.body}>
+        <HealthBanner network={network} />
+        {children}
+      </main>
     </div>
   );
 }

@@ -42,6 +42,7 @@ import {
 } from "../../_components/confidential/context.tsx";
 import { KeysCard, WalletCard } from "../../_components/confidential/keys.tsx";
 import { NetworkBanner } from "../../_components/confidential/network-banner.tsx";
+import { PausedNote } from "../../_components/confidential/paused-note.tsx";
 import { StepError, useSend } from "../../_components/confidential/use-send.ts";
 import { WithdrawForm } from "../../_components/confidential/withdraw.tsx";
 import { useKeySession } from "../../_components/key-session.tsx";
@@ -88,8 +89,9 @@ export function PayPanel(props: {
 }
 
 /** 06 section 4, step 3: a pending balance is applied from fresh account state, with the keys. */
-function ApplyPending() {
-  const { vault, data, network } = useConfidential();
+/** Exported for the component tests (F-19). */
+export function ApplyPending() {
+  const { vault, data, network, blocked } = useConfidential();
   const sending = useSend();
   const pending = data.confidential.kind === "decrypted" ? data.confidential.pending : 0n;
   if (pending <= 0n && !sending.done) return null;
@@ -106,7 +108,9 @@ function ApplyPending() {
         <div className={cards.actions}>
           <Button
             variant="line"
-            disabled={!sending.canSend || sending.busy !== null || !vault.unlocked || !token}
+            disabled={
+              !sending.canSend || sending.busy !== null || !vault.unlocked || !token || !!blocked
+            }
             onClick={() => {
               if (!token) return;
               void sending.send({
@@ -126,6 +130,7 @@ function ApplyPending() {
           >
             Apply pending balance
           </Button>
+          <PausedNote />
         </div>
       ) : null}
       {sending.busy ? (

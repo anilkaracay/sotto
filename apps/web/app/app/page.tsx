@@ -12,7 +12,7 @@ import { listBooksOrgs } from "../../lib/server/books.ts";
 import { currentSession } from "../../lib/server/current-session.ts";
 import { getDb } from "../../lib/server/db.ts";
 import { loadMe } from "../../lib/server/me.ts";
-import { currentNetworkLabel } from "../../lib/network.ts";
+import { loadNetworkView } from "../../lib/server/network-view.ts";
 import { shortWallet } from "../../lib/format.ts";
 import { AppShell } from "./_components/app-shell.tsx";
 
@@ -43,7 +43,7 @@ export default async function AppPage() {
   if (only && places.length === 1) redirect(only.href);
   if (me.memberships.length === 0) redirect("/app/onboarding");
   return (
-    <AppShell me={me} network={currentNetworkLabel()}>
+    <AppShell me={me} network={await loadNetworkView()}>
       <PageHeader
         overline={`Signed in with ${shortWallet(me.user.wallet)}`}
         title="Welcome to Sotto"

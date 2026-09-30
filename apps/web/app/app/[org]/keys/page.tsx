@@ -39,7 +39,7 @@ export default async function KeysPage({ params }: { params: Promise<{ org: stri
     loadNetworkView(),
   ]);
   return (
-    <AppShell me={me} network={network.label} nav={ownerNav(orgId, "keys")}>
+    <AppShell me={me} network={network} nav={ownerNav(orgId, "keys")}>
       {network.available ? (
         <KeysPanel
           wallet={me.user.wallet}

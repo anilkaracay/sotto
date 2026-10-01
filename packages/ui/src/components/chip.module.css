@@ -32,3 +32,28 @@
   background: var(--ink);
   color: #ffffff;
 }
+.check {
+  flex: none;
+  margin-left: -1px;
+}
+/* On the design's dark cards (step 3.7): light words on a translucent fill. */
+.onDark {
+  background: rgba(255, 255, 255, 0.08);
+  color: #c7d0de;
+}
+.onDark.green {
+  background: rgba(143, 227, 184, 0.14);
+  color: #8fe3b8;
+}
+.onDark.amber {
+  background: rgba(255, 196, 92, 0.14);
+  color: #ffd27a;
+}
+.onDark.blue {
+  background: rgba(122, 165, 255, 0.16);
+  color: #a9c4ff;
+}
+.onDark.red {
+  background: rgba(255, 120, 120, 0.14);
+  color: #ffb1b1;
+}

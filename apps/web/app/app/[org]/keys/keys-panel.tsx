@@ -313,7 +313,7 @@ function Backfill({
           viewerUserId: you,
           items: pending.items,
           manifests: pending.manifests,
-          open: (ciphertext) => session.worker().openSealed(ciphertext),
+          open: (ciphertext) => session.openWorker().openSealed(ciphertext),
         });
         const items = [];
         for (const record of opened) {

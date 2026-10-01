@@ -282,7 +282,7 @@ function RecipientsTable({ recipients }: { recipients: RecipientView[] }) {
         for (const row of recipients) {
           if (row.privateBlob === null) continue;
           try {
-            const value = await session.worker().openSealed(fromBase64(row.privateBlob));
+            const value = await session.openWorker().openSealed(fromBase64(row.privateBlob));
             next[row.id] = parseRecipientPrivate(value) ?? "unreadable";
           } catch {
             next[row.id] = "unreadable";

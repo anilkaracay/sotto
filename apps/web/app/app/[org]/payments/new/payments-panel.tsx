@@ -452,7 +452,7 @@ function PaymentsTable({
         for (const payment of payments) {
           if (!payment.privateBlob) continue;
           try {
-            const value = await session.worker().openSealed(fromBase64(payment.privateBlob));
+            const value = await session.openWorker().openSealed(fromBase64(payment.privateBlob));
             next[payment.id] = parsePaymentPrivate(value) ?? "unreadable";
           } catch {
             next[payment.id] = "unreadable";

@@ -90,7 +90,7 @@ export function RecentActivity({ userId }: { userId: string }) {
         if (!cancelled) setOpened({ secrets: {}, unverified: 0 });
         return;
       }
-      const open = (ciphertext: Uint8Array) => session.worker().openSealed(ciphertext);
+      const open = (ciphertext: Uint8Array) => session.openWorker().openSealed(ciphertext);
       const disclosures = await openDisclosures({
         orgId,
         ownerWallet: wallet,

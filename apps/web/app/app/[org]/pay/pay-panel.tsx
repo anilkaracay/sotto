@@ -224,7 +224,7 @@ function PayGroup({
         viewerUserId: userId,
         items: loaded.records.items,
         manifests: loaded.records.manifests,
-        open: (ciphertext) => session.worker().openSealed(ciphertext),
+        open: (ciphertext) => session.openWorker().openSealed(ciphertext),
       });
       if (!cancelled) {
         setOpened({

@@ -114,7 +114,7 @@ function BooksLive({ you, books }: { you: string; books: BooksView }) {
         viewerUserId: you,
         items: records.items,
         manifests: records.manifests,
-        open: (ciphertext) => session.worker().openSealed(ciphertext),
+        open: (ciphertext) => session.openWorker().openSealed(ciphertext),
       });
       const payloads = items.flatMap((item) => (item.state === "opened" ? [item.payload] : []));
       const unverified = items.filter((item) => item.state === "unverified").length;

@@ -11,7 +11,7 @@
 // Locking asks the vault to zero the keys it holds and then terminates the worker (client.ts close).
 // This module holds no keys: the worker does; the session knows the unlocked wallet and its public key.
 import { createAutoLock } from "./auto-lock.ts";
-import { CryptoWorkerClient } from "./client.ts";
+import { CryptoWorkerClient, CryptoWorkerError } from "./client.ts";
 import type { UnlockResult } from "./protocol.ts";
 
 export type LockReason =
@@ -98,6 +98,17 @@ export function createKeySession(options: {
   return {
     /** The tab's worker: the one holding the keys, or a new one before unlock. */
     worker,
+    /**
+     * The worker holding the keys, for reading with them. A locked session throws "locked" instead
+     * of starting a new worker, so a read still running when the keys lock leaves no worker behind
+     * (AC-03.5; step 3.7, where an overview read after a wallet account change started one).
+     */
+    openWorker(): CryptoWorkerClient {
+      if (!client || (unlocked === null && viewing === null)) {
+        throw new CryptoWorkerError("locked", "The keys are locked.");
+      }
+      return client;
+    },
     unlocked: (): Unlocked | null => unlocked,
     async unlock(wallet: string, signature: Uint8Array): Promise<UnlockResult> {
       const current = worker();

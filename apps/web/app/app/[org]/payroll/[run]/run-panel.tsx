@@ -121,8 +121,9 @@ export function RunView(props: {
           if (!line.privateBlob) continue;
           try {
             next[line.id] =
-              parseLinePrivate(await session.worker().openSealed(fromBase64(line.privateBlob))) ??
-              "unreadable";
+              parseLinePrivate(
+                await session.openWorker().openSealed(fromBase64(line.privateBlob)),
+              ) ?? "unreadable";
           } catch {
             next[line.id] = "unreadable";
           }

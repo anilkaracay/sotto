@@ -37,6 +37,7 @@ import {
   OVERVIEW_URL,
   signIn,
 } from "../helpers.ts";
+import { expectVisual } from "../visual.ts";
 
 const bootstrap = readLocalnetBootstrap();
 const rpc = createRetryingRpc(bootstrap.rpcUrl);
@@ -63,6 +64,8 @@ async function shoot(page: Page, name: string) {
   const path = test.info().outputPath(`${name}.png`);
   await page.screenshot({ path, fullPage: true });
   shots.push(path);
+  // Step 3.8: the approved screen against its baseline.
+  await expectVisual(page, name);
 }
 
 /** Calls one of the test wallet's controls (test-wallet.js) in the page. */

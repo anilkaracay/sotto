@@ -92,6 +92,10 @@ e2e_steps() {
     run pnpm --filter @sotto/e2e e2e
 }
 
+# Step 3.8: the e2e runs compare the approved screens with their baselines (tests/e2e/visual.ts),
+# taken on this machine; .github/workflows/ci.yml leaves it off, as another system's fonts differ.
+export SOTTO_VISUAL=1
+
 job_node() {
   require_version "node" "$(node --version | sed 's/^v//')" "$NODE_VERSION" &&
     require_version "pnpm" "$(pnpm --version)" "$PNPM_VERSION" &&

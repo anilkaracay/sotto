@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { e2eKeypair, seededKeypair } from "../fixtures.ts";
 import { ANY_APP_PAGE, clientAddress, signIn } from "../helpers.ts";
+import { expectVisual } from "../visual.ts";
 
 const VERIFIED = seededKeypair(`sotto-e2e-entry-verified/${Date.now()}`);
 const REFUSED = seededKeypair(`sotto-e2e-entry-refused/${Date.now()}`);
@@ -24,6 +25,8 @@ async function shoot(page: Page, name: string) {
   const path = test.info().outputPath(`${name}.png`);
   await page.screenshot({ path, fullPage: true });
   shots.push(path);
+  // Step 3.8: the approved screen against its baseline.
+  await expectVisual(page, name);
 }
 
 async function newPage(browser: Browser, width = 1440, height = 900): Promise<Page> {

@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import { e2eKeypair } from "../fixtures.ts";
 import { ANY_APP_PAGE, signIn } from "../helpers.ts";
+import { expectVisual } from "../visual.ts";
 
 const DEMO_SHOTS = fileURLToPath(new URL("../../../.demo-shots/screens/", import.meta.url));
 
@@ -23,6 +24,8 @@ test("the network banner on an app page when the network cannot be reached (13 A
   await page.waitForTimeout(900);
   const path = test.info().outputPath("37-banner-unreachable.png");
   await page.screenshot({ path, fullPage: true });
+  // Step 3.8: the approved banner against its baseline.
+  await expectVisual(page, "37-banner-unreachable");
   const stamp = new Date().toISOString().slice(0, 19).replaceAll(":", "-");
   const folder = `${DEMO_SHOTS}${stamp}Z-node`;
   await mkdir(folder, { recursive: true });

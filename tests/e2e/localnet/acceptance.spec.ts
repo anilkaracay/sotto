@@ -47,6 +47,7 @@ import {
   privacyScreenOn,
   signIn,
 } from "../helpers.ts";
+import { expectVisual } from "../visual.ts";
 
 const bootstrap = readLocalnetBootstrap();
 const rpc = createRetryingRpc(bootstrap.rpcUrl);
@@ -291,6 +292,9 @@ async function shoot(page: Page, name: string) {
   await page.screenshot({ path, fullPage: true });
   await test.info().attach(name, { path, contentType: "image/png" });
   screenshots.push(path);
+  // Step 3.8: the approved screens against their baselines; the public proof page waits for the
+  // founder's approval of its design (step 3.4.1).
+  if (name !== "07-proof-verified.png") await expectVisual(page, name.replace(/\.png$/, ""));
 }
 
 async function step(name: string, screenshot: string, body: () => Promise<Page>) {

@@ -27,6 +27,8 @@ export function dynamicRegions(page: Page): Locator[] {
     page.getByText(/\bslot \d+/i),
     page.getByText(/\b(Just now|Today|Yesterday|\d+ (minute|minutes|hour|hours|days) ago)\b/),
     page.getByText(/[1-9A-HJ-NP-Za-km-z]{2,4}…[1-9A-HJ-NP-Za-km-z]{2,4}/),
+    // A transaction's first characters in a message ("transactions 3djNoV26h1dt… and …").
+    page.getByText(/[1-9A-HJ-NP-Za-km-z]{8,}…/),
     page.getByRole("button", { name: "Account and organizations" }),
     page.locator('[class*="logAvatar"]'),
   ];

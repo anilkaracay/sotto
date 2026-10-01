@@ -11,13 +11,15 @@
 // - Who can read this run: you, each recipient with a viewing key for their own line, since step 2.4
 //   each holder of a viewing grant with the lines they hold records of, and the chain without amounts
 //   (13 A26: no board line).
-import { Button, Card, Chip, Table, Td, Th } from "@sotto/ui";
+import { Button, Card, Chip, initials, Person, Table, Td, Th } from "@sotto/ui";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { ApiCallError, callApi } from "../../../../../lib/client/api.ts";
 import { GRANT_COPIES_MISSING } from "../../../../../lib/client/records.ts";
 import { describeTransactionError } from "../../../../../lib/client/transactions.ts";
 import { CryptoWorkerError } from "../../../../../lib/crypto-worker/client.ts";
+import { monthLabel } from "../../../../../lib/books.ts";
+import { countryName } from "../../../../../lib/countries.ts";
 import { shortWallet } from "../../../../../lib/format.ts";
 import {
   blockedReason,
@@ -353,7 +355,13 @@ export function RunView(props: {
       <Card tone="dark" className={styles.s8} data-testid="run-total">
         <div className={styles.cardHead}>
           <h3>Run total</h3>
-          <Chip tone={status.tone} data-testid="run-status" data-status={view.status}>
+          <Chip
+            tone={status.tone}
+            check={status.tone === "green"}
+            onDark
+            data-testid="run-status"
+            data-status={view.status}
+          >
             {status.label}
           </Chip>
         </div>
@@ -378,16 +386,25 @@ export function RunView(props: {
                 const height = max > 0n ? Number((amount * 1000n) / max) / 10 : 0;
                 return (
                   <div key={team} className={styles.col}>
-                    <span className={styles.barValue}>
-                      <Amount>{formatUsdc(amount)}</Amount>
-                    </span>
                     <div
                       className={`${styles.bar} ${index === 0 ? styles.on : ""}`}
                       style={{
                         height: `${Math.max(height * 0.8, 4)}%`,
                         animationDelay: `${index * 0.07}s`,
                       }}
-                    />
+                      title={index === 0 ? undefined : team}
+                    >
+                      {/* The design's tag on the lit bar, the largest team (step 3.7); every line's
+                          amount is in the recipients table below. */}
+                      {index === 0 ? (
+                        <span className={styles.barTag}>
+                          <small>{team}</small>
+                          <b className="num">
+                            <Amount>{formatUsdc(amount)}</Amount>
+                          </b>
+                        </span>
+                      ) : null}
+                    </div>
                     <span className={styles.barLabel}>{team}</span>
                   </div>
                 );
@@ -400,39 +417,47 @@ export function RunView(props: {
           </p>
         )}
         <div className={styles.steps}>
-          <div className={`${styles.step} ${styles.done}`}>
-            <i>1</i>Upload
-          </div>
-          <div className={`${styles.step} ${styles.done}`}>
-            <i>2</i>Validate
-          </div>
-          <div className={`${styles.step} ${executed ? styles.done : styles.cur}`}>
-            <i>3</i>Approve
-          </div>
-          <div
-            className={`${styles.step} ${view.status === "settled" ? styles.done : executed ? styles.cur : ""}`}
+          <RunStep no={1} state="done">
+            Upload
+          </RunStep>
+          <RunStep no={2} state="done">
+            Validate
+          </RunStep>
+          <RunStep no={3} state={executed ? "done" : "current"}>
+            Approve
+          </RunStep>
+          <RunStep
+            no={4}
+            state={view.status === "settled" ? "done" : executed ? "current" : "next"}
           >
-            <i>4</i>Settle on Solana
-          </div>
+            Settle on Solana
+          </RunStep>
         </div>
       </Card>
 
       <Card tone="dark" className={styles.s4} data-testid="settlement">
         <div className={styles.cardHead}>
           <h3>Settlement</h3>
-          <span className={styles.periodChip}>{view.period}</span>
+          <span className={styles.periodChip}>{monthLabel(view.period, true)}</span>
         </div>
         <Gauge lines={lines} settled={settled} head={head} sub={sub} />
         <div className={styles.approvals} data-testid="approvals">
           <div className={styles.approver}>
             <span className={styles.avatar} aria-hidden="true">
-              {initiator.slice(0, 1).toUpperCase()}
+              {view.createdBy.displayName
+                ? initials(view.createdBy.displayName)
+                : view.createdBy.wallet.slice(0, 2)}
             </span>
             <div>
               <b>{initiator}</b>
               <small>You</small>
             </div>
-            <Chip tone={executed ? "green" : "amber"} data-testid="approval-chip">
+            <Chip
+              tone={executed ? "green" : "amber"}
+              check={executed}
+              onDark
+              data-testid="approval-chip"
+            >
               {executed ? "Approved" : "Waiting for you"}
             </Chip>
           </div>
@@ -442,7 +467,7 @@ export function RunView(props: {
         </div>
         <Button
           variant="blue"
-          className={styles.runButton}
+          className={`${styles.runButton} ${styles.whiteButton}`}
           disabled={!actionable || !canAct || progress.busy !== null || blocked !== null}
           onClick={() => void run()}
           data-testid="run-button"
@@ -514,12 +539,19 @@ export function RunView(props: {
                     data-line={line.lineNo}
                   >
                     <Td>
-                      <span className={styles.person}>
-                        <b>{line.recipient.displayName}</b>
-                        <small>{line.recipient.roleTitle ?? line.recipient.team ?? ""}</small>
-                      </span>
+                      <Person
+                        name={line.recipient.displayName}
+                        detail={line.recipient.roleTitle ?? line.recipient.team ?? ""}
+                        size={38}
+                      />
                     </Td>
-                    <Td>{line.recipient.country ?? <span className={styles.muted}>None</span>}</Td>
+                    <Td>
+                      {line.recipient.country ? (
+                        countryName(line.recipient.country)
+                      ) : (
+                        <span className={styles.muted}>None</span>
+                      )}
+                    </Td>
                     <Td>
                       <span className="mono">{shortWallet(line.recipient.wallet)}</span>
                     </Td>
@@ -535,7 +567,11 @@ export function RunView(props: {
                       )}
                     </Td>
                     <Td align="right">
-                      <Chip tone={chip.tone} data-testid="line-status">
+                      <Chip
+                        tone={chip.tone}
+                        check={chip.tone === "green"}
+                        data-testid="line-status"
+                      >
                         {chip.label}
                       </Chip>
                       {reason ? (
@@ -606,6 +642,44 @@ export function RunView(props: {
 }
 
 /** The radial tick gauge (design .rd2): X-18 ticks, lit as lines settle. */
+/** One of the run's four steps (design .stp8): done with a check, the current one lit. */
+function RunStep({
+  no,
+  state,
+  children,
+}: {
+  no: number;
+  state: "done" | "current" | "next";
+  children: string;
+}) {
+  return (
+    <div
+      className={`${styles.step} ${state === "done" ? styles.stepDone : state === "current" ? styles.stepCurrent : ""}`}
+      data-state={state}
+    >
+      <i aria-hidden="true">
+        {state === "done" ? (
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M5 12.5l4.5 4.5L19 7.5" />
+          </svg>
+        ) : (
+          no
+        )}
+      </i>
+      {children}
+    </div>
+  );
+}
+
 export function Gauge({
   lines,
   settled,

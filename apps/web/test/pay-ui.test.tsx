@@ -117,12 +117,12 @@ describe("my pay (F-12)", () => {
     expectAmountsInside(open);
     expect(text(open)).toContain("September 2026 pay Paid 30 Sep 2026 to HmEv…3Srq");
     expect(text(open)).toContain(
-      "Net pay Paid 9400 USDC Gross 10200 USDC Tax withheld (800 USDC) You, Northwind and Daniel Osei can read this",
+      "Net pay Paid 9400 USDC Gross 10200 USDC Tax withheld (800 USDC) MC N DO You, Northwind and Daniel Osei can read this",
     );
     expect(text(open)).toContain("Last 6 months Net, USDC");
     expect(open.match(/data-testid="pay-bar"/g)).toHaveLength(6);
     expect(text(open)).toContain(
-      "Payslips From Northwind PAY September 2026 Payslip · Paid 30 Sep 2026 · Salary, September 9400 USDC PDF",
+      "Payslips From Northwind September 2026 Payslip · Paid 30 Sep 2026 · Salary, September 9400 USDC PDF",
     );
   });
 
@@ -136,11 +136,11 @@ describe("my pay (F-12)", () => {
     });
     expectAmountsInside(html);
     expect(text(html)).toContain(
-      "September design work Payment from Northwind Paid 12 Sep 2026 to HmEv…3Srq Amount received Paid 7.5 USDC You and Northwind can read this",
+      "September design work Payment from Northwind Paid 12 Sep 2026 to HmEv…3Srq Amount received Paid 7.5 USDC MC N You and Northwind can read this",
     );
     expect(text(html)).toContain("Last 6 months Received, USDC");
     expect(text(html)).toContain(
-      "Payments From Northwind USDC September design work Payment from Northwind · Paid 12 Sep 2026 · Supplier 7.5 USDC PDF",
+      "Payments From Northwind September design work Payment from Northwind · Paid 12 Sep 2026 · Supplier 7.5 USDC PDF",
     );
     for (const word of ["Payslip", "Net pay", "Gross", "Tax withheld", " pay Payment"]) {
       expect(text(html)).not.toContain(word);
@@ -157,7 +157,7 @@ describe("my pay (F-12)", () => {
       unverified: 0,
     });
     expect(text(html)).toContain(
-      "Payslips and payments From Northwind PAY September 2026 Payslip · Paid 30 Sep 2026 · Salary, September 9400 USDC PDF USDC September design work Payment from Northwind · Paid 12 Sep 2026 · Supplier 7.5 USDC PDF",
+      "Payslips and payments From Northwind September 2026 Payslip · Paid 30 Sep 2026 · Salary, September 9400 USDC PDF September design work Payment from Northwind · Paid 12 Sep 2026 · Supplier 7.5 USDC PDF",
     );
     expect([...html.matchAll(/data-label="(\w+)"/g)].map((match) => match[1])).toEqual([
       "payslip",

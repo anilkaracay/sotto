@@ -393,7 +393,10 @@ function RunsCard({ runs }: { runs: PayrollRunSummary[] }) {
                     </span>
                   </Td>
                   <Td>
-                    <Chip tone={runStatusChip(run.status).tone}>
+                    <Chip
+                      tone={runStatusChip(run.status).tone}
+                      check={runStatusChip(run.status).tone === "green"}
+                    >
                       {runStatusChip(run.status).label}
                     </Chip>
                   </Td>

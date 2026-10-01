@@ -521,6 +521,7 @@ function PaymentsTable({
                   <Td>
                     <Chip
                       tone={paymentStatusChip(payment.status, payment.errorCode).tone}
+                      check={paymentStatusChip(payment.status, payment.errorCode).tone === "green"}
                       data-testid="payment-status"
                     >
                       {paymentStatusChip(payment.status, payment.errorCode).label}

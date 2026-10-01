@@ -91,12 +91,14 @@ function Overview({
       <div className={styles.grid}>
         <NetworkBanner check={network.check} label={network.label} />
         <BalancesSection />
-        <AccountSky orgName={orgName} />
-        <div className={overview.side}>
-          <WalletCard />
-          <KeysCard />
+        {/* Step 3.7 (M2): the design's first row, the dark balance growth beside a card of a third,
+            here the account's sky card. */}
+        <div className={overview.duo}>
+          <BalanceGrowth userId={userId} ownerKey={ownerKey} />
+          <AccountSky orgName={orgName} />
         </div>
-        <BalanceGrowth userId={userId} ownerKey={ownerKey} />
+        <WalletCard />
+        <KeysCard />
         <RecentActivity userId={userId} />
         <ChainPanel />
         <Drawer

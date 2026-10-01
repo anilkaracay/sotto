@@ -47,6 +47,7 @@ import {
   privacyScreenOn,
   signIn,
 } from "../helpers.ts";
+import { expectAccessible } from "../a11y.ts";
 import { expectVisual } from "../visual.ts";
 
 const bootstrap = readLocalnetBootstrap();
@@ -295,6 +296,8 @@ async function shoot(page: Page, name: string) {
   // Step 3.8: the approved screens against their baselines; the public proof page waits for the
   // founder's approval of its design (step 3.4.1).
   if (name !== "07-proof-verified.png") await expectVisual(page, name.replace(/\.png$/, ""));
+  // Step 3.10: no WCAG 2.1 A or AA violation on any page of the scenario.
+  await expectAccessible(page, name);
 }
 
 async function step(name: string, screenshot: string, body: () => Promise<Page>) {

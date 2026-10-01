@@ -45,6 +45,7 @@ import {
   OVERVIEW_URL,
   signIn,
 } from "../helpers.ts";
+import { expectAccessible, expectQuietConsole, watchConsole } from "../a11y.ts";
 import { expectVisual } from "../visual.ts";
 
 const bootstrap = readLocalnetBootstrap();
@@ -69,7 +70,7 @@ const DATABASE_URL_FILE = fileURLToPath(
 const shots: string[] = [];
 
 /** A full page screenshot once fonts are in and the entrance animations have ended. */
-async function shoot(page: Page, name: string) {
+async function shoot(page: Page, name: string, refused?: number) {
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(900);
   const path = test.info().outputPath(`${name}.png`);
@@ -77,6 +78,9 @@ async function shoot(page: Page, name: string) {
   shots.push(path);
   // Step 3.8: the approved screen against its baseline.
   await expectVisual(page, name);
+  // Step 3.10: no WCAG 2.1 A or AA violation in this state, and a quiet console up to it.
+  await expectAccessible(page, name);
+  expectQuietConsole(page, name, refused);
 }
 
 async function chainPerson(keypair: number[], usdc: bigint): Promise<LocalnetOwner> {
@@ -108,6 +112,7 @@ async function newPage(browser: Browser): Promise<Page> {
     extraHTTPHeaders: clientAddress(),
   });
   const page = await context.newPage();
+  watchConsole(page);
   await page.addInitScript({ content: V1_WALLET });
   return page;
 }
@@ -221,7 +226,7 @@ test("the sharing and records screens in every state, for the design pass (13 A3
   await form.getByLabel("Solana wallet address").fill("not a wallet");
   await form.getByRole("button", { name: "Add recipient" }).click();
   await expect(form.getByLabel("Solana wallet address")).toHaveAttribute("aria-invalid", "true");
-  await shoot(page, "05-recipients-refused");
+  await shoot(page, "05-recipients-refused", 400);
   await form.getByLabel("Role").fill("Design lead");
   await form.getByLabel("Team").fill("Design");
   await form.getByLabel("Country").selectOption("NL");

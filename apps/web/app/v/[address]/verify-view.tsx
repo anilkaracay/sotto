@@ -60,7 +60,7 @@ export function VerifyView(props: {
   return (
     <main className={styles.page}>
       <header className={styles.top}>
-        <Link className={styles.logo} href="/" aria-label="Sotto home">
+        <Link className={styles.logo} href="/" prefetch={false} aria-label="Sotto home">
           <Mark />
           <span>Sotto</span>
         </Link>

@@ -42,7 +42,7 @@ export function SignInScreen({ network }: { network: string }) {
         <SkyArt className={styles.skyArt} />
         <div className={styles.skyInner}>
           <header className={styles.top}>
-            <Link className={styles.logo} href="/" aria-label="Sotto home">
+            <Link className={styles.logo} href="/" prefetch={false} aria-label="Sotto home">
               <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
                 <circle cx="13" cy="13" r="11" fill="none" stroke="#FFFFFF" strokeWidth="1.8" />
                 <path d="M13 2a11 11 0 000 22z" fill="#FFFFFF" />
@@ -113,7 +113,9 @@ export function SignInScreen({ network }: { network: string }) {
           })}
           <p className={styles.note}>
             Sotto never asks for your recovery phrase and cannot move your funds.{" "}
-            <Link href="/trust">What Sotto can and cannot do</Link>
+            <Link href="/trust" prefetch={false}>
+              What Sotto can and cannot do
+            </Link>
           </p>
         </div>
       </main>

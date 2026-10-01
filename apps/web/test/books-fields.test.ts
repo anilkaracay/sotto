@@ -109,6 +109,20 @@ describe("accountant books in the tab (F-11)", () => {
     ]);
   });
 
+  it("AC-11.2 orders payments settled at the same time by counterparty, whatever order their records arrive in", () => {
+    const at = "2026-09-30T12:00:00.000Z";
+    const lines = [B, C, D].map((id) => payment(id, at, { kind: "payroll_line" }));
+    const records = [
+      payload(D, "3", { kind: "payroll_line", category: "payroll", counterparty: "Maya Chen" }),
+      payload(B, "1", { kind: "payroll_line", category: "payroll", counterparty: "Idris Kaya" }),
+      payload(C, "2", { kind: "payroll_line", category: "payroll", counterparty: "Lena Novak" }),
+    ];
+    const order = (list: DisclosurePayloadV1[]) =>
+      ledgerRows(list, lines).map((row) => row.counterparty);
+    expect(order(records)).toEqual(["Idris Kaya", "Lena Novak", "Maya Chen"]);
+    expect(order([...records].reverse())).toEqual(["Idris Kaya", "Lena Novak", "Maya Chen"]);
+  });
+
   it("AC-11.2 filters by month, category and needs receipt, and searches the opened records in memory", () => {
     const rows = ledgerRows(payloads, payments);
     const ids = (filter: Parameters<typeof filterRows>[1]) =>

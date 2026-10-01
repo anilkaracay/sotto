@@ -29,35 +29,6 @@
   line-height: 1.55;
   color: var(--muted);
 }
-.page .warning {
-  margin-top: 12px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: #fff4e0;
-  color: #8a5200;
-  font-size: 13.5px;
-  line-height: 1.5;
-}
-.page .problem,
-.drawerBody .problem {
-  margin-top: 14px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: #ffecec;
-  color: #b4232a;
-  font-size: 13.5px;
-  line-height: 1.5;
-}
-.page .done {
-  margin-top: 14px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(14, 154, 100, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(14, 154, 100, 0.2);
-  color: #0b5e3f;
-  font-size: 13.5px;
-  line-height: 1.5;
-}
 .page .empty {
   margin-top: 14px;
   font-size: 13.5px;
@@ -67,9 +38,10 @@
   color: var(--faint);
   font-size: 12.5px;
 }
+/* The keys table fits the app's minimum width (1280, 09 section 2) and does not scroll, so the revoke
+   confirmation can open over the rows below it. */
 .scroll {
   margin-top: 12px;
-  overflow-x: auto;
 }
 
 /* Who can read (design .dkc, .dsub, .cov). */
@@ -257,28 +229,30 @@
   gap: 10px;
   margin-top: 14px;
 }
+/* Design pass C (step 3.6, 13 A43): each holder as a person with the records in scope under the name,
+   one row each between hairlines. */
 .backfillRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
   font-size: 14px;
+}
+.backfillRow:first-child {
+  border-top: 0;
 }
 
 /* Keys (design .tbl, .t8, .tgl, tr.rev). */
-.person b {
-  display: block;
-  font-weight: 500;
-}
-.person small {
-  color: var(--faint);
-  font-size: 12.5px;
-}
 .revoked td {
   opacity: 0.5;
 }
 .revoked td:last-child {
   opacity: 1;
+}
+.keyEnd {
+  position: relative;
 }
 .rowEnd {
   display: inline-flex;
@@ -319,25 +293,38 @@
 .toggle:disabled {
   cursor: default;
 }
+/* The revoke confirmation (step 3.6): a card under the toggle, over the rows below, with the
+   warning notice of design pass B and the two choices. */
 .confirm {
-  max-width: 22em;
-  margin: 10px 0 0 auto;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: var(--soft);
+  position: absolute;
+  top: calc(100% - 8px);
+  right: 0;
+  z-index: 5;
+  width: 320px;
+  padding: 12px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 24px 48px -18px rgba(11, 24, 48, 0.35);
   text-align: left;
   white-space: normal;
+  animation: pop 0.18s ease;
 }
-.confirm p {
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--ink2);
+.confirm p.confirmText {
+  margin-top: 0;
 }
 .confirmActions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
   margin-top: 10px;
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
 }
 
 /* Access log (design .log, .le). */
@@ -392,35 +379,33 @@
   margin-top: 12px;
   text-align: left;
 }
-.linkRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.label {
+.linkField {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--ink2);
+  align-items: flex-start;
+  gap: 10px;
 }
-.control {
-  height: 42px;
+/* The link in the fields' soft control, on two lines (design pass C, step 3.6). */
+.linkText {
   width: 100%;
-  padding: 0 12px;
+  padding: 12px 16px;
   border: 0;
-  border-radius: 12px;
-  background: var(--surface);
-  box-shadow: 0 0 0 1px var(--line);
-  font: inherit;
-  font-size: 14px;
+  border-radius: 14px;
+  background: var(--soft);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
   color: var(--ink);
+  word-break: break-all;
+  resize: none;
 }
-.control:focus-visible {
+.linkText:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--blue);
+  background: var(--surface);
+  box-shadow:
+    inset 0 0 0 1.5px var(--blue),
+    0 0 0 4px rgba(31, 91, 232, 0.12);
 }
 .drawerBody {
   display: flex;
@@ -460,23 +445,30 @@
   background: #1c2130;
   color: #ffffff;
 }
+/* The Preview rows (design .anat). */
 .preview {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  border-radius: 14px;
-  background: var(--soft);
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1px var(--line);
+  overflow: hidden;
 }
 .preview div {
   display: grid;
-  grid-template-columns: 70px minmax(0, 1fr) auto;
+  grid-template-columns: 90px minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  font-size: 13.5px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+.preview div:first-child {
+  border-top: 0;
 }
 .preview div span:first-child {
   color: var(--faint);
+  font-size: 12px;
 }
 
 @keyframes growx {
@@ -488,7 +480,8 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .coverBar span {
+  .coverBar span,
+  .confirm {
     animation: none;
   }
   .toggle,

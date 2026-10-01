@@ -9,7 +9,19 @@
 // offers that retry once the tab holds the viewing key that opens the amount.
 import { formatTokenAmount, parseTokenAmount } from "@sotto/sdk/confidential/public";
 import { verifyViewKeyRegistration } from "@sotto/sdk/keys/public";
-import { Button, Card, Chip, Table, Td, Th } from "@sotto/ui";
+import {
+  Button,
+  Card,
+  Chip,
+  Field,
+  FieldActions,
+  FieldGrid,
+  Input,
+  Select,
+  Table,
+  Td,
+  Th,
+} from "@sotto/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { ApiCallError, callApi } from "../../../../../lib/client/api.ts";
@@ -340,88 +352,76 @@ export function PayCard({
           Unlock your keys to pay: the proofs of a confidential transfer are made in this tab.
         </p>
       ) : null}
-      <form className={styles.form} onSubmit={submit} noValidate>
-        <div className={`${styles.field} ${styles.wide}`}>
-          <label className={styles.label} htmlFor={`${id}-recipient`}>
-            Recipient
-          </label>
-          <select
-            id={`${id}-recipient`}
-            className={styles.control}
-            value={recipientId}
-            onChange={(event) => {
-              setRecipientId(event.target.value);
-              setAmount("");
-            }}
+      <form onSubmit={submit} noValidate>
+        <FieldGrid>
+          <Field label="Recipient" htmlFor={`${id}-recipient`} error={errors.recipient} wide>
+            <Select
+              id={`${id}-recipient`}
+              value={recipientId}
+              onChange={(event) => {
+                setRecipientId(event.target.value);
+                setAmount("");
+              }}
+            >
+              <option value="">Choose a recipient</option>
+              {recipients.map((recipient) => (
+                <option
+                  key={recipient.id}
+                  value={recipient.id}
+                  disabled={recipient.readiness !== "ready"}
+                >
+                  {recipient.displayName} · {shortWallet(recipient.wallet)}
+                  {recipient.readiness === "ready"
+                    ? ""
+                    : ` (${READINESS_LABEL[recipient.readiness]})`}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Amount (USDC)" htmlFor={`${id}-amount`} error={errors.amount}>
+            <Input
+              id={`${id}-amount`}
+              inputMode="decimal"
+              data-amount=""
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              aria-invalid={errors.amount ? true : undefined}
+            />
+          </Field>
+          <Field label="Category" htmlFor={`${id}-category`}>
+            <Select
+              id={`${id}-category`}
+              value={category}
+              onChange={(event) => setCategory(event.target.value as PaymentCategory)}
+            >
+              {PAYMENT_CATEGORIES.map((value) => (
+                <option key={value} value={value}>
+                  {CATEGORY_LABEL[value]}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field
+            label="Memo"
+            htmlFor={`${id}-memo`}
+            hint="Optional, encrypted like the amount"
+            error={errors.memo}
+            wide
           >
-            <option value="">Choose a recipient</option>
-            {recipients.map((recipient) => (
-              <option
-                key={recipient.id}
-                value={recipient.id}
-                disabled={recipient.readiness !== "ready"}
-              >
-                {recipient.displayName} · {shortWallet(recipient.wallet)}
-                {recipient.readiness === "ready"
-                  ? ""
-                  : ` (${READINESS_LABEL[recipient.readiness]})`}
-              </option>
-            ))}
-          </select>
-          {errors.recipient ? <small className={styles.error}>{errors.recipient}</small> : null}
-        </div>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor={`${id}-amount`}>
-            Amount (USDC)
-          </label>
-          <input
-            id={`${id}-amount`}
-            className={styles.control}
-            inputMode="decimal"
-            data-amount=""
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            aria-invalid={errors.amount ? true : undefined}
-          />
-          {errors.amount ? <small className={styles.error}>{errors.amount}</small> : null}
-        </div>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor={`${id}-category`}>
-            Category
-          </label>
-          <select
-            id={`${id}-category`}
-            className={styles.control}
-            value={category}
-            onChange={(event) => setCategory(event.target.value as PaymentCategory)}
-          >
-            {PAYMENT_CATEGORIES.map((value) => (
-              <option key={value} value={value}>
-                {CATEGORY_LABEL[value]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className={`${styles.field} ${styles.wide}`}>
-          <label className={styles.label} htmlFor={`${id}-memo`}>
-            Memo
-          </label>
-          <input
-            id={`${id}-memo`}
-            className={styles.control}
-            value={memo}
-            onChange={(event) => setMemo(event.target.value)}
-            aria-invalid={errors.memo ? true : undefined}
-          />
-          <small className={styles.hint}>Optional, encrypted like the amount</small>
-          {errors.memo ? <small className={styles.error}>{errors.memo}</small> : null}
-        </div>
-        <div className={styles.formActions}>
-          <Button type="submit" variant="blue" disabled={!ready || progress.busy !== null}>
-            {progress.busy ? "Paying…" : "Pay"}
-          </Button>
-        </div>
-        <PausedNote />
+            <Input
+              id={`${id}-memo`}
+              value={memo}
+              onChange={(event) => setMemo(event.target.value)}
+              aria-invalid={errors.memo ? true : undefined}
+            />
+          </Field>
+          <FieldActions>
+            <Button type="submit" variant="blue" disabled={!ready || progress.busy !== null}>
+              {progress.busy ? "Paying…" : "Pay"}
+            </Button>
+          </FieldActions>
+          <PausedNote />
+        </FieldGrid>
       </form>
       <Outcome progress={progress} />
     </Card>

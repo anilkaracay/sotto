@@ -11,6 +11,7 @@ import { getDb } from "../../../../lib/server/db.ts";
 import { ApiError } from "../../../../lib/server/errors.ts";
 import { loadMe } from "../../../../lib/server/me.ts";
 import { loadNetworkView } from "../../../../lib/server/network-view.ts";
+import notices from "../../_components/confidential/confidential.module.css";
 import { AppShell } from "../../_components/app-shell.tsx";
 import { BooksPanel } from "./books-panel.tsx";
 
@@ -42,7 +43,7 @@ export default async function BooksPage({ params }: { params: Promise<{ org: str
         <>
           <PageHeader overline={`${membership.orgName}, read only`} title="Books" />
           <Card>
-            <p role="status" data-testid="books-unavailable">
+            <p className={notices.info} role="status" data-testid="books-unavailable">
               {problem ??
                 "Sotto runs on devnet only during the beta, so the books are not available on this network."}
             </p>

@@ -316,9 +316,9 @@ test.describe.serial("viewing grants on localnet", () => {
     await expect(row.getByTestId("key-status")).toHaveText("Active");
     await unlock(page);
     const backfill = page.getByTestId("backfill");
-    await expect(backfill.getByTestId("backfill-row")).toContainText(
-      "Daniel Osei 2 records in scope",
-    );
+    const backfillRow = backfill.getByTestId("backfill-row");
+    await expect(backfillRow).toContainText("Daniel Osei");
+    await expect(backfillRow).toContainText("2 records in scope");
     await backfill.getByRole("button", { name: "Share past records" }).click();
     await expect(backfill.getByTestId("backfill-message")).toHaveText(
       "Shared 2 past records with Daniel Osei, encrypted for them only.",

@@ -1,4 +1,5 @@
-/* The invite page, built on the app tokens: no approved design exists for it (13 A38). */
+/* The invite page, built on the app tokens: no approved design exists for it (13 A38). Design pass C
+   (step 3.6): the organization's mark beside the title, and the steps numbered as on the setup page. */
 .page {
   min-height: 100vh;
   background: var(--bg);
@@ -29,10 +30,52 @@
 .primaryLink:hover {
   background: #1a4fd0;
 }
-.steps {
-  margin: 14px 0 0;
-  padding-left: 20px;
+.title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+/* The organization's initials in the dark rounded square the design gives a business. */
+.orgMark {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: var(--ink);
+  color: #ffffff;
   font-size: 14px;
-  line-height: 1.7;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0 4px;
+  padding: 0;
+  list-style: none;
+}
+.steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.55;
   color: var(--ink2);
+}
+.stepNo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin-top: -3px;
+  border-radius: 9px;
+  background: var(--soft);
+  color: var(--ink2);
+  font-family: var(--font-mono);
+  font-size: 12px;
 }

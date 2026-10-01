@@ -539,9 +539,8 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
       await expect(row.getByTestId("key-status")).toHaveText("Active");
       await unlock(page);
       const backfill = page.getByTestId("backfill");
-      await expect(backfill.getByTestId("backfill-row")).toContainText(
-        "Daniel Osei 3 records in scope",
-      );
+      await expect(backfill.getByTestId("backfill-row")).toContainText("Daniel Osei");
+      await expect(backfill.getByTestId("backfill-row")).toContainText("3 records in scope");
       await backfill.getByRole("button", { name: "Share past records" }).click();
       await expect(backfill.getByTestId("backfill-message")).toHaveText(
         "Shared 3 past records with Daniel Osei, encrypted for them only.",

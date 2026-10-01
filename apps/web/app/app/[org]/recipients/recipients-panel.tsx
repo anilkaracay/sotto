@@ -9,7 +9,19 @@
 // opens the default amounts for this page on its own.
 import { formatTokenAmount, parseTokenAmount } from "@sotto/sdk/confidential/public";
 import { verifyViewKeyRegistration } from "@sotto/sdk/keys/public";
-import { Button, Card, Table, Td, Th } from "@sotto/ui";
+import {
+  Button,
+  Card,
+  Field,
+  FieldActions,
+  FieldGrid,
+  Input,
+  Person,
+  Select,
+  Table,
+  Td,
+  Th,
+} from "@sotto/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { ApiCallError, callApi, invalidField } from "../../../../lib/client/api.ts";
@@ -22,6 +34,7 @@ import {
 } from "../../../../lib/recipient.ts";
 import type { RecipientView } from "../../../../lib/server/recipients.ts";
 import cards from "../../_components/confidential/cards.module.css";
+import notices from "../../_components/confidential/confidential.module.css";
 import {
   ConfidentialProvider,
   useConfidential,
@@ -174,24 +187,25 @@ function AddRecipientCard({ viewerKey }: { viewerKey: OwnerViewerKey | null }) {
   const input = (
     name: keyof Fields,
     label: string,
-    options: { wide?: boolean; hint?: string } = {},
+    options: { wide?: boolean; hint?: string; mono?: boolean } = {},
   ) => (
-    <div className={`${styles.field} ${options.wide ? styles.wide : ""}`}>
-      <label className={styles.label} htmlFor={`${id}-${name}`}>
-        {label}
-      </label>
-      <input
+    <Field
+      label={label}
+      htmlFor={`${id}-${name}`}
+      hint={options.hint}
+      error={errors[name]}
+      wide={options.wide ?? false}
+    >
+      <Input
         id={`${id}-${name}`}
-        className={styles.control}
+        className={options.mono ? styles.mono : undefined}
         value={fields[name]}
         onChange={(event) => set(name)(event.target.value)}
         aria-invalid={errors[name] ? true : undefined}
         disabled={(name === "amount" || name === "notes") && !viewerKey}
         data-amount={name === "amount" ? "" : undefined}
       />
-      {options.hint ? <small className={styles.hint}>{options.hint}</small> : null}
-      {errors[name] ? <small className={styles.error}>{errors[name]}</small> : null}
-    </div>
+    </Field>
   );
 
   return (
@@ -201,49 +215,46 @@ function AddRecipientCard({ viewerKey }: { viewerKey: OwnerViewerKey | null }) {
         A person or company you pay in wUSDC. The default amount and notes are encrypted in this tab
         to your viewing key, so only you can read them; Sotto stores them sealed.
       </p>
-      <form className={styles.form} onSubmit={submit} noValidate>
-        {input("displayName", "Name", { wide: true })}
-        {input("roleTitle", "Role")}
-        {input("team", "Team")}
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor={`${id}-country`}>
-            Country
-          </label>
-          <select
-            id={`${id}-country`}
-            className={styles.control}
-            value={fields.country}
-            onChange={(event) => set("country")(event.target.value)}
-          >
-            <option value="">Not set</option>
-            {COUNTRIES.map(([code, name]) => (
-              <option key={code} value={code}>
-                {name}
-              </option>
-            ))}
-          </select>
-          {errors.country ? <small className={styles.error}>{errors.country}</small> : null}
-        </div>
-        {input("amount", "Default amount (USDC)", {
-          hint: viewerKey ? "Optional, encrypted to you" : "Needs your viewing key",
-        })}
-        {input("wallet", "Solana wallet address", { wide: true })}
-        {input("notes", "Notes", {
-          wide: true,
-          hint: viewerKey
-            ? "Optional, encrypted to you"
-            : "Create your viewing key on the Account setup page to keep a default amount and notes, encrypted to you.",
-        })}
-        {problem ? (
-          <p className={`${styles.error} ${styles.wide}`} role="alert">
-            {problem}
-          </p>
-        ) : null}
-        <div className={styles.formActions}>
-          <Button type="submit" variant="blue" disabled={busy}>
-            {busy ? "Adding…" : "Add recipient"}
-          </Button>
-        </div>
+      <form onSubmit={submit} noValidate>
+        <FieldGrid>
+          {input("displayName", "Name", { wide: true })}
+          {input("roleTitle", "Role")}
+          {input("team", "Team")}
+          <Field label="Country" htmlFor={`${id}-country`} error={errors.country}>
+            <Select
+              id={`${id}-country`}
+              value={fields.country}
+              onChange={(event) => set("country")(event.target.value)}
+            >
+              <option value="">Not set</option>
+              {COUNTRIES.map(([code, name]) => (
+                <option key={code} value={code}>
+                  {name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          {input("amount", "Default amount (USDC)", {
+            hint: viewerKey ? "Optional, encrypted to you" : "Needs your viewing key",
+          })}
+          {input("wallet", "Solana wallet address", { wide: true, mono: true })}
+          {input("notes", "Notes", {
+            wide: true,
+            hint: viewerKey
+              ? "Optional, encrypted to you"
+              : "Create your viewing key on the Account setup page to keep a default amount and notes, encrypted to you.",
+          })}
+          {problem ? (
+            <p className={`${cards.problem} ${styles.wide}`} role="alert">
+              {problem}
+            </p>
+          ) : null}
+          <FieldActions>
+            <Button type="submit" variant="blue" disabled={busy}>
+              {busy ? "Adding…" : "Add recipient"}
+            </Button>
+          </FieldActions>
+        </FieldGrid>
       </form>
     </Card>
   );
@@ -355,19 +366,24 @@ function RecipientsTable({ recipients }: { recipients: RecipientView[] }) {
     <Card className={styles.tableCard} data-testid="recipients-card">
       <div className={styles.head}>
         <h2 className={cards.cardTitle}>Recipients</h2>
-        {sealed.length > 0 && !unlocked ? (
-          <small className={styles.muted} data-testid="amounts-sealed-note">
-            Default amounts open in this tab once you unlock your keys.
-          </small>
-        ) : null}
+        <small className={styles.count}>
+          {recipients.length === 1 ? "1 recipient" : `${recipients.length} recipients`}
+        </small>
       </div>
+      {sealed.length > 0 && !unlocked ? (
+        <p className={styles.sealedNote} data-testid="amounts-sealed-note">
+          Default amounts open in this tab once you unlock your keys.
+        </p>
+      ) : null}
       {problem ? (
         <p className={cards.problem} role="alert">
           {problem}
         </p>
       ) : null}
       {recipients.length === 0 ? (
-        <p className={styles.empty}>No recipients yet. Add the people and companies you pay.</p>
+        <p className={styles.empty} data-testid="recipients-empty">
+          No recipients yet. Add the people and companies you pay.
+        </p>
       ) : (
         <Table>
           <thead>
@@ -418,10 +434,7 @@ function RecipientRows(props: {
     <>
       <tr data-testid="recipient-row" data-wallet={row.wallet}>
         <Td>
-          <div className={styles.person}>
-            <b>{row.displayName}</b>
-            {row.roleTitle ? <small>{row.roleTitle}</small> : null}
-          </div>
+          <Person name={row.displayName} detail={row.roleTitle} size={36} />
         </Td>
         <Td>{row.team ?? <span className={styles.muted}>None</span>}</Td>
         <Td>
@@ -434,15 +447,16 @@ function RecipientRows(props: {
         </Td>
         <Td>{props.amount}</Td>
         <Td>
-          <ReadinessCell readiness={row.readiness} />
-          {row.joined ? (
-            <small className={styles.muted}>Joined</small>
-          ) : row.invite.status === "pending" && row.invite.expiresAt && !props.link ? (
-            // Sotto cannot know whether the owner sent the link, only until when it works.
-            <small className={styles.muted}>
-              Invite open until {formatDate(row.invite.expiresAt)}
-            </small>
-          ) : null}
+          <ReadinessCell readiness={row.readiness}>
+            {row.joined ? (
+              <small className={styles.joined}>Joined</small>
+            ) : row.invite.status === "pending" && row.invite.expiresAt && !props.link ? (
+              // Sotto cannot know whether the owner sent the link, only until when it works.
+              <small className={styles.invited}>
+                Invite open until {formatDate(row.invite.expiresAt)}
+              </small>
+            ) : null}
+          </ReadinessCell>
         </Td>
         <Td align="right">
           <div className={styles.rowActions}>
@@ -482,32 +496,34 @@ function RecipientRows(props: {
       {props.link ? (
         <tr className={styles.linkRow}>
           <Td colSpan={7}>
-            <div className={styles.link}>
-              <span className={styles.muted}>Send this link to {row.displayName}:</span>
-              <input
-                className={styles.linkInput}
-                readOnly
-                value={props.link.url}
-                aria-label={`Invite link for ${row.displayName}`}
-                data-testid="invite-link"
-                onFocus={(event) => event.currentTarget.select()}
-              />
-              <Button
-                variant="line"
-                size="sm"
-                onClick={() => {
-                  void navigator.clipboard
-                    ?.writeText(props.link?.url ?? "")
-                    .then(() => setCopied(true));
-                }}
-              >
-                {copied ? "Copied" : "Copy"}
-              </Button>
+            <div className={`${notices.info} ${styles.link}`}>
+              <b>Send this link to {row.displayName}</b>
+              <div className={styles.linkField}>
+                <Input
+                  className={styles.mono}
+                  readOnly
+                  value={props.link.url}
+                  aria-label={`Invite link for ${row.displayName}`}
+                  data-testid="invite-link"
+                  onFocus={(event) => event.currentTarget.select()}
+                />
+                <Button
+                  variant="line"
+                  size="sm"
+                  onClick={() => {
+                    void navigator.clipboard
+                      ?.writeText(props.link?.url ?? "")
+                      .then(() => setCopied(true));
+                  }}
+                >
+                  {copied ? "Copied" : "Copy"}
+                </Button>
+              </div>
+              <small>
+                It works once, only with {shortWallet(row.wallet)}, until{" "}
+                {formatDate(props.link.expiresAt)}. Sotto shows it only now.
+              </small>
             </div>
-            <small className={styles.muted}>
-              It works once, only with {shortWallet(row.wallet)}, until{" "}
-              {formatDate(props.link.expiresAt)}. Sotto shows it only now.
-            </small>
           </Td>
         </tr>
       ) : null}

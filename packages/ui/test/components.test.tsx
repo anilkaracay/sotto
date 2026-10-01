@@ -6,7 +6,14 @@ import {
   Card,
   Chip,
   Drawer,
+  Field,
+  FieldActions,
+  FieldGrid,
+  Input,
+  initials,
   PageHeader,
+  Person,
+  Select,
   Table,
   Td,
   Th,
@@ -32,6 +39,37 @@ describe("app theme (09 section 2)", () => {
 });
 
 describe("components", () => {
+  it("Person shows initials in the avatar, the name and the line under it", () => {
+    expect(initials("Maya Chen")).toBe("MC");
+    expect(initials("  daniel  van der Berg ")).toBe("DB");
+    expect(initials("Northwind")).toBe("N");
+    expect(html(<Person name="Maya Chen" detail="Design lead" size={34} />)).toBe(
+      '<span class="person"><span class="avatar" style="width:34px;height:34px" aria-hidden="true">MC</span><span class="text"><b>Maya Chen</b><small>Design lead</small></span></span>',
+    );
+    expect(html(<Person name="Northwind Ltd" business />)).toContain('class="avatar business"');
+  });
+
+  it("Field puts the label above its control, then the hint and the problem (13 A35)", () => {
+    const markup = html(
+      <FieldGrid>
+        <Field label="Name" htmlFor="name" hint="As on the invoice" error="Enter a name." wide>
+          <Input id="name" aria-invalid />
+        </Field>
+        <Field label="Country" htmlFor="country">
+          <Select id="country">
+            <option value="">Not set</option>
+          </Select>
+        </Field>
+        <FieldActions>
+          <Button>Add</Button>
+        </FieldActions>
+      </FieldGrid>,
+    );
+    expect(markup).toBe(
+      '<div class="grid"><div class="field wide"><label class="label" for="name">Name</label><input class="control" id="name" aria-invalid="true"/><small class="hint">As on the invoice</small><small class="error">Enter a name.</small></div><div class="field"><label class="label" for="country">Country</label><select class="control select" id="country"><option value="">Not set</option></select></div><div class="actions"><button type="button" class="button">Add</button></div></div>',
+    );
+  });
+
   it("Button renders a typed button with the design variants", () => {
     expect(html(<Button>Go</Button>)).toBe('<button type="button" class="button">Go</button>');
     expect(

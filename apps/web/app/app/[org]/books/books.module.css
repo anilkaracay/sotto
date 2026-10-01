@@ -109,10 +109,34 @@
 }
 
 /* The scope banner (AC-11.1). */
+/* The scope banner (design pass C, step 3.6, 13 A46): the design's shield beside the words. */
 .banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   font-size: 14px;
   line-height: 1.5;
   color: var(--ink2);
+}
+.bannerIcon {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 10px;
+  background: rgba(14, 154, 100, 0.1);
+  color: #0b7a51;
+}
+/* No row for the filters: the empty state of the recipients and payroll pages. */
+.ledgerEmpty {
+  margin-top: 14px;
+  padding: 28px 20px;
+  border-radius: 16px;
+  background: var(--soft);
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted);
 }
 .banner b {
   font-weight: 500;

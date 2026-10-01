@@ -40,6 +40,7 @@ import { expiryWords, scopeWords } from "../../../../lib/grant.ts";
 import type { BooksPaymentView, BooksView } from "../../../../lib/server/books.ts";
 import type { DisclosureItemView, ManifestView } from "../../../../lib/server/disclosures.ts";
 import cards from "../../_components/confidential/cards.module.css";
+import notices from "../../_components/confidential/confidential.module.css";
 import {
   ConfidentialProvider,
   useConfidential,
@@ -288,13 +289,30 @@ export function BooksScreen({
       <div className={styles.page}>
         <Card className={styles.s12} data-testid="scope-banner">
           <p className={styles.banner}>
-            Shared by <b>{granter}</b> ·{" "}
-            {grant ? scopeWords(grant.scope, grant.periodFrom, grant.periodTo) : "Every amount"} ·{" "}
-            {expiry} · Read only, never control of funds
+            <span className={styles.bannerIcon} aria-hidden="true">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6l7-3z" />
+                <path d="M9 12l2 2 4-4" />
+              </svg>
+            </span>
+            <span>
+              Shared by <b>{granter}</b> ·{" "}
+              {grant ? scopeWords(grant.scope, grant.periodFrom, grant.periodTo) : "Every amount"} ·{" "}
+              {expiry} · Read only, never control of funds
+            </span>
           </p>
           {exported ? (
             <p
-              className={exported.tone === "done" ? styles.done : styles.problem}
+              className={exported.tone === "done" ? notices.result : cards.problem}
               role={exported.tone === "done" ? "status" : "alert"}
               data-testid="export-result"
             >
@@ -424,25 +442,25 @@ export function BooksScreen({
             ) : null}
           </div>
           {problem ? (
-            <p className={styles.problem} role="alert">
+            <p className={cards.problem} role="alert">
               {problem}
             </p>
           ) : null}
           {unverified > 0 ? (
-            <p className={styles.warning} role="alert" data-testid="books-unverified">
+            <p className={cards.warning} role="alert" data-testid="books-unverified">
               {unverified === 1
                 ? `1 record did not verify against ${orgName}'s signature, so it was not opened.`
                 : `${unverified} records did not verify against ${orgName}'s signature, so they were not opened.`}
             </p>
           ) : null}
           {!rows ? (
-            <p className={styles.lead} data-testid="books-locked">
+            <p className={notices.info} data-testid="books-locked">
               {payments.length === 0
                 ? `${orgName} has not shared any record with you yet.`
                 : `${payments.length} ${payments.length === 1 ? "record is" : "records are"} sealed to your viewing key. Unlock it below to read them in this tab.`}
             </p>
           ) : shown.length === 0 ? (
-            <p className={styles.empty} data-testid="ledger-empty">
+            <p className={styles.ledgerEmpty} data-testid="ledger-empty">
               {rows.length === 0
                 ? `${orgName} has not shared any record with you yet.`
                 : "No record matches these filters."}
@@ -659,7 +677,7 @@ function PaymentDrawer({
             </div>
           </div>
           {problem ? (
-            <p className={styles.problem} role="alert">
+            <p className={cards.problem} role="alert">
               {problem}
             </p>
           ) : null}

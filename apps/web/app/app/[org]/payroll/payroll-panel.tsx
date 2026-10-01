@@ -6,11 +6,12 @@
 // the owner's own viewing key (the line's private blob) and the run is created as a draft; nothing
 // in plaintext leaves the tab. The runs list shows each run's status and how many lines settled.
 import { verifyViewKeyRegistration } from "@sotto/sdk/keys/public";
-import { Button, Card, Chip, Table, Td, Th } from "@sotto/ui";
+import { Button, Card, Chip, Field, FieldGrid, Input, Person, Table, Td, Th } from "@sotto/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState, type ChangeEvent } from "react";
 import { ApiCallError, callApi } from "../../../../lib/client/api.ts";
+import { monthLabel } from "../../../../lib/books.ts";
 import { formatDate, shortWallet } from "../../../../lib/format.ts";
 import {
   CSV_COLUMNS,
@@ -25,6 +26,7 @@ import {
 } from "../../../../lib/payroll.ts";
 import type { PayrollRunSummary, PayrollRunView } from "../../../../lib/server/payroll.ts";
 import cards from "../../_components/confidential/cards.module.css";
+import notices from "../../_components/confidential/confidential.module.css";
 import {
   ConfidentialProvider,
   useConfidential,
@@ -195,14 +197,10 @@ function NewRunCard({
           Create your viewing key on the Account setup page first: each line is sealed to it.
         </p>
       ) : null}
-      <div className={styles.form}>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor={`${id}-period`}>
-            Pay period
-          </label>
-          <input
+      <FieldGrid>
+        <Field label="Pay period" htmlFor={`${id}-period`}>
+          <Input
             id={`${id}-period`}
-            className={styles.control}
             type="month"
             value={period}
             onChange={(event) => {
@@ -212,32 +210,50 @@ function NewRunCard({
               setPeriod(next);
             }}
           />
-        </div>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor={`${id}-title`}>
-            Title
-          </label>
-          <input
+        </Field>
+        <Field label="Title" htmlFor={`${id}-title`}>
+          <Input
             id={`${id}-title`}
-            className={styles.control}
             value={title}
             maxLength={TITLE_MAX}
             onChange={(event) => setTitle(event.target.value)}
           />
-        </div>
-        <div className={`${styles.field} ${styles.wide}`}>
-          <label className={styles.label} htmlFor={`${id}-file`}>
-            Payroll CSV
-          </label>
-          <input
-            id={`${id}-file`}
-            className={styles.file}
-            type="file"
-            accept=".csv,text/csv"
-            onChange={(event) => void choose(event)}
-          />
-        </div>
-      </div>
+        </Field>
+        <Field label="Payroll CSV" htmlFor={`${id}-file`} wide>
+          {/* The file input covers the drop zone, so a click opens the picker and a dropped file
+              lands in the input, as with the browser's own control. */}
+          <div className={styles.drop} data-chosen={draft ? "" : undefined}>
+            <span className={styles.dropIcon} aria-hidden="true">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z" />
+                <path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3" />
+              </svg>
+            </span>
+            <span className={styles.dropText}>
+              <b>{draft ? draft.name : "Choose a CSV file or drop it here"}</b>
+              <small>
+                {draft ? "Choose another file to replace it" : "CSV UTF-8, read in this tab"}
+              </small>
+            </span>
+            <input
+              id={`${id}-file`}
+              className={styles.file}
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(event) => void choose(event)}
+            />
+          </div>
+        </Field>
+      </FieldGrid>
       {fileErrors.length > 0 ? (
         <p className={styles.problem} role="alert" data-testid="csv-file-error">
           {fileErrors.join(" ")}
@@ -245,7 +261,7 @@ function NewRunCard({
       ) : null}
       {rows.length > 0 ? (
         <>
-          <p className={styles.summary} data-testid="csv-summary">
+          <p className={invalid === 0 ? notices.info : cards.warning} data-testid="csv-summary">
             {rows.length} {rows.length === 1 ? "line" : "lines"} from {draft?.name},{" "}
             {invalid === 0 ? (
               <>
@@ -273,14 +289,17 @@ function NewRunCard({
                     data-testid="csv-row"
                     data-state={row.errors.length > 0 ? "error" : "ok"}
                   >
-                    <Td className="num">{row.row}</Td>
+                    <Td className={`num ${styles.rowNo}`}>{row.row}</Td>
                     <Td>
-                      <span className={styles.person}>
-                        <b>{row.recipient?.displayName ?? (row.name || "Unknown")}</b>
-                        <small className="mono">
-                          {row.wallet ? shortWallet(row.wallet) : "No wallet"}
-                        </small>
-                      </span>
+                      <Person
+                        name={row.recipient?.displayName ?? (row.name || "Unknown")}
+                        detail={
+                          <span className="mono">
+                            {row.wallet ? shortWallet(row.wallet) : "No wallet"}
+                          </span>
+                        }
+                        size={32}
+                      />
                     </Td>
                     <Td align="right" className="num">
                       {row.base !== null ? (
@@ -328,7 +347,14 @@ function RunsCard({ runs }: { runs: PayrollRunSummary[] }) {
   const { orgId } = useConfidential();
   return (
     <Card data-testid="runs-card">
-      <h2 className={cards.cardTitle}>Runs</h2>
+      <div className={styles.runsHead}>
+        <h2 className={cards.cardTitle}>Runs</h2>
+        {runs.length > 0 ? (
+          <small className={styles.muted}>
+            {runs.length === 1 ? "1 run" : `${runs.length} runs`}
+          </small>
+        ) : null}
+      </div>
       {runs.length === 0 ? (
         <p className={styles.empty}>No payroll runs yet. Upload a CSV to create the first one.</p>
       ) : (
@@ -338,7 +364,7 @@ function RunsCard({ runs }: { runs: PayrollRunSummary[] }) {
               <tr>
                 <Th>Run</Th>
                 <Th>Period</Th>
-                <Th align="right">Lines</Th>
+                <Th>Lines</Th>
                 <Th>Status</Th>
                 <Th>Created</Th>
               </tr>
@@ -351,9 +377,20 @@ function RunsCard({ runs }: { runs: PayrollRunSummary[] }) {
                       {run.title}
                     </Link>
                   </Td>
-                  <Td className="mono">{run.period}</Td>
-                  <Td align="right" className="num">
-                    {run.settled} of {run.lineCount} settled
+                  <Td>{monthLabel(run.period, true)}</Td>
+                  <Td>
+                    <span className={styles.settled}>
+                      <span className={styles.settledBar} aria-hidden="true">
+                        <span
+                          style={{
+                            width: `${run.lineCount === 0 ? 0 : Math.round((run.settled / run.lineCount) * 100)}%`,
+                          }}
+                        />
+                      </span>
+                      <span className="num">
+                        {run.settled} of {run.lineCount} settled
+                      </span>
+                    </span>
                   </Td>
                   <Td>
                     <Chip tone={runStatusChip(run.status).tone}>

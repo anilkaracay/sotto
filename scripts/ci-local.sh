@@ -221,6 +221,7 @@ job_checks() {
   run python3 scripts/checks/no-dashes.py HEAD &&
     run python3 -m unittest discover -s scripts/checks -p "test_*.py" &&
     run python3 scripts/checks/ac-manifest.py --list &&
+    run python3 scripts/checks/invariants.py &&
     install_gitleaks &&
     run "$GITLEAKS" git --redact --no-banner --config .gitleaks.toml --log-opts="--all" . &&
     run scripts/checks/no-zk-token-proof.sh &&

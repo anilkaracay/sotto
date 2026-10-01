@@ -2,8 +2,21 @@
 
 // The onboarding screen's client part: the organization form (create, and edit while in review) and
 // the status card. The form validates with the same schema as the API (lib/org.ts). No approved
-// design exists for this screen; it is built on the app tokens (13 A35).
-import { Button, Card, Chip, PageHeader, type ChipTone } from "@sotto/ui";
+// design exists for this screen; it is built on the app tokens (13 A35). Step 3.4 (design pass A,
+// founder 2026-10-01): the shared fields of packages/ui beside the three steps of verification, and the
+// status as a tracker of those steps with the attestation as the last.
+import {
+  Button,
+  Card,
+  Chip,
+  Field as UiField,
+  FieldActions,
+  FieldGrid,
+  Input,
+  PageHeader,
+  Select,
+  type ChipTone,
+} from "@sotto/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState, useTransition, type FormEvent, type ReactNode } from "react";
@@ -60,7 +73,10 @@ export function OrgOnboarding({ org }: { org: OnboardingOrg | null }) {
     return (
       <>
         <PageHeader overline="Get started" title="Your organization" />
-        <OrgForm />
+        <div className={styles.grid}>
+          <OrgForm />
+          <HowItWorks />
+        </div>
       </>
     );
   }
@@ -68,7 +84,10 @@ export function OrgOnboarding({ org }: { org: OnboardingOrg | null }) {
     return (
       <>
         <PageHeader overline="Change details" title={org.displayName} />
-        <OrgForm org={org} onDone={() => setEditing(false)} />
+        <div className={styles.grid}>
+          <OrgForm org={org} onDone={() => setEditing(false)} />
+          <HowItWorks />
+        </div>
       </>
     );
   }
@@ -163,107 +182,105 @@ function OrgForm({ org, onDone }: { org?: OnboardingOrg; onDone?: () => void }) 
   return (
     <Card className={styles.formCard}>
       <h2 className={styles.cardTitle}>Business details</h2>
-      <p className={styles.lead}>
-        A Sotto admin reviews these details before money features open. Once verified, Sotto issues
-        an attestation onchain to your wallet with the organization ID, legal name, country,
-        verification date and review level. Anyone can read it.
-      </p>
-      <form className={styles.form} onSubmit={submit} noValidate aria-busy={busy}>
-        <Field label="Legal name" error={errors.legalName} wide>
-          {(props) => (
-            <input
-              {...props}
-              name="legalName"
-              autoComplete="organization"
-              value={values.legalName}
-              onChange={change("legalName")}
-            />
-          )}
-        </Field>
-        <Field
-          label="Display name"
-          hint="Optional. Shown in Sotto instead of the legal name."
-          error={errors.displayName}
-        >
-          {(props) => (
-            <input
-              {...props}
-              name="displayName"
-              value={values.displayName}
-              onChange={change("displayName")}
-            />
-          )}
-        </Field>
-        <Field label="Country" error={errors.country}>
-          {(props) => (
-            <select
-              {...props}
-              name="country"
-              autoComplete="country"
-              value={values.country}
-              onChange={change("country")}
-            >
-              <option value="" disabled>
-                Choose a country
-              </option>
-              {COUNTRIES.map(([code, name]) => (
-                <option key={code} value={code}>
-                  {name}
+      <p className={styles.lead}>A Sotto admin reviews these details before money features open.</p>
+      <form onSubmit={submit} noValidate aria-busy={busy}>
+        <FieldGrid>
+          <Field label="Legal name" error={errors.legalName} wide>
+            {(props) => (
+              <Input
+                {...props}
+                name="legalName"
+                autoComplete="organization"
+                value={values.legalName}
+                onChange={change("legalName")}
+              />
+            )}
+          </Field>
+          <Field
+            label="Display name"
+            hint="Optional. Shown in Sotto instead of the legal name."
+            error={errors.displayName}
+          >
+            {(props) => (
+              <Input
+                {...props}
+                name="displayName"
+                value={values.displayName}
+                onChange={change("displayName")}
+              />
+            )}
+          </Field>
+          <Field label="Country" error={errors.country}>
+            {(props) => (
+              <Select
+                {...props}
+                name="country"
+                autoComplete="country"
+                value={values.country}
+                onChange={change("country")}
+              >
+                <option value="" disabled>
+                  Choose a country
                 </option>
-              ))}
-            </select>
-          )}
-        </Field>
-        <Field label="Registration number" error={errors.registrationNo}>
-          {(props) => (
-            <input
-              {...props}
-              name="registrationNo"
-              value={values.registrationNo}
-              onChange={change("registrationNo")}
-            />
-          )}
-        </Field>
-        <Field label="Website" error={errors.website}>
-          {(props) => (
-            <input
-              {...props}
-              name="website"
-              inputMode="url"
-              autoComplete="url"
-              placeholder="example.com"
-              value={values.website}
-              onChange={change("website")}
-            />
-          )}
-        </Field>
-        <Field label="Contact email" error={errors.contactEmail}>
-          {(props) => (
-            <input
-              {...props}
-              name="contactEmail"
-              type="email"
-              autoComplete="email"
-              value={values.contactEmail}
-              onChange={change("contactEmail")}
-            />
-          )}
-        </Field>
-        {formError ? (
-          <p className={styles.formError} role="alert">
-            {formError}
-          </p>
-        ) : null}
-        <div className={styles.actions}>
-          <Button type="submit" variant="blue" disabled={busy}>
-            {busy ? "Sending…" : org ? "Save changes" : "Send for review"}
-          </Button>
-          {org && onDone ? (
-            <Button variant="line" onClick={onDone} disabled={busy}>
-              Cancel
-            </Button>
+                {COUNTRIES.map(([code, name]) => (
+                  <option key={code} value={code}>
+                    {name}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+          <Field label="Registration number" error={errors.registrationNo}>
+            {(props) => (
+              <Input
+                {...props}
+                name="registrationNo"
+                value={values.registrationNo}
+                onChange={change("registrationNo")}
+              />
+            )}
+          </Field>
+          <Field label="Website" error={errors.website}>
+            {(props) => (
+              <Input
+                {...props}
+                name="website"
+                inputMode="url"
+                autoComplete="url"
+                placeholder="example.com"
+                value={values.website}
+                onChange={change("website")}
+              />
+            )}
+          </Field>
+          <Field label="Contact email" error={errors.contactEmail}>
+            {(props) => (
+              <Input
+                {...props}
+                name="contactEmail"
+                type="email"
+                autoComplete="email"
+                value={values.contactEmail}
+                onChange={change("contactEmail")}
+              />
+            )}
+          </Field>
+          {formError ? (
+            <p className={`${styles.formError} ${styles.wide}`} role="alert">
+              {formError}
+            </p>
           ) : null}
-        </div>
+          <FieldActions>
+            <Button type="submit" variant="blue" disabled={busy}>
+              {busy ? "Sending…" : org ? "Save changes" : "Send for review"}
+            </Button>
+            {org && onDone ? (
+              <Button variant="line" onClick={onDone} disabled={busy}>
+                Cancel
+              </Button>
+            ) : null}
+          </FieldActions>
+        </FieldGrid>
       </form>
     </Card>
   );
@@ -271,11 +288,11 @@ function OrgForm({ org, onDone }: { org?: OnboardingOrg; onDone?: () => void }) 
 
 type ControlProps = {
   id: string;
-  className: string | undefined;
   "aria-invalid": boolean;
   "aria-describedby"?: string;
 };
 
+/** A shared field whose hint and problem the control names in aria-describedby. */
 function Field({
   label,
   hint,
@@ -294,27 +311,109 @@ function Field({
     .filter(Boolean)
     .join(" ");
   return (
-    <div className={wide ? `${styles.field} ${styles.wide}` : styles.field}>
-      <label className={styles.label} htmlFor={id}>
-        {label}
-      </label>
+    <UiField label={label} htmlFor={id} hint={hint} error={error} wide={wide ?? false}>
       {children({
         id,
-        className: styles.control,
         "aria-invalid": Boolean(error),
         ...(described ? { "aria-describedby": described } : {}),
       })}
-      {hint ? (
-        <small id={`${id}-hint`} className={styles.hint}>
-          {hint}
-        </small>
-      ) : null}
-      {error ? (
-        <small id={`${id}-error`} className={styles.error}>
-          {error}
-        </small>
-      ) : null}
-    </div>
+    </UiField>
+  );
+}
+
+/** The three steps of verification, beside the form. */
+function HowItWorks() {
+  return (
+    <Card className={styles.how} data-testid="how-verification-works">
+      <h2 className={styles.cardTitle}>How verification works</h2>
+      <ol className={styles.steps}>
+        <li>
+          <span className={styles.stepNo} aria-hidden="true">
+            01
+          </span>
+          <div>
+            <b>Send your business details</b>
+            <small>Legal name, country, registration number, website and a contact email.</small>
+          </div>
+        </li>
+        <li>
+          <span className={styles.stepNo} aria-hidden="true">
+            02
+          </span>
+          <div>
+            <b>A Sotto admin reviews them</b>
+            <small>Money features stay off until the review verifies the organization.</small>
+          </div>
+        </li>
+        <li>
+          <span className={styles.stepNo} aria-hidden="true">
+            03
+          </span>
+          <div>
+            <b>An attestation onchain</b>
+            <small>
+              Once verified, Sotto issues an attestation onchain to your wallet with the
+              organization ID, legal name, country, verification date and review level. Anyone can
+              read it.
+            </small>
+          </div>
+        </li>
+      </ol>
+    </Card>
+  );
+}
+
+type Stage = { title: string; detail: string; state: "done" | "current" | "next" | "stopped" };
+
+/** The status as the three steps of verification. */
+export function stagesOf(org: OnboardingOrg): Stage[] {
+  const sent: Stage = {
+    title: "Sent for review",
+    detail: formatDate(org.createdAt),
+    state: "done",
+  };
+  if (org.status === "pending_review") {
+    return [
+      sent,
+      { title: "Reviewed by Sotto", detail: "In review", state: "current" },
+      { title: "Attestation onchain", detail: "After the review", state: "next" },
+    ];
+  }
+  if (org.status === "suspended") {
+    return [
+      sent,
+      {
+        title: "Reviewed by Sotto",
+        detail: org.reviewedAt ? `Not verified, ${formatDate(org.reviewedAt)}` : "Not verified",
+        state: "stopped",
+      },
+      { title: "Attestation onchain", detail: "None", state: "next" },
+    ];
+  }
+  return [
+    sent,
+    {
+      title: "Reviewed by Sotto",
+      detail: org.reviewedAt ? `Verified, ${formatDate(org.reviewedAt)}` : "Verified",
+      state: "done",
+    },
+    org.attestationAddress
+      ? { title: "Attestation onchain", detail: "Issued to your wallet", state: "done" }
+      : { title: "Attestation onchain", detail: "Being issued", state: "current" },
+  ];
+}
+
+function Tracker({ org }: { org: OnboardingOrg }) {
+  return (
+    <ol className={styles.tracker} data-testid="verification-tracker">
+      {stagesOf(org).map((stage) => (
+        <li key={stage.title} className={styles[stage.state]} data-state={stage.state}>
+          <span className={styles.dot} aria-hidden="true" />
+          <b>{stage.title}</b>
+          <small>{stage.detail}</small>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -328,6 +427,7 @@ function OrgStatusView({ org, onEdit }: { org: OnboardingOrg; onEdit: () => void
             {orgStatusLabel(org.status)}
           </Chip>
         </div>
+        <Tracker org={org} />
         {org.status === "pending_review" ? (
           <>
             <p className={styles.lead}>

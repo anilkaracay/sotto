@@ -66,7 +66,7 @@ describe("components", () => {
       </FieldGrid>,
     );
     expect(markup).toBe(
-      '<div class="grid"><div class="field wide"><label class="label" for="name">Name</label><input class="control" id="name" aria-invalid="true"/><small class="hint">As on the invoice</small><small class="error">Enter a name.</small></div><div class="field"><label class="label" for="country">Country</label><select class="control select" id="country"><option value="">Not set</option></select></div><div class="actions"><button type="button" class="button">Add</button></div></div>',
+      '<div class="grid"><div class="field wide"><label class="label" for="name">Name</label><input class="control" id="name" aria-invalid="true"/><small id="name-hint" class="hint">As on the invoice</small><small id="name-error" class="error">Enter a name.</small></div><div class="field"><label class="label" for="country">Country</label><select class="control select" id="country"><option value="">Not set</option></select></div><div class="actions"><button type="button" class="button">Add</button></div></div>',
     );
   });
 

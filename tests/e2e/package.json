@@ -10,6 +10,7 @@
     "e2e:localnet": "playwright test --config playwright.localnet.config.ts"
   },
   "devDependencies": {
+    "@axe-core/playwright": "catalog:",
     "@playwright/test": "catalog:",
     "@solana/kit": "catalog:",
     "@sotto/config": "workspace:*",
@@ -18,6 +19,7 @@
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "globals": "catalog:",
+    "lighthouse": "catalog:",
     "typescript": "catalog:"
   }
 }

@@ -58,6 +58,9 @@ jobs:
         run: python3 scripts/checks/build-output.py
       - name: Install the Playwright browser
         run: pnpm --filter @sotto/e2e exec playwright install --with-deps chromium firefox
+      # The visual baselines (step 3.8, tests/e2e/visual.ts) are compared in the local CI only
+      # (D-25): they are taken on its macOS machine, and this runner's fonts would differ. Here
+      # SOTTO_VISUAL is not set, so the specs skip the comparison.
       - name: End to end tests (Playwright)
         run: pnpm --filter @sotto/e2e e2e
 

@@ -65,3 +65,27 @@ class Phases(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class VisualBaselines(unittest.TestCase):
+    """Step 3.8: approved screens and their baseline files match."""
+
+    def test_listed_screens_need_their_files_and_files_need_listing(self):
+        current = {"currentPhase": 3, "phases": {"3": {"required": [], "visual": True}}}
+        listed = {"specs/landing.spec.ts": ["landing-1440"]}
+        ok, _ = ac_manifest.check_visual(current, listed, {"specs/landing.spec.ts/landing-1440"})
+        self.assertTrue(ok)
+        ok, message = ac_manifest.check_visual(current, listed, set())
+        self.assertFalse(ok)
+        self.assertIn("without a baseline", message)
+        ok, message = ac_manifest.check_visual(
+            current, listed, {"specs/landing.spec.ts/landing-1440", "specs/x.spec.ts/new"}
+        )
+        self.assertFalse(ok)
+        self.assertIn("not listed as approved", message)
+
+    def test_a_visual_phase_needs_baselines(self):
+        current = {"currentPhase": 3, "phases": {"3": {"required": [], "visual": True}}}
+        self.assertFalse(ac_manifest.check_visual(current, {}, set())[0])
+        earlier = {"currentPhase": 2, "phases": {"2": {"required": [], "visual": False}}}
+        self.assertTrue(ac_manifest.check_visual(earlier, {}, set())[0])

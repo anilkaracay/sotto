@@ -1,8 +1,11 @@
 // The landing in the browser (F-17, AC-17.1; step 3.1): the production build serves `/` from
 // design/sotto-landing.html with the copy corrections of 13, without a console error or warning, at
 // 1440, and at 390 and 360 without a horizontal scroll; Sign in opens the app. Since step 3.2 (AC-17.2)
-// the request access form stores a request with the visitor's consent and says thanks.
+// the request access form stores a request with the visitor's consent and says thanks. Since step 3.8
+// the approved landing at 1440 and 390 is compared with its baselines, its clock paused so the hero's
+// views hold still.
 import { expect, firefox, test, type Page } from "@playwright/test";
+import { expectVisual, VISUAL } from "../visual.ts";
 
 function watchConsole(page: Page): string[] {
   const problems: string[] = [];
@@ -186,3 +189,17 @@ test("AC-17.2 stores a request with the visitor's consent and says thanks", asyn
   await expect(page.getByTestId("request-access-done")).toHaveText("Thanks, we will be in touch");
   expect(problems).toEqual([]);
 });
+
+for (const width of [1440, 390]) {
+  test(`AC-17.1 matches the approved landing at ${width}`, async ({ page }) => {
+    test.skip(!VISUAL, "visual checks run in the local CI (SOTTO_VISUAL=1)");
+    const at = new Date("2026-10-01T09:00:00.000Z");
+    await page.clock.install({ time: at });
+    await page.clock.pauseAt(at);
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Private books.");
+    await page.evaluate(() => document.fonts.ready);
+    await expectVisual(page, `landing-${width}`);
+  });
+}

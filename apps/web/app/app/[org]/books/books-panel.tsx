@@ -16,7 +16,7 @@
 // Every record is verified against the owner's manifest before it opens (I-9); nothing opens before
 // the viewing key is unlocked in this tab, and no figure is shown while locked.
 import type { DisclosurePayloadV1 } from "@sotto/sdk/disclosure";
-import { Button, Card, Chip, Drawer, PageHeader, Table, Td, Th } from "@sotto/ui";
+import { Button, Card, Chip, Drawer, initials, PageHeader, Table, Td, Th } from "@sotto/ui";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   BOOKS_CATEGORY_LABEL,
@@ -114,7 +114,7 @@ function BooksLive({ you, books }: { you: string; books: BooksView }) {
         viewerUserId: you,
         items: records.items,
         manifests: records.manifests,
-        open: (ciphertext) => session.worker().openSealed(ciphertext),
+        open: (ciphertext) => session.openWorker().openSealed(ciphertext),
       });
       const payloads = items.flatMap((item) => (item.state === "opened" ? [item.payload] : []));
       const unverified = items.filter((item) => item.state === "unverified").length;
@@ -158,7 +158,7 @@ function BooksLive({ you, books }: { you: string; books: BooksView }) {
   );
 }
 
-const initial = (name: string) => name.trim().slice(0, 1).toUpperCase() || "?";
+const initial = (name: string) => initials(name) || "?";
 
 /**
  * The screen from what the container loaded and opened: `rows` is null while the viewing key is
@@ -341,6 +341,8 @@ export function BooksScreen({
               selected={activeMonth}
               format={formatUsdc}
               testId="money-out-bar"
+              // The design lays out a quarter, three months (step 3.7).
+              slots={3}
             />
           ) : null}
         </Card>

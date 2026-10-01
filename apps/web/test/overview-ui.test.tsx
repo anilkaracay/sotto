@@ -149,7 +149,7 @@ describe("overview recent activity", () => {
     );
     expect(html).toContain('data-kind="payroll_line"');
     expect(text(html)).toContain(
-      "Maya Chen August payroll Sealed Settled M D Maya Chen, Daniel Osei Sealed",
+      "MC Maya Chen August payroll Sealed Settled MC DO Maya Chen, Daniel Osei Sealed",
     );
     expect(html).toContain('title="Maya Chen, Daniel Osei"');
   });

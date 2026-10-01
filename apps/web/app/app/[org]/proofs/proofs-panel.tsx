@@ -8,7 +8,7 @@
 // (AC-13.2). The issued list shows each record's state from chain; an expired record can be closed,
 // its rent back to the owner (X-31).
 import { getCloseProofRecordInstruction } from "@sotto/sdk/proofs";
-import { Button, Card, Chip, Table, Td, Th } from "@sotto/ui";
+import { Button, Card, Chip, Person, Table, Td, Th } from "@sotto/ui";
 import { address } from "@solana/kit";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
@@ -496,13 +496,15 @@ export function IssuedProofsView(props: {
             {props.proofs.map((proof) => (
               <tr key={proof.recordAddress} data-testid="issued-row" data-state={proof.state}>
                 <Td>
-                  <b>{proof.counterpartyLabel}</b>
+                  <Person name={proof.counterpartyLabel} business size={38} />
                 </Td>
                 <Td>
                   <WithAmounts>{statementWords(BigInt(proof.threshold))}</WithAmounts>
                 </Td>
                 <Td>
-                  <Chip tone="green">{PROVEN}</Chip>
+                  <Chip tone="green" check>
+                    {PROVEN}
+                  </Chip>
                 </Td>
                 <Td className="num">{formatDate(proof.createdAt)}</Td>
                 <Td>

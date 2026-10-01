@@ -76,11 +76,11 @@ export function BalanceGrowth({
     const locked = () => cancelled || session.unlocked() === null || session.viewing() === null;
     const worker = () => {
       if (locked()) throw new Error("The keys locked.");
-      return vault.worker();
+      return session.openWorker();
     };
     const openSealed = (ciphertext: Uint8Array) => {
       if (locked()) throw new Error("The keys locked.");
-      return session.worker().openSealed(ciphertext);
+      return session.openWorker().openSealed(ciphertext);
     };
     void (async () => {
       if (!unlocked || !viewing || !balance) {

@@ -2,6 +2,7 @@
 // by team (decrypted in the tab), the settlement gauge (X-18), the approvals block with the
 // initiator's approval only (Q-12, 13 A31), the recipients with each line's status, and Approve and
 // run or Resume. Only for the owner of an active org (AC-02.2).
+import { monthLabel } from "../../../../../lib/books.ts";
 import { PageHeader } from "@sotto/ui";
 import { notFound, redirect } from "next/navigation";
 import { ownerNav } from "../../../../../lib/org-nav.ts";
@@ -51,7 +52,7 @@ export default async function PayrollRunPage({
   if (!run) notFound();
   return (
     <AppShell me={me} network={network} nav={ownerNav(orgId, "payroll")}>
-      <PageHeader overline={`Payroll run, ${run.period}`} title={run.title} />
+      <PageHeader overline={`Payroll run, ${monthLabel(run.period, true)}`} title={run.title} />
       {network.available ? (
         <RunPanel
           wallet={me.user.wallet}

@@ -342,22 +342,27 @@
 .logEntry::before {
   content: "";
   position: absolute;
-  top: 18px;
-  bottom: 0;
-  left: 5px;
+  top: 34px;
+  bottom: 2px;
+  left: 15px;
   width: 1px;
   background: var(--line);
 }
 .logEntry:last-child::before {
   display: none;
 }
-.logDot {
+/* Step 3.7: the actor's initials in the design's 30 pixel avatar, the Sotto mark for the worker. */
+.logAvatar {
+  display: inline-grid;
+  place-items: center;
   flex: none;
-  width: 11px;
-  height: 11px;
-  margin-top: 4px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: var(--blue);
+  background: #eef3ff;
+  color: #1a45c4;
+  font-size: 11px;
+  font-weight: 600;
 }
 .logEntry b {
   display: block;

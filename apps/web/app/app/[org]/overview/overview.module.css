@@ -12,6 +12,26 @@
   min-width: 0;
   overflow-x: auto;
 }
+/* Step 3.7: the design's row of a dark card of two thirds beside one of a third (.s8, .s4). */
+.duo {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+  min-width: 0;
+}
+.duo > .wide {
+  grid-column: auto;
+  display: flex;
+  flex-direction: column;
+}
+/* Locked, empty or reading: the words in the middle of the card's height, not at its top. */
+.duo > .wide > .darkEmpty {
+  margin: auto 0;
+  padding-bottom: 40px;
+  text-align: center;
+}
 .linkButton {
   display: inline-flex;
   align-items: center;
@@ -200,13 +220,13 @@
 .reader {
   display: inline-grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: #eef3ff;
   color: #1a45c4;
   border: 2px solid var(--surface);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
 }
 

@@ -14,7 +14,7 @@
 // figure shows while locked.
 import { formatTokenAmount } from "@sotto/sdk/confidential/public";
 import type { DisclosurePayloadV1 } from "@sotto/sdk/disclosure";
-import { Button, Card } from "@sotto/ui";
+import { Button, Card, Chip, initials } from "@sotto/ui";
 import { address, fetchEncodedAccount } from "@solana/kit";
 import { useEffect, useState } from "react";
 import { BOOKS_CATEGORY_LABEL } from "../../../../lib/books.ts";
@@ -224,7 +224,7 @@ function PayGroup({
         viewerUserId: userId,
         items: loaded.records.items,
         manifests: loaded.records.manifests,
-        open: (ciphertext) => session.worker().openSealed(ciphertext),
+        open: (ciphertext) => session.openWorker().openSealed(ciphertext),
       });
       if (!cancelled) {
         setOpened({
@@ -379,7 +379,9 @@ export function PayGroupView({
           <div className={styles.slip}>
             <div className={styles.sg1}>
               <span>{latestIsPayslip ? "Net pay" : "Amount received"}</span>
-              <span className={styles.paid}>Paid</span>
+              <Chip tone="green" check>
+                Paid
+              </Chip>
             </div>
             <b className={`${styles.sgb} num`} data-testid="payslip-net">
               <Amount>{formatUsdc(latest.net)}</Amount>
@@ -400,8 +402,18 @@ export function PayGroupView({
                 </div>
               </div>
             ) : null}
-            <p className={styles.sg3} data-testid="payslip-readers">
-              {readersWords(orgName, latest.readers)}
+            <p className={styles.sg3}>
+              {/* The design's stacked avatars of who can read it, as initials (step 3.7). */}
+              <span className={styles.readers} aria-hidden="true">
+                {[pay.recipient.displayName, orgName, ...latest.readers]
+                  .slice(0, 4)
+                  .map((name, index) => (
+                    <span key={`${name}:${index}`} className={styles.reader}>
+                      {initials(name)}
+                    </span>
+                  ))}
+              </span>
+              <span data-testid="payslip-readers">{readersWords(orgName, latest.readers)}</span>
             </p>
           </div>
         ) : null}
@@ -455,7 +467,23 @@ export function PayGroupView({
                 data-label={isPayslip(slip) ? "payslip" : "payment"}
               >
                 <span className={styles.slipIcon} aria-hidden="true">
-                  {isPayslip(slip) ? "PAY" : "USDC"}
+                  {/* The design's document for a payslip; an arrow in for a payment (step 3.7). */}
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    {isPayslip(slip) ? (
+                      <path d="M7 3h7l4 4v14H7z M14 3v4h4 M10 12h5 M10 16h5" />
+                    ) : (
+                      <path d="M17 7L7 17 M15 17H7V9" />
+                    )}
+                  </svg>
                 </span>
                 <div>
                   <b>{payslipTitle(slip)}</b>
@@ -474,6 +502,19 @@ export function PayGroupView({
                   onClick={() => downloadPayslip(orgName, pay, slip)}
                   data-testid="payslip-pdf"
                 >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+                  </svg>
                   PDF
                 </Button>
               </div>

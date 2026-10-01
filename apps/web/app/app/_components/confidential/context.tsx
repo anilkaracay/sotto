@@ -63,6 +63,8 @@ export type { SignProblem };
 
 export type Vault = {
   worker: () => CryptoWorkerClient;
+  /** The worker holding the keys, for reads; throws "locked" rather than start one (AC-03.5). */
+  openWorker: () => CryptoWorkerClient;
   /** The keys of this page's signed in wallet, when unlocked in this tab. */
   unlocked: { elgamalPubkey: string } | null;
   unlock: (wallet: string, signature: Uint8Array) => Promise<UnlockResult>;
@@ -171,6 +173,7 @@ function useVault(wallet: string): Vault {
   return useMemo(
     () => ({
       worker: () => session.worker(),
+      openWorker: () => session.openWorker(),
       unlocked: mine ? { elgamalPubkey: mine.elgamalPubkey } : null,
       unlock: (owner: string, signature: Uint8Array) => session.unlock(owner, signature),
       lock: () => session.lock("button"),
@@ -236,7 +239,7 @@ async function readAccountData(input: {
       confidential = { kind: "not_set_up" };
     } else {
       try {
-        const decrypted = await input.vault.worker().decrypt(new Uint8Array(encoded.data));
+        const decrypted = await input.vault.openWorker().decrypt(new Uint8Array(encoded.data));
         confidential = {
           kind: "decrypted",
           available: decrypted.available,

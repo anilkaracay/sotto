@@ -39,6 +39,18 @@ describe("app theme (09 section 2)", () => {
 });
 
 describe("components", () => {
+  it("Chip puts a check before a done state's words", () => {
+    const markup = html(
+      <Chip tone="green" check>
+        Settled
+      </Chip>,
+    );
+    expect(markup).toMatch(/^<span class="chip green"><svg class="check"[^>]*aria-hidden="true">/);
+    expect(markup.replace(/<svg[\s\S]*<\/svg>/, "")).toBe(
+      '<span class="chip green">Settled</span>',
+    );
+  });
+
   it("Person shows initials in the avatar, the name and the line under it", () => {
     expect(initials("Maya Chen")).toBe("MC");
     expect(initials("  daniel  van der Berg ")).toBe("DB");

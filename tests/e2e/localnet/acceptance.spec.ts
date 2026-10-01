@@ -546,6 +546,8 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
         "Shared 3 past records with Daniel Osei, encrypted for them only.",
         { timeout: 60_000 },
       );
+      // Step 3.7: the viewing keys page with an active key, for the pixel fidelity pass.
+      await shoot(page, "05a-viewing-keys.png");
 
       await daniel.goto("/app");
       await expect(daniel).toHaveURL(new RegExp(`/app/${orgId}/books$`));
@@ -631,6 +633,8 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
         commitment: "confirmed",
       });
       expect(record.exists && record.programAddress).toBe(bootstrap.sottoProofs?.programId);
+      // Step 3.7: the proofs page with its certificate and the issued proof.
+      await shoot(page, "07a-proofs.png");
 
       const signedOut = await newPage(browser, "visitor");
       visitor = signedOut;

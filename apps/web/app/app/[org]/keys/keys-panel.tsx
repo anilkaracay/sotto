@@ -313,7 +313,7 @@ function Backfill({
           viewerUserId: you,
           items: pending.items,
           manifests: pending.manifests,
-          open: (ciphertext) => session.worker().openSealed(ciphertext),
+          open: (ciphertext) => session.openWorker().openSealed(ciphertext),
         });
         const items = [];
         for (const record of opened) {
@@ -606,6 +606,17 @@ function KeysTable({ grants, onChange }: { grants: GrantView[]; onChange: () => 
   );
 }
 
+/**
+ * Whose initials an access log entry shows: the actor's display name, else, when someone other than
+ * the owner acted on a key, the holder the event names; null for a person glyph.
+ */
+function avatarName(event: AccessEventView, you: string): string | null {
+  if (!event.actor) return null;
+  if (event.actor.displayName) return event.actor.displayName;
+  if (event.actor.userId !== you && event.subject.type === "grant") return event.subject.label;
+  return null;
+}
+
 function AccessLog({ events, you }: { events: AccessEventView[]; you: string }) {
   return (
     <Card className={styles.s4} data-testid="access-log">
@@ -626,7 +637,37 @@ function AccessLog({ events, you }: { events: AccessEventView[]; you: string }) 
                 data-testid="log-entry"
                 data-action={event.action}
               >
-                <span className={styles.logDot} aria-hidden="true" />
+                {/* Who acted (design .le avatars, as initials); the Sotto mark for the worker. */}
+                <span className={styles.logAvatar} aria-hidden="true">
+                  {event.actor === null ? (
+                    <svg width="14" height="14" viewBox="0 0 26 26">
+                      <circle
+                        cx="13"
+                        cy="13"
+                        r="10.5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.6"
+                      />
+                      <path d="M13 2.5a10.5 10.5 0 000 21z" fill="currentColor" />
+                    </svg>
+                  ) : avatarName(event, you) ? (
+                    initials(avatarName(event, you) ?? "")
+                  ) : (
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    >
+                      <circle cx="12" cy="8" r="3.5" />
+                      <path d="M5 20c.9-3.6 3.6-5.5 7-5.5s6.1 1.9 7 5.5" />
+                    </svg>
+                  )}
+                </span>
                 <div>
                   <b>{words.title}</b>
                   <small>

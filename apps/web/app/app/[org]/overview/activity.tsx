@@ -9,7 +9,7 @@
 // the recipient, and each holder of a readable grant (the design's avatars, as initials).
 import { formatTokenAmount } from "@sotto/sdk/confidential/public";
 import type { DisclosurePayloadV1 } from "@sotto/sdk/disclosure";
-import { Button, Card, Chip, Table, Td, Th } from "@sotto/ui";
+import { Button, Card, Chip, initials, Person, Table, Td, Th } from "@sotto/ui";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { callApi } from "../../../../lib/client/api.ts";
@@ -90,7 +90,7 @@ export function RecentActivity({ userId }: { userId: string }) {
         if (!cancelled) setOpened({ secrets: {}, unverified: 0 });
         return;
       }
-      const open = (ciphertext: Uint8Array) => session.worker().openSealed(ciphertext);
+      const open = (ciphertext: Uint8Array) => session.openWorker().openSealed(ciphertext);
       const disclosures = await openDisclosures({
         orgId,
         ownerWallet: wallet,
@@ -172,7 +172,7 @@ function Readers({ readers }: { readers: ActivityPaymentView["readers"] }) {
           className={styles.reader}
           aria-hidden="true"
         >
-          {reader.name.slice(0, 1).toUpperCase()}
+          {initials(reader.name)}
         </span>
       ))}
       <span className={styles.srOnly}>{names}</span>
@@ -264,18 +264,22 @@ export function ActivityView({
                       <span className={`num ${styles.date}`}>{formatDate(payment.createdAt)}</span>
                     </Td>
                     <Td>
-                      <span className={styles.person}>
-                        <b>{payment.recipient.displayName}</b>
-                        <small>
-                          {readable?.memo ?? payment.run?.title ?? (
+                      <Person
+                        name={payment.recipient.displayName}
+                        size={34}
+                        detail={
+                          readable?.memo ??
+                          payment.run?.title ?? (
                             <span className="mono">{shortWallet(payment.recipient.wallet)}</span>
-                          )}
-                        </small>
-                      </span>
+                          )
+                        }
+                      />
                     </Td>
                     <Td>{readable ? <Chip>{categoryLabel(readable.category)}</Chip> : sealed}</Td>
                     <Td>
-                      <Chip tone={chip.tone}>{chip.label}</Chip>
+                      <Chip tone={chip.tone} check={chip.tone === "green"}>
+                        {chip.label}
+                      </Chip>
                     </Td>
                     <Td>
                       <Readers readers={payment.readers} />

@@ -452,7 +452,7 @@ function PaymentsTable({
         for (const payment of payments) {
           if (!payment.privateBlob) continue;
           try {
-            const value = await session.worker().openSealed(fromBase64(payment.privateBlob));
+            const value = await session.openWorker().openSealed(fromBase64(payment.privateBlob));
             next[payment.id] = parsePaymentPrivate(value) ?? "unreadable";
           } catch {
             next[payment.id] = "unreadable";
@@ -521,6 +521,7 @@ function PaymentsTable({
                   <Td>
                     <Chip
                       tone={paymentStatusChip(payment.status, payment.errorCode).tone}
+                      check={paymentStatusChip(payment.status, payment.errorCode).tone === "green"}
                       data-testid="payment-status"
                     >
                       {paymentStatusChip(payment.status, payment.errorCode).label}

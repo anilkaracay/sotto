@@ -64,6 +64,26 @@ afterEach(() => {
 });
 
 describe("the tab's key session", () => {
+  it("AC-03.5 opens with the worker holding the keys and starts none once they locked", async () => {
+    const { session, clients, unlock } = setUp();
+    expect(() => session.openWorker()).toThrow(CryptoWorkerError);
+    expect(clients).toHaveLength(0);
+    await unlock();
+    expect(session.openWorker()).toBe(clients[0]);
+    session.lock("wallet_change");
+    // A read still running after the lock gets "locked", and no new worker starts for it.
+    let caught: unknown = null;
+    try {
+      session.openWorker();
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(CryptoWorkerError);
+    expect((caught as CryptoWorkerError).code).toBe("locked");
+    expect(clients).toHaveLength(1);
+    expect(clients[0]?.closed).toBe(1);
+  });
+
   it("AC-03.5 keeps the keys across the pages of one org and ends them on the Lock button", async () => {
     const { session, clients, unlock, lastReason } = setUp();
     session.navigated(`/app/${ORG_A}/setup`);

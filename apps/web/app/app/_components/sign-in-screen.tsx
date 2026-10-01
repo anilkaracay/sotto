@@ -1,10 +1,13 @@
 "use client";
 
-// Sign in (F-01, D-15, D-26): every Wallet Standard wallet that can connect, sign transactions and use
-// a Solana chain is offered, with no name list. The user connects, then signs in with an explicit click:
-// solana:signIn when the wallet has it, otherwise a signed message.
-import { canBeOffered, signInMethod, walletCapabilities } from "@sotto/sdk/wallet";
-import { Button, Card, Chip } from "@sotto/ui";
+// Sign in (F-01, D-15, D-26): every Wallet Standard wallet the browser has, grouped by what it can do
+// (lib/wallet-groups.ts), never by name; the user connects, then signs in with an explicit click:
+// solana:signIn when the wallet has it, otherwise a signed message. Step 3.4.1 (13 A34; founder,
+// 2026-10-01: designed in the repository): the landing's sky with
+// what Sotto is in one line and the devnet beta note, beside the sign in panel in the app's language.
+import Link from "next/link";
+import { signInMethod, walletCapabilities } from "@sotto/sdk/wallet";
+import { Button, Chip } from "@sotto/ui";
 import { useSignIn, useSignMessage } from "@solana/react";
 import { useConnect, useWallets } from "@wallet-standard/react";
 import type { UiWallet, UiWalletAccount } from "@wallet-standard/react";
@@ -14,50 +17,125 @@ import { completeSignIn, describeWalletError, requestSignIn } from "../../../lib
 import { fromWallet } from "../../../lib/client/wallet-words.ts";
 import { safeNextPath } from "../../../lib/next-path.ts";
 import { shortWallet } from "../../../lib/format.ts";
-import { Logo } from "./logo.tsx";
+import {
+  GROUP_WORDS,
+  missingWords,
+  walletGroup,
+  type WalletGroup,
+} from "../../../lib/wallet-groups.ts";
+import { SkyArt } from "./sky-art.tsx";
 import styles from "./sign-in.module.css";
 
 type Status = { busy: boolean; error: string | null };
 
+const GROUPS: WalletGroup[] = ["confidential", "sign_in_only", "unsupported"];
+
 export function SignInScreen({ network }: { network: string }) {
-  const wallets = useWallets().filter((wallet) => canBeOffered(walletCapabilities(wallet)));
+  const wallets = useWallets().map((wallet) => ({
+    wallet,
+    group: walletGroup(walletCapabilities(wallet)),
+  }));
+  const offered = wallets.filter((entry) => entry.group !== "unsupported").length;
   return (
     <div className={styles.page}>
-      <header className={styles.top}>
-        <Logo />
-        <Chip tone="blue" data-testid="network-label">
-          {network}
-        </Chip>
-      </header>
-      <div className={styles.center}>
-        <Card className={styles.card}>
+      <section className={styles.sky} aria-label="About Sotto">
+        <SkyArt className={styles.skyArt} />
+        <div className={styles.skyInner}>
+          <header className={styles.top}>
+            <Link className={styles.logo} href="/" aria-label="Sotto home">
+              <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
+                <circle cx="13" cy="13" r="11" fill="none" stroke="#FFFFFF" strokeWidth="1.8" />
+                <path d="M13 2a11 11 0 000 22z" fill="#FFFFFF" />
+              </svg>
+              <span>Sotto</span>
+            </Link>
+            <span className={styles.network} data-testid="network-label">
+              {network}
+            </span>
+          </header>
+          <div className={styles.hero}>
+            <span className={styles.kicker}>
+              <b>Beta</b>Solana devnet
+            </span>
+            <p className={styles.headline}>Private books. Public chain.</p>
+            <p className={styles.oneLine} data-testid="what-sotto-is">
+              The business account for companies that pay in stablecoins: every payment settles on
+              Solana, and only the people you hand a key to can read the numbers.
+            </p>
+          </div>
+          <div className={styles.beta} data-testid="beta-note">
+            <b>A beta on Solana devnet</b>
+            <span>
+              Balances are devnet test tokens with no value, so nothing here moves real money. Any
+              wallet with the capabilities listed here can be used; Sotto was tested with Solflare
+              and Phantom.
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <main className={styles.panel}>
+        <div className={styles.panelInner}>
           <h1 className={styles.title}>Sign in to Sotto</h1>
           <p className={styles.lead}>
             Connect a Solana wallet and sign a message. Signing in never sends a transaction or
             costs a fee.
           </p>
-          {wallets.length === 0 ? (
-            <p className={styles.empty} role="status">
-              No Solana wallet found in this browser. Install a wallet that supports the Wallet
-              Standard, then reload this page.
+          {offered === 0 ? (
+            <p className={styles.empty} role="status" data-testid="no-wallets">
+              No Solana wallet that can sign in was found in this browser. Install a wallet that
+              supports the Wallet Standard, then reload this page.
             </p>
-          ) : (
-            <ul className={styles.list} aria-label="Wallets">
-              {wallets.map((wallet, index) => (
-                <WalletOption key={`${index}:${wallet.name}`} wallet={wallet} />
-              ))}
-            </ul>
-          )}
+          ) : null}
+          {GROUPS.map((group) => {
+            const members = wallets.filter((entry) => entry.group === group);
+            if (members.length === 0) return null;
+            return (
+              <section
+                key={group}
+                className={styles.group}
+                data-testid="wallet-group"
+                data-group={group}
+              >
+                <h2 className={styles.groupTitle}>{GROUP_WORDS[group].title}</h2>
+                <p className={styles.groupDetail}>{GROUP_WORDS[group].detail}</p>
+                <ul className={styles.list} aria-label={GROUP_WORDS[group].title}>
+                  {members.map(({ wallet }, index) =>
+                    group === "unsupported" ? (
+                      <UnsupportedWallet key={`${index}:${wallet.name}`} wallet={wallet} />
+                    ) : (
+                      <WalletOption key={`${index}:${wallet.name}`} wallet={wallet} group={group} />
+                    ),
+                  )}
+                </ul>
+              </section>
+            );
+          })}
           <p className={styles.note}>
-            Sotto never asks for your recovery phrase and cannot move your funds.
+            Sotto never asks for your recovery phrase and cannot move your funds.{" "}
+            <Link href="/trust">What Sotto can and cannot do</Link>
           </p>
-        </Card>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
 
-function WalletOption({ wallet }: { wallet: UiWallet }) {
+/** A wallet D-26 does not offer: its name and what it lacks, without a button. */
+function UnsupportedWallet({ wallet }: { wallet: UiWallet }) {
+  return (
+    <li className={`${styles.wallet} ${styles.unsupported}`} data-testid="wallet-unsupported">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className={styles.icon} src={wallet.icon} alt="" />
+      <span className={styles.text}>
+        <span className={styles.name}>{wallet.name}</span>
+        <span className={styles.detail}>{missingWords(walletCapabilities(wallet))}</span>
+      </span>
+    </li>
+  );
+}
+
+function WalletOption({ wallet, group }: { wallet: UiWallet; group: WalletGroup }) {
   const [isConnecting, connect] = useConnect(wallet);
   const [account, setAccount] = useState<UiWalletAccount | null>(null);
   const [status, setStatus] = useState<Status>({ busy: false, error: null });
@@ -68,19 +146,23 @@ function WalletOption({ wallet }: { wallet: UiWallet }) {
       {/* Wallet icons are data URIs declared by the wallet (Wallet Standard): nothing to optimize. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className={styles.icon} src={wallet.icon} alt="" />
-      <span>
+      <span className={styles.text}>
         <span className={styles.name}>{wallet.name}</span>
         <span className={styles.detail}>
           {account ? `Connected ${shortWallet(account.address)}` : "Solana wallet"}
         </span>
+        <span className={styles.chips}>
+          {group === "confidential" ? (
+            <Chip tone="green" check>
+              Confidential balances
+            </Chip>
+          ) : (
+            <Chip tone="amber">Public payments only</Chip>
+          )}
+        </span>
         {status.error ? (
           <span className={styles.error} role="alert">
             {status.error}
-          </span>
-        ) : null}
-        {!method ? (
-          <span className={styles.error} role="alert">
-            This wallet cannot sign in: it signs neither sign in requests nor messages.
           </span>
         ) : null}
       </span>

@@ -1,89 +1,253 @@
-/* The sign in screen, built on the app tokens (no design exists for it). */
+/* The sign in screen (13 A34; step 3.4.1, founder 2026-10-01: designed in the repository). The
+   landing's sky on the left with what Sotto is and the devnet beta note, the sign in panel on the
+   right in the app's language; one column under 960 pixels, the sky first and shorter. */
 .page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--bg);
+}
+.sky {
+  position: relative;
+  overflow: hidden;
+  color: #ffffff;
+  background: linear-gradient(180deg, #2c66ae 0%, #3f7bc4 30%, #6a9fd9 60%, #a6c8ec 100%);
+}
+.skyArt {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.85;
+}
+/* A deeper blue over the art's upper half keeps the white words readable on its clouds. */
+.sky::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(31, 78, 150, 0.35) 0%,
+    rgba(31, 78, 150, 0.3) 50%,
+    rgba(31, 78, 150, 0) 80%
+  );
+  pointer-events: none;
+}
+.skyInner {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  min-height: 100%;
+  padding: 0 56px 48px;
 }
 .top {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   height: 92px;
-  padding: 0 32px;
 }
-.center {
-  flex: 1;
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  text-decoration: none;
+}
+.network {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+/* The words on the sky's blue upper part, the beta note on the clouds below. */
+.hero {
+  padding-top: 72px;
+}
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px 6px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.32);
+  font-size: 13.5px;
+}
+.kicker b {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 500;
+}
+.headline.headline {
+  margin-top: 26px;
+  font-size: clamp(44px, 5.4vw, 76px);
+  font-weight: 400;
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+  text-shadow: 0 2px 40px rgba(10, 40, 90, 0.18);
+}
+.oneLine.oneLine {
+  max-width: 30em;
+  margin-top: 22px;
+  font-size: 18px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.92);
+}
+.beta {
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 40px 16px 64px;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 36em;
+  margin-top: auto;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(11, 24, 48, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(12px);
+  font-size: 13.5px;
+  line-height: 1.55;
 }
-.card {
+.beta b {
+  font-weight: 600;
+}
+.beta span {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 40px;
+}
+.panelInner {
   width: 100%;
-  max-width: 460px;
+  max-width: 520px;
   animation: pg-in 0.45s var(--ease-out) both;
 }
-.title {
-  font-size: 32px;
-  font-weight: 500;
-  letter-spacing: -0.04em;
+.title.title {
+  font-size: 40px;
+  font-weight: 450;
+  letter-spacing: -0.045em;
 }
-.lead {
-  margin-top: 8px;
-  font-size: 14.5px;
+.lead.lead {
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.55;
   color: var(--muted);
+}
+.group {
+  margin-top: 28px;
+}
+.groupTitle.groupTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink2);
+}
+.groupDetail.groupDetail {
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--faint);
 }
 .list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin: 22px 0 0;
+  gap: 10px;
+  margin: 12px 0 0;
   padding: 0;
   list-style: none;
 }
 .wallet {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 16px;
-  box-shadow: 0 0 0 1px var(--line);
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 18px 40px -30px rgba(11, 24, 48, 0.35);
+}
+.unsupported {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.unsupported .icon {
+  filter: grayscale(1);
+  opacity: 0.6;
 }
 .icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
   flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+}
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 .name {
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 500;
 }
 .detail {
-  display: block;
-  font-size: 12px;
+  font-size: 12.5px;
   color: var(--faint);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
 }
 .action {
   margin-left: auto;
+  flex: none;
 }
 .error {
-  margin-top: 14px;
+  margin-top: 8px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: #ffecec;
-  color: #b4232a;
+  background: #fff1f1;
+  color: #a61e25;
   font-size: 13px;
+  line-height: 1.5;
 }
-.empty {
-  margin-top: 22px;
+.empty.empty {
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--soft);
   font-size: 14px;
+  line-height: 1.55;
   color: var(--muted);
 }
-.note {
-  margin-top: 18px;
-  font-size: 12.5px;
+.note.note {
+  margin-top: 28px;
+  font-size: 13px;
+  line-height: 1.55;
   color: var(--faint);
+}
+.note a {
+  color: var(--ink2);
 }
 @keyframes pg-in {
   from {
@@ -93,5 +257,40 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+@media (max-width: 960px) {
+  .page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .skyInner {
+    padding: 0 20px 28px;
+  }
+  .top {
+    height: 72px;
+  }
+  .hero {
+    padding-top: 28px;
+  }
+  .skyInner {
+    min-height: 0;
+  }
+  .oneLine.oneLine {
+    font-size: 16px;
+  }
+  .beta {
+    margin-top: 24px;
+  }
+  .panel {
+    padding: 36px 16px 56px;
+  }
+  .title.title {
+    font-size: 32px;
+  }
+  .wallet {
+    flex-wrap: wrap;
+  }
+  .action {
+    margin-left: 54px;
   }
 }

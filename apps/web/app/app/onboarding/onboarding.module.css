@@ -1,22 +1,25 @@
-/* The onboarding screen, built on the app tokens (no design exists for it, 13 A35). */
+/* The onboarding screen (13 A35): no design exists for it. Step 3.4 (design pass A, founder
+   2026-10-01): in the app's language, the shared fields of packages/ui beside the three numbered
+   steps of verification; the status as a tracker of those steps, the details as the drawer's rows,
+   problems as the notices of design pass B. */
 .grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
   gap: 16px;
   align-items: start;
 }
 .formCard {
-  max-width: 760px;
+  min-width: 0;
 }
 .cardTitle {
   font-size: 17px;
   font-weight: 500;
   letter-spacing: -0.02em;
 }
-.lead {
+.lead.lead {
   margin-top: 8px;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--muted);
 }
 .statusHead {
@@ -25,85 +28,204 @@
   justify-content: space-between;
   gap: 12px;
 }
-.form {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px 16px;
-  margin-top: 22px;
-}
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
 .wide {
   grid-column: 1 / -1;
 }
-.label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--ink2);
-}
-.control {
-  height: 44px;
-  width: 100%;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 0 0 1px var(--line);
-  font: inherit;
-  font-size: 14.5px;
-  color: var(--ink);
-  transition: box-shadow 0.15s ease;
-}
-.control:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--blue);
-}
-.control[aria-invalid="true"] {
-  box-shadow: 0 0 0 1px var(--red);
-}
-.control::placeholder {
-  color: var(--faint);
-}
-.hint {
-  font-size: 12.5px;
-  color: var(--faint);
-}
-.error {
-  font-size: 12.5px;
-  color: #b4232a;
-}
-.formError {
-  grid-column: 1 / -1;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: #ffecec;
-  color: #b4232a;
+/* A problem as the notice of design pass B (cards.module.css .problem). */
+.formError.formError {
+  position: relative;
+  padding: 12px 14px 12px 42px;
+  border-radius: 14px;
+  background: #fff1f1;
+  box-shadow: inset 0 0 0 1px rgba(229, 72, 77, 0.14);
+  color: #a61e25;
   font-size: 13.5px;
+  line-height: 1.55;
+}
+.formError::before {
+  content: "";
+  position: absolute;
+  top: 13px;
+  left: 14px;
+  width: 17px;
+  height: 17px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7.5v5M12 16h.01'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7.5v5M12 16h.01'/%3E%3C/svg%3E")
+    center / contain no-repeat;
 }
 .actions {
-  grid-column: 1 / -1;
   display: flex;
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 18px;
 }
+
+/* How verification works: the steps numbered as on the setup page. */
+.how {
+  min-width: 0;
+}
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.steps b {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 500;
+}
+.steps small {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.stepNo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--soft);
+  color: var(--ink2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.steps li:first-child .stepNo {
+  background: var(--blue);
+  color: #ffffff;
+}
+
+/* The verification tracker: three stops joined by a line, done in green, the current one in blue
+   with a soft ring, a stop that did not pass in red, the next ones grey. */
+.tracker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 24px 0 20px;
+  padding: 0;
+  list-style: none;
+}
+.tracker li {
+  position: relative;
+  padding-top: 30px;
+  padding-right: 12px;
+}
+.tracker li::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 18px;
+  right: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.tracker li:last-child::before {
+  display: none;
+}
+.tracker li.done::before {
+  background: var(--green);
+}
+.dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px #d5dce6;
+}
+.done .dot {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4L18 8'/%3E%3C/svg%3E")
+      center / 12px no-repeat,
+    var(--green);
+  box-shadow: none;
+}
+.current .dot {
+  background: var(--blue);
+  box-shadow: 0 0 0 5px rgba(31, 91, 232, 0.16);
+  animation: pulse 2.2s ease-in-out infinite;
+}
+.stopped .dot {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 8l8 8M16 8l-8 8'/%3E%3C/svg%3E")
+      center / 12px no-repeat,
+    #d9484f;
+  box-shadow: none;
+}
+.tracker b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.tracker small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.next b,
+.next small {
+  color: var(--faint);
+}
+@keyframes pulse {
+  50% {
+    box-shadow: 0 0 0 8px rgba(31, 91, 232, 0.06);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .current .dot {
+    animation: none;
+  }
+}
+
+/* The business details as the drawer's rows (design .anat). */
 .details {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
-  gap: 10px 20px;
   margin: 18px 0 0;
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1px var(--line);
+  overflow: hidden;
   font-size: 14px;
 }
+.details dt,
+.details dd {
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  margin: 0;
+  padding: 8px 14px;
+  border-top: 1px solid var(--line);
+}
+.details dt:first-of-type,
+.details dt:first-of-type + dd {
+  border-top: 0;
+}
 .details dt {
+  font-size: 12.5px;
   color: var(--faint);
 }
 .details dd {
-  margin: 0;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+.details a {
+  color: inherit;
 }
 .primaryLink {
   display: inline-flex;

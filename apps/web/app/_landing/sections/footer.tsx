@@ -105,15 +105,16 @@ export function Footer({ v }: { v: LandingView }) {
           </div>
           <div>
             <b>{"Company"}</b>
-            <a href="#v8trust">{"Trust"}</a>
-            <a href="#v8trust">{"Security"}</a>
+            {/* 13 L36: the trust page exists since step 3.4. */}
+            <a href="/trust">{"Trust"}</a>
+            <a href="/trust">{"Security"}</a>
             <a href="#v8access">{"Contact"}</a>
           </div>
         </div>
         <div className="fbase">
           <span>{"\u00a9 2026 Sotto. Built for Colosseum's Crypto World's Fair."}</span>
           <nav aria-label="Legal">
-            <a href="#v8trust">{"Security"}</a>
+            <a href="/trust">{"Security"}</a>
           </nav>
         </div>
       </div>

@@ -13,7 +13,10 @@ export function FieldGrid({ className, ...rest }: HTMLAttributes<HTMLDivElement>
   return <div className={cx(styles.grid, className)} {...rest} />;
 }
 
-/** A field: its label above the control, then the hint and the problem, if any. */
+/**
+ * A field: its label above the control, then the hint and the problem, if any. The hint's id is
+ * `<htmlFor>-hint` and the problem's `<htmlFor>-error`, for the control's aria-describedby.
+ */
 export function Field({
   label,
   htmlFor,
@@ -37,8 +40,16 @@ export function Field({
         {label}
       </label>
       {children}
-      {hint ? <small className={styles.hint}>{hint}</small> : null}
-      {error ? <small className={styles.error}>{error}</small> : null}
+      {hint ? (
+        <small id={`${htmlFor}-hint`} className={styles.hint}>
+          {hint}
+        </small>
+      ) : null}
+      {error ? (
+        <small id={`${htmlFor}-error`} className={styles.error}>
+          {error}
+        </small>
+      ) : null}
     </div>
   );
 }

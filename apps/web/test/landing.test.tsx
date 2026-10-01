@@ -31,6 +31,11 @@ describe("the landing (AC-17.1)", () => {
     expect(text).toContain("Sample data. Public view");
     expect(text).toContain("Beta on Solana devnet");
     expect(links.find((link) => link.label === "Sign in")?.href).toBe("/app");
+    // 13 L36: the footer's Trust and Security open the trust page.
+    expect(links.filter((link) => link.label === "Security").map((link) => link.href)).toEqual([
+      "/trust",
+      "/trust",
+    ]);
   });
 
   it("AC-17.1 replaces the market statistics with facts from the verification log (L11)", () => {

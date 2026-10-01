@@ -145,7 +145,7 @@ describe("public verification page (AC-13.3)", () => {
       found("valid", { status: "verified", legalName: "Northwind Labs Ltd", country: "TR" }),
     );
     expect(text(html)).toContain(
-      "Proven The statement held when the record was written, and the record is still valid. Organization Northwind Labs Ltd, TR Statement Balance is at least $0.50 Shared with Hollis Supply Co. Verified at Slot 505624879, 29 Sep 2026, 19:13 UTC Valid until 6 Oct 2026, 19:13 UTC Balance disclosed none",
+      "Organization Northwind Labs Ltd, TR Statement Balance is at least $0.50 Shared with Hollis Supply Co. Proven The statement held when the record was written, and the record is still valid. Verified at Slot 505624879 29 Sep 2026, 19:13 UTC Valid until 6 Oct 2026 19:13 UTC Balance disclosed none The balance stays encrypted",
     );
     expect(text(html)).toContain(`Record ${RECORD} Owner wallet ${OWNER}`);
     expect(html).toContain('data-state="valid"');
@@ -154,7 +154,7 @@ describe("public verification page (AC-13.3)", () => {
 
   it("says when the record expired, the program is paused or the organization is not verified", () => {
     expect(text(render(found("expired", { status: "not_verified" })))).toContain(
-      "Expired The statement was proven, but the record expired on 6 Oct 2026. Organization Not verified by Sotto",
+      "Organization Not verified by Sotto Statement Balance is at least $0.50 Shared with Hollis Supply Co. Expired The statement was proven, but the record expired on 6 Oct 2026.",
     );
     expect(
       text(render(found("paused", { status: "verified", legalName: "N", country: "TR" }))),

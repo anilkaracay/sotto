@@ -536,7 +536,7 @@ export function PayGroupView({
               <div key={row.signature} className={styles.pubRow} data-testid="colleagues-row">
                 <span className="mono">{shortWallet(account)}</span>
                 <span>{row.blockTime ? formatDate(row.blockTime) : "Time not known"}</span>
-                <span className={styles.bar} aria-label="Amount sealed" />
+                <span className={styles.bar} role="img" aria-label="Amount sealed" />
               </div>
             ))}
           </div>

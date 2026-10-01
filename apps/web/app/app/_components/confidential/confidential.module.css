@@ -107,7 +107,7 @@
   color: var(--faint);
 }
 .wrapLabel {
-  color: var(--amber);
+  color: #8a5200; /* step 3.10: --amber was 4.24:1 on white */
   font-weight: 500;
 }
 /* The devnet label of a wUSDC figure (13 A25), a tag under the figure. */
@@ -119,7 +119,7 @@
   padding: 0 8px;
   border-radius: 999px;
   background: #fff4e0;
-  color: var(--amber);
+  color: #8a5200; /* step 3.10: --amber was 3.89:1 on the tag */
   font-size: 12px;
   font-weight: 500;
 }

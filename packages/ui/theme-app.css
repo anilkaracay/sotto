@@ -6,7 +6,8 @@
   --ink: #0b1830;
   --ink2: #2a3852;
   --muted: #5c6980;
-  --faint: #6b7689;
+  /* Step 3.10: #6b7689 was 4.27:1 on --soft; #5f6b80 is 4.5:1 or more on every surface (AA). */
+  --faint: #5f6b80;
   --line: #e7ecf2;
   --soft: #f5f7fa;
   --blue: #1f5be8;

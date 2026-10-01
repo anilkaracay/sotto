@@ -458,6 +458,12 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
           ).toHaveAttribute("data-readiness", "ready", { timeout: 2_000 });
         }
       }).toPass({ timeout: 120_000 });
+      // Step 3.8: a reload, so the shot never keeps the invite links an earlier visit showed (the
+      // router kept that state in some runs and not in others).
+      await page.reload();
+      await expect(page.getByTestId("recipient-row")).toHaveCount(3);
+      // A reload locks the keys; the run of step 4 needs them.
+      await unlock(page);
       return page;
     },
   );

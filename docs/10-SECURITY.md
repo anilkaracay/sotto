@@ -2,6 +2,8 @@
 
 ## 1. Invariants (each has an automated test or a CI check)
 
+Since step 3.9 `tests/invariants.json` names, for each invariant below, the tests (file and title, or Rust test function) and CI checks that enforce it, and `scripts/checks/invariants.py` in the checks job fails when an invariant of this table is missing there, has neither, or names a test or check that does not exist or does not run.
+
 | ID | Invariant | Enforced by |
 |----|-----------|-------------|
 | I-1 | No plaintext amount or key material in the database | Schema column name test (08 section 1), code review checklist; since step 2.5 a check of `chain_activity` keeps its only amount column set exactly for confidential deposits and withdrawals, whose amounts are public onchain, so no other amount can be stored (`packages/db/test/migrations.test.ts`), and the indexer never reads a transfer's amount (it is a ciphertext) |

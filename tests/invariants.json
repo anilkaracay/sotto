@@ -1,0 +1,223 @@
+{
+  "$comment": "Step 3.9: each invariant of docs/10-SECURITY.md section 1 with the tests and CI checks that enforce it. scripts/checks/invariants.py fails when an invariant of 10 is missing here, has neither a test nor a check, names a test title its file does not hold (TypeScript titles as scripts/checks/test-titles.ts reads them; Rust test function names), or names a check that scripts/ci-local.sh does not run.",
+  "invariants": {
+    "I-1": {
+      "invariant": "No plaintext amount or key material in the database",
+      "tests": [
+        {
+          "file": "packages/db/test/golden-rule.test.ts",
+          "title": "has no column named like an amount outside the allow list"
+        },
+        {
+          "file": "packages/db/test/golden-rule.test.ts",
+          "title": "catches amount like names and allows only the two public amount columns"
+        },
+        {
+          "file": "packages/db/test/migrations.test.ts",
+          "title": "keep the golden rule in the database itself"
+        },
+        {
+          "file": "packages/db/test/migrations.test.ts",
+          "title": "AC-05.3 keep only deposit and withdraw amounts in chain activity (step 2.5, ENGINEERING-RULES.md rule 4)"
+        }
+      ],
+      "checks": []
+    },
+    "I-2": {
+      "invariant": "No key material or plaintext amount leaves the browser except as ciphertext",
+      "tests": [
+        {
+          "file": "tests/e2e/localnet/acceptance.spec.ts",
+          "title": "the hackathon acceptance scenario runs end to end on localnet, amounts never leave the browsers"
+        },
+        {
+          "file": "tests/e2e/localnet/payments.spec.ts",
+          "title": "AC-06.1 AC-06.2 AC-06.3 AC-06.4 blocks a deny-listed wallet, then pays a ready recipient confidentially and discloses it to both"
+        },
+        {
+          "file": "tests/e2e/localnet/grants.spec.ts",
+          "title": "AC-10.1 AC-10.2 AC-10.3 AC-10.4 AC-10.5 AC-06.4 AC-14.1 AC-11.1 AC-11.2 AC-11.3 AC-11.4 AC-05.3 grants an accountant a key through an invite, shares past payments and payroll lines, reaches them with a new payment, lets them read and export the books, shows what the chain shows, and revokes it"
+        }
+      ],
+      "checks": []
+    },
+    "I-3": {
+      "invariant": "sotto_proofs has no token CPI and no authority over token accounts",
+      "tests": [
+        {
+          "file": "programs/sotto_proofs/tests/static_limits.rs",
+          "title": "every_cross_program_call_goes_through_invoke_system_which_accepts_only_the_system_program"
+        },
+        {
+          "file": "programs/sotto_proofs/tests/static_limits.rs",
+          "title": "builds_no_token_instruction_and_never_writes_the_token_account"
+        },
+        {
+          "file": "programs/sotto_proofs/tests/static_limits.rs",
+          "title": "the_idl_names_no_token_program_and_passes_the_token_account_read_only"
+        },
+        {
+          "file": "programs/sotto_proofs/tests/verify.rs",
+          "title": "calls_no_program_but_the_system_program"
+        }
+      ],
+      "checks": []
+    },
+    "I-4": {
+      "invariant": "The deprecated ZK Token Proof program is never referenced",
+      "tests": [
+        {
+          "file": "packages/sdk/test/cluster-config.test.ts",
+          "title": "never references the deprecated ZK Token Proof program (I-4)"
+        },
+        {
+          "file": "programs/sotto_proofs/tests/verify.rs",
+          "title": "checks_5_and_8_refuse_contexts_of_any_other_program_the_deprecated_zk_token_proof_included"
+        }
+      ],
+      "checks": ["scripts/checks/no-zk-token-proof.sh"]
+    },
+    "I-5": {
+      "invariant": "Confidential keys are compared with the onchain ElGamal public key before any use",
+      "tests": [
+        {
+          "file": "packages/sdk/test/keys.test.ts",
+          "title": "I-5 uses keys for an account only if they match its onchain ElGamal key"
+        },
+        {
+          "file": "packages/sdk/test/confidential-account.test.ts",
+          "title": "refuses to decrypt or apply with keys that do not match the account (I-5)"
+        },
+        {
+          "file": "apps/web/test/crypto-worker.test.ts",
+          "title": "AC-03.3 refuses account setup when the wallet's second key signature differs (determinism check)"
+        }
+      ],
+      "checks": []
+    },
+    "I-6": {
+      "invariant": "Sotto's API refuses to authorize, and the Sotto client refuses to execute, without screening and approvals",
+      "tests": [
+        {
+          "file": "apps/web/test/api-payments.test.ts",
+          "title": "AC-06.2 screens the recipient before authorization: a hit blocks the payment and logs the event"
+        },
+        {
+          "file": "apps/web/test/api-payments.test.ts",
+          "title": "AC-06.3 counts the initiator's execution as the default approval, and with a policy of 2 needs another member's signed message over the current contents"
+        },
+        {
+          "file": "apps/web/test/api-payments.test.ts",
+          "title": "F-19 authorizes only after a recent successful proof program check"
+        },
+        {
+          "file": "apps/web/test/api-payroll.test.ts",
+          "title": "AC-08.2 blocks before signing a run where one recipient is not ready and one is deny listed, with each line's reason, and authorizes the rest once they are removed"
+        },
+        {
+          "file": "tests/e2e/localnet/payments.spec.ts",
+          "title": "AC-06.1 AC-06.2 AC-06.3 AC-06.4 blocks a deny-listed wallet, then pays a ready recipient confidentially and discloses it to both"
+        },
+        {
+          "file": "tests/e2e/localnet/payroll.spec.ts",
+          "title": "AC-08.1 AC-08.2 validates the CSV row by row, then blocks a run with a recipient who is not ready and one on the deny list before anything is signed"
+        }
+      ],
+      "checks": []
+    },
+    "I-7": {
+      "invariant": "No double payment on retry",
+      "tests": [
+        {
+          "file": "apps/web/test/api-payments.test.ts",
+          "title": "AC-06.1 creates a draft for a recipient with the amount sealed, and the same idempotency key returns the same draft"
+        },
+        {
+          "file": "apps/web/test/api-payments.test.ts",
+          "title": "records each signature before sending with the initiator's approval, ends a failed attempt, and never resends a transfer that landed (I-7)"
+        },
+        {
+          "file": "apps/web/test/api-payroll.test.ts",
+          "title": "AC-08.5 a resume reads the chain first: a line whose transfer landed is never authorized again, the others are"
+        },
+        {
+          "file": "tests/e2e/localnet/payroll.spec.ts",
+          "title": "AC-08.4 AC-08.5 AC-08.6 AC-12.1 AC-12.2 AC-12.3 pays 24 lines in chunks, stops at a failure forced on line 12, a resume settles the run without paying lines 1 to 11 twice, and the recipient reads her payslip"
+        }
+      ],
+      "checks": []
+    },
+    "I-8": {
+      "invariant": "Viewer public keys are used only after their registration signature verifies",
+      "tests": [
+        {
+          "file": "packages/sdk/test/keys.test.ts",
+          "title": "I-8 trusts a viewer key only with its registration signature (server substitution)"
+        },
+        {
+          "file": "apps/web/test/api-viewer-keys.test.ts",
+          "title": "I-8 a key swapped on the server fails the browser's registration check"
+        },
+        {
+          "file": "apps/web/test/balance-snapshot.test.tsx",
+          "title": "AC-05.2 seals nothing to a viewing key whose registration does not verify (I-8)"
+        }
+      ],
+      "checks": []
+    },
+    "I-9": {
+      "invariant": "Disclosures are trusted only with a valid owner manifest signature",
+      "tests": [
+        {
+          "file": "packages/sdk/test/disclosure.test.ts",
+          "title": "refuses a tampered item, a wrong signer, a changed manifest and a replay for another org"
+        },
+        {
+          "file": "apps/web/test/api-disclosures.test.ts",
+          "title": "stores a batch the owner signed and gives each viewer only its own items, whose manifest verifies (I-9)"
+        },
+        {
+          "file": "apps/web/test/disclosures-open.test.ts",
+          "title": "opens an item the owner's manifest lists for this viewer, and refuses a tampered item, another signer and another viewer"
+        }
+      ],
+      "checks": []
+    },
+    "I-10": {
+      "invariant": "Revocation deletes all disclosures of the grant atomically",
+      "tests": [
+        {
+          "file": "apps/web/test/api-grants.test.ts",
+          "title": "AC-10.4 AC-10.5 revoking deletes the grant's records in the same transaction and logs it; a recipient's own payslips are not revoked here"
+        },
+        {
+          "file": "apps/worker/test/grant-expiry.test.ts",
+          "title": "AC-10.4 AC-10.5 expires a grant past its expiry, deletes its records and logs it, and leaves the rest"
+        }
+      ],
+      "checks": []
+    },
+    "I-11": {
+      "invariant": "The public proof page proves only from chain, and the counterparty label and salt never go onchain",
+      "tests": [
+        {
+          "file": "apps/web/test/api-proofs.test.ts",
+          "title": "AC-13.3 shows the public view from chain without a sign in, the legal name from the attestation and the label from Sotto"
+        },
+        {
+          "file": "apps/web/test/api-proofs.test.ts",
+          "title": "AC-13.3 says when a record expired, was closed, was never written or is not a record"
+        },
+        {
+          "file": "apps/web/test/api-proofs.test.ts",
+          "title": "AC-13.1 records the owner's proof after checking it against the chain and the counterparty hash"
+        },
+        {
+          "file": "apps/web/test/proof-run.test.ts",
+          "title": "AC-13.1 AC-13.4 proves, closes the proof accounts and gives Sotto the label and salt, never onchain"
+        }
+      ],
+      "checks": []
+    }
+  }
+}

@@ -4,7 +4,9 @@
 // the status card. The form validates with the same schema as the API (lib/org.ts). No approved
 // design exists for this screen; it is built on the app tokens (13 A35). Step 3.4 (design pass A,
 // founder 2026-10-01): the shared fields of packages/ui beside the three steps of verification, and the
-// status as a tracker of those steps with the attestation as the last.
+// status as a tracker of those steps with the attestation as the last. Step 4.3 (D-29): where the
+// network has more than one asset, the form asks which one the account holds (USDC by default); the
+// choice is fixed once the organization exists.
 import {
   Button,
   Card,
@@ -29,7 +31,11 @@ import {
   orgStatusLabel,
   type OrgStatus,
 } from "../../../lib/org.ts";
+import { assetWords } from "../../../lib/asset-words.ts";
+import type { AssetView } from "../../../lib/server/network-view.ts";
+import { DevnetTestBadge } from "../_components/devnet-badge.tsx";
 import styles from "./onboarding.module.css";
+import { DEFAULT_ASSET, isAssetId, type AssetId } from "@sotto/sdk/cluster/assets";
 
 export type OnboardingOrg = {
   id: string;
@@ -40,13 +46,14 @@ export type OnboardingOrg = {
   website: string;
   contactEmail: string;
   status: OrgStatus;
+  asset: AssetId;
   attestationAddress: string | null;
   reviewedAt: string | null;
   createdAt: string;
 };
 
 type FieldName =
-  "legalName" | "displayName" | "country" | "registrationNo" | "website" | "contactEmail";
+  "legalName" | "displayName" | "country" | "registrationNo" | "website" | "contactEmail" | "asset";
 
 type Values = Record<FieldName, string>;
 
@@ -57,6 +64,7 @@ const EMPTY: Values = {
   registrationNo: "",
   website: "",
   contactEmail: "",
+  asset: DEFAULT_ASSET,
 };
 
 const FIELD_NAMES = new Set<string>(Object.keys(EMPTY));
@@ -67,14 +75,21 @@ const STATUS_TONE: Record<OrgStatus, ChipTone> = {
   suspended: "red",
 };
 
-export function OrgOnboarding({ org }: { org: OnboardingOrg | null }) {
+export function OrgOnboarding({
+  org,
+  assets,
+}: {
+  org: OnboardingOrg | null;
+  /** The network's registry (step 4.3): the assets an account may hold, USDC first. */
+  assets: AssetView[];
+}) {
   const [editing, setEditing] = useState(false);
   if (!org) {
     return (
       <>
         <PageHeader overline="Get started" title="Your organization" />
         <div className={styles.grid}>
-          <OrgForm />
+          <OrgForm assets={assets} />
           <HowItWorks />
         </div>
       </>
@@ -85,7 +100,7 @@ export function OrgOnboarding({ org }: { org: OnboardingOrg | null }) {
       <>
         <PageHeader overline="Change details" title={org.displayName} />
         <div className={styles.grid}>
-          <OrgForm org={org} onDone={() => setEditing(false)} />
+          <OrgForm org={org} assets={assets} onDone={() => setEditing(false)} />
           <HowItWorks />
         </div>
       </>
@@ -108,10 +123,19 @@ function valuesOf(org: OnboardingOrg | undefined): Values {
     registrationNo: org.registrationNo,
     website: org.website,
     contactEmail: org.contactEmail,
+    asset: org.asset,
   };
 }
 
-function OrgForm({ org, onDone }: { org?: OnboardingOrg; onDone?: () => void }) {
+function OrgForm({
+  org,
+  assets,
+  onDone,
+}: {
+  org?: OnboardingOrg;
+  assets: AssetView[];
+  onDone?: () => void;
+}) {
   const router = useRouter();
   const [values, setValues] = useState<Values>(() => valuesOf(org));
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
@@ -119,6 +143,7 @@ function OrgForm({ org, onDone }: { org?: OnboardingOrg; onDone?: () => void }) 
   const [sending, setSending] = useState(false);
   const [refreshing, startRefresh] = useTransition();
   const busy = sending || refreshing;
+  const chosen = assetWords(isAssetId(values.asset) ? values.asset : DEFAULT_ASSET);
 
   const change = (name: FieldName) => (event: { target: { value: string } }) => {
     const { value } = event.target;
@@ -135,6 +160,7 @@ function OrgForm({ org, onDone }: { org?: OnboardingOrg; onDone?: () => void }) 
       registrationNo: values.registrationNo,
       website: normalizeWebsite(values.website),
       contactEmail: values.contactEmail.trim(),
+      ...(org ? {} : { asset: values.asset }),
     });
     if (!parsed.success) {
       const next: Partial<Record<FieldName, string>> = {};
@@ -265,6 +291,33 @@ function OrgForm({ org, onDone }: { org?: OnboardingOrg; onDone?: () => void }) 
               />
             )}
           </Field>
+          {!org && assets.length > 1 ? (
+            <Field
+              label="Currency"
+              hint="The account holds and pays in this currency. It cannot be changed later."
+              error={errors.asset}
+              wide
+            >
+              {(props) => (
+                <Select {...props} name="asset" value={values.asset} onChange={change("asset")}>
+                  {assets.map((asset) => (
+                    <option key={asset.id} value={asset.id}>
+                      {asset.symbol === asset.displayName
+                        ? asset.symbol
+                        : `${asset.symbol}, ${asset.displayName}`}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+          ) : null}
+          {!org && chosen.devnetTestAsset ? (
+            <p className={`${styles.assetNote} ${styles.wide}`} data-testid="asset-note">
+              <DevnetTestBadge asset={chosen} />
+              {chosen.symbol} has no value: it lets you try Sotto with realistic amounts. Your
+              wallet can get some from the faucet on the setup page.
+            </p>
+          ) : null}
           {formError ? (
             <p className={`${styles.formError} ${styles.wide}`} role="alert">
               {formError}
@@ -495,6 +548,10 @@ function OrgStatusView({ org, onEdit }: { org: OnboardingOrg; onEdit: () => void
           </dd>
           <dt>Contact email</dt>
           <dd>{org.contactEmail}</dd>
+          <dt>Currency</dt>
+          <dd data-testid="org-asset">
+            {assetWords(org.asset).symbol} <DevnetTestBadge asset={assetWords(org.asset)} />
+          </dd>
           <dt>Sent for review</dt>
           <dd>{formatDate(org.createdAt)}</dd>
           {org.reviewedAt ? (

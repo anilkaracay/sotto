@@ -242,3 +242,15 @@
 .primaryLink:hover {
   background: #1a4fd0;
 }
+
+/* The devnet test asset's note under the currency choice (step 4.3). */
+.assetNote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--ink2);
+  font-size: 13px;
+  line-height: 1.5;
+}

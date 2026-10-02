@@ -13,6 +13,7 @@ import {
 import { ApiError, apiErrors } from "./errors.ts";
 import { requireMembership, type Role } from "./membership.ts";
 import type { Session } from "./session.ts";
+import type { AssetId } from "@sotto/sdk/cluster/assets";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -25,6 +26,7 @@ const orgColumns = {
   website: orgs.website,
   contactEmail: orgs.contactEmail,
   status: orgs.status,
+  asset: orgs.asset,
   attestationAddress: orgs.attestationAddress,
   reviewedAt: orgs.reviewedAt,
   createdAt: orgs.createdAt,
@@ -39,6 +41,8 @@ export type OrgView = {
   website: string;
   contactEmail: string;
   status: OrgStatus;
+  /** The organization's asset (step 4.3, D-29), fixed at creation. */
+  asset: AssetId;
   attestationAddress: string | null;
   reviewedAt: Date | null;
   createdAt: Date;
@@ -74,6 +78,8 @@ export const orgErrors = {
       "The legal name, country, registration number and website can change only while the organization is in review",
     ),
   notFound: () => new ApiError(404, "org_not_found", "Organization not found"),
+  assetUnavailable: () =>
+    new ApiError(422, "asset_unavailable", "This currency is not available on this network"),
   statusConflict: (action: AdminAction, status: OrgStatus) =>
     new ApiError(
       409,

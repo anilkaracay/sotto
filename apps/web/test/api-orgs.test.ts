@@ -121,6 +121,38 @@ describe("POST /api/orgs", () => {
     ]);
   });
 
+  it("step 4.3: the asset is USDC unless the network's registry has the one chosen, and it never changes", async () => {
+    const user = await createUserWithSession(test);
+    const plain = await create(user.cookie, FIELDS);
+    const { org } = (await plain.json()) as { org: { id: string; asset: string } };
+    expect(org.asset).toBe("usdc");
+    // Devnet has no devUSD until its mints and its sotto_proofs deployment exist.
+    const other = await createUserWithSession(test);
+    expect(await errorOf(await create(other.cookie, { ...FIELDS, asset: "devusd" }))).toBe(
+      "422 asset_unavailable: This currency is not available on this network",
+    );
+    expect(await errorOf(await create(other.cookie, { ...FIELDS, asset: "eurc" }))).toBe(
+      "400 invalid_request: Invalid request: asset: Choose a currency",
+    );
+    // A local ledger whose bootstrap made devUSD offers it.
+    vi.stubEnv("NEXT_PUBLIC_CLUSTER", "localnet");
+    vi.stubEnv("LOCALNET_DEVUSD_MINT", "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+    try {
+      const devusd = await create(other.cookie, { ...FIELDS, asset: "devusd" });
+      expect(devusd.status).toBe(201);
+      const created = ((await devusd.json()) as { org: { id: string; asset: string } }).org;
+      expect(created.asset).toBe("devusd");
+      expect(await errorOf(await patch(other.cookie, created.id, { asset: "usdc" }))).toMatch(
+        /^400 invalid_request: Invalid request: body: Unrecognized key: "asset"/,
+      );
+      const [row] = await test.db.select().from(orgs).where(eq(orgs.id, created.id));
+      expect(row?.asset).toBe("devusd");
+    } finally {
+      vi.stubEnv("NEXT_PUBLIC_CLUSTER", "");
+      vi.stubEnv("LOCALNET_DEVUSD_MINT", "");
+    }
+  });
+
   it("AC-02.1 trims the fields and takes an optional display name", async () => {
     const user = await createUserWithSession(test);
     const response = await create(user.cookie, {

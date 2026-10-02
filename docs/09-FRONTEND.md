@@ -118,7 +118,7 @@ Implementation (step 2.6, `apps/web/lib/pay.ts`, `lib/payslip-pdf.ts`, `app/app/
 
 Enforced since step 3.10 (11 section 1):
 
-- `tests/e2e/a11y.ts` runs axe (WCAG 2.1 A and AA, color contrast included) on every state the specs take a screenshot of: the acceptance spec, the screens specs, the network banner. With the privacy screen on, the blurred amounts are left out of the scan on purpose; the rest of the page is scanned.
+- `tests/e2e/a11y.ts` runs axe (WCAG 2.1 A and AA, color contrast included) on every state the specs take a screenshot of: the acceptance spec, the screens specs, the network banner, and since step 3.10.1 sign in and the public proof page `/v/` in every state at 1440 and 390. With the privacy screen on, the blurred amounts are left out of the scan on purpose; the rest of the page is scanned.
 - `tests/e2e/specs/keyboard.spec.ts` presses Tab until the focus comes back around on the landing, the trust page, sign in, the recovery guide and a signed in wallet's onboarding: every visible control is reached and shows an outline or a ring.
 - `tests/e2e/specs/lighthouse.spec.ts` runs Lighthouse with its desktop preset on the production build: performance 90 or more on the landing, accessibility 95 or more on the landing, the trust page, sign in, the recovery guide and onboarding. The pages of an organization need a chain and get the same accessibility audits from axe in the localnet specs.
 - The landing spec, the acceptance spec and the screens specs fail on any console error or warning and any uncaught page error.

@@ -17,7 +17,8 @@
     "program:test": "cargo test --locked -p sotto_proofs",
     "ci:local": "scripts/ci-local.sh",
     "ci:local:full": "scripts/ci-local.sh --full",
-    "acceptance:devnet": "node scripts/acceptance-devnet.ts"
+    "acceptance:devnet": "node scripts/acceptance-devnet.ts",
+    "deploy:hosted": "node scripts/hosting-env.ts -- bash scripts/deploy-hosted.sh"
   },
   "prettier": "@sotto/config/prettier",
   "devDependencies": {

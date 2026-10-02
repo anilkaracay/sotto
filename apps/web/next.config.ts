@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 import { buildAppUrl } from "./lib/app-url.ts";
 
@@ -12,8 +13,19 @@ const DEV_ONLY_EXTENSIONS = ["dev.tsx", "dev.ts"];
 // The app origin sign in messages name, fixed at build time (lib/app-url.ts, 14 section 2).
 const appUrl = buildAppUrl(process.env);
 
+// The hosted image (D-28, deploy/web.Dockerfile) sets SOTTO_STANDALONE=1: a standalone server traced
+// from the repository root, so the workspace packages come along (next 16.3.6 docs, output.md). Local
+// builds, the E2E server and CI keep next start.
+const standalone = process.env.SOTTO_STANDALONE === "1";
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  ...(standalone
+    ? {
+        output: "standalone" as const,
+        outputFileTracingRoot: fileURLToPath(new URL("../../", import.meta.url)),
+      }
+    : {}),
   transpilePackages: ["@sotto/ui"],
   pageExtensions:
     process.env.NODE_ENV === "development"

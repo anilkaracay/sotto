@@ -9,6 +9,8 @@ never values. Run after pnpm build.
   ignored, outside the Docker build context, not uploaded by the Vercel CLI, and outside the
   Turborepo build outputs.
 - Not searched: NEXT_PUBLIC_ values (inlined by design) and PUBLIC_VALUES, which hold public data.
+- The brand files (step 4.2.1: favicons, the web manifest, the link preview image) exist in
+  apps/web/public, and the prerendered landing, trust page and recovery guide link them.
 - Dev only routes (apps/web/app/**/page.dev.tsx and route.dev.ts, page extensions only under next dev,
   apps/web/next.config.ts) are absent: not in app-path-routes-manifest.json, no .next/server/app
   directory, and no deployable file names their path.
@@ -94,11 +96,52 @@ def dev_route_problems(next_dir, routes):
     return problems
 
 
+BRAND_PAGES = ("index.html", "trust.html", os.path.join("app", "recovery.html"))
+BRAND_TAGS = (
+    ('rel="icon"', "/favicon.svg"),
+    ('rel="icon"', "/favicon.ico"),
+    ('rel="apple-touch-icon"', "/apple-touch-icon-180.png"),
+    ('rel="manifest"', "/site.webmanifest"),
+    ('property="og:image"', "/sotto-og-1200x630.png"),
+    ('name="twitter:image"', "/sotto-og-1200x630.png"),
+)
+
+
+def brand_problems(next_dir, public_dir, metadata_file):
+    """Step 4.2.1: the brand kit's icons, manifest and link preview image exist, and every
+    prerendered public page links them. The file list is BRAND_FILES in apps/web/lib/site-metadata.ts."""
+    problems = []
+    with open(metadata_file, encoding="utf-8") as handle:
+        block = re.search(r"BRAND_FILES = \[(.*?)\]", handle.read(), re.S)
+    files = re.findall(r'"([^"]+)"', block.group(1)) if block else []
+    if not files:
+        return ["no BRAND_FILES list in " + os.path.relpath(metadata_file, ROOT)]
+    for name in files:
+        path = os.path.join(public_dir, name)
+        if not os.path.isfile(path) or os.path.getsize(path) == 0:
+            problems.append("brand file missing or empty: " + os.path.relpath(path, ROOT))
+    for page in BRAND_PAGES:
+        path = os.path.join(next_dir, "server", "app", page)
+        if not os.path.isfile(path):
+            problems.append("prerendered page missing: " + os.path.relpath(path, ROOT))
+            continue
+        with open(path, encoding="utf-8", errors="replace") as handle:
+            tags = re.findall(r"<(?:link|meta)\b[^>]*>", handle.read())
+        for marker, target in BRAND_TAGS:
+            if not any(marker in tag and target in tag for tag in tags):
+                problems.append(page + " has no " + marker + " for " + target)
+    return problems
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--next-dir", default=os.path.join(ROOT, "apps", "web", ".next"))
     parser.add_argument("--env-file", default=os.path.join(ROOT, "apps", "web", ".env.local"))
     parser.add_argument("--app-dir", default=os.path.join(ROOT, "apps", "web", "app"))
+    parser.add_argument("--public-dir", default=os.path.join(ROOT, "apps", "web", "public"))
+    parser.add_argument(
+        "--metadata-file", default=os.path.join(ROOT, "apps", "web", "lib", "site-metadata.ts")
+    )
     args = parser.parse_args()
 
     if not os.path.isdir(args.next_dir):
@@ -110,6 +153,7 @@ def main():
     dev_routes = dev_only_routes(args.app_dir)
     route_markers = [(route, route.encode("utf-8")) for route in dev_routes]
     problems = dev_route_problems(args.next_dir, dev_routes)
+    problems += brand_problems(args.next_dir, args.public_dir, args.metadata_file)
     count = 0
     local_only = tuple(os.path.join(args.next_dir, name) + os.sep for name in LOCAL_ONLY_DIRS)
     for directory, _dirs, files in os.walk(args.next_dir):
@@ -140,7 +184,8 @@ def main():
     source = "apps/web/.env.local" if checks else "no env file"
     print(
         "ok: no env file in .next; none of %d server only values from %s in the %d deployable files;"
-        " dev only routes absent (%s)" % (len(checks), source, count, ", ".join(dev_routes) or "none")
+        " dev only routes absent (%s); the brand files and every public page's icons and link"
+        " preview present" % (len(checks), source, count, ", ".join(dev_routes) or "none")
     )
     return 0
 

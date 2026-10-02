@@ -172,9 +172,10 @@ Sotto is wallet agnostic. Any wallet that implements the Wallet Standard for Sol
 - Nothing Post-hackathon is shown in the landing or the app (ENGINEERING-RULES.md rule 6); the affected rows are in `13-COPY-CORRECTIONS.md`.
 - **Balance snapshots are the owner's only** (founder, 2026-09-30, step 2.12): grant holders do not receive `balance_snapshot` items in the hackathon build, whatever their scope; sharing them with `all_payments` and `period` grants (07 section 6) is Post-hackathon.
 
-### D-28 · Hosting on the founder's own server · PROPOSED (founder's instruction 2026-10-02, plan awaiting approval)
+### D-28 · Hosting on the founder's own server · PROPOSED (founder's instruction 2026-10-02; Phase 4 plan approved, the hosting changes wait for the discovery report)
 - Replaces the D-13 default for the hackathon build: the devnet web app, worker and PostgreSQL 16 run as one isolated Docker Compose project (`sotto`) on a server the founder operates, at https://sottoapp.xyz (the app under `/app`, one origin).
 - The machine runs other projects: nothing of theirs changes; Sotto has its own system user, folder, Compose project, network and volumes, publishes no host port, and changes no global configuration without the founder's approval.
-- Secrets on the server are limited to `RPC_URL`, `SESSION_SECRET`, `DATABASE_URL`, `ADMIN_WALLETS` and the devnet SAS signer; wallet A never goes there.
+- Secrets on the server are limited to `RPC_URL`, `SESSION_SECRET`, `DATABASE_URL`, `ADMIN_WALLETS` and the devnet SAS signer, plus what the server needs to be reached and monitored; wallet A never goes there.
+- Backups (founder, 2026-10-02): daily, encrypted with a key that stays on the founder's Mac, kept on the server for 7 days and pulled to the Mac at the seed and before the submission; no cloud bucket for the hackathon.
 - Deploys from the founder's Mac with a health check and a rollback; GitHub Actions stay manual until the public launch (D-25).
 - The plan, the discovery and the undo of every step: `14-ENVIRONMENTS-DEPLOY.md` section 8.

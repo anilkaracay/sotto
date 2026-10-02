@@ -121,6 +121,19 @@ describe("payload version 1 (07 section 3)", () => {
     }
   });
 
+  it("names the organization's asset: USDC or devUSD, nothing else (step 4.3)", () => {
+    const usdc = payload("payment");
+    expect(validatePayload({ ...usdc, currency: "devUSD" })).toEqual({
+      ...usdc,
+      currency: "devUSD",
+    });
+    for (const currency of ["usdc", "DEVUSD", "USD", "$", ""]) {
+      expect(() => validatePayload({ ...usdc, currency })).toThrow(
+        "currency must be USDC or devUSD",
+      );
+    }
+  });
+
   it("AC-05.2 takes a balance snapshot with its pending balance, its ISO date and no flow fields", () => {
     expect(validatePayload(snapshotPayload())).toEqual(snapshotPayload());
     const base = snapshotPayload() as unknown as Record<string, unknown>;

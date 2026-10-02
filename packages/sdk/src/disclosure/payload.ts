@@ -27,7 +27,8 @@ export type DisclosurePayloadV1 = {
   subject: string;
   /** Base units as a decimal string. */
   amount: string;
-  currency: "USDC";
+  /** The organization's asset's symbol (step 4.3, D-29): USDC, or devUSD on devnet. */
+  currency: DisclosureCurrency;
   memo: string | null;
   gross: string | null;
   tax: string | null;
@@ -40,6 +41,10 @@ export type DisclosurePayloadV1 = {
    */
   pending?: string;
 };
+
+/** The symbols a disclosure may name (@sotto/sdk/cluster/assets ASSET_WORDS). */
+export const DISCLOSURE_CURRENCIES = ["USDC", "devUSD"] as const;
+export type DisclosureCurrency = (typeof DISCLOSURE_CURRENCIES)[number];
 
 export class DisclosureError extends Error {
   constructor(message: string) {
@@ -118,7 +123,9 @@ export function validatePayload(value: unknown): DisclosurePayloadV1 {
   if (!DISCLOSURE_CATEGORIES.includes(input.category as DisclosurePayloadV1["category"])) {
     throw new DisclosureError("category is not a disclosure category");
   }
-  if (input.currency !== "USDC") throw new DisclosureError("currency must be USDC");
+  if (!DISCLOSURE_CURRENCIES.includes(input.currency as DisclosureCurrency)) {
+    throw new DisclosureError("currency must be USDC or devUSD");
+  }
   if (
     !Array.isArray(input.signatures) ||
     input.signatures.length > 64 ||
@@ -154,7 +161,7 @@ export function validatePayload(value: unknown): DisclosurePayloadV1 {
     category: input.category as DisclosurePayloadV1["category"],
     subject: text(input.subject, "subject", 100, false) as string,
     amount: units(input.amount, "amount", false) as string,
-    currency: "USDC",
+    currency: input.currency as DisclosureCurrency,
     memo: text(input.memo, "memo", 500, true),
     gross: units(input.gross, "gross", true),
     tax: units(input.tax, "tax", true),

@@ -380,3 +380,10 @@
     transform: none;
   }
 }
+
+/* Step 4.2.2: the date column has one width, so a date's digits never move the columns after it (its
+   text is masked in the visual baselines and changed their layout from one day to the next). */
+.date {
+  width: 5.5rem;
+  white-space: nowrap;
+}

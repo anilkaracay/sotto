@@ -6,6 +6,7 @@
 // the server the label and the salt, which the verify instruction only carries as a hash (X-32).
 import { getAddressEncoder, type Address } from "@solana/kit";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { assetWords } from "../lib/asset-words.ts";
 
 const PROGRAM = "4rMKgJWgawaTTdUxaudUXthEExnRZ7AvFvqzsoEAr9jd" as Address;
 const TOKEN = "DFqVbjLfr1edLKBrmGB6tATRc2vvEqdRr5DVubyhqGXf" as Address;
@@ -151,6 +152,7 @@ const input = {
   validityDays: 7,
   wrappedMint: "AhJfP4JJBaHWRtXRiaScZUC7SMm4RqUPSb3g9H5RT8Bd",
   program: PROGRAM,
+  asset: assetWords("usdc"),
 };
 
 beforeEach(() => {

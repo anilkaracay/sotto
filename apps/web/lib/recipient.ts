@@ -5,6 +5,7 @@
 import { isAddress } from "@solana/kit";
 import { z } from "zod";
 import { isCountryCode } from "./countries.ts";
+import type { AssetWords } from "./asset-words.ts";
 
 const CONTROL = /\p{Cc}/u;
 /** A sealed box adds 48 bytes; the blob holds a default amount and short notes. */
@@ -106,24 +107,26 @@ export const READINESS_LABEL: Record<Readiness, string> = {
 };
 
 /** AC-07.4: whether a recipient can be paid confidentially, and in plain words why not. */
-export function payability(readiness: Readiness): { payable: boolean; reason: string } {
+export function payability(
+  readiness: Readiness,
+  asset: AssetWords,
+): { payable: boolean; reason: string } {
+  const wrapped = asset.wrappedSymbol;
   switch (readiness) {
     case "no_account":
       return {
         payable: false,
-        reason:
-          "Cannot be paid confidentially yet: there is no wUSDC account at this wallet. Their invite link walks them through setting one up.",
+        reason: `Cannot be paid confidentially yet: there is no ${wrapped} account at this wallet. Their invite link walks them through setting one up.`,
       };
     case "not_configured":
       return {
         payable: false,
-        reason:
-          "Cannot be paid confidentially yet: the wUSDC account at this wallet is not set up for confidential payments. Their invite link walks them through it.",
+        reason: `Cannot be paid confidentially yet: the ${wrapped} account at this wallet is not set up for confidential payments. Their invite link walks them through it.`,
       };
     case "ready":
       return {
         payable: true,
-        reason: "Ready: the wUSDC account at this wallet can receive confidential payments.",
+        reason: `Ready: the ${wrapped} account at this wallet can receive confidential payments.`,
       };
   }
 }

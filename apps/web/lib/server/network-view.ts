@@ -12,6 +12,7 @@ import {
   DEFAULT_ASSET,
   type AssetConfig,
   type AssetId,
+  type AssetSymbol,
 } from "@sotto/sdk/cluster/assets";
 import { verifyCluster } from "@sotto/sdk/cluster/verify";
 import { readMintInfo } from "@sotto/sdk/confidential/public";
@@ -36,7 +37,7 @@ export type NetworkCheck =
 /** An asset's words for the browser (no secret; the addresses are on the view itself). */
 export type AssetView = {
   id: AssetId;
-  symbol: string;
+  symbol: AssetSymbol;
   wrappedSymbol: string;
   displayName: string;
   /** devUSD: the "Devnet test dollar" badge goes wherever it appears. */
@@ -49,7 +50,7 @@ export function assetView(asset: Pick<AssetConfig, "id"> | AssetId): AssetView {
 }
 
 export type NetworkView =
-  | { available: false; label: string }
+  | { available: false; label: string; asset: AssetView }
   | {
       available: true;
       cluster: "localnet" | "devnet";
@@ -80,10 +81,12 @@ export async function loadNetworkView(
   db: () => Database = getDb,
 ): Promise<NetworkView> {
   const cluster = await serverCluster();
-  if (!cluster) return { available: false, label: networkLabel(undefined) };
+  const assetId = options.orgId ? await orgAssetId(db(), options.orgId) : DEFAULT_ASSET;
+  if (!cluster) {
+    return { available: false, label: networkLabel(undefined), asset: assetView(assetId) };
+  }
   const { config } = cluster;
   const proofProgram = await readProgramHealth(db(), config.name);
-  const assetId = options.orgId ? await orgAssetId(db(), options.orgId) : DEFAULT_ASSET;
   const asset = clusterAsset(cluster, assetId);
   const base = {
     available: true as const,

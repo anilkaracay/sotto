@@ -29,7 +29,7 @@ import { and, asc, desc, eq, gt, inArray, isNotNull, ne } from "drizzle-orm";
 import { z } from "zod";
 import { payability } from "../recipient.ts";
 import type { ServerCluster } from "./cluster.ts";
-import { orgWrappedMint } from "./assets.ts";
+import { orgAssetId, orgWrappedMint } from "./assets.ts";
 import { ApiError, apiErrors } from "./errors.ts";
 import { log } from "./log.ts";
 import { requireMoneyAccess } from "./orgs.ts";
@@ -37,6 +37,7 @@ import { readinessFromChain, recipientErrors } from "./recipients.ts";
 import { readViewerKey } from "./viewer-keys.ts";
 import { recentScreening, screeningProvider, screenWallet } from "./screening.ts";
 import type { Session } from "./session.ts";
+import { ASSET_WORDS } from "@sotto/sdk/cluster/assets";
 
 /** A proof program check older than this does not count (the job runs every 5 minutes). */
 export const PROOF_PROGRAM_MAX_AGE_MS = 15 * 60 * 1000;
@@ -442,7 +443,10 @@ export async function authorizePayment(
     .update(recipients)
     .set({ readiness, readinessCheckedAt: now })
     .where(eq(recipients.id, payment.recipientId));
-  if (readiness !== "ready") throw paymentErrors.recipientNotReady(payability(readiness).reason);
+  if (readiness !== "ready") {
+    const asset = ASSET_WORDS[await orgAssetId(db, orgId)];
+    throw paymentErrors.recipientNotReady(payability(readiness, asset).reason);
+  }
 
   // D-10, AC-06.2: a clear result within 24 hours, or a new screening now; a hit blocks.
   let screening = await recentScreening(db, orgId, row.wallet, now);

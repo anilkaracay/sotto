@@ -136,8 +136,6 @@ export type LedgerFilter = {
   search: string;
 };
 
-export const formatUsdc = (base: bigint) => `${formatTokenAmount(base, DECIMALS)} USDC`;
-
 /** The rows the ledger shows; the search runs on the opened records in memory (AC-11.2). */
 export function filterRows(rows: readonly LedgerRow[], filter: LedgerFilter): LedgerRow[] {
   const needle = filter.search.trim().toLowerCase();
@@ -174,8 +172,11 @@ export const CSV_HEADER = [
   "transaction",
 ];
 
-/** AC-11.4: the CSV of the rows the ledger shows, in the same order, generated in this tab. */
-export function ledgerCsv(rows: readonly LedgerRow[]): string {
+/**
+ * AC-11.4: the CSV of the rows the ledger shows, in the same order, generated in this tab. The currency
+ * column is the organization's symbol (step 4.3): USDC or devUSD.
+ */
+export function ledgerCsv(rows: readonly LedgerRow[], currency: string): string {
   const lines = [CSV_HEADER.join(",")];
   for (const row of rows) {
     lines.push(
@@ -185,7 +186,7 @@ export function ledgerCsv(rows: readonly LedgerRow[]): string {
         row.memo ?? "",
         BOOKS_CATEGORY_LABEL[row.category],
         formatTokenAmount(row.amount, DECIMALS),
-        "USDC",
+        currency,
         row.kind === "payroll_line" ? "Payroll line" : "Payment",
         row.reconciliation === "matched" ? "Matched" : "Needs receipt",
         row.payment.chain?.signature ?? "",

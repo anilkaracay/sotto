@@ -117,7 +117,11 @@ describe("proof program health (F-19)", () => {
       renderToStaticMarkup(<HealthBannerView network={network("ok", { status: "ok" })} />),
     ).toBe("");
     expect(
-      renderToStaticMarkup(<HealthBannerView network={{ available: false, label: "Mainnet" }} />),
+      renderToStaticMarkup(
+        <HealthBannerView
+          network={{ available: false, label: "Mainnet", asset: assetView("usdc") }}
+        />,
+      ),
     ).toBe("");
   });
 

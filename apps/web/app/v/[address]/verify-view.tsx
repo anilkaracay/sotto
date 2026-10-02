@@ -4,8 +4,11 @@
 // Step 3.4.1 (13 A51; founder, 2026-10-01: designed in the repository): a certificate. The legal name
 // and the statement are the largest words, the result is a stamped band, the slot, time, expiry and
 // "Balance disclosed: none" sit in a grid of their own, and every other state is a card as clear.
+// Step 4.3: the statement names the record's asset, with the devnet test badge for devUSD.
 import Link from "next/link";
+import { DevnetTestBadge } from "../../app/_components/devnet-badge.tsx";
 import { Logo } from "../../app/_components/logo.tsx";
+import { assetWords } from "../../../lib/asset-words.ts";
 import { formatDate, shortWallet } from "../../../lib/format.ts";
 import { PROVEN, statementWords } from "../../../lib/proofs.ts";
 import type { PublicProofView } from "../../../lib/server/proofs.ts";
@@ -162,8 +165,9 @@ function Found({ view }: { view: Extract<PublicProofView, { state: "found" }> })
         </p>
         <span className={styles.label}>Statement</span>
         <p className={styles.statement} data-testid="verify-statement">
-          {statementWords(BigInt(record.threshold))}
+          {statementWords(BigInt(record.threshold), assetWords(record.asset))}
         </p>
+        <DevnetTestBadge asset={assetWords(record.asset)} />
         {view.counterpartyLabel ? (
           <p className={styles.shared}>
             Shared with <b>{view.counterpartyLabel}</b>

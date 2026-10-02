@@ -34,6 +34,7 @@ import {
 } from "../../../../lib/crypto-worker/client.ts";
 import { expiryFrom, proofErrorWords, USDC_DECIMALS } from "../../../../lib/proofs.ts";
 import type { Connected } from "../../_components/confidential/context.tsx";
+import type { AssetWords } from "../../../../lib/asset-words.ts";
 
 export type ProofRunInput = {
   orgId: string;
@@ -42,6 +43,8 @@ export type ProofRunInput = {
   validityDays: number;
   wrappedMint: string;
   program: string;
+  /** The organization's asset (step 4.3): the words of a failure. */
+  asset: AssetWords;
 };
 
 export type ProvenRecord = {
@@ -90,7 +93,11 @@ export async function runProof(options: {
   // 06 section 8 step 1: a pending balance is applied first, from fresh state.
   onProgress("Reading your account from the network…");
   let account = await readAccount(token);
-  if (!account) return { kind: "failed", message: "Your wUSDC account does not exist yet." };
+  if (!account)
+    return {
+      kind: "failed",
+      message: `Your ${input.asset.wrappedSymbol} account does not exist yet.`,
+    };
   if ((await options.worker().decrypt(account)).pending > 0n) {
     onProgress("Applying your pending balance first…");
     const apply = await options.worker().applyInstruction(token, account);
@@ -105,7 +112,11 @@ export async function runProof(options: {
 
   const attempt = async (): Promise<ProofRunOutcome> => {
     account = await readAccount(token);
-    if (!account) return { kind: "failed", message: "Your wUSDC account could not be read." };
+    if (!account)
+      return {
+        kind: "failed",
+        message: `Your ${input.asset.wrappedSymbol} account could not be read.`,
+      };
     onProgress("Preparing the proofs in this tab…");
     let proofs;
     try {
@@ -244,7 +255,7 @@ export async function runProof(options: {
       const words =
         code === null
           ? describeTransactionError(error, connected.info.name)
-          : proofErrorWords(code);
+          : proofErrorWords(code, input.asset);
       return {
         kind: "failed",
         message: closed

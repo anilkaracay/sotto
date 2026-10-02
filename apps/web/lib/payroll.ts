@@ -2,11 +2,12 @@
 // server only imports. Amounts never travel in plaintext: the CSV is read in the browser, and each
 // line's amount, memo, gross and tax are sealed in the tab to the owner's viewing key (the line's
 // private blob, 07 section 2), then disclosed to the owner and the recipient once the line settles.
-import { formatTokenAmount, parseTokenAmount } from "@sotto/sdk/confidential/public";
+import { parseTokenAmount } from "@sotto/sdk/confidential/public";
 import { isAddress } from "@solana/kit";
 import { isCountryCode } from "./countries.ts";
 import { memoProblem } from "./payment.ts";
 import { payability, type Readiness } from "./recipient.ts";
+import type { AssetWords } from "./asset-words.ts";
 
 export const DECIMALS = 6;
 /** AC-08.1: the header of a payroll CSV; `gross,tax` may follow as extension columns (AC-12.1). */
@@ -165,7 +166,11 @@ const normalized = (name: string) => name.trim().replace(/\s+/g, " ").toLocaleLo
  * AC-08.1: every row validated, errors per row. Rows match existing recipients by wallet; an unknown
  * wallet is "Add this recipient first". A wallet may appear once per run.
  */
-export function parsePayrollCsv(text: string, recipients: readonly CsvRecipient[]): ParsedCsv {
+export function parsePayrollCsv(
+  text: string,
+  recipients: readonly CsvRecipient[],
+  asset: AssetWords,
+): ParsedCsv {
   // The browser reads the file as UTF-8 and turns bytes that are not UTF-8 into U+FFFD.
   if (text.includes("\uFFFD")) {
     return {
@@ -280,7 +285,7 @@ export function parsePayrollCsv(text: string, recipients: readonly CsvRecipient[
       }
     }
     if (parsed.recipient && parsed.recipient.readiness !== "ready") {
-      parsed.warning = payability(parsed.recipient.readiness).reason;
+      parsed.warning = payability(parsed.recipient.readiness, asset).reason;
     }
     return parsed;
   });
@@ -323,8 +328,6 @@ export function parseLinePrivate(value: unknown): PayrollLinePrivate | null {
     tax: input.tax as string | null,
   };
 }
-
-export const formatUsdc = (base: bigint) => `${formatTokenAmount(base, DECIMALS)} USDC`;
 
 /**
  * X-18, AC-08.4: the settlement gauge has as many ticks as lines, clamped to 12 at least and 48 at
@@ -378,7 +381,7 @@ export function runStatusChip(status: string): {
 }
 
 /** Why a line cannot be paid now, from its error code (AC-07.4 words, D-10), or null. */
-export function blockedReason(errorCode: string | null): string | null {
+export function blockedReason(errorCode: string | null, asset: AssetWords): string | null {
   if (!errorCode) return null;
   if (errorCode === "screening_hit") {
     return "The recipient's wallet is on the screening list, so the payment is blocked";
@@ -386,7 +389,7 @@ export function blockedReason(errorCode: string | null): string | null {
   if (errorCode.startsWith("recipient_not_ready:")) {
     const readiness = errorCode.slice("recipient_not_ready:".length);
     if (readiness === "no_account" || readiness === "not_configured") {
-      return payability(readiness).reason;
+      return payability(readiness, asset).reason;
     }
   }
   return null;

@@ -25,7 +25,7 @@ const text = (html: string) =>
     .trim();
 
 const pay: PayView = {
-  org: { id: ORG, displayName: "Northwind" },
+  org: { id: ORG, displayName: "Northwind", asset: "usdc" },
   ownerWallet: "7SSpLJh516AbWiV5GM7ooZFTHoQN64pdohYxbDs3Gq4L",
   recipient: {
     displayName: "Maya Chen",

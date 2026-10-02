@@ -10,6 +10,7 @@ export function BalancesSection() {
   if (!ready) return null;
   return (
     <BalanceCards
+      asset={network.asset}
       decimals={network.decimals ?? 6}
       wrapLabel={network.wrapLabel}
       loading={data.loading}

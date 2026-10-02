@@ -25,7 +25,7 @@ import {
   PROVEN_DETAIL,
   RECORD_STATE_WORDS,
   statementWords,
-  THRESHOLD_CHIPS,
+  thresholdChips,
   VALIDITY_OPTIONS,
   verifyPath,
 } from "../../../../lib/proofs.ts";
@@ -41,6 +41,7 @@ import { SkyArt } from "../../_components/sky-art.tsx";
 import { runProof, type ProofRunOutcome } from "./proof-run.ts";
 import styles from "./proofs.module.css";
 import { Amount, WithAmounts } from "../../_components/privacy.tsx";
+import { useAssetWords } from "../../_components/asset.tsx";
 
 type Stage =
   | { kind: "idle" }
@@ -96,6 +97,7 @@ export function Proofs(props: {
           validityDays: input.validityDays,
           wrappedMint: props.network.wrappedMint,
           program: props.program,
+          asset: props.network.asset,
         },
         connected,
         worker: vault.worker,
@@ -148,6 +150,9 @@ export function Builder(props: {
   onProve: (input: { threshold: bigint; label: string; validityDays: number }) => void;
 }) {
   const id = useId();
+  const asset = useAssetWords();
+  const chips = thresholdChips(asset);
+  const unit = asset.symbol === "USDC" ? "US dollars" : asset.symbol;
   const [choice, setChoice] = useState<number | "custom">(0);
   const [custom, setCustom] = useState("");
   const [label, setLabel] = useState("");
@@ -155,9 +160,9 @@ export function Builder(props: {
   const [problem, setProblem] = useState<string | null>(null);
 
   function submit() {
-    const threshold = choice === "custom" ? parseThreshold(custom) : THRESHOLD_CHIPS[choice]?.base;
+    const threshold = choice === "custom" ? parseThreshold(custom) : chips[choice]?.base;
     if (!threshold) {
-      setProblem("Enter the amount to prove, in US dollars, such as 250000.");
+      setProblem(`Enter the amount to prove, in ${unit}, such as 250000.`);
       return;
     }
     const name = label.trim();
@@ -177,7 +182,7 @@ export function Builder(props: {
         Balance is at least
       </div>
       <div className={styles.dops} role="group" aria-labelledby={`${id}-threshold`}>
-        {THRESHOLD_CHIPS.map((chip, index) => (
+        {chips.map((chip, index) => (
           <button
             key={chip.label}
             type="button"
@@ -199,7 +204,7 @@ export function Builder(props: {
       </div>
       {choice === "custom" ? (
         <label className={styles.darkField}>
-          <span>Custom amount (US dollars)</span>
+          <span>Custom amount ({unit})</span>
           <input
             inputMode="decimal"
             data-amount=""
@@ -301,6 +306,7 @@ export function CertificateView(props: {
   origin?: string;
 }) {
   const [copied, setCopied] = useState(false);
+  const asset = useAssetWords();
   const { outcome } = props;
   if (outcome.kind === "failed") {
     return (
@@ -356,7 +362,7 @@ export function CertificateView(props: {
         <div>
           <dt>Statement</dt>
           <dd data-testid="certificate-statement">
-            <WithAmounts>{statementWords(props.threshold)}</WithAmounts>
+            <WithAmounts>{statementWords(props.threshold, asset)}</WithAmounts>
           </dd>
         </div>
         <div>
@@ -470,6 +476,7 @@ export function IssuedProofsView(props: {
   onCopy: (recordAddress: string) => void;
   onClose: ((recordAddress: string) => void) | null;
 }) {
+  const asset = useAssetWords();
   return (
     <Card className={styles.issued} data-testid="issued-proofs">
       <div className={styles.head}>
@@ -499,7 +506,7 @@ export function IssuedProofsView(props: {
                   <Person name={proof.counterpartyLabel} business size={38} />
                 </Td>
                 <Td>
-                  <WithAmounts>{statementWords(BigInt(proof.threshold))}</WithAmounts>
+                  <WithAmounts>{statementWords(BigInt(proof.threshold), asset)}</WithAmounts>
                 </Td>
                 <Td>
                   <Chip tone="green" check>

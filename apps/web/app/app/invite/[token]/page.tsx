@@ -15,6 +15,8 @@ import { AppShell } from "../../_components/app-shell.tsx";
 import { Logo } from "../../_components/logo.tsx";
 import { InvitePanel } from "./invite-panel.tsx";
 import styles from "./invite.module.css";
+import { AssetWordsProvider } from "../../_components/asset.tsx";
+import { DevnetTestBadge } from "../../_components/devnet-badge.tsx";
 
 export const dynamic = "force-dynamic";
 
@@ -73,10 +75,11 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
         <Chip tone="blue" data-testid="network-label">
           {network.label}
         </Chip>
+        <DevnetTestBadge asset={network.asset} />
       </header>
       <main className={styles.body}>
         <PageHeader overline={invite.org.displayName} title="Your invite" />
-        {panel}
+        <AssetWordsProvider asset={network.asset}>{panel}</AssetWordsProvider>
       </main>
     </div>
   );

@@ -7,7 +7,7 @@
 // verifies (I-8, 07 section 5); the server stores only the sealed box. Since step 1.8.1 the page has
 // the keys card: one Unlock click also unlocks the viewing key, and while the tab holds it the worker
 // opens the default amounts for this page on its own.
-import { formatTokenAmount, parseTokenAmount } from "@sotto/sdk/confidential/public";
+import { parseTokenAmount } from "@sotto/sdk/confidential/public";
 import { verifyViewKeyRegistration } from "@sotto/sdk/keys/public";
 import {
   Button,
@@ -45,6 +45,8 @@ import { useKeySession } from "../../_components/key-session.tsx";
 import { ReadinessCell } from "./readiness-cell.tsx";
 import styles from "./recipients.module.css";
 import { Amount } from "../../_components/privacy.tsx";
+import { formatAmount } from "../../../../lib/asset-words.ts";
+import { useAssetWords } from "../../_components/asset.tsx";
 
 export type OwnerViewerKey = { publicKey: string; signature: string };
 
@@ -99,6 +101,7 @@ const EMPTY: Fields = {
 };
 
 function AddRecipientCard({ viewerKey }: { viewerKey: OwnerViewerKey | null }) {
+  const asset = useAssetWords();
   const { wallet, orgId } = useConfidential();
   const { session } = useKeySession();
   const router = useRouter();
@@ -212,8 +215,9 @@ function AddRecipientCard({ viewerKey }: { viewerKey: OwnerViewerKey | null }) {
     <Card data-testid="add-recipient-card">
       <h2 className={cards.cardTitle}>Add a recipient</h2>
       <p className={cards.lead}>
-        A person or company you pay in wUSDC. The default amount and notes are encrypted in this tab
-        to your viewing key, so only you can read them; Sotto stores them sealed.
+        A person or company you pay in {asset.wrappedSymbol}. The default amount and notes are
+        encrypted in this tab to your viewing key, so only you can read them; Sotto stores them
+        sealed.
       </p>
       <form onSubmit={submit} noValidate>
         <FieldGrid>
@@ -234,7 +238,7 @@ function AddRecipientCard({ viewerKey }: { viewerKey: OwnerViewerKey | null }) {
               ))}
             </Select>
           </Field>
-          {input("amount", "Default amount (USDC)", {
+          {input("amount", `Default amount (${asset.symbol})`, {
             hint: viewerKey ? "Optional, encrypted to you" : "Needs your viewing key",
           })}
           {input("wallet", "Solana wallet address", { wide: true, mono: true })}
@@ -261,6 +265,7 @@ function AddRecipientCard({ viewerKey }: { viewerKey: OwnerViewerKey | null }) {
 }
 
 function RecipientsTable({ recipients }: { recipients: RecipientView[] }) {
+  const asset = useAssetWords();
   const { wallet, orgId } = useConfidential();
   const { session, viewing } = useKeySession();
   const router = useRouter();
@@ -354,7 +359,7 @@ function RecipientsTable({ recipients }: { recipients: RecipientView[] }) {
           <span className={styles.muted}>No amount</span>
         ) : (
           <span className="num" data-testid="default-amount">
-            <Amount>{formatTokenAmount(BigInt(value.default_amount), DECIMALS)} USDC</Amount>
+            <Amount>{formatAmount(BigInt(value.default_amount), asset)}</Amount>
           </span>
         )}
         {value.notes ? <small className={styles.muted}> · {value.notes}</small> : null}

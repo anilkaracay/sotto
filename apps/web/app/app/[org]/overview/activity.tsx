@@ -7,7 +7,6 @@
 // private blob. Both are sealed to the owner's viewing key, so nothing opens until the keys are
 // unlocked in this tab. Since step 2.5 "Can read amount" names who else holds the payment's record:
 // the recipient, and each holder of a readable grant (the design's avatars, as initials).
-import { formatTokenAmount } from "@sotto/sdk/confidential/public";
 import type { DisclosurePayloadV1 } from "@sotto/sdk/disclosure";
 import { Button, Card, Chip, initials, Person, Table, Td, Th } from "@sotto/ui";
 import Link from "next/link";
@@ -29,10 +28,11 @@ import { useConfidential } from "../../_components/confidential/context.tsx";
 import { useKeySession } from "../../_components/key-session.tsx";
 import styles from "./overview.module.css";
 import { Amount } from "../../_components/privacy.tsx";
+import { formatAmount } from "../../../../lib/asset-words.ts";
+import { useAssetWords } from "../../_components/asset.tsx";
 
 /** The design's table shows the latest few; the payments page lists them all. */
 const SHOWN = 8;
-const DECIMALS = 6;
 const fromBase64 = (text: string) => Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
 
 type Loaded = {
@@ -196,6 +196,7 @@ export function ActivityView({
   unverified: number;
   onRetry: () => void;
 }) {
+  const asset = useAssetWords();
   const sealed = <span className={styles.muted}>Sealed</span>;
 
   return (
@@ -287,9 +288,7 @@ export function ActivityView({
                     <Td align="right">
                       {readable ? (
                         <span className="num" data-testid="activity-amount">
-                          <Amount>
-                            {formatTokenAmount(BigInt(readable.amount), DECIMALS)} USDC
-                          </Amount>
+                          <Amount>{formatAmount(BigInt(readable.amount), asset)}</Amount>
                         </span>
                       ) : secret === "unreadable" ? (
                         <span className={styles.muted}>Not readable with this key</span>

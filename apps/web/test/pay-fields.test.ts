@@ -17,6 +17,7 @@ import {
 } from "../lib/pay.ts";
 import { latin1, payslipLines, payslipPdf } from "../lib/payslip-pdf.ts";
 import type { PayView } from "../lib/server/pay.ts";
+import { assetWords } from "../lib/asset-words.ts";
 
 const ORG = "3f1b6a2e-5c4d-4e8f-9a0b-1c2d3e4f5a6b";
 const LINE = "a0000000-0000-4000-8000-000000000001";
@@ -24,7 +25,7 @@ const SINGLE = "a0000000-0000-4000-8000-000000000002";
 const OTHER = "a0000000-0000-4000-8000-000000000003";
 
 const pay: PayView = {
-  org: { id: ORG, displayName: "Northwind" },
+  org: { id: ORG, displayName: "Northwind", asset: "usdc" },
   ownerWallet: "7SSpLJh516AbWiV5GM7ooZFTHoQN64pdohYxbDs3Gq4L",
   recipient: {
     displayName: "Maya Chen",
@@ -147,6 +148,7 @@ describe("my pay in the tab (F-12)", () => {
       recipientName: "Elif Aydın",
       roleTitle: "Design lead",
       wallet: pay.recipient.wallet,
+      asset: assetWords("usdc"),
       slip,
     };
     expect(payslipLines(document).map((line) => line.text)).toEqual([
@@ -197,6 +199,7 @@ describe("my pay in the tab (F-12)", () => {
       recipientName: "Maya Chen",
       roleTitle: null,
       wallet: pay.recipient.wallet,
+      asset: assetWords("usdc"),
       slip: { ...slip, gross: 2_000_000n, tax: 750_000n },
     };
     expect(payslipLines(document).map((line) => line.text)).toEqual([

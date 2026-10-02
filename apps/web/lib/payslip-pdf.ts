@@ -2,10 +2,17 @@
 // never on the server; a record outside category payroll gives a payment receipt instead, with the
 // amount received and no gross or tax (13 A49): one A4 page of text in the standard Helvetica font (PDF 1.4, no embedded font,
 // no dependency). Text outside Latin-1, which Helvetica's WinAnsi encoding cannot show, is written
-// without its accents where Unicode decomposes it and as "?" otherwise.
+// without its accents where Unicode decomposes it and as "?" otherwise. Step 4.3: amounts in the
+// organization's asset (USDC or devUSD), and a devnet test asset says it has no value.
+import {
+  DEVNET_TEST_ASSET_BADGE,
+  DEVNET_TEST_ASSET_TOOLTIP,
+  formatAmount,
+  type AssetWords,
+} from "./asset-words.ts";
 import { formatDate } from "./format.ts";
 import { BOOKS_CATEGORY_LABEL } from "./books.ts";
-import { formatUsdc, isPayslip, payslipTitle, type Payslip } from "./pay.ts";
+import { isPayslip, payslipTitle, type Payslip } from "./pay.ts";
 
 export type PayslipDocument = {
   orgName: string;
@@ -13,6 +20,8 @@ export type PayslipDocument = {
   roleTitle: string | null;
   wallet: string;
   slip: Payslip;
+  /** The paying organization's asset. */
+  asset: AssetWords;
 };
 
 /** Letters outside Latin-1 that Unicode does not decompose, and typographic quotes and dashes. */
@@ -58,7 +67,8 @@ function literal(text: string): string {
 
 /** The lines of the payslip or the payment receipt: the size of their font and their text. */
 export function payslipLines(document: PayslipDocument): { size: number; text: string }[] {
-  const { slip } = document;
+  const { slip, asset } = document;
+  const amount = (base: bigint) => formatAmount(base, asset);
   const payslip = isPayslip(slip);
   const lines: { size: number; text: string }[] = [
     { size: 20, text: `${payslip ? "Payslip" : "Payment receipt"}: ${payslipTitle(slip)}` },
@@ -75,15 +85,15 @@ export function payslipLines(document: PayslipDocument): { size: number; text: s
     if (slip.memo) lines.push({ size: 11, text: `Memo: ${slip.memo}` });
     lines.push({ size: 11, text: "" });
     if (slip.gross !== null && slip.tax !== null) {
-      lines.push({ size: 11, text: `Gross pay: ${formatUsdc(slip.gross)}` });
-      lines.push({ size: 11, text: `Tax withheld: ${formatUsdc(slip.tax)}` });
+      lines.push({ size: 11, text: `Gross pay: ${amount(slip.gross)}` });
+      lines.push({ size: 11, text: `Tax withheld: ${amount(slip.tax)}` });
     }
-    lines.push({ size: 14, text: `Net pay: ${formatUsdc(slip.net)}` });
+    lines.push({ size: 14, text: `Net pay: ${amount(slip.net)}` });
   } else {
     // The memo is the receipt's title already.
     lines.push({ size: 11, text: `Category: ${BOOKS_CATEGORY_LABEL[slip.category]}` });
     lines.push({ size: 11, text: "" });
-    lines.push({ size: 14, text: `Amount received: ${formatUsdc(slip.net)}` });
+    lines.push({ size: 14, text: `Amount received: ${amount(slip.net)}` });
   }
   lines.push({ size: 11, text: "" });
   // The signature on its own line: with its label it ran past the page's right edge.
@@ -93,8 +103,14 @@ export function payslipLines(document: PayslipDocument): { size: number; text: s
   }
   lines.push({
     size: 9,
-    text: "Paid in confidential wUSDC on Solana: the amount is encrypted onchain.",
+    text: `Paid in confidential ${asset.wrappedSymbol} on Solana: the amount is encrypted onchain.`,
   });
+  if (asset.devnetTestAsset) {
+    lines.push({
+      size: 9,
+      text: `${asset.symbol}: ${DEVNET_TEST_ASSET_BADGE.toLowerCase()}. ${DEVNET_TEST_ASSET_TOOLTIP}`,
+    });
+  }
   lines.push({
     size: 9,
     text: "Made in your browser from your own sealed payment record. Sotto never saw these amounts.",

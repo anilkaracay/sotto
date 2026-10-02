@@ -12,13 +12,16 @@ export type AssetId = "usdc" | "devusd";
 
 export const ASSET_IDS: readonly AssetId[] = ["usdc", "devusd"];
 
+/** The symbols amounts show; a disclosure's currency is one of them (disclosure/payload.ts). */
+export type AssetSymbol = "USDC" | "devUSD";
+
 /** The default asset of an organization (D-29). */
 export const DEFAULT_ASSET: AssetId = "usdc";
 
 export interface AssetConfig {
   readonly id: AssetId;
   /** What every amount of this asset shows: "USDC", "devUSD". */
-  readonly symbol: string;
+  readonly symbol: AssetSymbol;
   /** The wrapped token's symbol: "wUSDC", "wdevUSD". */
   readonly wrappedSymbol: string;
   readonly displayName: string;

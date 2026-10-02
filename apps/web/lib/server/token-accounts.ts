@@ -13,12 +13,13 @@ import {
   recipientReadiness,
   type AccountCheck,
 } from "@sotto/sdk/confidential/public";
+import { ASSET_WORDS } from "@sotto/sdk/cluster/assets";
 import type { SolanaRpc } from "@sotto/sdk/tx";
 import { address, isAddress } from "@solana/kit";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { ServerCluster } from "./cluster.ts";
-import { orgWrappedMint } from "./assets.ts";
+import { orgAssetId, orgWrappedMint } from "./assets.ts";
 import { ApiError } from "./errors.ts";
 import { requireMoneyAccess } from "./orgs.ts";
 import type { Session } from "./session.ts";
@@ -35,14 +36,14 @@ export type TokenAccountRegistration = z.infer<typeof tokenAccountRegistrationSc
 
 type InvalidReason = Extract<AccountCheck, { ok: false }>["reason"];
 
-const INVALID: Record<InvalidReason, string> = {
+const invalidWords = (wrappedSymbol: string): Record<InvalidReason, string> => ({
   missing: "The token account does not exist onchain",
   not_token_2022: "The account is not a Token-2022 token account",
   wrong_owner: "The token account belongs to another wallet",
-  wrong_mint: "The token account does not hold this network's wUSDC",
+  wrong_mint: `The token account does not hold this network's ${wrappedSymbol}`,
   not_confidential: "The token account is not configured for confidential balances",
   not_approved: "The token account is not approved for confidential balances",
-};
+});
 
 export const tokenAccountErrors = {
   unavailable: () =>
@@ -51,7 +52,9 @@ export const tokenAccountErrors = {
       "confidential_unavailable",
       "Confidential balances are not available on this network",
     ),
-  invalid: (reason: InvalidReason) => new ApiError(422, "token_account_invalid", INVALID[reason]),
+  /** In the organization's asset's words (step 4.3): wUSDC or wdevUSD. */
+  invalid: (reason: InvalidReason, wrappedSymbol: string) =>
+    new ApiError(422, "token_account_invalid", invalidWords(wrappedSymbol)[reason]),
   taken: () =>
     new ApiError(409, "token_account_taken", "This token account is registered to another user"),
 };
@@ -99,7 +102,10 @@ export async function registerTokenAccount(
     owner: address(session.wallet),
     mint: mint,
   });
-  if (!check.ok) throw tokenAccountErrors.invalid(check.reason);
+  if (!check.ok) {
+    const asset = ASSET_WORDS[await orgAssetId(db, input.orgId)];
+    throw tokenAccountErrors.invalid(check.reason, asset.wrappedSymbol);
+  }
   // A recipient of this org who records their associated wUSDC account, the account readiness reads
   // and payments go to, is ready from this read on (AC-07.3). Another account leaves readiness as it is.
   const associated = await associatedTokenAccount(address(session.wallet), mint);

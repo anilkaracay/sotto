@@ -1,20 +1,26 @@
 // Proof of funds in words (F-13, step 2.8), for the owner's proofs page, the public verification page and
 // their tests. No server only imports. The statement always says "at least" (X-22, D-06): "Balance is at
 // least $X"; the result is Proven or Not proven (D-06, 13 L3), never True or False. A threshold is in
-// base units of wUSDC (6 decimals), whose unit is one US dollar of USDC.
+// base units of the organization's wrapped asset (6 decimals). Step 4.3: a USDC record keeps the dollar
+// words ("$250,000"); a devUSD record names its symbol ("250,000 devUSD") and never says USDC.
 import { parseTokenAmount } from "@sotto/sdk/confidential/public";
+import type { AssetWords } from "./asset-words.ts";
 import { formatDate } from "./format.ts";
 
 export const USDC_DECIMALS = 6;
 const USDC = 1_000_000n;
 
-/** The builder's threshold chips (09 section 4), in base units. */
-export const THRESHOLD_CHIPS = [
-  { label: "$100k", base: 100_000n * USDC },
-  { label: "$500k", base: 500_000n * USDC },
-  { label: "$1M", base: 1_000_000n * USDC },
-  { label: "$2.5M", base: 2_500_000n * USDC },
-] as const;
+/** The builder's threshold chips (09 section 4), in base units, labeled in the asset's words. */
+export function thresholdChips(asset: AssetWords): readonly { label: string; base: bigint }[] {
+  const label = (short: string) =>
+    asset.symbol === "USDC" ? `$${short}` : `${short} ${asset.symbol}`;
+  return [
+    { label: label("100k"), base: 100_000n * USDC },
+    { label: label("500k"), base: 500_000n * USDC },
+    { label: label("1M"), base: 1_000_000n * USDC },
+    { label: label("2.5M"), base: 2_500_000n * USDC },
+  ];
+}
 
 /**
  * How long a record stays valid (05 section 3: chosen by the owner, at most 365 days after it is
@@ -32,21 +38,23 @@ export const DEFAULT_VALIDITY_DAYS = 30;
 export const LABEL_MAX = 120;
 
 /**
- * "$100,000", "$7", "$1.50", "$0.000001": whole dollars with thousands separators, and every digit of
- * the fraction there is (at least two), so the words never round the record's threshold.
+ * "$100,000", "$7", "$1.50", "$0.000001" for USDC, "250,000 devUSD" for devUSD: whole units with
+ * thousands separators, and every digit of the fraction there is (at least two), so the words never
+ * round the record's threshold.
  */
-export function usdWords(base: bigint): string {
+export function thresholdWords(base: bigint, asset: AssetWords): string {
   const whole = (base / USDC).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   const fraction = (base % USDC).toString().padStart(USDC_DECIMALS, "0").replace(/0+$/, "");
-  return fraction ? `$${whole}.${fraction.padEnd(2, "0")}` : `$${whole}`;
+  const number = fraction ? `${whole}.${fraction.padEnd(2, "0")}` : whole;
+  return asset.symbol === "USDC" ? `$${number}` : `${number} ${asset.symbol}`;
 }
 
 /** X-22: the statement a record proves. */
-export function statementWords(threshold: bigint): string {
-  return `Balance is at least ${usdWords(threshold)}`;
+export function statementWords(threshold: bigint, asset: AssetWords): string {
+  return `Balance is at least ${thresholdWords(threshold, asset)}`;
 }
 
-/** A custom threshold typed as dollars ("250000", "250,000", "7.5"); null when it is not an amount. */
+/** A custom threshold typed as units ("250000", "250,000", "$7.5"); null when it is not an amount. */
 export function parseThreshold(text: string): bigint | null {
   return parseTokenAmount(text.replaceAll(",", "").replace(/^\$/, ""), USDC_DECIMALS);
 }
@@ -91,15 +99,15 @@ export function expiryWords(expiry: Date | string, now: Date): string {
 }
 
 /** Plain words for the program's errors (05 section 5, codes 0 to 16), for the owner's page. */
-const PROOF_ERRORS: readonly string[] = [
+const PROOF_ERRORS = (wrapped: string): readonly string[] => [
   "Verification is paused: the proof program is not writing new records right now.",
   "The threshold must be above zero.",
   "The validity period is not accepted: it must end after now and within 365 days.",
-  "Your wUSDC account is not a Token-2022 account.",
-  "The account is not a wUSDC account of this network.",
-  "The wUSDC account belongs to another wallet.",
-  "Your wUSDC account has no confidential balance yet.",
-  "Your wUSDC account's confidential balance is not approved.",
+  `Your ${wrapped} account is not a Token-2022 account.`,
+  `The account is not a ${wrapped} account of this network.`,
+  `The ${wrapped} account belongs to another wallet.`,
+  `Your ${wrapped} account has no confidential balance yet.`,
+  `Your ${wrapped} account's confidential balance is not approved.`,
   "A proof account was not written by the ZK ElGamal Proof program.",
   "A proof account holds another kind of proof.",
   "A proof account belongs to another wallet.",
@@ -111,6 +119,9 @@ const PROOF_ERRORS: readonly string[] = [
   "The record has not expired yet, so it cannot be closed.",
 ];
 
-export function proofErrorWords(code: number): string {
-  return PROOF_ERRORS[code] ?? `The proof program refused the transaction with error ${code}.`;
+export function proofErrorWords(code: number, asset: AssetWords): string {
+  return (
+    PROOF_ERRORS(asset.wrappedSymbol)[code] ??
+    `The proof program refused the transaction with error ${code}.`
+  );
 }

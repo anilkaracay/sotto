@@ -152,7 +152,7 @@ describe("my pay endpoint (F-12)", () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as Record<string, unknown>;
     expect(body).toEqual({
-      org: { id: orgId, displayName: expect.any(String) },
+      org: { id: orgId, displayName: expect.any(String), asset: "usdc" },
       ownerWallet: owner.wallet,
       recipient: { displayName: "Maya Chen", roleTitle: null, wallet: maya.wallet },
       tokenAccount: mayaAccount,

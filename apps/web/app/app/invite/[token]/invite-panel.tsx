@@ -40,6 +40,7 @@ import {
 } from "../../_components/confidential/keys.tsx";
 import { NetworkBanner } from "../../_components/confidential/network-banner.tsx";
 import styles from "./invite.module.css";
+import { useAssetWords } from "../../_components/asset.tsx";
 
 export function InvitePanel({
   token,
@@ -59,6 +60,7 @@ export function InvitePanel({
 }) {
   const org = invite.org.displayName;
   const details = invite.details;
+  const asset = useAssetWords();
 
   if (invite.acceptedByYou && wallet && network && invite.role === "accountant") {
     return (
@@ -123,7 +125,7 @@ export function InvitePanel({
                 <span className={styles.stepNo} aria-hidden="true">
                   03
                 </span>
-                Set up your confidential wUSDC account.
+                Set up your confidential {asset.wrappedSymbol} account.
               </li>
             </ol>
             <p className={cards.lead}>
@@ -131,7 +133,7 @@ export function InvitePanel({
               <Link className={cards.link} href={`/app/${invite.org.id}/pay`}>
                 your pay page
               </Link>
-              , where you can also withdraw them to USDC.
+              , where you can also withdraw them to {asset.symbol}.
             </p>
           </Card>
           <WalletCard />
@@ -209,6 +211,7 @@ function InviteState({
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const org = invite.org.displayName;
+  const asset = useAssetWords();
 
   if (invite.status === "expired") {
     return <p className={cards.lead}>This invite has expired. Ask {org} for a new link.</p>;
@@ -251,7 +254,7 @@ function InviteState({
       <p className={cards.lead}>
         {invite.role === "accountant"
           ? `Accepting adds you to ${org} as its accountant, with read access only, never control of funds. ${org} shares its records with you encrypted to your viewing key, which you create in this tab next.`
-          : `Accepting adds you to ${org} as a recipient and lets ${org} pay you in confidential wUSDC: amounts are encrypted onchain, so only you, ${org} and the people ${org} shares them with can read them. Then you set up your confidential wUSDC account in this tab.`}
+          : `Accepting adds you to ${org} as a recipient and lets ${org} pay you in confidential ${asset.wrappedSymbol}: amounts are encrypted onchain, so only you, ${org} and the people ${org} shares them with can read them. Then you set up your confidential ${asset.wrappedSymbol} account in this tab.`}
       </p>
       {details}
       <div className={cards.actions}>

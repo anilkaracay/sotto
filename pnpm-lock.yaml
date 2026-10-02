@@ -616,6 +616,9 @@ importers:
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.63.0
+      '@solana-program/token':
+        specifier: 'catalog:'
+        version: 0.16.1(@solana/kit@8.3.0(typescript@6.0.3))
       '@solana/kit':
         specifier: 'catalog:'
         version: 8.3.0(typescript@6.0.3)
@@ -631,6 +634,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.0
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.3(@opentelemetry/api@1.9.1)(postgres@3.4.9)
       eslint:
         specifier: 'catalog:'
         version: 10.11.0

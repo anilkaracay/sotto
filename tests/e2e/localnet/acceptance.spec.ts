@@ -12,10 +12,11 @@
 // logs an error or warning, the health banner never shows, and every balance shown equals the chain
 // read here. A full page screenshot per step goes to this test's output directory (git ignored) and,
 // once the run passes, to .demo-shots/<UTC time>/ (git ignored, never cleared by Playwright); the step
-// times go to the report. The memos hold a comma, so the payroll CSV quotes them (RFC 4180). Only the wallets' SOL and USDC come from the local faucet, as a
-// devnet faucet would give them. Runs in the localnet job of scripts/ci-local.sh, never on devnet.
+// times go to the report. The memos hold a comma, so the payroll CSV quotes them (RFC 4180). Only the
+// wallets' SOL and USDC come from outside the app: the local faucet on localnet, wallet A on devnet.
+// Runs in the localnet job of scripts/ci-local.sh; since step 3.11 also on devnet against the running
+// app and worker with fresh keypairs, through pnpm acceptance:devnet (acceptance-target.ts, 14).
 import { copyFile, mkdir, readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
 import { decodeBusinessAttestation } from "@sotto/sdk/attestation";
 import { decryptTokenAccount } from "@sotto/sdk/confidential";
 import {
@@ -25,8 +26,6 @@ import {
   readPublicTokenBalance,
 } from "@sotto/sdk/confidential/public";
 import { confidentialKeysMessage, deriveStandardKeys } from "@sotto/sdk/keys";
-import { fundLocalnetWallet, readLocalnetBootstrap } from "@sotto/sdk/testing/localnet";
-import { createRetryingRpc } from "@sotto/sdk/tx";
 import {
   address,
   createKeyPairSignerFromBytes,
@@ -35,7 +34,7 @@ import {
   type Address,
 } from "@solana/kit";
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
-import { e2eKeypair, seededKeypair } from "../fixtures.ts";
+import { acceptanceTarget } from "../acceptance-target.ts";
 import {
   addTestWallet,
   ANY_APP_PAGE,
@@ -50,46 +49,38 @@ import {
 import { expectAccessible } from "../a11y.ts";
 import { expectVisual } from "../visual.ts";
 
-const bootstrap = readLocalnetBootstrap();
-const rpc = createRetryingRpc(bootstrap.rpcUrl);
-const SERVER_LOG = new URL("../../../.localnet/e2e-server.log", import.meta.url);
+const target = await acceptanceTarget();
+const rpc = target.rpc;
 const PAY_URL = /\/app\/[0-9a-f-]{36}\/pay$/;
 const RUN_URL = /\/app\/[0-9a-f-]{36}\/payroll\/[0-9a-f-]{36}$/;
-const LEGAL_NAME = "Acceptance Test Ltd";
-const OWNER = seededKeypair("sotto-e2e-acceptance-owner/v1");
-const ACCOUNTANT = seededKeypair("sotto-e2e-acceptance-accountant/v1");
+const LEGAL_NAME = target.legalName;
+const OWNER = target.owner;
+const ACCOUNTANT = target.accountant;
 const DECIMALS = 6;
 const V1_WALLET = "window.__sottoTestWalletVersions = ['legacy', 0, 1];";
 /** The owner's deposit, public onchain by design (I-2 exempts it). */
-const FUNDING = 40n;
+const FUNDING = target.funding;
 /** I-2: net, gross and tax per line and a memo, never used for a deposit or a withdrawal. */
 const PEOPLE = [
   {
     name: "Maya Chen",
     team: "Design",
-    net: 1_937_153n,
-    tax: 484_288n,
     memo: "Salary, ref 7301",
   },
   {
     name: "Idris Kaya",
     team: "Engineering",
-    net: 2_604_179n,
-    tax: 651_044n,
     memo: "Salary, ref 7302",
   },
   {
     name: "Lena Novak",
     team: "Growth",
-    net: 3_259_187n,
-    tax: 814_796n,
     memo: "Salary, ref 7303",
   },
-].map((person, index) => ({
-  ...person,
-  gross: person.net + person.tax,
-  keypair: seededKeypair(`sotto-e2e-acceptance-person-${index + 1}/v1`),
-}));
+].map((person, index) => {
+  const { net, tax } = target.lines[index] ?? { net: 0n, tax: 0n };
+  return { ...person, net, tax, gross: net + tax, keypair: target.people[index] ?? [] };
+});
 const TOTAL = PEOPLE.reduce((sum, person) => sum + person.net, 0n);
 const show = (base: bigint) => formatTokenAmount(base, DECIMALS);
 /** Every amount and memo of the scenario that must never leave a browser in plaintext. */
@@ -104,16 +95,16 @@ type Person = {
   keys: Awaited<ReturnType<typeof deriveStandardKeys>>;
 };
 
-/** A wallet with SOL and whole USDC from the local faucet, and the keys its signature derives. */
+/** A wallet with SOL and whole USDC (the local faucet, or wallet A before a devnet run), and its keys. */
 async function person(keypair: number[], sol: bigint, usdc: bigint): Promise<Person> {
   const signer = await createKeyPairSignerFromBytes(new Uint8Array(keypair));
-  const funded = await fundLocalnetWallet(rpc, bootstrap, signer.address, { sol, usdc });
+  const usdcAccount = await target.prepare(signer.address, sol, usdc);
   const signature = new Uint8Array(
     await signBytes(signer.keyPair.privateKey, confidentialKeysMessage()),
   );
   return {
     address: signer.address,
-    usdc: funded.usdc,
+    usdc: usdcAccount,
     keys: await deriveStandardKeys(signer.address, signature),
   };
 }
@@ -123,9 +114,15 @@ async function publicBalance(account: Address): Promise<bigint> {
   return balance.status === "present" ? balance.amount : 0n;
 }
 
+/** A public USDC balance, or null where the wallet has no USDC account (a devnet recipient). */
+async function publicUsdcBalance(account: Address): Promise<bigint | null> {
+  const balance = await readPublicTokenBalance(rpc, account);
+  return balance.status === "present" ? balance.amount : null;
+}
+
 /** The balances a page shows, read from chain here and decrypted with the owner's own keys. */
 async function chainBalances(who: Person) {
-  const wusdc = await associatedTokenAccount(who.address, bootstrap.wrappedUsdcMint);
+  const wusdc = await associatedTokenAccount(who.address, target.wrappedUsdcMint);
   const account = await fetchEncodedAccount(rpc, wusdc, { commitment: "confirmed" });
   if (!account.exists) throw new Error("the wUSDC account does not exist");
   const decrypted = decryptTokenAccount(
@@ -136,7 +133,7 @@ async function chainBalances(who: Person) {
     available: decrypted.available,
     pending: decrypted.pending,
     publicWusdc: await publicBalance(wusdc),
-    publicUsdc: await publicBalance(who.usdc),
+    publicUsdc: await publicUsdcBalance(who.usdc),
   };
 }
 
@@ -154,10 +151,12 @@ async function expectBalancesFromChain(page: Page, who: Person) {
     await expect(value("balance-public-wusdc")).toHaveText(`${show(chain.publicWusdc)} wUSDC`, {
       timeout: 2_000,
     });
-    await expect(value("balance-public-usdc")).toHaveText(`${show(chain.publicUsdc)} USDC`, {
-      timeout: 2_000,
-    });
-  }).toPass({ timeout: 90_000 });
+    // The page's words for a wallet without a USDC account (balances.tsx publicUsdcValue).
+    await expect(value("balance-public-usdc")).toHaveText(
+      chain.publicUsdc === null ? "No USDC account" : `${show(chain.publicUsdc)} USDC`,
+      { timeout: 2_000 },
+    );
+  }).toPass({ timeout: 90_000 * target.slow });
   return chainBalances(who);
 }
 
@@ -270,9 +269,9 @@ function csvLine(line: string): string[] {
   return values;
 }
 
-const DEMO_SHOTS = fileURLToPath(new URL("../../../.demo-shots/", import.meta.url));
 const timings: { step: string; seconds: number }[] = [];
 const screenshots: string[] = [];
+const stepShots: string[] = [];
 
 /**
  * A full page screenshot once the page's finite animations ended (the month bars grow for about a
@@ -294,8 +293,8 @@ async function shoot(page: Page, name: string) {
   await test.info().attach(name, { path, contentType: "image/png" });
   screenshots.push(path);
   // Step 3.8: the approved screens against their baselines, the public proof page since its
-  // design's approval (step 3.4.1, step 3.10.1).
-  await expectVisual(page, name.replace(/\.png$/, ""));
+  // design's approval (step 3.4.1, step 3.10.1); localnet only, devnet shows other data.
+  if (target.visual) await expectVisual(page, name.replace(/\.png$/, ""));
   // Step 3.10: no WCAG 2.1 A or AA violation on any page of the scenario.
   await expectAccessible(page, name);
 }
@@ -305,6 +304,7 @@ async function step(name: string, screenshot: string, body: () => Promise<Page>)
     const started = Date.now();
     const shown = await body();
     await shoot(shown, screenshot);
+    stepShots.push(screenshot);
     timings.push({ step: name, seconds: Math.round((Date.now() - started) / 100) / 10 });
     expectCleanSoFar(name);
   });
@@ -313,16 +313,20 @@ async function step(name: string, screenshot: string, body: () => Promise<Page>)
 // A click that cannot happen fails within a minute instead of waiting out the test.
 test.use({ extraHTTPHeaders: { "x-forwarded-for": "198.51.100.50" }, actionTimeout: 60_000 });
 
-test("the hackathon acceptance scenario runs end to end on localnet, amounts never leave the browsers", async ({
+test(`the hackathon acceptance scenario runs end to end on ${target.name}, amounts never leave the browsers`, async ({
   page,
   browser,
 }) => {
-  test.setTimeout(1_200_000);
+  test.setTimeout(1_200_000 * target.slow);
   const started = Date.now();
-  const owner = await person(OWNER.keypair, 5n, 60n);
+  const owner = await person(OWNER, 5n, 60n);
   const people: Person[] = [];
-  for (const entry of PEOPLE) people.push(await person(entry.keypair.keypair, 2n, 0n));
-  await fundLocalnetWallet(rpc, bootstrap, address(ACCOUNTANT.address), { sol: 1n, usdc: 0n });
+  for (const entry of PEOPLE) people.push(await person(entry.keypair, 2n, 0n));
+  await target.prepare(
+    (await createKeyPairSignerFromBytes(new Uint8Array(ACCOUNTANT))).address,
+    1n,
+    0n,
+  );
   // The watchers are live: a context that warns and shows a banner is caught, then forgotten.
   const canary = await newPage(browser, "canary");
   await canary.goto("/");
@@ -340,12 +344,13 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
   await page.addInitScript({ content: V1_WALLET });
   let orgId = "";
   let recordAddress = "";
+  let attestationAddress = "";
 
   await step(
     "1. The organization is created, approved and attested",
     "01-org-verified.png",
     async () => {
-      await signIn(page, OWNER.keypair);
+      await signIn(page, OWNER);
       await page.getByLabel("Legal name").fill(LEGAL_NAME);
       await page.getByLabel("Country").selectOption("NL");
       await page.getByLabel("Registration number").fill("KVK 30");
@@ -354,15 +359,16 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
       await page.getByRole("button", { name: "Send for review" }).click();
       await expect(page.getByTestId("org-status")).toHaveText("In review");
       const admin = await newPage(browser, "admin");
-      // The E2E admin wallet may own an organization of another spec: any app page after sign in.
-      await signIn(admin, e2eKeypair(), ANY_APP_PAGE);
+      // The admin wallet (the E2E admin on localnet, the run's own admin on devnet) may own an
+      // organization of another spec: any app page after sign in.
+      await signIn(admin, target.admin, ANY_APP_PAGE);
       await approveOrg(admin, LEGAL_NAME);
       await admin.context().close();
       // The worker issues the attestation; the status page shows its address once it is onchain.
       await expect(async () => {
         await page.goto("/app/onboarding");
         await expect(page.getByTestId("attestation-address")).toBeVisible({ timeout: 2_000 });
-      }).toPass({ timeout: 120_000 });
+      }).toPass({ timeout: 120_000 * target.slow });
       await expect(page.getByTestId("org-status")).toHaveText("Verified");
       const attestation = address(
         (await page.getByTestId("attestation-address").innerText()).trim(),
@@ -371,7 +377,8 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
       expect(account.exists).toBe(true);
       const decoded = decodeBusinessAttestation(new Uint8Array(account.exists ? account.data : []));
       expect(decoded.data).toMatchObject({ legalName: LEGAL_NAME, country: "NL" });
-      expect(decoded.credential).toBe(bootstrap.sas.credential);
+      expect(decoded.credential).toBe(target.sasCredential);
+      attestationAddress = attestation;
       orgId = decoded.data.orgId;
       await page.goto("/app");
       await expect(page).toHaveURL(OVERVIEW_URL);
@@ -400,7 +407,7 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
       await funding.getByRole("button", { name: "Fund account" }).click();
       await expect(funding.getByTestId("step-done")).toContainText(
         `Funded ${FUNDING} wUSDC in two steps`,
-        { timeout: 180_000 },
+        { timeout: 180_000 * target.slow },
       );
       const chain = await expectBalancesFromChain(page, owner);
       expect(chain).toMatchObject({ available: FUNDING * 1_000_000n, pending: 0n });
@@ -433,7 +440,7 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
       }
       for (const [index, entry] of PEOPLE.entries()) {
         const recipient = await newPage(browser, entry.name);
-        await addTestWallet(recipient, entry.keypair.keypair);
+        await addTestWallet(recipient, entry.keypair);
         await recipient.goto(links[index] ?? "");
         await signInFromInvite(recipient);
         await expect(recipient.getByTestId("invite-details")).toContainText(entry.name);
@@ -460,7 +467,7 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
               .getByTestId("recipient-readiness"),
           ).toHaveAttribute("data-readiness", "ready", { timeout: 2_000 });
         }
-      }).toPass({ timeout: 120_000 });
+      }).toPass({ timeout: 120_000 * target.slow });
       // Step 3.8: a reload, so the shot never keeps the invite links an earlier visit showed (the
       // router kept that state in some runs and not in others).
       await page.reload();
@@ -497,10 +504,10 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
     await expect(page.getByTestId("run-button")).toBeEnabled();
     await page.getByTestId("run-button").click();
     await expect(page.getByTestId("run-done")).toContainText("3 lines were sent and confirmed", {
-      timeout: 300_000,
+      timeout: 300_000 * target.slow,
     });
     await expect(page.getByTestId("run-status")).toHaveAttribute("data-status", "settled", {
-      timeout: 120_000,
+      timeout: 120_000 * target.slow,
     });
     await expect(page.getByTestId("gauge-head")).toHaveText("3 of 3 paid");
     await expect(page.getByTestId("run-total-amount")).toHaveText(`${show(TOTAL)} USDC`);
@@ -537,7 +544,7 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
       await expect(row.getByTestId("key-status")).toHaveText("Invite sent");
 
       const daniel = await newPage(browser, "accountant");
-      await addTestWallet(daniel, ACCOUNTANT.keypair);
+      await addTestWallet(daniel, ACCOUNTANT);
       await daniel.goto(new URL(link).pathname);
       await signInFromInvite(daniel);
       await expect(daniel.getByTestId("invite-details")).toContainText("Every amount");
@@ -557,7 +564,7 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
       await backfill.getByRole("button", { name: "Share past records" }).click();
       await expect(backfill.getByTestId("backfill-message")).toHaveText(
         "Shared 3 past records with Daniel Osei, encrypted for them only.",
-        { timeout: 60_000 },
+        { timeout: 60_000 * target.slow },
       );
       // Step 3.7: the viewing keys page with an active key, for the pixel fidelity pass.
       await shoot(page, "05a-viewing-keys.png");
@@ -608,7 +615,7 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
     const maya = PEOPLE[0];
     if (!maya) throw new Error("no recipient");
     const recipient = await newPage(browser, `${maya.name} again`);
-    await signIn(recipient, maya.keypair.keypair, PAY_URL);
+    await signIn(recipient, maya.keypair, PAY_URL);
     await unlock(recipient);
     await expect(recipient.getByTestId("payslip-net")).toHaveText(`${show(maya.net)} USDC`);
     await expect(recipient.getByTestId("payslip-gross")).toHaveText(`${show(maya.gross)} USDC`);
@@ -632,11 +639,13 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
       ).toBeVisible();
       const builder = page.getByTestId("proof-builder");
       await builder.getByRole("button", { name: "Custom" }).click();
-      await builder.getByLabel("Custom amount (US dollars)").fill("10");
+      await builder.getByLabel("Custom amount (US dollars)").fill(target.proofDollars);
       await builder.getByLabel("Share the answer with").fill("Harbor Bank");
       await builder.getByRole("button", { name: "Generate proof" }).click();
       const certificate = page.getByTestId("certificate");
-      await expect(certificate).toHaveAttribute("data-result", "proven", { timeout: 180_000 });
+      await expect(certificate).toHaveAttribute("data-result", "proven", {
+        timeout: 180_000 * target.slow,
+      });
       const href = await certificate
         .getByRole("link", { name: "Open the public page" })
         .getAttribute("href");
@@ -645,7 +654,7 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
       const record = await fetchEncodedAccount(rpc, address(recordAddress), {
         commitment: "confirmed",
       });
-      expect(record.exists && record.programAddress).toBe(bootstrap.sottoProofs?.programId);
+      expect(record.exists && record.programAddress).toBe(target.sottoProofsProgram);
       // Step 3.7: the proofs page with its certificate and the issued proof.
       await shoot(page, "07a-proofs.png");
 
@@ -654,7 +663,7 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
       await signedOut.goto(`/v/${recordAddress}`);
       await expect(signedOut.getByTestId("verify-word")).toHaveText("Proven");
       await expect(signedOut.getByTestId("verify-organization")).toHaveText(`${LEGAL_NAME}, NL`);
-      await expect(signedOut.getByTestId("verify-statement")).toHaveText("Balance is at least $10");
+      await expect(signedOut.getByTestId("verify-statement")).toHaveText(target.statement);
       await expect(signedOut.getByTestId("verify-disclosed")).toHaveText("none");
       expect((await signedOut.context().cookies()).length).toBe(0);
       return signedOut;
@@ -703,18 +712,26 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
   );
 
   // I-2 across the run: no amount or memo in any request, browser console line or server log line.
-  const server = await readFile(SERVER_LOG, "utf8");
+  const server = await target.serverLog();
   expect(server).toContain('"event":"api_request"');
   expect(server).toContain('"job":"payroll-runs"');
+  // On devnet the app's database too, every row of every table (as in step 2.11's manual run).
+  const database = await target.databaseText();
   const everything = {
     requests: watch.traffic.join("\n"),
     console: watch.console.join("\n"),
     server,
+    ...(database === null ? {} : { database }),
   };
   expect(watch.traffic.length).toBeGreaterThan(100);
   for (const [where, text] of Object.entries(everything)) {
     for (const secret of SECRETS) {
-      expect(text.includes(secret), `${secret} in ${where}`).toBe(false);
+      // A base amount leaks as a number of its own; inside a longer number (a slot, a time in
+      // milliseconds, lamports) its digits are not the amount.
+      const found = /^\d+$/.test(secret)
+        ? new RegExp(`(?<![0-9])${secret}(?![0-9])`).test(text)
+        : text.includes(secret);
+      expect(found, `${secret} in ${where}`).toBe(false);
     }
   }
   expectCleanSoFar("the end");
@@ -733,8 +750,25 @@ test("the hackathon acceptance scenario runs end to end on localnet, amounts nev
     .toISOString()
     .replace(/\.\d+Z$/, "Z")
     .replaceAll(":", "-");
-  const shots = `${DEMO_SHOTS}${stamp}`;
+  const shots = target.shotsDir(stamp);
   await mkdir(shots, { recursive: true });
-  for (const path of screenshots) await copyFile(path, `${shots}/${path.split("/").pop()}`);
+  for (const path of screenshots) {
+    const name = path.split("/").pop() ?? "";
+    if (target.stepShotsOnly && !stepShots.includes(name)) continue;
+    await copyFile(path, `${shots}/${name}`);
+  }
   console.log(`acceptance scenario screenshots: ${shots}`);
+  await target.record({
+    target: target.name,
+    legalName: LEGAL_NAME,
+    orgId,
+    attestation: attestationAddress,
+    proofRecord: recordAddress,
+    statement: target.statement,
+    owner: owner.address,
+    recipients: people.map((entry) => entry.address),
+    accountant: (await createKeyPairSignerFromBytes(new Uint8Array(ACCOUNTANT))).address,
+    screenshots: shots,
+    timings: { steps: timings, totalSeconds: total },
+  });
 });

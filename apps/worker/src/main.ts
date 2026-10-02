@@ -12,8 +12,10 @@ import { payrollRunsJob } from "./jobs/payroll-runs.ts";
 import { pendingCreditsJob } from "./jobs/pending-credits.ts";
 import { proofProgramHealthJob } from "./jobs/proof-program-health.ts";
 import { recipientReadinessJob } from "./jobs/recipient-readiness.ts";
+import { reviewNotifyJob } from "./jobs/review-notify.ts";
 import { runJobs } from "./jobs/runner.ts";
 import { sasIssueJob } from "./jobs/sas-issue.ts";
+import { notifyTarget } from "./notify.ts";
 import { loadKeypairSigner } from "./keypair.ts";
 import { log } from "./log.ts";
 
@@ -64,8 +66,16 @@ export async function main(
     grantExpiryJob({ db }),
     indexAccountsJob({ db, rpc }),
     proofProgramHealthJob({ db, rpc, feePayer: signer.address }),
+    reviewNotifyJob({ db, target: notifyTarget(config.notifyUrl) }),
   ];
-  log("worker_started", { jobs: jobs.map((job) => job.name), once, signer: signer.address });
+  // The notification URL holds a token: only whether it is set and which service it names is logged.
+  const notify = notifyTarget(config.notifyUrl);
+  log("worker_started", {
+    jobs: jobs.map((job) => job.name),
+    once,
+    signer: signer.address,
+    reviewNotification: notify ? notify.kind : config.notifyUrl ? "unrecognized URL, off" : "off",
+  });
   try {
     const { failures } = await runJobs(jobs, { signal: controller.signal, log, once });
     return once && failures > 0 ? 1 : 0;

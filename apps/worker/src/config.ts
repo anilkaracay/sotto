@@ -20,6 +20,8 @@ export type SasConfig = {
 
 /** The running worker needs every value (the bootstrap reads the SAS part as optional). */
 export type WorkerConfig = {
+  /** SOTTO_NOTIFY_URL (step 4.2): optional; a value that names no known service is ignored. */
+  notifyUrl: string | null;
   rpcUrl: string;
   databaseUrl: string;
   sasSignerKeypair: string;
@@ -97,6 +99,7 @@ export function loadWorkerConfig(env: Env = process.env): WorkerConfig {
   if (!sas.sasCredentialAddress) throw new ConfigError("SAS_CREDENTIAL_ADDRESS is not set");
   if (!sas.sasSchemaAddress) throw new ConfigError("SAS_SCHEMA_ADDRESS is not set");
   return {
+    notifyUrl: optional(env, "SOTTO_NOTIFY_URL"),
     rpcUrl,
     databaseUrl,
     sasSignerKeypair: sas.sasSignerKeypair,

@@ -1,0 +1,1 @@
+ALTER TABLE "orgs" ADD COLUMN "review_notified_at" timestamp with time zone;

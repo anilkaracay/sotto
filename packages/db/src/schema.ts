@@ -169,6 +169,8 @@ export const orgs = pgTable(
     attestationAddress: text("attestation_address"),
     reviewedBy: text("reviewed_by"),
     reviewedAt: timestamptz("reviewed_at"),
+    /** When the worker announced the review to SOTTO_NOTIFY_URL (step 4.2); null until then. */
+    reviewNotifiedAt: timestamptz("review_notified_at"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     /** Encrypted to the owner's own key: budgets and settings with amounts. */
     privateBlob: bytea("private_blob"),

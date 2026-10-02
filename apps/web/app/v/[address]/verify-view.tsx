@@ -5,6 +5,7 @@
 // and the statement are the largest words, the result is a stamped band, the slot, time, expiry and
 // "Balance disclosed: none" sit in a grid of their own, and every other state is a card as clear.
 import Link from "next/link";
+import { Logo } from "../../app/_components/logo.tsx";
 import { formatDate, shortWallet } from "../../../lib/format.ts";
 import { PROVEN, statementWords } from "../../../lib/proofs.ts";
 import type { PublicProofView } from "../../../lib/server/proofs.ts";
@@ -42,15 +43,6 @@ function dateTime(iso: string): string {
   return `${formatDate(date)}, ${date.toISOString().slice(11, 16)} UTC`;
 }
 
-function Mark({ color = "#0B1830", size = 24 }: { color?: string; size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 26 26" aria-hidden="true">
-      <circle cx="13" cy="13" r="11" fill="none" stroke={color} strokeWidth="1.9" />
-      <path d="M13 2a11 11 0 000 22z" fill={color} />
-    </svg>
-  );
-}
-
 export function VerifyView(props: {
   view: PublicProofView;
   now: Date;
@@ -61,8 +53,7 @@ export function VerifyView(props: {
     <main className={styles.page}>
       <header className={styles.top}>
         <Link className={styles.logo} href="/" prefetch={false} aria-label="Sotto home">
-          <Mark />
-          <span>Sotto</span>
+          <Logo tone="white" decorative />
         </Link>
         <span className={styles.network}>
           {props.cluster ? `Solana ${props.cluster}` : "Solana"}

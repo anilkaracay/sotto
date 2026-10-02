@@ -4,6 +4,7 @@
 // D-02, D-05, D-16, facts C3, 10 section 4, ENGINEERING-RULES.md rules 4 and 5); the addresses come from the
 // devnet cluster config.
 import type { Metadata } from "next";
+import { SottoLockupWhite } from "@sotto/ui";
 import Link from "next/link";
 import { NEVER_HELD, ONCHAIN, TRUST_CARDS } from "./trust-facts.ts";
 import styles from "./trust.module.css";
@@ -23,13 +24,6 @@ const ICONS: Record<string, string> = {
   program: "M5 4h14v16H5z M9 9h6 M9 13h6 M9 17h3",
 };
 
-const Logo = () => (
-  <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
-    <circle cx="13" cy="13" r="11" fill="none" stroke="#FFFFFF" strokeWidth="1.8" />
-    <path d="M13 2a11 11 0 000 22z" fill="#FFFFFF" />
-  </svg>
-);
-
 function Row({ label, value, mono = true }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className={styles.row}>
@@ -47,8 +41,7 @@ export default function TrustPage() {
           <header className="nav5">
             <div className="in">
               <Link className="logo" href="/" aria-label="Sotto home">
-                <Logo />
-                <span>{"Sotto"}</span>
+                <SottoLockupWhite height={28} decorative />
               </Link>
               <nav className="nl" aria-label="Main">
                 <Link href="/#v8views">{"Product"}</Link>

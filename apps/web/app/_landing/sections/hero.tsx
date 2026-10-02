@@ -1,5 +1,6 @@
 // The landing's hero section (F-17, step 3.1), from design/sotto-landing.html.
 import Link from "next/link";
+import { SottoLockupWhite } from "@sotto/ui";
 import type { LandingView } from "../use-landing.ts";
 
 export function Hero({ v }: { v: LandingView }) {
@@ -117,11 +118,7 @@ export function Hero({ v }: { v: LandingView }) {
       <header className="nav5">
         <div className="in">
           <a className="logo" href="#v8top" aria-label="Sotto home">
-            <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
-              <circle cx="13" cy="13" r="11" fill="none" stroke="#FFFFFF" strokeWidth="1.8" />
-              <path d="M13 2a11 11 0 000 22z" fill="#FFFFFF" />
-            </svg>
-            <span>{"Sotto"}</span>
+            <SottoLockupWhite height={28} decorative />
           </a>
           <nav className="nl" aria-label="Main">
             <a href="#v8views">{"Product"}</a>

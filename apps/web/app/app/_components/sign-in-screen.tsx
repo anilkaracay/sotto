@@ -24,6 +24,7 @@ import {
   type WalletGroup,
 } from "../../../lib/wallet-groups.ts";
 import { SkyArt } from "./sky-art.tsx";
+import { Logo } from "./logo.tsx";
 import styles from "./sign-in.module.css";
 
 type Status = { busy: boolean; error: string | null };
@@ -43,11 +44,7 @@ export function SignInScreen({ network }: { network: string }) {
         <div className={styles.skyInner}>
           <header className={styles.top}>
             <Link className={styles.logo} href="/" prefetch={false} aria-label="Sotto home">
-              <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
-                <circle cx="13" cy="13" r="11" fill="none" stroke="#FFFFFF" strokeWidth="1.8" />
-                <path d="M13 2a11 11 0 000 22z" fill="#FFFFFF" />
-              </svg>
-              <span>Sotto</span>
+              <Logo tone="white" decorative />
             </Link>
             <span className={styles.network} data-testid="network-label">
               {network}

@@ -96,7 +96,7 @@ export function AdminConsole({
                 <Th>Registration</Th>
                 <Th>Contact</Th>
                 <Th>Owner wallet</Th>
-                <Th>Sent</Th>
+                <Th className={styles.sent}>Sent</Th>
                 <Th>Status</Th>
                 <Th>Attestation</Th>
                 <Th align="right">Actions</Th>
@@ -179,7 +179,7 @@ function OrgRow({ org }: { org: AdminOrg }) {
           {shortWallet(org.ownerWallet)}
         </span>
       </Td>
-      <Td>{formatDate(org.createdAt)}</Td>
+      <Td className={styles.sent}>{formatDate(org.createdAt)}</Td>
       <Td>
         <Chip tone={STATUS[org.status].tone}>{STATUS[org.status].label}</Chip>
       </Td>

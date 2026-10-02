@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { parseAdminWallets, seedAdmins } from "../src/admins.ts";
+import { parseAdminWallets, removeAdmins, seedAdmins } from "../src/admins.ts";
 import { admins } from "../src/schema.ts";
 import { createTestDatabase, type TestDatabase } from "../src/testing.ts";
 
@@ -40,5 +40,12 @@ describe("seedAdmins", () => {
     expect(await seedAdmins(test.db, [])).toBe(0);
     const rows = await test.db.select().from(admins);
     expect(rows.map((row) => row.wallet).sort()).toEqual([B, A].sort());
+  });
+
+  it("removes only the wallets it is given, for an admin added for one run (step 3.11)", async () => {
+    expect(await removeAdmins(test.db, [B, "11111111111111111111111111111111"])).toBe(1);
+    expect(await removeAdmins(test.db, [])).toBe(0);
+    const rows = await test.db.select().from(admins);
+    expect(rows.map((row) => row.wallet)).toEqual([A]);
   });
 });

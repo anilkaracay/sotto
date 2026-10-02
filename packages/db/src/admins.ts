@@ -1,6 +1,7 @@
 // Admins seed (X-53): the admins table is the source of truth; ADMIN_WALLETS (comma separated base58)
 // is used only by this seed to insert rows. Existing rows are kept.
 import { isAddress } from "@solana/kit";
+import { inArray } from "drizzle-orm";
 import type { Database } from "./client.ts";
 import { admins } from "./schema.ts";
 
@@ -25,4 +26,17 @@ export async function seedAdmins(db: Database, wallets: readonly string[]): Prom
     .onConflictDoNothing()
     .returning({ wallet: admins.wallet });
   return inserted.length;
+}
+
+/**
+ * Deletes the given wallets from admins and returns how many rows went: for an admin added for one
+ * run only, such as the devnet acceptance run's own keypair (step 3.11).
+ */
+export async function removeAdmins(db: Database, wallets: readonly string[]): Promise<number> {
+  if (wallets.length === 0) return 0;
+  const removed = await db
+    .delete(admins)
+    .where(inArray(admins.wallet, [...wallets]))
+    .returning({ wallet: admins.wallet });
+  return removed.length;
 }

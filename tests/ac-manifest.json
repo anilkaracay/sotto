@@ -1,6 +1,6 @@
 {
   "$comment": "Phase scoped AC manifest (X-46, docs/11-TESTING.md section 4). A required AC with no test named after its ID fails the build at the end of that phase. Phases follow docs/12-MILESTONES.md. The current phase is set by currentPhase (single source).",
-  "currentPhase": 2,
+  "currentPhase": 3,
   "phases": {
     "0": {
       "required": [],

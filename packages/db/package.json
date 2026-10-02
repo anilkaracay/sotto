@@ -15,7 +15,8 @@
     "test": "vitest run",
     "generate": "drizzle-kit generate",
     "migrate": "node src/bin/migrate.ts",
-    "seed:admins": "node src/bin/seed-admins.ts"
+    "seed:admins": "node src/bin/seed-admins.ts",
+    "remove:admins": "node src/bin/remove-admins.ts"
   },
   "dependencies": {
     "@solana/kit": "catalog:",

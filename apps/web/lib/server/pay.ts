@@ -18,6 +18,7 @@ import { associatedTokenAccount } from "@sotto/sdk/confidential/public";
 import { address } from "@solana/kit";
 import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import type { ServerCluster } from "./cluster.ts";
+import { orgWrappedMint } from "./assets.ts";
 import { apiErrors } from "./errors.ts";
 import { readableGrantCondition } from "./grants.ts";
 import { requireMoneyAccess } from "./orgs.ts";
@@ -87,9 +88,9 @@ export async function readPay(
           ),
         )
     : [];
-  const tokenAccount = cluster?.wrappedUsdcMint
-    ? await associatedTokenAccount(address(recipient.wallet), cluster.wrappedUsdcMint)
-    : null;
+  // The organization's asset (step 4.3).
+  const mint = await orgWrappedMint(db, cluster, orgId);
+  const tokenAccount = mint ? await associatedTokenAccount(address(recipient.wallet), mint) : null;
   const chain = tokenAccount
     ? await db
         .select({

@@ -26,12 +26,12 @@ export default async function ProofsPage({ params }: { params: Promise<{ org: st
   const owned = me.memberships.find((m) => m.orgId === orgId && m.role === "owner");
   if (!owned) notFound();
   if (owned.orgStatus !== "active") redirect("/app/onboarding");
-  const [cluster, network] = await Promise.all([serverCluster(), loadNetworkView()]);
+  const [cluster, network] = await Promise.all([serverCluster(), loadNetworkView({ orgId })]);
   const program = cluster?.sottoProofs?.program ?? null;
   const [{ proofs }, paused] = program
     ? await Promise.all([
         listProofs(db, session, orgId, serverRpc()),
-        proofsPaused(serverRpc(), cluster),
+        proofsPaused(serverRpc(), getDb(), cluster, orgId),
       ])
     : [{ proofs: [] }, false];
   return (

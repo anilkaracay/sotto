@@ -28,7 +28,7 @@ export default async function OverviewPage({ params }: { params: Promise<{ org: 
   if (!owned) notFound();
   if (owned.orgStatus !== "active") redirect("/app/onboarding");
   const [network, ownerKey] = await Promise.all([
-    loadNetworkView(),
+    loadNetworkView({ orgId }),
     // Step 2.12: the owner's viewing key for the daily balance snapshot; none before registration.
     readViewerKey(db, session, session.userId).catch((error: unknown) => {
       if (error instanceof ApiError && error.status === 404) return null;

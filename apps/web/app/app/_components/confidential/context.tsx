@@ -219,11 +219,11 @@ async function readAccountData(input: {
     const owner = address(input.wallet);
     const wusdcAccount = await associatedTokenAccount(owner, address(network.wrappedMint));
     const usdcAccount =
-      network.usdcMint && network.usdcTokenProgram
+      network.baseMint && network.baseTokenProgram
         ? await associatedTokenAccount(
             owner,
-            address(network.usdcMint),
-            address(network.usdcTokenProgram),
+            address(network.baseMint),
+            address(network.baseTokenProgram),
           )
         : null;
     const [encoded, usdc] = await Promise.all([

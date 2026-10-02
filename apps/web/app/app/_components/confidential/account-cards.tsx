@@ -96,9 +96,9 @@ export function WrappedMintCard() {
   const missing = check.status === "wrapped_missing";
 
   async function create() {
-    if (!connected || !network.usdcMint) return;
+    if (!connected || !network.baseMint) return;
     const owner = connected.account.address;
-    const usdcMint = network.usdcMint;
+    const usdcMint = network.baseMint;
     await sending.send({
       busy: "Creating the wrapped USDC mint…",
       done: "The wrapped USDC mint exists now.",
@@ -146,7 +146,7 @@ export function WrappedMintCard() {
               </span>
             </dd>
             <dt>USDC mint</dt>
-            <dd className="mono">{network.usdcMint}</dd>
+            <dd className="mono">{network.baseMint}</dd>
           </dl>
         </>
       ) : missing ? (
@@ -426,12 +426,12 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
    * applies after a fresh read.
    */
   async function fund() {
-    if (amount === null || !connected || !network.usdcMint || !network.usdcTokenProgram) return;
+    if (amount === null || !connected || !network.baseMint || !network.baseTokenProgram) return;
     setSplit(null);
     const plan = await wrapAndDepositTransactions({
       owner,
-      unwrappedMint: address(network.usdcMint),
-      unwrappedTokenProgram: address(network.usdcTokenProgram),
+      unwrappedMint: address(network.baseMint),
+      unwrappedTokenProgram: address(network.baseTokenProgram),
       programAddress: address(network.tokenWrapProgram),
       amount,
       decimals,

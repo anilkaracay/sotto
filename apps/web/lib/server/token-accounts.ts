@@ -18,6 +18,7 @@ import { address, isAddress } from "@solana/kit";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { ServerCluster } from "./cluster.ts";
+import { orgWrappedMint } from "./assets.ts";
 import { ApiError } from "./errors.ts";
 import { requireMoneyAccess } from "./orgs.ts";
 import type { Session } from "./session.ts";
@@ -90,23 +91,25 @@ export async function registerTokenAccount(
   // The owner's account (step 1.7) or, since step 1.8, a recipient's own account.
   await requireMoneyAccess(db, session, input.orgId, ["owner", "recipient"]);
   if (!session) throw new Error("requireMoneyAccess returns only with a session");
-  if (!cluster?.wrappedUsdcMint) throw tokenAccountErrors.unavailable();
+  // The organization's asset (step 4.3, D-29).
+  const mint = await orgWrappedMint(db, cluster, input.orgId);
+  if (!cluster || !mint) throw tokenAccountErrors.unavailable();
   const { state, slot } = await readTokenAccountStateWithSlot(rpc, address(input.address));
   const check = checkConfidentialAccount(state, {
     owner: address(session.wallet),
-    mint: cluster.wrappedUsdcMint,
+    mint: mint,
   });
   if (!check.ok) throw tokenAccountErrors.invalid(check.reason);
   // A recipient of this org who records their associated wUSDC account, the account readiness reads
   // and payments go to, is ready from this read on (AC-07.3). Another account leaves readiness as it is.
-  const associated = await associatedTokenAccount(address(session.wallet), cluster.wrappedUsdcMint);
+  const associated = await associatedTokenAccount(address(session.wallet), mint);
   if (input.address === associated) {
     await db
       .update(recipients)
       .set({
         readiness: recipientReadiness(state, {
           owner: address(session.wallet),
-          mint: cluster.wrappedUsdcMint,
+          mint: mint,
         }),
         readinessCheckedAt: new Date(),
       })
@@ -120,7 +123,7 @@ export async function registerTokenAccount(
       orgId: input.orgId,
       cluster: cluster.config.name,
       address: input.address,
-      mint: cluster.wrappedUsdcMint,
+      mint: mint,
       keyScheme: input.keyScheme,
       configuredSlot: slot,
     })

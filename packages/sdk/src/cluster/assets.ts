@@ -49,7 +49,8 @@ export const ASSET_WORDS: Readonly<
 
 /** The badge and tooltip shown wherever a devnet test asset appears (founder, 2026-10-02). */
 export const DEVNET_TEST_ASSET_BADGE = "Devnet test dollar";
-export const DEVNET_TEST_ASSET_TOOLTIP = "A test token for trying Sotto on devnet. It has no value.";
+export const DEVNET_TEST_ASSET_TOOLTIP =
+  "A test token for trying Sotto on devnet. It has no value.";
 
 export function isAssetId(value: unknown): value is AssetId {
   return typeof value === "string" && (ASSET_IDS as readonly string[]).includes(value);

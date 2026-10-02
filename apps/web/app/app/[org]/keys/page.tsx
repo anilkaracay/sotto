@@ -36,7 +36,7 @@ export default async function KeysPage({ params }: { params: Promise<{ org: stri
       throw error;
     }),
     orgOwnerWallet(db, orgId),
-    loadNetworkView(),
+    loadNetworkView({ orgId }),
   ]);
   return (
     <AppShell me={me} network={network} nav={ownerNav(orgId, "keys")}>

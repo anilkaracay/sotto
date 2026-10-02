@@ -60,7 +60,12 @@ export async function main(
       schemaAddress: config.sasSchemaAddress,
     }),
     pendingCreditsJob({ db, rpc }),
-    recipientReadinessJob({ db, rpc, localnetUsdcMint: config.localnetUsdcMint }),
+    recipientReadinessJob({
+      db,
+      rpc,
+      localnetUsdcMint: config.localnetUsdcMint,
+      localnetDevusdMint: config.localnetDevusdMint,
+    }),
     confirmExecutionsJob({ db, rpc }),
     payrollRunsJob({ db }),
     grantExpiryJob({ db }),

@@ -28,7 +28,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   });
   const [me, network] = await Promise.all([
     session ? loadMe(db, session) : Promise.resolve(null),
-    loadNetworkView(),
+    loadNetworkView({ orgId: invite.org.id }),
   ]);
   const joined = session !== null && invite.acceptedByYou;
   const [viewerKey, recorded] = await Promise.all([

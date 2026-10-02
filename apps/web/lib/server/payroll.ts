@@ -38,12 +38,13 @@ import {
 } from "@sotto/sdk/confidential/public";
 import { sha256Hex } from "@sotto/sdk/disclosure";
 import type { SolanaRpc } from "@sotto/sdk/tx";
-import { address, fetchEncodedAccounts, type Signature } from "@solana/kit";
+import { address, fetchEncodedAccounts, type Signature, type Address } from "@solana/kit";
 import { and, asc, countDistinct, desc, eq, gt, inArray, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { MAX_RUN_LINES } from "../payroll.ts";
 import type { Readiness } from "../recipient.ts";
 import type { ServerCluster } from "./cluster.ts";
+import { orgWrappedMint } from "./assets.ts";
 import { ApiError, apiErrors } from "./errors.ts";
 import { readableGrantCondition } from "./grants.ts";
 import { log } from "./log.ts";
@@ -614,10 +615,9 @@ export async function listRuns(
 /** Readiness of wallets from chain (AC-07.2), in one read per 100; null when the chain is unreadable. */
 async function readinessOfWallets(
   rpc: SolanaRpc,
-  cluster: ServerCluster,
+  mint: Address | null,
   wallets: string[],
 ): Promise<Readiness[] | null> {
-  const mint = cluster.wrappedUsdcMint;
   if (!mint) return null;
   try {
     const tokens = await Promise.all(
@@ -692,7 +692,9 @@ export async function authorizeRun(
   const run = await runRow(db, orgId, runId);
   if (!AUTHORIZABLE.includes(run.status)) throw payrollErrors.status(run.status);
   const cluster = chain.cluster;
-  if (!cluster?.wrappedUsdcMint) throw paymentErrors.confidentialUnavailable();
+  // The organization's asset (step 4.3, D-29).
+  const mint = await orgWrappedMint(db, cluster, orgId);
+  if (!cluster || !mint) throw paymentErrors.confidentialUnavailable();
   const lines = await lineRows(db, run.id);
 
   // I-7, AC-08.5: a line whose earlier transfer landed is never sent again; the job settles it.
@@ -713,7 +715,7 @@ export async function authorizeRun(
   // Every line still to pay, like a single payment: its account from chain now, and screening.
   const readiness = await readinessOfWallets(
     chain.rpc,
-    cluster,
+    mint,
     toPay.map((line) => line.wallet),
   );
   if (readiness === null) throw paymentErrors.readinessUnavailable();

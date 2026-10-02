@@ -4,13 +4,22 @@
 // and "devnet test wrap" for assets of Sotto's Token Wrap deployment, D-01). The browser gets public
 // values only. A network that cannot be reached shows as such; the keys still work without it. Since
 // step 2.9 every /app page loads it for the shell's banner (F-19), with the proof program's health
-// from the worker's verdict (program-health.ts).
+// from the worker's verdict (program-health.ts). Since step 4.3 (D-29) it describes one asset: the
+// organization's when the page belongs to one, else the default (USDC); its mints, decimals and
+// words, and the registry for the account setup's choice.
+import {
+  ASSET_WORDS,
+  DEFAULT_ASSET,
+  type AssetConfig,
+  type AssetId,
+} from "@sotto/sdk/cluster/assets";
 import { verifyCluster } from "@sotto/sdk/cluster/verify";
 import { readMintInfo } from "@sotto/sdk/confidential/public";
 import type { SolanaRpc } from "@sotto/sdk/tx";
 import { networkLabel } from "../network.ts";
 import { serverRpc } from "./chain.ts";
-import { serverCluster } from "./cluster.ts";
+import { orgAssetId } from "./assets.ts";
+import { clusterAsset, serverCluster } from "./cluster.ts";
 import type { Database } from "@sotto/db";
 import { getDb } from "./db.ts";
 import { log } from "./log.ts";
@@ -24,6 +33,21 @@ export type NetworkCheck =
   | { status: "wrapped_missing"; address: string }
   | { status: "wrapped_invalid"; reason: string };
 
+/** An asset's words for the browser (no secret; the addresses are on the view itself). */
+export type AssetView = {
+  id: AssetId;
+  symbol: string;
+  wrappedSymbol: string;
+  displayName: string;
+  /** devUSD: the "Devnet test dollar" badge goes wherever it appears. */
+  devnetTestAsset: boolean;
+};
+
+export function assetView(asset: Pick<AssetConfig, "id"> | AssetId): AssetView {
+  const id = typeof asset === "string" ? asset : asset.id;
+  return { id, ...ASSET_WORDS[id] };
+}
+
 export type NetworkView =
   | { available: false; label: string }
   | {
@@ -35,8 +59,12 @@ export type NetworkView =
       /** "devnet test wrap": the label of every asset wrapped by Sotto's Token Wrap deployment. */
       wrapLabel: string;
       tokenWrapProgram: string;
-      usdcMint: string | null;
-      usdcTokenProgram: string | null;
+      /** The asset this view describes, and the cluster's registry (step 4.3). */
+      asset: AssetView;
+      assets: AssetView[];
+      /** The asset's classic SPL mint and token program, and its wrapped Token-2022 mint. */
+      baseMint: string | null;
+      baseTokenProgram: string | null;
       wrappedMint: string | null;
       decimals: number | null;
       /** Whether the RPC serves version 1 transactions (the wallet must declare them too, D-26). */
@@ -47,6 +75,7 @@ export type NetworkView =
     };
 
 export async function loadNetworkView(
+  options: { orgId?: string } = {},
   rpc: () => SolanaRpc = serverRpc,
   db: () => Database = getDb,
 ): Promise<NetworkView> {
@@ -54,6 +83,8 @@ export async function loadNetworkView(
   if (!cluster) return { available: false, label: networkLabel(undefined) };
   const { config } = cluster;
   const proofProgram = await readProgramHealth(db(), config.name);
+  const assetId = options.orgId ? await orgAssetId(db(), options.orgId) : DEFAULT_ASSET;
+  const asset = clusterAsset(cluster, assetId);
   const base = {
     available: true as const,
     cluster: config.name,
@@ -61,18 +92,20 @@ export async function loadNetworkView(
     chain: config.name === "localnet" ? ("solana:localnet" as const) : ("solana:devnet" as const),
     wrapLabel: config.tokenWrapLabel,
     tokenWrapProgram: config.programs.tokenWrap,
-    usdcMint: cluster.usdcMint,
-    wrappedMint: cluster.wrappedUsdcMint,
+    asset: assetView(assetId),
+    assets: cluster.assets.map(assetView),
+    baseMint: asset?.baseMint ?? null,
+    wrappedMint: asset?.wrappedMint ?? null,
     proofProgram,
   };
   try {
     const client = rpc();
     const [startup, usdc] = await Promise.all([
       verifyCluster(client, config, {
-        usdcMint: cluster.usdcMint,
-        wrappedUsdcMint: cluster.wrappedUsdcMint,
+        usdcMint: asset?.baseMint ?? null,
+        wrappedUsdcMint: asset?.wrappedMint ?? null,
       }),
-      cluster.usdcMint ? readMintInfo(client, cluster.usdcMint) : Promise.resolve(null),
+      asset ? readMintInfo(client, asset.baseMint) : Promise.resolve(null),
     ]);
     const missing = startup.programs
       .filter((program) => !program.executable)
@@ -92,7 +125,7 @@ export async function loadNetworkView(
                 : { status: "wrapped_invalid", reason: wrapped.reason };
     return {
       ...base,
-      usdcTokenProgram: usdc?.programAddress ?? null,
+      baseTokenProgram: usdc?.programAddress ?? null,
       decimals: usdc?.decimals ?? null,
       v1: startup.v1,
       check,
@@ -101,7 +134,7 @@ export async function loadNetworkView(
     log("warn", "network_check_failed", { error });
     return {
       ...base,
-      usdcTokenProgram: null,
+      baseTokenProgram: null,
       decimals: null,
       v1: false,
       check: { status: "unreachable" },

@@ -72,6 +72,7 @@ describe("worker config", () => {
       sasCredentialAddress: CREDENTIAL,
       sasSchemaAddress: SCHEMA,
       localnetUsdcMint: null,
+      localnetDevusdMint: null,
     });
     expect(loadWorkerConfig({ ...FULL, LOCALNET_USDC_MINT: CREDENTIAL }).localnetUsdcMint).toBe(
       CREDENTIAL,

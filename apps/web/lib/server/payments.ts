@@ -29,6 +29,7 @@ import { and, asc, desc, eq, gt, inArray, isNotNull, ne } from "drizzle-orm";
 import { z } from "zod";
 import { payability } from "../recipient.ts";
 import type { ServerCluster } from "./cluster.ts";
+import { orgWrappedMint } from "./assets.ts";
 import { ApiError, apiErrors } from "./errors.ts";
 import { log } from "./log.ts";
 import { requireMoneyAccess } from "./orgs.ts";
@@ -421,7 +422,9 @@ export async function authorizePayment(
     throw paymentErrors.status(payment.status);
   }
   const cluster = chain.cluster;
-  if (!cluster?.wrappedUsdcMint) throw paymentErrors.confidentialUnavailable();
+  // The organization's asset (step 4.3, D-29).
+  const mint = await orgWrappedMint(db, cluster, orgId);
+  if (!cluster || !mint) throw paymentErrors.confidentialUnavailable();
 
   // I-7: never send again a transfer that landed; the job settles it.
   if (payment.status === "failed_clean" && (await landedTransfers(db, chain.rpc, payment.id))) {
@@ -433,7 +436,7 @@ export async function authorizePayment(
   }
 
   // The recipient's account, read from chain right before the payment (step 1.8 choice 6).
-  const readiness = await readinessFromChain(chain.rpc, cluster, row.wallet);
+  const readiness = await readinessFromChain(chain.rpc, mint, row.wallet);
   if (readiness === null) throw paymentErrors.readinessUnavailable();
   await db
     .update(recipients)

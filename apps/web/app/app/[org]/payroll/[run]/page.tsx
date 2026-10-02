@@ -47,7 +47,7 @@ export default async function PayrollRunPage({
       if (error instanceof ApiError && error.status === 404) return null;
       throw error;
     }),
-    loadNetworkView(),
+    loadNetworkView({ orgId }),
   ]);
   if (!run) notFound();
   return (

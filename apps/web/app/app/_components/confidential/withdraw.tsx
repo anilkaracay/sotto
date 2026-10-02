@@ -60,13 +60,13 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
   /** Token Wrap `Unwrap` of public wUSDC to USDC (06 section 6, step 3), signed by the wallet. */
   async function sendUnwrap(amount: bigint): Promise<string> {
     const signer = connected?.signer;
-    if (!signer || !connected || !network.usdcMint || !network.usdcTokenProgram) {
+    if (!signer || !connected || !network.baseMint || !network.baseTokenProgram) {
       throw new Error("This network has no USDC mint configured.");
     }
     const built = await unwrapInstructions({
       owner: createNoopSigner(signer.address),
-      unwrappedMint: address(network.usdcMint),
-      unwrappedTokenProgram: address(network.usdcTokenProgram),
+      unwrappedMint: address(network.baseMint),
+      unwrappedTokenProgram: address(network.baseTokenProgram),
       programAddress: address(network.tokenWrapProgram),
       amount,
     });
@@ -283,7 +283,7 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
         <Button type="submit" variant="blue" disabled={!canRun || outcome.busy !== null}>
           {outcome.busy ? "Withdrawing…" : unwrap ? "Withdraw and unwrap" : "Withdraw"}
         </Button>
-        {publicWusdc > 0n && network.usdcMint ? (
+        {publicWusdc > 0n && network.baseMint ? (
           <Button
             variant="line"
             disabled={!connected?.signer || outcome.busy !== null}

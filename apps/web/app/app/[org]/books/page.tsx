@@ -25,7 +25,7 @@ export default async function BooksPage({ params }: { params: Promise<{ org: str
   const me = await loadMe(db, session);
   const membership = me.memberships.find((m) => m.orgId === orgId && m.role === "accountant");
   if (!membership) notFound();
-  const network = await loadNetworkView();
+  const network = await loadNetworkView({ orgId });
   let books: BooksView | null = null;
   let problem: string | null = null;
   try {

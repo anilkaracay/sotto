@@ -22,9 +22,18 @@ playwright-report/
 # Environment files (.env.example stays tracked)
 .env
 .env.*
-!.env.example
 .env*.local
 .envrc
+# Any env file under any name or folder, and the hosting credentials (step 4.1): they live only in
+# ~/.config/sotto/hosting.env, outside the repository.
+**/.env
+**/.env.*
+*.env
+**/*.env
+hosting.env
+**/hosting.env
+# Kept tracked: the template, last so it wins over the patterns above.
+!.env.example
 
 # Keypairs: never commit wallet or program secrets
 *keypair*.json

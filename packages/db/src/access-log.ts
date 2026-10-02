@@ -18,6 +18,11 @@ export type AccessEvent = {
   subjectType: "grant" | "manifest" | "payment" | "payroll_run" | "export" | "proof";
   subjectId: string;
   metadata?: AccessMetadata;
+  /**
+   * When it happened, if not now (step 4.2.2): a settlement is dated by its block's time, the
+   * moment it settled on Solana, not when the worker saw it finalized.
+   */
+  at?: Date;
 };
 
 /** A database or a transaction: anything that can insert. */
@@ -36,5 +41,6 @@ export async function insertAccessEvent(db: AccessLogWriter, event: AccessEvent)
     subjectType: event.subjectType,
     subjectId: event.subjectId,
     metadata,
+    ...(event.at ? { createdAt: event.at } : {}),
   });
 }

@@ -8,6 +8,7 @@ import { copyFile, mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import { signIn } from "../helpers.ts";
+import { expectAccessible } from "../a11y.ts";
 import { expectVisual } from "../visual.ts";
 
 const DEMO_SHOTS = fileURLToPath(new URL("../../../.demo-shots/screens/", import.meta.url));
@@ -26,6 +27,7 @@ test("the network banner on an app page when the network cannot be reached (13 A
   await page.screenshot({ path, fullPage: true });
   // Step 3.8: the approved banner against its baseline.
   await expectVisual(page, "37-banner-unreachable");
+  await expectAccessible(page, "the network banner");
   const stamp = new Date().toISOString().slice(0, 19).replaceAll(":", "-");
   const folder = `${DEMO_SHOTS}${stamp}Z-node`;
   await mkdir(folder, { recursive: true });

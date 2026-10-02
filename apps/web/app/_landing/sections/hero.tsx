@@ -221,7 +221,8 @@ export function Hero({ v }: { v: LandingView }) {
                     <span style={{ color: "#B4BFCE" }}>{"/"}</span>
                     <span>{"Payroll"}</span>
                   </div>
-                  <h3>{"September payroll"}</h3>
+                  {/* Step 3.10: a card title, not a heading: an h3 here broke the heading order under the h1. */}
+                  <p className="sheetTitle">{"September payroll"}</p>
                   <div className="facts5">
                     <span>
                       <svg

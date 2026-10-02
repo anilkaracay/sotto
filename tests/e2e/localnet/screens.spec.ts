@@ -37,6 +37,7 @@ import {
   OVERVIEW_URL,
   signIn,
 } from "../helpers.ts";
+import { expectAccessible, expectQuietConsole, watchConsole } from "../a11y.ts";
 import { expectVisual } from "../visual.ts";
 
 const bootstrap = readLocalnetBootstrap();
@@ -58,7 +59,7 @@ type TestWallet = {
 const shots: string[] = [];
 
 /** A full page screenshot once fonts are in and the entrance animations have ended. */
-async function shoot(page: Page, name: string) {
+async function shoot(page: Page, name: string, refused?: number) {
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(900);
   const path = test.info().outputPath(`${name}.png`);
@@ -66,6 +67,9 @@ async function shoot(page: Page, name: string) {
   shots.push(path);
   // Step 3.8: the approved screen against its baseline.
   await expectVisual(page, name);
+  // Step 3.10: no WCAG 2.1 A or AA violation in this state, and a quiet console up to it.
+  await expectAccessible(page, name);
+  expectQuietConsole(page, name, refused);
 }
 
 /** Calls one of the test wallet's controls (test-wallet.js) in the page. */
@@ -137,7 +141,9 @@ async function newPage(browser: Browser): Promise<Page> {
     ).__sottoOnSignTransaction = () =>
       (window as unknown as { __sottoPromptHook: () => Promise<void> }).__sottoPromptHook();
   });
-  return context.newPage();
+  const page = await context.newPage();
+  watchConsole(page);
+  return page;
 }
 
 async function connect(page: Page) {
@@ -361,7 +367,7 @@ test("the account and money screens in every state, for the design pass (13 A36 
   await expect(page.getByTestId("payment-problem")).toHaveText(
     "The recipient's wallet is on the screening list, so the payment is blocked",
   );
-  await shoot(page, "15-payment-blocked");
+  await shoot(page, "15-payment-blocked", 422);
   await pay.getByLabel("Recipient").selectOption({ label: label("Maya Chen", RECIPIENT.address) });
   await pay.getByLabel("Amount (USDC)").fill("7.5");
   const paymentHeld = atPrompt(0, async () => {

@@ -9,7 +9,8 @@
 .overline {
   display: block;
   font-size: 15px;
-  color: var(--faint);
+  /* Step 3.10: --faint was 4.02:1 on the page background; --muted is 4.86:1 (AA). */
+  color: var(--muted);
 }
 .title {
   margin-top: 6px;

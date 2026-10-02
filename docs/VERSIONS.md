@@ -362,3 +362,17 @@ Commands:
 pnpm build && scripts/db-local.sh test-up && pnpm --filter @sotto/e2e exec playwright test --config playwright.localnet.config.ts localnet/proofs.spec.ts   # after localnet.sh and the bootstrap
 ```
 
+
+## Step 3.10 (2026-10-01): accessibility and Lighthouse
+
+| Item | Version | Resolved on | Source | Notes |
+|---|---|---|---|---|
+| `@axe-core/playwright` | 4.13.0 | 2026-10-01 | https://registry.npmjs.org/@axe-core/playwright (dist-tag `latest`, published 2026-08-11) | `tests/e2e/a11y.ts`, the named export `AxeBuilder` (the default export is not a constructor in this build). Depends on `axe-core` `~4.13.0`, resolved to 4.13.0 (published 2026-08-05) |
+| `lighthouse` | 13.5.0 | 2026-10-01 | https://registry.npmjs.org/lighthouse (dist-tag `latest`, published 2026-09-18) | `tests/e2e/specs/lighthouse.spec.ts`, ESM default export and the desktop preset `lighthouse/core/config/desktop-config.js`. Needs Node 22.19 or later (its `engines`); the project runs Node 24.21.0 |
+
+Commands:
+
+```sh
+pnpm build && pnpm --filter @sotto/e2e exec playwright test specs/lighthouse.spec.ts specs/keyboard.spec.ts
+SOTTO_A11Y_REPORT=1 pnpm --filter @sotto/e2e e2e:localnet   # lists every axe violation and console problem instead of failing at the first
+```

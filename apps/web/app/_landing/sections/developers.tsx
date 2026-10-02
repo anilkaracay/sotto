@@ -131,7 +131,8 @@ function Code({ sample }: { sample: Sample }) {
   const total = String(sample.lines.length);
   return (
     <div className="pane">
-      <pre className="mono">
+      {/* Step 3.10: it scrolls sideways on a phone, so the keyboard can reach it (WCAG 2.1.1). */}
+      <pre className="mono" tabIndex={0} aria-label="SDK sample">
         <code>
           {sample.lines.map((line, index) => (
             <span key={index} className="cl" style={{ "--l": String(index) }}>

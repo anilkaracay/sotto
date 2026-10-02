@@ -126,7 +126,7 @@
   flex: none;
   border-radius: 10px;
   background: rgba(14, 154, 100, 0.1);
-  color: #0b7a51;
+  color: #0a7049;
 }
 /* No row for the filters: the empty state of the recipients and payroll pages. */
 .ledgerEmpty {

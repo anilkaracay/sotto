@@ -77,7 +77,14 @@ export function ledgerRows(
       payment,
     });
   }
-  return [...rows.values()].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  // Payments settled at the same time (a payroll run's lines) by counterparty, then id, so the ledger
+  // keeps one order whatever order the records arrive in.
+  return [...rows.values()].sort(
+    (a, b) =>
+      (a.date < b.date ? 1 : a.date > b.date ? -1 : 0) ||
+      a.counterparty.localeCompare(b.counterparty, "en") ||
+      (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+  );
 }
 
 /** The months that have rows, oldest first, at most the latest `limit`. */

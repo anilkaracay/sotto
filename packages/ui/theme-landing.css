@@ -26,7 +26,8 @@ body:has(> main.theme-landing) {
   --ink: #0b1830;
   --ink2: #2a3852;
   --muted: #5c6980;
-  --faint: #6b7689;
+  /* Step 3.10: #6b7689 was 4.27:1 on --soft; #5f6b80 is 4.5:1 or more on every surface (AA). */
+  --faint: #5f6b80;
   --line: #e6ebf2;
   --soft: #f5f7fa;
   --blue: #1f5be8;
@@ -443,7 +444,8 @@ body:has(> main.theme-landing) {
   align-items: center;
   justify-content: center;
 }
-.theme-landing .shead h3 {
+.theme-landing .shead h3,
+.theme-landing .shead .sheetTitle {
   font-size: 30px;
   font-weight: 450;
   letter-spacing: -0.04em;
@@ -1038,7 +1040,9 @@ body:has(> main.theme-landing) {
 }
 @keyframes landing-swOn {
   from {
-    color: #cdd5e0;
+    /* Step 3.10: a word before the scroll reaches it, at 3.26:1 on white (AA for large text);
+       the design's #cdd5e0 was 1.47:1. */
+    color: #848fa3;
   }
   to {
     color: #0b1830;
@@ -1046,7 +1050,9 @@ body:has(> main.theme-landing) {
 }
 @keyframes landing-swHot {
   from {
-    color: #cdd5e0;
+    /* Step 3.10: a word before the scroll reaches it, at 3.26:1 on white (AA for large text);
+       the design's #cdd5e0 was 1.47:1. */
+    color: #848fa3;
   }
   to {
     color: #b4541a;
@@ -1054,7 +1060,9 @@ body:has(> main.theme-landing) {
 }
 @keyframes landing-swKey {
   from {
-    color: #cdd5e0;
+    /* Step 3.10: a word before the scroll reaches it, at 3.26:1 on white (AA for large text);
+       the design's #cdd5e0 was 1.47:1. */
+    color: #848fa3;
   }
   to {
     color: #1f5be8;
@@ -2245,7 +2253,7 @@ body:has(> main.theme-landing) {
 }
 .theme-landing .fqi {
   font-size: 12.5px;
-  color: #a5b0c0;
+  color: var(--faint); /* step 3.10: #a5b0c0 was 2.19:1 */
 }
 .theme-landing .fq8.open .fqi {
   color: var(--blue);
@@ -3863,7 +3871,7 @@ body:has(> main.theme-landing) {
   padding: 0 10px;
   border-radius: 999px;
   background: rgba(14, 154, 100, 0.1);
-  color: #0b7a51;
+  color: #0a7049;
   font-size: 12px;
   font-weight: 500;
 }
@@ -3947,7 +3955,7 @@ body:has(> main.theme-landing) {
 }
 .theme-landing .rt.checked {
   background: rgba(14, 154, 100, 0.1);
-  color: #0b7a51;
+  color: #0a7049;
 }
 .theme-landing .rcpt {
   border-radius: 30px;
@@ -4006,19 +4014,19 @@ body:has(> main.theme-landing) {
 .theme-landing .rval .amt {
   justify-self: start;
 }
-.theme-landing .rcpt.hl-public .rr:not(.g-public),
-.theme-landing .rcpt.hl-sealed .rr:not(.g-sealed),
-.theme-landing .rcpt.hl-checked .rr:not(.g-checked) {
-  opacity: 0.3;
-}
+/* Step 3.10: the design dimmed the other rows to 30 percent opacity, which no text survives at AA;
+   every row stays readable and the highlighted group carries a tint and an accent bar. */
 .theme-landing .rcpt.hl-public .rr.g-public {
   background: #f7f9fc;
+  box-shadow: inset 3px 0 0 #5f6b80;
 }
 .theme-landing .rcpt.hl-sealed .rr.g-sealed {
   background: #f5f8ff;
+  box-shadow: inset 3px 0 0 #1f5be8;
 }
 .theme-landing .rcpt.hl-checked .rr.g-checked {
   background: #f3fbf7;
+  box-shadow: inset 3px 0 0 #0e9a64;
 }
 /* trust + dev */
 

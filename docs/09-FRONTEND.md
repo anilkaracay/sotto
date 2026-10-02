@@ -115,3 +115,11 @@ Implementation (step 2.6, `apps/web/lib/pay.ts`, `lib/payslip-pdf.ts`, `app/app/
 - Color contrast AA for text.
 - Lighthouse: performance 90 or more on landing (desktop), accessibility 95 or more on all pages.
 - No console errors or React warnings in production builds.
+
+Enforced since step 3.10 (11 section 1):
+
+- `tests/e2e/a11y.ts` runs axe (WCAG 2.1 A and AA, color contrast included) on every state the specs take a screenshot of: the acceptance spec, the screens specs, the network banner. With the privacy screen on, the blurred amounts are left out of the scan on purpose; the rest of the page is scanned.
+- `tests/e2e/specs/keyboard.spec.ts` presses Tab until the focus comes back around on the landing, the trust page, sign in, the recovery guide and a signed in wallet's onboarding: every visible control is reached and shows an outline or a ring.
+- `tests/e2e/specs/lighthouse.spec.ts` runs Lighthouse with its desktop preset on the production build: performance 90 or more on the landing, accessibility 95 or more on the landing, the trust page, sign in, the recovery guide and onboarding. The pages of an organization need a chain and get the same accessibility audits from axe in the localnet specs.
+- The landing spec, the acceptance spec and the screens specs fail on any console error or warning and any uncaught page error.
+- Contrast: the faint text color is `#5f6b80` (5.4 to 1 on white, 4.7 on the app's background `#eef0f3`) and the dark green text `#0a7049`; the landing's receipt marks its highlighted rows with a colored bar instead of fading the others.

@@ -6,6 +6,7 @@ packages:
 
 # Exact versions, resolved at scaffold time (docs/VERSIONS.md). Packages reference them with "catalog:".
 catalog:
+  "@axe-core/playwright": 4.13.0
   "@codama/nodes": 1.11.0
   "@codama/renderers-js": 2.5.0
   "@codama/visitors-core": 1.11.0
@@ -34,6 +35,7 @@ catalog:
   eslint: 10.11.0
   globals: 17.12.0
   libsodium-wrappers-sumo: 0.8.4
+  lighthouse: 13.5.0
   next: 16.3.6
   postgres: 3.4.9
   prettier: 3.9.9

@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { e2eKeypair, seededKeypair } from "../fixtures.ts";
 import { ANY_APP_PAGE, clientAddress, signIn } from "../helpers.ts";
+import { expectAccessible, expectQuietConsole, watchConsole } from "../a11y.ts";
 import { expectVisual } from "../visual.ts";
 
 const VERIFIED = seededKeypair(`sotto-e2e-entry-verified/${Date.now()}`);
@@ -27,6 +28,9 @@ async function shoot(page: Page, name: string) {
   shots.push(path);
   // Step 3.8: the approved screen against its baseline.
   await expectVisual(page, name);
+  // Step 3.10: no WCAG 2.1 A or AA violation in this state, and a quiet console up to it.
+  await expectAccessible(page, name);
+  expectQuietConsole(page, name);
 }
 
 async function newPage(browser: Browser, width = 1440, height = 900): Promise<Page> {
@@ -36,7 +40,9 @@ async function newPage(browser: Browser, width = 1440, height = 900): Promise<Pa
     extraHTTPHeaders: clientAddress(),
     viewport: { width, height },
   });
-  return context.newPage();
+  const page = await context.newPage();
+  watchConsole(page);
+  return page;
 }
 
 async function sendForReview(page: Page, legalName: string) {

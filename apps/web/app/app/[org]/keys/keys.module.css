@@ -245,11 +245,10 @@
 }
 
 /* Keys (design .tbl, .t8, .tgl, tr.rev). */
-.revoked td {
-  opacity: 0.5;
-}
-.revoked td:last-child {
-  opacity: 1;
+/* Step 3.10: a revoked key in muted ink at full opacity; half opacity broke AA contrast. */
+.revoked td,
+.revoked td b {
+  color: var(--faint);
 }
 .keyEnd {
   position: relative;

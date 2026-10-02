@@ -26,7 +26,11 @@ export function dynamicRegions(page: Page): Locator[] {
     page.getByText(/\b\d{1,2}:\d{2} UTC\b/),
     page.getByText(/\bslot \d+/i),
     page.getByText(/\b(Just now|Today|Yesterday|\d+ (minute|minutes|hour|hours|days) ago)\b/),
-    page.getByText(/[1-9A-HJ-NP-Za-km-z]{2,4}…[1-9A-HJ-NP-Za-km-z]{2,4}/),
+    // A short address as a whole word: without the bounds the name above it in the same cell ran
+    // into it ("Maya Chen6z2j…atrE"), and the whole cell was masked in some runs only (step 3.10).
+    page.getByText(
+      /(?<![0-9A-Za-z])[1-9A-HJ-NP-Za-km-z]{2,4}…[1-9A-HJ-NP-Za-km-z]{2,4}(?![0-9A-Za-z])/,
+    ),
     // A transaction's first characters in a message ("transactions 3djNoV26h1dt… and …"), from a
     // word's start: table cells' texts run together, and a match across two cells masked a whole row.
     page.getByText(/(?<![0-9A-Za-z])[1-9A-HJ-NP-Za-km-z]{8,}…/),

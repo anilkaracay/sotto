@@ -85,7 +85,7 @@ Next.js (App Router) with TypeScript strict mode, React, CSS Modules plus a glob
 Next.js route handlers for the API, PostgreSQL 16 with Drizzle ORM and SQL migrations, a separate Node worker for chain indexing and jobs. Managed Postgres: Neon (branch per environment). Founder may switch to Supabase or another Postgres host; schema is plain Postgres.
 
 ### D-13 · Hosting · DEFAULT
-Web on Vercel. Worker on Fly.io. Founder may override.
+Web on Vercel. Worker on Fly.io. Founder may override. Proposed to be replaced by D-28 for the hackathon build (founder, 2026-10-02).
 
 ### D-14 · RPC provider · DEFAULT with GATE
 Helius for devnet and mainnet, public RPC as a devnet fallback only. Gate G1 must confirm the provider serves v1 transactions (`maxSupportedTransactionVersion: 1`) and the ZK ElGamal program is active on the cluster.
@@ -172,3 +172,9 @@ Sotto is wallet agnostic. Any wallet that implements the Wallet Standard for Sol
 - Nothing Post-hackathon is shown in the landing or the app (ENGINEERING-RULES.md rule 6); the affected rows are in `13-COPY-CORRECTIONS.md`.
 - **Balance snapshots are the owner's only** (founder, 2026-09-30, step 2.12): grant holders do not receive `balance_snapshot` items in the hackathon build, whatever their scope; sharing them with `all_payments` and `period` grants (07 section 6) is Post-hackathon.
 
+### D-28 · Hosting on the founder's own server · PROPOSED (founder's instruction 2026-10-02, plan awaiting approval)
+- Replaces the D-13 default for the hackathon build: the devnet web app, worker and PostgreSQL 16 run as one isolated Docker Compose project (`sotto`) on a server the founder operates, at https://sottoapp.xyz (the app under `/app`, one origin).
+- The machine runs other projects: nothing of theirs changes; Sotto has its own system user, folder, Compose project, network and volumes, publishes no host port, and changes no global configuration without the founder's approval.
+- Secrets on the server are limited to `RPC_URL`, `SESSION_SECRET`, `DATABASE_URL`, `ADMIN_WALLETS` and the devnet SAS signer; wallet A never goes there.
+- Deploys from the founder's Mac with a health check and a rollback; GitHub Actions stay manual until the public launch (D-25).
+- The plan, the discovery and the undo of every step: `14-ENVIRONMENTS-DEPLOY.md` section 8.

@@ -47,7 +47,7 @@ Key scenarios that must exist:
 
 ## 5. Devnet release checklist
 
-Run the full E2E suite on devnet with fresh wallets. Record run ID, commit, and results in `VERIFICATION-LOG.md`. For the hackathon build (founder, 2026-09-29): the run is the hackathon acceptance scenario of 12 on devnet, manual with real wallets and fresh accounts, each step verified on devnet as in the Phase 1 exit run; the localnet acceptance scenario spec and the existing specs must be green on the same commit.
+Run the full E2E suite on devnet with fresh wallets. Record run ID, commit, and results in `VERIFICATION-LOG.md`. For the hackathon build (founder, 2026-09-29): the run is the hackathon acceptance scenario of 12 on devnet, manual with real wallets and fresh accounts, each step verified on devnet as in the Phase 1 exit run; the localnet acceptance scenario spec and the existing specs must be green on the same commit. Changed by the founder on 2026-10-02 (step 3.11): the run is automated, `pnpm acceptance:devnet` (14 section 4): the localnet acceptance spec with the injected test wallet against the devnet app and worker, fresh keypairs for every role funded by wallet A, the checks of step 2.10 on, and the result verified on devnet by the command; the screenshots go to `.demo-shots/devnet-acceptance/<UTC time>/`. The real wallet check moves to Phase 4, when the founder records the demo with the three Solflare accounts funded in step 3.11.
 
 ## 6. Visual regression tolerance
 

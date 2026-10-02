@@ -38,6 +38,8 @@ export const membershipRole = pgEnum("membership_role", [
 export const viewerKeyStatus = pgEnum("viewer_key_status", ["active", "rotated"]);
 export const clusterName = pgEnum("cluster_name", ["localnet", "devnet", "mainnet"]);
 export const keyScheme = pgEnum("key_scheme", ["standard_v1", "sotto_ikm_v1"]);
+/** The asset an organization holds (step 4.3, D-29; @sotto/sdk/cluster/assets). */
+export const assetId = pgEnum("asset_id", ["usdc", "devusd"]);
 export const recipientReadiness = pgEnum("recipient_readiness", [
   "no_account",
   "not_configured",
@@ -163,6 +165,8 @@ export const orgs = pgTable(
     website: text("website").notNull(),
     contactEmail: text("contact_email").notNull(),
     status: orgStatus("status").notNull().default("pending_review"),
+    /** Chosen at account setup, USDC by default; not changed once the account exists (D-29). */
+    asset: assetId("asset").notNull().default("usdc"),
     ownerUserId: uuid("owner_user_id")
       .notNull()
       .references(() => users.id),
@@ -772,5 +776,28 @@ export const waitlist = pgTable(
       sql`char_length(${t.email}) between 3 and 254 and ${t.email} = lower(${t.email}) and position('@' in ${t.email}) > 1`,
     ),
     check("waitlist_company_length", sql`char_length(${t.company}) between 1 and 120`),
+  ],
+);
+
+/**
+ * devUSD faucet mints (step 4.3, D-29): devnet only, at most 10,000 devUSD per wallet per 24 hours.
+ * The amount is public onchain (a mint to a public account), so it may be stored (ENGINEERING-RULES.md rule 4).
+ */
+export const faucetMints = pgTable(
+  "faucet_mints",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgs.id),
+    wallet: text("wallet").notNull(),
+    amountBaseUnits: bigint("amount_base_units", { mode: "bigint" }).notNull(),
+    signature: text("signature"),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("faucet_mints_wallet_time").on(t.wallet, t.createdAt),
+    check("faucet_mints_wallet_base58", sql`${t.wallet} ~ ${sql.raw(`'${BASE58_ADDRESS}'`)}`),
+    check("faucet_mints_amount_positive", sql`${t.amountBaseUnits} > 0`),
   ],
 );

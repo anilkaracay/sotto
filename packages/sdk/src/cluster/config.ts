@@ -7,6 +7,7 @@
 import { address, type Address } from "@solana/kit";
 import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022";
 import { ZK_ELGAMAL_PROOF_PROGRAM_ADDRESS } from "@solana-program/zk-elgamal-proof";
+import { DEVNET_USDC, type AssetConfig } from "./assets.ts";
 
 export type ClusterName = "localnet" | "devnet" | "mainnet";
 
@@ -42,6 +43,12 @@ export interface AvailableClusterConfig {
    * Null on localnet: scripts/bootstrap-localnet.ts deploys it per ledger (.localnet/bootstrap.json).
    */
   readonly sottoProofs: { readonly program: Address; readonly config: Address } | null;
+  /**
+   * The asset registry (step 4.3, D-29, assets.ts): the assets an organization can choose, USDC first
+   * (the default). Empty on localnet: each ledger's bootstrap creates its own (.localnet/bootstrap.json).
+   * usdcMint, wrappedUsdcMint and sottoProofs above stay as the USDC entry's values.
+   */
+  readonly assets: readonly AssetConfig[];
 }
 
 export interface UnavailableClusterConfig {
@@ -85,6 +92,7 @@ export const clusters: Readonly<Record<ClusterName, ClusterConfig>> = {
     usdcMint: null,
     wrappedUsdcMint: null,
     sottoProofs: null,
+    assets: [],
   },
   devnet: {
     name: "devnet",
@@ -99,12 +107,11 @@ export const clusters: Readonly<Record<ClusterName, ClusterConfig>> = {
     sasCredential: address("4KX4P7he62x5x8X35vubNNhJRhV4vJXPGNsc8skPyKFT"),
     sasBusinessSchema: address("A4PX8yuPQYeZFqtPomd5E3Jce7dTuWktcnpzb9YCM4z3"),
     tokenWrapLabel: DEVNET_TEST_WRAP_LABEL,
-    usdcMint: address("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
-    wrappedUsdcMint: address("AhJfP4JJBaHWRtXRiaScZUC7SMm4RqUPSb3g9H5RT8Bd"),
-    sottoProofs: {
-      program: address("4rMKgJWgawaTTdUxaudUXthEExnRZ7AvFvqzsoEAr9jd"),
-      config: address("Gxhkhq4QDvv2y2GK7ZjHF1J8rThwsSdfxDziMCdWFnFe"),
-    },
+    usdcMint: DEVNET_USDC.baseMint,
+    wrappedUsdcMint: DEVNET_USDC.wrappedMint,
+    sottoProofs: DEVNET_USDC.sottoProofs,
+    // devUSD joins once its mints and its sotto_proofs deployment exist on devnet (step 4.3).
+    assets: [DEVNET_USDC],
   },
   mainnet: {
     name: "mainnet",

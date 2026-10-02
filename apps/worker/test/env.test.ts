@@ -63,8 +63,9 @@ describe("worker config", () => {
     SAS_SCHEMA_ADDRESS: SCHEMA,
   };
 
-  it("reads RPC_URL, DATABASE_URL, the SAS variables and the optional LOCALNET_USDC_MINT", () => {
+  it("reads RPC_URL, DATABASE_URL, the SAS variables and the optional LOCALNET_USDC_MINT and SOTTO_NOTIFY_URL", () => {
     expect(loadWorkerConfig(FULL)).toEqual({
+      notifyUrl: null,
       rpcUrl: HELIUS,
       databaseUrl: "postgresql://sotto:hidden-pw-9@127.0.0.1:56432/sotto",
       sasSignerKeypair: "~/.config/solana/sotto/sas-signer-devnet.json",
@@ -78,6 +79,9 @@ describe("worker config", () => {
     expect(thrown(() => loadWorkerConfig({ ...FULL, LOCALNET_USDC_MINT: "nope" })).message).toBe(
       "LOCALNET_USDC_MINT is not a valid address",
     );
+    // Optional (step 4.2): read as given; notify.ts decides whether it names a known service.
+    const hook = "https://discord.com/api/webhooks/1/hidden-token";
+    expect(loadWorkerConfig({ ...FULL, SOTTO_NOTIFY_URL: hook }).notifyUrl).toBe(hook);
   });
 
   it("requires every variable the running worker needs, naming only the variable", () => {

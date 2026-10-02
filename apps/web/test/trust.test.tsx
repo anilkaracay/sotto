@@ -84,3 +84,25 @@ describe("the trust page", () => {
     }
   });
 });
+
+describe("the trust page's devUSD facts (step 4.3, D-29)", () => {
+  it("adds what holds for devUSD once the devnet registry lists it, and nothing before", async () => {
+    const { DEVUSD, trustCards } = await import("../app/trust/trust-facts.ts");
+    const { assetConfig } = await import("@sotto/sdk/cluster/assets");
+    const { address } = await import("@solana/kit");
+    const mint = address("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+    const devusd = assetConfig("devusd", { baseMint: mint, wrappedMint: mint, sottoProofs: null });
+    const words = (cards: ReturnType<typeof trustCards>) =>
+      cards.flatMap((card) => [card.title, ...card.body]).join(" ");
+    const withDevusd = words(trustCards(devusd));
+    expect(withDevusd).toContain("devUSD is a test token Sotto issues on devnet");
+    expect(withDevusd).toContain("It has no value and is not a US dollar.");
+    expect(withDevusd).toContain("It has no freeze authority.");
+    expect(withDevusd).toContain("at most 10,000 devUSD a day");
+    expect(withDevusd).toContain("The USDC issuer's freeze controls still apply to USDC.");
+    const without = words(trustCards(null));
+    expect(without).not.toContain("devUSD");
+    // Today's devnet registry: the page names devUSD only if it is there.
+    expect(text.includes("devUSD")).toBe(DEVUSD !== null);
+  });
+});

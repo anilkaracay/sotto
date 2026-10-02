@@ -6,7 +6,7 @@
 import type { Metadata } from "next";
 import { SottoLockupWhite } from "@sotto/ui";
 import Link from "next/link";
-import { NEVER_HELD, ONCHAIN, TRUST_CARDS } from "./trust-facts.ts";
+import { DEVUSD, NEVER_HELD, ONCHAIN, TRUST_CARDS } from "./trust-facts.ts";
 import styles from "./trust.module.css";
 
 export const metadata: Metadata = {
@@ -132,9 +132,22 @@ export default function TrustPage() {
               <Row label="Wrapped USDC (wUSDC)" value={ONCHAIN.wrappedMint} />
               <Row label="sotto_proofs program" value={ONCHAIN.proofsProgram} />
               <Row label="sotto_proofs build, SHA-256" value={ONCHAIN.proofsBuildSha256} />
+              {DEVUSD ? (
+                <>
+                  <Row label="devUSD, Sotto's test dollar" value={DEVUSD.baseMint} />
+                  <Row label="Wrapped devUSD (wdevUSD)" value={DEVUSD.wrappedMint} />
+                  {DEVUSD.sottoProofs ? (
+                    <Row label="sotto_proofs for devUSD" value={DEVUSD.sottoProofs.program} />
+                  ) : null}
+                </>
+              ) : null}
               <Row
                 label="Upgrade authority"
-                value="A Sotto key, for both programs Sotto deployed, during the beta"
+                value={
+                  DEVUSD
+                    ? "A Sotto key, for every program Sotto deployed, during the beta"
+                    : "A Sotto key, for both programs Sotto deployed, during the beta"
+                }
                 mono={false}
               />
             </dl>

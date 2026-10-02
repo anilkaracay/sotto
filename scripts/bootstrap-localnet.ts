@@ -5,9 +5,11 @@
 // its SBF build exists (target/deploy/sotto_proofs.so, cargo-build-sbf --arch v3), the sotto_proofs
 // program under a throwaway program keypair with the payer as upgrade authority and its config for
 // the wrapped mint (step 2.7). It checks the result with the startup verification (06 section 0) and
-// writes .localnet/bootstrap.json. It
-// refuses any cluster whose genesis hash is devnet's or mainnet's. The keypairs it creates hold only
-// localnet SOL and live in .localnet/bootstrap (git ignored).
+// writes .localnet/bootstrap.json. Since step 4.3 (D-29) it does the same for devUSD, the devnet test
+// dollar: its own SPL Token mint (6 decimals, no freeze authority) under its own mint authority, as on
+// devnet, its wrapped mint and escrow, and a second sotto_proofs deployment for its wrapped mint (a
+// config holds one wrapped mint). It refuses any cluster whose genesis hash is devnet's or mainnet's.
+// The keypairs it creates hold only localnet SOL and live in .localnet/bootstrap (git ignored).
 //
 // Usage: node scripts/bootstrap-localnet.ts [--url http://127.0.0.1:8899]
 import { execFileSync } from "node:child_process";
@@ -106,10 +108,11 @@ async function deploySottoProofs(
   url: string,
   payer: { signer: KeyPairSigner; path: string },
   wrappedUsdcMint: Address,
+  keypairName: string,
 ): Promise<{ programId: Address; config: Address; programKeypair: string } | null> {
   const so = join(ROOT, "target", "deploy", "sotto_proofs.so");
   if (!existsSync(so)) return null;
-  const program = await newKeypairFile("sotto-proofs-program.json");
+  const program = await newKeypairFile(keypairName);
   execFileSync(
     "solana",
     [
@@ -147,6 +150,57 @@ async function deploySottoProofs(
   return { programId: programAddress, config, programKeypair: program.path };
 }
 
+/**
+ * An SPL Token mint of 6 decimals under `mintAuthority` (the freeze authority too when `freeze`), its
+ * wrapped Token-2022 mint through the cluster's Token Wrap deployment, and the escrow of unwrapped
+ * tokens.
+ */
+async function createAsset(
+  rpc: SolanaRpc,
+  config: AvailableClusterConfig,
+  payer: KeyPairSigner,
+  mintAuthority: Address,
+  freeze: boolean,
+): Promise<{ mint: Address; wrappedMint: Address; escrow: Address }> {
+  const mint = await generateKeyPairSigner();
+  const space = getMintSize();
+  const rent = await rpc.getMinimumBalanceForRentExemption(BigInt(space)).send();
+  await sendWithKeypairSigners({
+    rpc,
+    feePayer: payer,
+    instructions: [
+      getCreateAccountInstruction({
+        payer,
+        newAccount: mint,
+        lamports: rent,
+        space,
+        programAddress: TOKEN_PROGRAM_ADDRESS,
+      }),
+      getInitializeMint2Instruction({
+        mint: mint.address,
+        decimals: USDC_DECIMALS,
+        mintAuthority,
+        freezeAuthority: freeze ? mintAuthority : null,
+      }),
+    ],
+  });
+  const wrapped = await createWrappedMintInstructions({
+    rpc,
+    payer,
+    unwrappedMint: mint.address,
+    programAddress: config.programs.tokenWrap,
+  });
+  await sendWithKeypairSigners({ rpc, feePayer: payer, instructions: wrapped.instructions });
+  const escrow = await createEscrowInstructions({
+    rpc,
+    payer,
+    unwrappedMint: mint.address,
+    programAddress: config.programs.tokenWrap,
+  });
+  await sendWithKeypairSigners({ rpc, feePayer: payer, instructions: escrow.instructions });
+  return { mint: mint.address, wrappedMint: wrapped.wrappedMint, escrow: escrow.escrow };
+}
+
 async function main(): Promise<void> {
   const { values } = parseArgs({
     options: { url: { type: "string", default: "http://127.0.0.1:8899" } },
@@ -163,62 +217,58 @@ async function main(): Promise<void> {
   await airdrop(rpc, payer.signer.address, 100n);
 
   // The USDC-like mint: an SPL Token mint like USDC, with the payer as mint and freeze authority.
-  const usdc = await generateKeyPairSigner();
-  const space = getMintSize();
-  const rent = await rpc.getMinimumBalanceForRentExemption(BigInt(space)).send();
-  await sendWithKeypairSigners({
+  const usdc = await createAsset(rpc, config, payer.signer, payer.signer.address, true);
+  // devUSD (step 4.3): its own mint authority, which on devnet lives only on the server.
+  const devusdAuthority = await newKeypairFile("devusd-mint-authority.json");
+  await airdrop(rpc, devusdAuthority.signer.address, 10n);
+  const devusd = await createAsset(
     rpc,
-    feePayer: payer.signer,
-    instructions: [
-      getCreateAccountInstruction({
-        payer: payer.signer,
-        newAccount: usdc,
-        lamports: rent,
-        space,
-        programAddress: TOKEN_PROGRAM_ADDRESS,
-      }),
-      getInitializeMint2Instruction({
-        mint: usdc.address,
-        decimals: USDC_DECIMALS,
-        mintAuthority: payer.signer.address,
-        freezeAuthority: payer.signer.address,
-      }),
-    ],
-  });
-
-  const wrapped = await createWrappedMintInstructions({
-    rpc,
-    payer: payer.signer,
-    unwrappedMint: usdc.address,
-    programAddress: config.programs.tokenWrap,
-  });
-  await sendWithKeypairSigners({ rpc, feePayer: payer.signer, instructions: wrapped.instructions });
-  const escrow = await createEscrowInstructions({
-    rpc,
-    payer: payer.signer,
-    unwrappedMint: usdc.address,
-    programAddress: config.programs.tokenWrap,
-  });
-  await sendWithKeypairSigners({ rpc, feePayer: payer.signer, instructions: escrow.instructions });
+    config,
+    payer.signer,
+    devusdAuthority.signer.address,
+    false,
+  );
+  const wrapped = { wrappedMint: usdc.wrappedMint };
+  const escrow = { escrow: usdc.escrow };
 
   const check = await verifyCluster(rpc, config, {
-    usdcMint: usdc.address,
+    usdcMint: usdc.mint,
     wrappedUsdcMint: wrapped.wrappedMint,
   });
   if (!check.confidentialEnabled) {
     throw new Error(`the startup verification failed: ${JSON.stringify(check)}`);
   }
+  const devusdCheck = await verifyCluster(rpc, config, {
+    usdcMint: devusd.mint,
+    wrappedUsdcMint: devusd.wrappedMint,
+  });
+  if (!devusdCheck.confidentialEnabled) {
+    throw new Error(`the startup verification failed for devUSD: ${JSON.stringify(devusdCheck)}`);
+  }
 
   const sasSigner = await newKeypairFile("sas-signer.json");
   const sas = bootstrapSas(sasSigner.path);
-  const sottoProofs = await deploySottoProofs(rpc, values.url, payer, wrapped.wrappedMint);
+  const sottoProofs = await deploySottoProofs(
+    rpc,
+    values.url,
+    payer,
+    wrapped.wrappedMint,
+    "sotto-proofs-program.json",
+  );
+  const devusdProofs = await deploySottoProofs(
+    rpc,
+    values.url,
+    payer,
+    devusd.wrappedMint,
+    "sotto-proofs-devusd-program.json",
+  );
 
   const record = {
     createdAt: new Date().toISOString(),
     rpcUrl: values.url,
     genesisHash,
     payer: { address: payer.signer.address, keypair: payer.path },
-    usdcMint: usdc.address,
+    usdcMint: usdc.mint,
     usdcDecimals: USDC_DECIMALS,
     usdcMintAuthority: payer.signer.address,
     tokenWrapProgram: config.programs.tokenWrap,
@@ -226,11 +276,23 @@ async function main(): Promise<void> {
     escrow: escrow.escrow,
     sas: { signer: sasSigner.signer.address, signerKeypair: sasSigner.path, ...sas },
     sottoProofs,
+    devusd: {
+      mint: devusd.mint,
+      decimals: USDC_DECIMALS,
+      mintAuthority: devusdAuthority.signer.address,
+      mintAuthorityKeypair: devusdAuthority.path,
+      wrappedMint: devusd.wrappedMint,
+      escrow: devusd.escrow,
+      sottoProofs: devusdProofs,
+    },
     startupCheck: { confidentialEnabled: check.confidentialEnabled, v1: check.v1 },
   };
   writeFileSync(join(ROOT, ".localnet", "bootstrap.json"), `${JSON.stringify(record, null, 2)}\n`);
   console.log(
-    `usdc mint:        ${usdc.address} (${USDC_DECIMALS} decimals, authority ${payer.signer.address})`,
+    `usdc mint:        ${usdc.mint} (${USDC_DECIMALS} decimals, authority ${payer.signer.address})`,
+  );
+  console.log(
+    `devusd mint:      ${devusd.mint} (wrapped ${devusd.wrappedMint}, authority ${devusdAuthority.signer.address})`,
   );
   console.log(`wrapped mint:     ${wrapped.wrappedMint} (Token Wrap ${config.programs.tokenWrap})`);
   console.log(`escrow:           ${escrow.escrow}`);
@@ -240,6 +302,11 @@ async function main(): Promise<void> {
     sottoProofs
       ? `sotto_proofs:     ${sottoProofs.programId} (config ${sottoProofs.config})`
       : "sotto_proofs:     not built (target/deploy/sotto_proofs.so), not deployed",
+  );
+  console.log(
+    devusdProofs
+      ? `devusd proofs:    ${devusdProofs.programId} (config ${devusdProofs.config})`
+      : "devusd proofs:    not built, not deployed",
   );
   console.log(`startup check:    confidential enabled, v1 ${check.v1 ? "yes" : "no"}`);
   console.log("LOCALNET BOOTSTRAP OK (.localnet/bootstrap.json)");

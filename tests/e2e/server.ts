@@ -9,7 +9,8 @@
 // environment (14 section 2), as the worker's start test does. Since step 2.8 the web also gets the
 // ledger's sotto_proofs program and SAS credential and schema, for the proofs page and /v/<address>.
 // Since step 3.6 --localnet writes the database's address to .localnet/e2e-database-url (git ignored,
-// removed on stop) for the sharing screens spec, which shows the paused proof program banner.
+// removed on stop) for the sharing screens spec, which shows the paused proof program banner. Since
+// step 4.3 the web and the worker also get the ledger's devUSD mint, and the web its sotto_proofs.
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import {
@@ -45,6 +46,8 @@ type Bootstrap = {
   usdcMint: string;
   sas: { signerKeypair: string; credential: string; schema: string };
   sottoProofs: { programId: string } | null;
+  /** Step 4.3: the ledger's devUSD and its own sotto_proofs deployment. */
+  devusd?: { mint: string; sottoProofs: { programId: string } | null };
 };
 
 const localnet = process.argv.includes("--localnet");
@@ -61,6 +64,13 @@ if (localnet) {
   chain.LOCALNET_SAS_CREDENTIAL = bootstrap.sas.credential;
   chain.LOCALNET_SAS_SCHEMA = bootstrap.sas.schema;
   if (bootstrap.sottoProofs) chain.LOCALNET_SOTTO_PROOFS_PROGRAM = bootstrap.sottoProofs.programId;
+  // Step 4.3: devUSD, the second asset an organization can choose.
+  if (bootstrap.devusd) {
+    chain.LOCALNET_DEVUSD_MINT = bootstrap.devusd.mint;
+    if (bootstrap.devusd.sottoProofs) {
+      chain.LOCALNET_DEVUSD_SOTTO_PROOFS_PROGRAM = bootstrap.devusd.sottoProofs.programId;
+    }
+  }
 }
 
 const database = await createTestDatabase();
@@ -106,6 +116,7 @@ if (bootstrap) {
         SAS_CREDENTIAL_ADDRESS: bootstrap.sas.credential,
         SAS_SCHEMA_ADDRESS: bootstrap.sas.schema,
         LOCALNET_USDC_MINT: bootstrap.usdcMint,
+        ...(bootstrap.devusd ? { LOCALNET_DEVUSD_MINT: bootstrap.devusd.mint } : {}),
       },
     }),
   );

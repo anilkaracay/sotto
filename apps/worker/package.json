@@ -13,6 +13,7 @@
     "sas:close-attestation": "node src/bin/sas-close-attestation.ts"
   },
   "dependencies": {
+    "@solana-program/token": "catalog:",
     "@solana/kit": "catalog:",
     "@sotto/db": "workspace:*",
     "@sotto/sdk": "workspace:*",

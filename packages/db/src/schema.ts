@@ -40,6 +40,16 @@ export const clusterName = pgEnum("cluster_name", ["localnet", "devnet", "mainne
 export const keyScheme = pgEnum("key_scheme", ["standard_v1", "sotto_ikm_v1"]);
 /** The asset an organization holds (step 4.3, D-29; @sotto/sdk/cluster/assets). */
 export const assetId = pgEnum("asset_id", ["usdc", "devusd"]);
+/**
+ * A faucet mint (step 4.3): pending (asked for), sent (signed, its signature stored before it was
+ * sent, so a restart never mints twice), minted (finalized) or failed (counts toward no limit).
+ */
+export const faucetMintStatus = pgEnum("faucet_mint_status", [
+  "pending",
+  "sent",
+  "minted",
+  "failed",
+]);
 export const recipientReadiness = pgEnum("recipient_readiness", [
   "no_account",
   "not_configured",
@@ -781,7 +791,8 @@ export const waitlist = pgTable(
 
 /**
  * devUSD faucet mints (step 4.3, D-29): devnet only, at most 10,000 devUSD per wallet per 24 hours.
- * The amount is public onchain (a mint to a public account), so it may be stored (ENGINEERING-RULES.md rule 4).
+ * The web takes a request and the worker, which alone holds the mint authority, mints it. The amount
+ * is public onchain (a mint to a public account), so it may be stored (ENGINEERING-RULES.md rule 4).
  */
 export const faucetMints = pgTable(
   "faucet_mints",
@@ -792,11 +803,18 @@ export const faucetMints = pgTable(
       .references(() => orgs.id),
     wallet: text("wallet").notNull(),
     amountBaseUnits: bigint("amount_base_units", { mode: "bigint" }).notNull(),
+    status: faucetMintStatus("status").notNull().default("pending"),
+    /** The mint transaction's signature, stored before it is sent, and its last valid block height. */
     signature: text("signature"),
+    lastValidBlockHeight: bigint("last_valid_block_height", { mode: "bigint" }),
+    /** Why a mint failed, as a code (never a key or an RPC URL). */
+    errorCode: text("error_code"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
+    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },
   (t) => [
     index("faucet_mints_wallet_time").on(t.wallet, t.createdAt),
+    index("faucet_mints_status").on(t.status),
     check("faucet_mints_wallet_base58", sql`${t.wallet} ~ ${sql.raw(`'${BASE58_ADDRESS}'`)}`),
     check("faucet_mints_amount_positive", sql`${t.amountBaseUnits} > 0`),
   ],

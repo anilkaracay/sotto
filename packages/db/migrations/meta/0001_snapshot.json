@@ -104,12 +104,8 @@
           "name": "approvals_org_id_orgs_id_fk",
           "tableFrom": "approvals",
           "tableTo": "orgs",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["org_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -117,12 +113,8 @@
           "name": "approvals_approver_user_id_users_id_fk",
           "tableFrom": "approvals",
           "tableTo": "users",
-          "columnsFrom": [
-            "approver_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["approver_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -132,11 +124,7 @@
         "approvals_subject_approver_key": {
           "name": "approvals_subject_approver_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "subject_type",
-            "subject_id",
-            "approver_user_id"
-          ]
+          "columns": ["subject_type", "subject_id", "approver_user_id"]
         }
       },
       "policies": {},
@@ -299,12 +287,8 @@
           "name": "disclosures_org_id_orgs_id_fk",
           "tableFrom": "disclosures",
           "tableTo": "orgs",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["org_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -312,12 +296,8 @@
           "name": "disclosures_grant_id_grants_id_fk",
           "tableFrom": "disclosures",
           "tableTo": "grants",
-          "columnsFrom": [
-            "grant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["grant_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -325,12 +305,8 @@
           "name": "disclosures_viewer_user_id_users_id_fk",
           "tableFrom": "disclosures",
           "tableTo": "users",
-          "columnsFrom": [
-            "viewer_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["viewer_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -338,12 +314,8 @@
           "name": "disclosures_manifest_id_manifests_id_fk",
           "tableFrom": "disclosures",
           "tableTo": "manifests",
-          "columnsFrom": [
-            "manifest_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["manifest_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -479,12 +451,8 @@
           "name": "grants_org_id_orgs_id_fk",
           "tableFrom": "grants",
           "tableTo": "orgs",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["org_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -492,12 +460,8 @@
           "name": "grants_viewer_user_id_users_id_fk",
           "tableFrom": "grants",
           "tableTo": "users",
-          "columnsFrom": [
-            "viewer_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["viewer_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -505,12 +469,8 @@
           "name": "grants_invite_token_invites_token_fk",
           "tableFrom": "grants",
           "tableTo": "invites",
-          "columnsFrom": [
-            "invite_token"
-          ],
-          "columnsTo": [
-            "token"
-          ],
+          "columnsFrom": ["invite_token"],
+          "columnsTo": ["token"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -518,12 +478,8 @@
           "name": "grants_created_by_users_id_fk",
           "tableFrom": "grants",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -609,12 +565,8 @@
           "name": "invites_org_id_orgs_id_fk",
           "tableFrom": "invites",
           "tableTo": "orgs",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["org_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -622,12 +574,8 @@
           "name": "invites_created_by_users_id_fk",
           "tableFrom": "invites",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -635,12 +583,8 @@
           "name": "invites_accepted_by_users_id_fk",
           "tableFrom": "invites",
           "tableTo": "users",
-          "columnsFrom": [
-            "accepted_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["accepted_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -716,12 +660,8 @@
           "name": "manifests_org_id_orgs_id_fk",
           "tableFrom": "manifests",
           "tableTo": "orgs",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["org_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -807,12 +747,8 @@
           "name": "memberships_org_id_orgs_id_fk",
           "tableFrom": "memberships",
           "tableTo": "orgs",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["org_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -820,12 +756,8 @@
           "name": "memberships_user_id_users_id_fk",
           "tableFrom": "memberships",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -835,11 +767,7 @@
         "memberships_org_user_role_key": {
           "name": "memberships_org_user_role_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "org_id",
-            "user_id",
-            "role"
-          ]
+          "columns": ["org_id", "user_id", "role"]
         }
       },
       "policies": {},
@@ -877,12 +805,8 @@
           "name": "org_policy_org_id_orgs_id_fk",
           "tableFrom": "org_policy",
           "tableTo": "orgs",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["org_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1032,12 +956,8 @@
           "name": "orgs_owner_user_id_users_id_fk",
           "tableFrom": "orgs",
           "tableTo": "users",
-          "columnsFrom": [
-            "owner_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1118,12 +1038,8 @@
           "name": "payment_attempts_payment_id_payments_id_fk",
           "tableFrom": "payment_attempts",
           "tableTo": "payments",
-          "columnsFrom": [
-            "payment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["payment_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1133,10 +1049,7 @@
         "payment_attempts_payment_attempt_key": {
           "name": "payment_attempts_payment_attempt_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "payment_id",
-            "attempt_no"
-          ]
+          "columns": ["payment_id", "attempt_no"]
         }
       },
       "policies": {},
@@ -1269,12 +1182,8 @@
           "name": "payments_org_id_orgs_id_fk",
           "tableFrom": "payments",
           "tableTo": "orgs",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["org_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1282,12 +1191,8 @@
           "name": "payments_recipient_id_recipients_id_fk",
           "tableFrom": "payments",
           "tableTo": "recipients",
-          "columnsFrom": [
-            "recipient_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["recipient_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1297,9 +1202,7 @@
         "payments_idempotency_key_unique": {
           "name": "payments_idempotency_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "idempotency_key"
-          ]
+          "columns": ["idempotency_key"]
         }
       },
       "policies": {},
@@ -1417,12 +1320,8 @@
           "name": "recipients_org_id_orgs_id_fk",
           "tableFrom": "recipients",
           "tableTo": "orgs",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["org_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1430,12 +1329,8 @@
           "name": "recipients_user_id_users_id_fk",
           "tableFrom": "recipients",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1445,10 +1340,7 @@
         "recipients_org_wallet_key": {
           "name": "recipients_org_wallet_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "org_id",
-            "wallet"
-          ]
+          "columns": ["org_id", "wallet"]
         }
       },
       "policies": {},
@@ -1548,12 +1440,8 @@
           "name": "screenings_org_id_orgs_id_fk",
           "tableFrom": "screenings",
           "tableTo": "orgs",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["org_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1634,12 +1522,8 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1728,12 +1612,8 @@
           "name": "token_accounts_user_id_users_id_fk",
           "tableFrom": "token_accounts",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1741,12 +1621,8 @@
           "name": "token_accounts_org_id_orgs_id_fk",
           "tableFrom": "token_accounts",
           "tableTo": "orgs",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["org_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1756,10 +1632,7 @@
         "token_accounts_cluster_address_key": {
           "name": "token_accounts_cluster_address_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "cluster",
-            "address"
-          ]
+          "columns": ["cluster", "address"]
         }
       },
       "policies": {},
@@ -1813,9 +1686,7 @@
         "users_wallet_unique": {
           "name": "users_wallet_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "wallet"
-          ]
+          "columns": ["wallet"]
         }
       },
       "policies": {},
@@ -1895,12 +1766,8 @@
           "name": "viewer_keys_user_id_users_id_fk",
           "tableFrom": "viewer_keys",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1925,142 +1792,77 @@
     "public.approval_kind": {
       "name": "approval_kind",
       "schema": "public",
-      "values": [
-        "message",
-        "execution"
-      ]
+      "values": ["message", "execution"]
     },
     "public.approval_subject_type": {
       "name": "approval_subject_type",
       "schema": "public",
-      "values": [
-        "payment",
-        "payroll_run"
-      ]
+      "values": ["payment", "payroll_run"]
     },
     "public.cluster_name": {
       "name": "cluster_name",
       "schema": "public",
-      "values": [
-        "localnet",
-        "devnet",
-        "mainnet"
-      ]
+      "values": ["localnet", "devnet", "mainnet"]
     },
     "public.disclosure_kind": {
       "name": "disclosure_kind",
       "schema": "public",
-      "values": [
-        "payment",
-        "payroll_line",
-        "month_total",
-        "balance_snapshot"
-      ]
+      "values": ["payment", "payroll_line", "month_total", "balance_snapshot"]
     },
     "public.grant_scope": {
       "name": "grant_scope",
       "schema": "public",
-      "values": [
-        "all_payments",
-        "period",
-        "payroll_only",
-        "own_payslips"
-      ]
+      "values": ["all_payments", "period", "payroll_only", "own_payslips"]
     },
     "public.grant_status": {
       "name": "grant_status",
       "schema": "public",
-      "values": [
-        "pending_viewer_key",
-        "active",
-        "revoked",
-        "expired"
-      ]
+      "values": ["pending_viewer_key", "active", "revoked", "expired"]
     },
     "public.key_scheme": {
       "name": "key_scheme",
       "schema": "public",
-      "values": [
-        "standard_v1",
-        "sotto_ikm_v1"
-      ]
+      "values": ["standard_v1", "sotto_ikm_v1"]
     },
     "public.membership_role": {
       "name": "membership_role",
       "schema": "public",
-      "values": [
-        "owner",
-        "approver",
-        "accountant",
-        "board",
-        "recipient"
-      ]
+      "values": ["owner", "approver", "accountant", "board", "recipient"]
     },
     "public.org_status": {
       "name": "org_status",
       "schema": "public",
-      "values": [
-        "pending_review",
-        "active",
-        "suspended"
-      ]
+      "values": ["pending_review", "active", "suspended"]
     },
     "public.payment_attempt_status": {
       "name": "payment_attempt_status",
       "schema": "public",
-      "values": [
-        "sent",
-        "confirmed",
-        "finalized",
-        "failed",
-        "failed_clean"
-      ]
+      "values": ["sent", "confirmed", "finalized", "failed", "failed_clean"]
     },
     "public.payment_kind": {
       "name": "payment_kind",
       "schema": "public",
-      "values": [
-        "single",
-        "payroll_line"
-      ]
+      "values": ["single", "payroll_line"]
     },
     "public.payment_status": {
       "name": "payment_status",
       "schema": "public",
-      "values": [
-        "draft",
-        "authorized",
-        "executing",
-        "settled",
-        "failed_clean",
-        "failed"
-      ]
+      "values": ["draft", "authorized", "executing", "settled", "failed_clean", "failed"]
     },
     "public.recipient_readiness": {
       "name": "recipient_readiness",
       "schema": "public",
-      "values": [
-        "no_account",
-        "not_configured",
-        "ready"
-      ]
+      "values": ["no_account", "not_configured", "ready"]
     },
     "public.screening_result": {
       "name": "screening_result",
       "schema": "public",
-      "values": [
-        "clear",
-        "hit",
-        "error"
-      ]
+      "values": ["clear", "hit", "error"]
     },
     "public.viewer_key_status": {
       "name": "viewer_key_status",
       "schema": "public",
-      "values": [
-        "active",
-        "rotated"
-      ]
+      "values": ["active", "rotated"]
     }
   },
   "schemas": {},

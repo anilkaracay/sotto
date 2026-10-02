@@ -16,6 +16,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { AssetWordsProvider } from "../app/app/_components/asset.tsx";
 import { BalanceCards } from "../app/app/_components/confidential/balances.tsx";
+import { ConfidentialContext } from "../app/app/_components/confidential/context.tsx";
+import { FaucetCard } from "../app/app/_components/confidential/faucet-card.tsx";
 import { DevnetTestBadge } from "../app/app/_components/devnet-badge.tsx";
 import { ReadinessCell } from "../app/app/[org]/recipients/readiness-cell.tsx";
 import { splitAmounts } from "../lib/amount-text.ts";
@@ -30,6 +32,7 @@ import { chainAmountWords, chainTypeWords } from "../lib/chain-activity.ts";
 import type { Payslip } from "../lib/pay.ts";
 import { payslipLines } from "../lib/payslip-pdf.ts";
 import { payability } from "../lib/recipient.ts";
+import { assetView } from "../lib/server/network-view.ts";
 import { expectAmountsInside, privacyOn } from "./helpers/amounts.ts";
 
 const USDC = assetWords("usdc");
@@ -189,5 +192,27 @@ describe("the devnet test dollar badge", () => {
     expect(html).toContain(`aria-label="${DEVNET_TEST_ASSET_BADGE}: ${DEVNET_TEST_ASSET_TOOLTIP}"`);
     expect(html).toContain('tabindex="0"');
     expect(renderToStaticMarkup(<DevnetTestBadge asset={USDC} />)).toBe("");
+  });
+});
+
+describe("the devUSD faucet card", () => {
+  it("names devUSD, says it has no value and its daily limit, with the badge", () => {
+    const value = {
+      orgId: "3f1b6a2e-5c4d-4e8f-9a0b-1c2d3e4f5a6b",
+      network: { cluster: "devnet", asset: assetView("devusd") },
+      refresh: async () => {},
+    };
+    const html = renderToStaticMarkup(
+      <ConfidentialContext.Provider value={value as never}>
+        <FaucetCard />
+      </ConfidentialContext.Provider>,
+    );
+    const words = text(html);
+    expect(words).toContain("Get devUSD Devnet test dollar");
+    expect(words).toContain("devUSD is a test token for trying Sotto on devnet. It has no value.");
+    expect(words).toContain("up to 10,000 devUSD every 24 hours");
+    expect(words).not.toContain("USDC");
+    // Nothing to ask for before the faucet's state is read.
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Get devUSD<\/button>/);
   });
 });

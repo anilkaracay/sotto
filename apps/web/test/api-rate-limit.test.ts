@@ -80,6 +80,7 @@ describe("consumeRateLimit", () => {
       rpcSession: { name: "rpc-session", limit: 600, windowSeconds: 60, by: "session" },
       publicReadIp: { name: "public-read-ip", limit: 60, windowSeconds: 60, by: "ip" },
       waitlistIp: { name: "waitlist-ip", limit: 10, windowSeconds: 3600, by: "ip" },
+      faucetSession: { name: "faucet-session", limit: 6, windowSeconds: 3600, by: "session" },
     });
   });
 });

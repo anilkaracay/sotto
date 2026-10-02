@@ -3,9 +3,11 @@
 // (hosted, 14 section 2). A missing or invalid variable stops the worker with its name; values are
 // never printed. With --once each job runs one time and the process exits.
 import { createDb } from "@sotto/db";
+import { getClusterConfig } from "@sotto/sdk/cluster";
 import { createRetryingRpc } from "@sotto/sdk/tx";
 import { ConfigError, loadWorkerConfig } from "./config.ts";
 import { confirmExecutionsJob } from "./jobs/confirm-executions.ts";
+import { devusdFaucetJob } from "./jobs/devusd-faucet.ts";
 import { grantExpiryJob } from "./jobs/grant-expiry.ts";
 import { indexAccountsJob } from "./jobs/index-accounts.ts";
 import { payrollRunsJob } from "./jobs/payroll-runs.ts";
@@ -42,6 +44,23 @@ export async function main(
     );
     return 1;
   }
+  // Step 4.3: the devUSD faucet's mints, where the mint authority's keypair is configured and the
+  // devnet registry has devUSD. The job itself refuses any ledger but devnet's.
+  const devnet = getClusterConfig("devnet");
+  const devusdMint = devnet.available
+    ? (devnet.assets.find((asset) => asset.id === "devusd")?.baseMint ?? null)
+    : null;
+  let devusdAuthority = null;
+  if (config.devusdMintAuthorityKeypair && devusdMint) {
+    try {
+      devusdAuthority = await loadKeypairSigner(config.devusdMintAuthorityKeypair);
+    } catch (error) {
+      console.error(
+        `sotto worker: configuration error: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return 1;
+    }
+  }
   const once = argv.includes("--once");
   const { db, close } = createDb(config.databaseUrl, { max: 3 });
   const rpc = createRetryingRpc(config.rpcUrl, {
@@ -72,6 +91,9 @@ export async function main(
     indexAccountsJob({ db, rpc }),
     proofProgramHealthJob({ db, rpc, feePayer: signer.address }),
     reviewNotifyJob({ db, target: notifyTarget(config.notifyUrl) }),
+    ...(devusdAuthority && devusdMint
+      ? [devusdFaucetJob({ db, rpc, authority: devusdAuthority, mint: devusdMint })]
+      : []),
   ];
   // The notification URL holds a token: only whether it is set and which service it names is logged.
   const notify = notifyTarget(config.notifyUrl);
@@ -80,6 +102,11 @@ export async function main(
     once,
     signer: signer.address,
     reviewNotification: notify ? notify.kind : config.notifyUrl ? "unrecognized URL, off" : "off",
+    devusdFaucet: devusdAuthority
+      ? `on, mint authority ${devusdAuthority.address}`
+      : config.devusdMintAuthorityKeypair
+        ? "off, no devUSD in the devnet registry"
+        : "off",
   });
   try {
     const { failures } = await runJobs(jobs, { signal: controller.signal, log, once });

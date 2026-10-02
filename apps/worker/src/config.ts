@@ -35,6 +35,11 @@ export type WorkerConfig = {
   localnetUsdcMint: Address | null;
   /** The local ledger's devUSD mint (step 4.3), optional. */
   localnetDevusdMint: Address | null;
+  /**
+   * DEVUSD_MINT_AUTHORITY_KEYPAIR (step 4.3): the path of the devUSD mint authority's keypair file,
+   * on the hosting server only. Optional: without it the faucet's requests wait unminted.
+   */
+  devusdMintAuthorityKeypair: string | null;
 };
 
 const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
@@ -109,5 +114,6 @@ export function loadWorkerConfig(env: Env = process.env): WorkerConfig {
     sasSchemaAddress: sas.sasSchemaAddress,
     localnetUsdcMint: optionalAddress(env, "LOCALNET_USDC_MINT"),
     localnetDevusdMint: optionalAddress(env, "LOCALNET_DEVUSD_MINT"),
+    devusdMintAuthorityKeypair: optional(env, "DEVUSD_MINT_AUTHORITY_KEYPAIR"),
   };
 }

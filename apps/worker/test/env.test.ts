@@ -73,7 +73,13 @@ describe("worker config", () => {
       sasSchemaAddress: SCHEMA,
       localnetUsdcMint: null,
       localnetDevusdMint: null,
+      devusdMintAuthorityKeypair: null,
     });
+    // Step 4.3: the devUSD mint authority's keypair file, read as a path like the SAS signer's.
+    expect(
+      loadWorkerConfig({ ...FULL, DEVUSD_MINT_AUTHORITY_KEYPAIR: "/run/secrets/devusd.json" })
+        .devusdMintAuthorityKeypair,
+    ).toBe("/run/secrets/devusd.json");
     expect(loadWorkerConfig({ ...FULL, LOCALNET_USDC_MINT: CREDENTIAL }).localnetUsdcMint).toBe(
       CREDENTIAL,
     );

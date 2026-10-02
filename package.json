@@ -16,7 +16,8 @@
     "program:build": "cargo-build-sbf --manifest-path programs/sotto_proofs/Cargo.toml --arch v3 -- --locked",
     "program:test": "cargo test --locked -p sotto_proofs",
     "ci:local": "scripts/ci-local.sh",
-    "ci:local:full": "scripts/ci-local.sh --full"
+    "ci:local:full": "scripts/ci-local.sh --full",
+    "acceptance:devnet": "node scripts/acceptance-devnet.ts"
   },
   "prettier": "@sotto/config/prettier",
   "devDependencies": {

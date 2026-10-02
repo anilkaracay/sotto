@@ -1,13 +1,16 @@
 // The sign in screen in every state (step 3.4.1, 13 A34): with the test wallet only, with a wallet
 // for each capability group of D-26 (the test wallet, a wallet that signs in but signs no messages,
 // a wallet that cannot sign transactions), connected, a wallet that shares no account, and with no
-// wallet at all; each at 1440 and 390 with no horizontal scroll and no console error, saved to this test's
+// wallet at all; each at 1440 and 390 with no horizontal scroll and no console error, compared with
+// its baseline and scanned with axe since step 3.10.1, saved to this test's
 // output directory and, once it passes, to .demo-shots/screens/<UTC time>-sign-in/ (git ignored),
 // for the founder's approval. Runs in the node job: signing in needs no chain.
 import { copyFile, mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
+import { expectAccessible } from "../a11y.ts";
 import { addTestWallet } from "../helpers.ts";
+import { expectVisual } from "../visual.ts";
 
 const DEMO_SHOTS = fileURLToPath(new URL("../../../.demo-shots/screens/", import.meta.url));
 const shots: string[] = [];
@@ -43,6 +46,9 @@ async function shoot(page: Page, name: string) {
   const path = test.info().outputPath(`${name}-${width}.png`);
   await page.screenshot({ path, fullPage: true });
   shots.push(path);
+  // Step 3.10.1: the approved screen against its baseline, and no WCAG 2.1 A or AA violation.
+  await expectVisual(page, `${name}-${width}`);
+  await expectAccessible(page, `${name}-${width}`);
 }
 
 for (const width of [1440, 390]) {

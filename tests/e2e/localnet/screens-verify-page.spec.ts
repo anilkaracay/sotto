@@ -3,11 +3,13 @@
 // wallet with no organization (Proven, "Not verified by Sotto"), a record that expired, then the same
 // record closed by its owner, the paused proof program (set and put back by the bootstrap's admin
 // key), an address where nothing was written, and an account that is not a record. Each at 1440 and
-// 390, with no horizontal scroll and no console error, saved to this test's output directory and,
+// 390, with no horizontal scroll and no console error, compared with its baseline and scanned with axe
+// since step 3.10.1, saved to this test's output directory and,
 // once the run passes, to .demo-shots/screens/<UTC time>-proof-page/ (git ignored), for the
 // founder's approval. "Proofs are not available here" needs a network without the program and is
 // covered by the component test. Runs in the localnet job of scripts/ci-local.sh, one spec at a time
-// (workers: 1), so the pause reaches no other spec; never devnet.
+// (workers: 1), so the pause reaches no other spec; never devnet. Named to run after the sharing
+// screens (step 3.10.1): its organization would add a row to their admin console's baseline.
 import { copyFile, mkdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { closeProofAccounts } from "@sotto/sdk/confidential";
@@ -44,6 +46,7 @@ import {
   type Transaction,
 } from "@solana/kit";
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import { expectAccessible } from "../a11y.ts";
 import { e2eKeypair, seededKeypair } from "../fixtures.ts";
 import {
   ANY_APP_PAGE,
@@ -53,6 +56,7 @@ import {
   OVERVIEW_URL,
   signIn,
 } from "../helpers.ts";
+import { expectVisual } from "../visual.ts";
 
 const bootstrap = readLocalnetBootstrap();
 const rpc = createRetryingRpc(bootstrap.rpcUrl);
@@ -93,6 +97,9 @@ async function shootProof(browser: Browser, address: string, state: string, name
     const path = test.info().outputPath(`${name}-${width}.png`);
     await visitor.screenshot({ path, fullPage: true });
     shots.push(path);
+    // Step 3.10.1: the approved state against its baseline, and no WCAG 2.1 A or AA violation.
+    await expectVisual(visitor, `${name}-${width}`);
+    await expectAccessible(visitor, `${name}-${width}`);
     expect(problems).toEqual([]);
     await visitor.context().close();
   }

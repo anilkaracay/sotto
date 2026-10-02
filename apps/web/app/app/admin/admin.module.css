@@ -74,3 +74,10 @@
   white-space: normal;
   color: #b4232a;
 }
+
+/* The date a request was sent, in a column of its own width: the dates' digits and month names have
+   different widths, and an automatic column moved every column after it from one day to the next. */
+.sent {
+  width: 5.5rem;
+  white-space: nowrap;
+}

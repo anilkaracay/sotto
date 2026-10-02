@@ -293,9 +293,9 @@ async function shoot(page: Page, name: string) {
   await page.screenshot({ path, fullPage: true });
   await test.info().attach(name, { path, contentType: "image/png" });
   screenshots.push(path);
-  // Step 3.8: the approved screens against their baselines; the public proof page waits for the
-  // founder's approval of its design (step 3.4.1).
-  if (name !== "07-proof-verified.png") await expectVisual(page, name.replace(/\.png$/, ""));
+  // Step 3.8: the approved screens against their baselines, the public proof page since its
+  // design's approval (step 3.4.1, step 3.10.1).
+  await expectVisual(page, name.replace(/\.png$/, ""));
   // Step 3.10: no WCAG 2.1 A or AA violation on any page of the scenario.
   await expectAccessible(page, name);
 }

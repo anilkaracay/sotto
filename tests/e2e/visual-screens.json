@@ -11,6 +11,7 @@
       "05-books-accountant",
       "05a-viewing-keys",
       "06-my-pay-payslip",
+      "07-proof-verified",
       "07a-proofs",
       "08-privacy-screen",
       "08a-balance-growth"
@@ -86,6 +87,34 @@
       "20-pay-pending",
       "21-pay-withdraw",
       "22-recovery"
+    ],
+    "specs/screens-sign-in.spec.ts": [
+      "01-sign-in-1440",
+      "01-sign-in-390",
+      "02-sign-in-capability-groups-1440",
+      "02-sign-in-capability-groups-390",
+      "03-sign-in-connected-1440",
+      "03-sign-in-connected-390",
+      "04-sign-in-wallet-error-1440",
+      "04-sign-in-wallet-error-390",
+      "05-sign-in-no-wallet-1440",
+      "05-sign-in-no-wallet-390"
+    ],
+    "localnet/screens-verify-page.spec.ts": [
+      "01-proof-proven-1440",
+      "01-proof-proven-390",
+      "02-proof-not-verified-org-1440",
+      "02-proof-not-verified-org-390",
+      "03-proof-expired-1440",
+      "03-proof-expired-390",
+      "04-proof-closed-1440",
+      "04-proof-closed-390",
+      "05-proof-paused-1440",
+      "05-proof-paused-390",
+      "06-proof-not-found-1440",
+      "06-proof-not-found-390",
+      "07-proof-not-a-record-1440",
+      "07-proof-not-a-record-390"
     ]
   }
 }

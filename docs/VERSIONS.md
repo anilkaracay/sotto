@@ -376,3 +376,19 @@ Commands:
 pnpm build && pnpm --filter @sotto/e2e exec playwright test specs/lighthouse.spec.ts specs/keyboard.spec.ts
 SOTTO_A11Y_REPORT=1 pnpm --filter @sotto/e2e e2e:localnet   # lists every axe violation and console problem instead of failing at the first
 ```
+
+## Step 4.2 (2026-10-02): hosting on sottoapp.xyz (D-28)
+
+| Item | Version | Resolved on | Source | Notes |
+|---|---|---|---|---|
+| Node.js base image | `node:24.21.0-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6` | 2026-10-02 | Docker Hub (`docker buildx imagetools inspect`; `NODE_VERSION=24.21.0` in its config) | `deploy/web.Dockerfile`, `deploy/worker.Dockerfile`; pnpm 12.6.0 through corepack and the root `packageManager` |
+| PostgreSQL image | `postgres:16.15-bookworm@sha256:efedf3595f1d6f415c08568ba171029bf54052e754cc9f030e3f2412b21f3d67` | 2026-10-02 | Docker Hub tag `16.15-bookworm` (`PG_VERSION=16.15-1.pgdg12+2`, updated 2026-09-19) | `deploy/compose.yaml` `db`; the restore test on the Mac (`scripts/pull-backup.sh`) |
+| cloudflared image | `cloudflare/cloudflared:2026.9.3@sha256:072c067d25ccbe61d46e18f0d0723255f2bb5304f7317caa95b27031520ff92c` | 2026-10-02 | Docker Hub: the tags `2026.9.3` and `latest` share this digest (2026-09-24) | `deploy/compose.yaml` `cloudflared`; runs as 65532 (distroless) |
+| age | v1.3.2 | 2026-10-02 | https://github.com/FiloSottile/age/releases/tag/v1.3.2 (2026-08-29); SHA-256 from the release's asset digests: linux-amd64 `cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10`, darwin-arm64 `e2020b073c44f692685a24d6abc378817eb81ffaaf49fd0531ef8565f767f2f5` | On the server (encrypts the backups); `~/.config/sotto/bin/age` and `age-keygen` on the Mac (the key and the restore); never in the repository |
+| Database migration | `0012_review_notification` | 2026-10-02 | `packages/db/migrations` (drizzle-kit generate) | `orgs.review_notified_at` for the `review-notify` job |
+
+Commands:
+
+```sh
+pnpm deploy:hosted [--skip-ci-check] [--no-external] | --rollback   # 14 section 8
+```

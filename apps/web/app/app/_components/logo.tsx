@@ -1,21 +1,18 @@
-// The Sotto mark and name (design/sotto-app.html .lg).
-export function Logo({ size = 24 }: { size?: number }) {
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 9,
-        fontWeight: 600,
-        fontSize: 22,
-        letterSpacing: "-0.04em",
-      }}
-    >
-      <svg width={size} height={size} viewBox="0 0 26 26" aria-hidden="true">
-        <circle cx="13" cy="13" r="11" fill="none" stroke="#0B1830" strokeWidth="1.9" />
-        <path d="M13 2a11 11 0 000 22z" fill="#0B1830" />
-      </svg>
-      <span>Sotto</span>
-    </span>
-  );
+// The Sotto logo: the horizontal lockup of the approved brand kit (design/brand-kit, step 4.2.1),
+// outlined, never retyped. Ink on light grounds, white on dark ones (the sky, night). 28 pixels
+// tall, 102 wide: above the guidelines' 96 pixel minimum for the lockup.
+import { SottoLockupInk, SottoLockupWhite } from "@sotto/ui";
+
+export function Logo({
+  tone = "ink",
+  height = 28,
+  decorative = false,
+}: {
+  tone?: "ink" | "white";
+  height?: number;
+  /** True inside a link that already names Sotto (aria-label). */
+  decorative?: boolean;
+}) {
+  const Lockup = tone === "white" ? SottoLockupWhite : SottoLockupInk;
+  return <Lockup height={height} decorative={decorative} />;
 }

@@ -1,11 +1,11 @@
 // The landing route (F-17, step 3.1; 09 section 6): the public page from design/sotto-landing.html.
 import type { Metadata } from "next";
+import { LANDING_DESCRIPTION, LANDING_TITLE } from "../lib/site-metadata.ts";
 import { Landing } from "./_landing/landing.tsx";
 
 export const metadata: Metadata = {
-  title: "Sotto: confidential business payments on Solana",
-  description:
-    "The business account for companies that pay in stablecoins. Every payment settles on Solana. Only the people you hand a key to can read the numbers. Beta on Solana devnet.",
+  title: LANDING_TITLE,
+  description: LANDING_DESCRIPTION,
 };
 
 export default function HomePage() {

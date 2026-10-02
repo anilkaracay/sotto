@@ -1,5 +1,6 @@
 // The landing's footer section (F-17, step 3.1), from design/sotto-landing.html.
 import { RequestAccessForm } from "../request-access.tsx";
+import { SottoLockupInk, SottoWordmarkWhite } from "@sotto/ui";
 import type { LandingView } from "../use-landing.ts";
 
 export function Footer({ v }: { v: LandingView }) {
@@ -70,19 +71,19 @@ export function Footer({ v }: { v: LandingView }) {
           onMouseLeave={v.onFootLeave}
           aria-hidden="true"
         >
-          <span className="bl">{"Sotto"}</span>
-          <span className="sh">{"Sotto"}</span>
+          <span className="bl">
+            <SottoWordmarkWhite height={256} decorative />
+          </span>
+          <span className="sh">
+            <SottoWordmarkWhite height={256} decorative />
+          </span>
         </div>
       </div>
       <div className="w5">
         <div className="fcols">
           <div>
             <a className="logo" href="#v8top">
-              <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
-                <circle cx="13" cy="13" r="11" fill="none" stroke="#0B1830" strokeWidth="1.8" />
-                <path d="M13 2a11 11 0 000 22z" fill="#0B1830" />
-              </svg>
-              <span>{"Sotto"}</span>
+              <SottoLockupInk height={28} />
             </a>
             <p>{"The confidential business account for companies that pay in stablecoins."}</p>
           </div>

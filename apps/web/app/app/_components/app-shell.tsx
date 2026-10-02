@@ -7,7 +7,6 @@
 // to its pay page (step 1.10); Sotto admins also get the business review console. Signing out ends the tab's keys.
 // Step 2.9: the design's privacy screen toggle (F-15) and, on every /app page, the proof program
 // banner (F-19) or, when the network cannot be reached, "Network unreachable, retrying" (D-14).
-import { Chip, TopNav, type TopNavItem } from "@sotto/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
@@ -18,6 +17,7 @@ import type { MeView } from "../../../lib/server/me.ts";
 import type { NetworkView } from "../../../lib/server/network-view.ts";
 import { HealthBanner } from "./health-banner.tsx";
 import { useKeySession } from "./key-session.tsx";
+import { Chip, SottoMarkInk, TopNav, type TopNavItem } from "@sotto/ui";
 import { Logo } from "./logo.tsx";
 import { usePrivacy } from "./privacy.tsx";
 import styles from "./shell.module.css";
@@ -76,7 +76,14 @@ export function AppShell({
   return (
     <div className={styles.shell}>
       <header className={styles.top}>
-        <Logo />
+        {/* Step 4.2.1: the lockup, or the mark alone where a narrow screen leaves the lockup no
+            clear space (the brand kit's small space version). */}
+        <span className={styles.logoWide}>
+          <Logo />
+        </span>
+        <span className={styles.logoNarrow}>
+          <SottoMarkInk height={28} />
+        </span>
         <div className={styles.middle}>
           <TopNav items={nav} link={Link} />
         </div>

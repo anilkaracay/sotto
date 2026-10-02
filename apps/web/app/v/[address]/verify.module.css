@@ -30,12 +30,6 @@
   color: #ffffff;
   text-decoration: none;
 }
-.logo svg circle {
-  stroke: #ffffff;
-}
-.logo svg path {
-  fill: #ffffff;
-}
 .network {
   display: inline-flex;
   align-items: center;

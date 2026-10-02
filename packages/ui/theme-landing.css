@@ -1142,9 +1142,9 @@ body:has(> main.theme-landing) {
   letter-spacing: -0.035em;
   margin-right: 14px;
 }
+/* Step 4.2.1: the brand kit's lockup sizes itself (27 pixels tall, above its 96 pixel minimum width). */
 .theme-landing .snav .slogo svg {
-  width: 20px;
-  height: 20px;
+  display: block;
 }
 .theme-landing .snav nav {
   display: flex;
@@ -4199,19 +4199,25 @@ body:has(> main.theme-landing) {
   margin-top: 90px;
   user-select: none;
 }
+/* Step 4.2.1: the brand kit's outlined wordmark (never retyped), as wide as the text it replaces
+   (2.2065 times its old font size, clamp(190px, 30vw, 430px)), its baseline where the text's was,
+   just under the sky's bottom edge. The two layers and their motion are unchanged. */
 .theme-landing .wmk span {
   position: absolute;
   left: 50%;
-  bottom: -0.17em;
+  bottom: -8px;
   transform: translateX(-50%);
-  font-size: clamp(190px, 30vw, 430px);
-  font-weight: 500;
-  letter-spacing: -0.075em;
-  line-height: 1;
-  white-space: nowrap;
+  line-height: 0;
+}
+.theme-landing .wmk span svg {
+  display: block;
+  width: clamp(419px, 66.2vw, 949px);
+  height: auto;
 }
 .theme-landing .wmk .bl {
   color: rgba(255, 255, 255, 0.55);
+  /* The white file at the old layer's 55 percent. */
+  opacity: 0.55;
   filter: blur(12px);
 }
 .theme-landing .wmk .sh {

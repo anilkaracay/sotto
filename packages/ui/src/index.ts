@@ -4,6 +4,13 @@ export const themeClass = {
   app: "theme-app",
 } as const;
 
+export {
+  SottoLockupInk,
+  SottoLockupWhite,
+  SottoMarkInk,
+  SottoWordmarkWhite,
+  type LogoProps,
+} from "./brand/logos.tsx";
 export { Button, type ButtonProps } from "./components/Button.tsx";
 export { Card } from "./components/Card.tsx";
 export { Chip, type ChipTone } from "./components/Chip.tsx";

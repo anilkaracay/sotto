@@ -91,6 +91,11 @@ async function shootProof(browser: Browser, address: string, state: string, name
     });
     await visitor.goto(`/v/${address}`);
     await expect(visitor.getByTestId("verify-result")).toHaveAttribute("data-state", state);
+    // Step 4.2.1: the public page's link preview is the brand kit's image.
+    await expect(visitor.locator('meta[property="og:image"]')).toHaveAttribute(
+      "content",
+      /\/sotto-og-1200x630\.png$/,
+    );
     expect(await visitor.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
     await visitor.evaluate(() => document.fonts.ready);
     await visitor.waitForTimeout(1200);

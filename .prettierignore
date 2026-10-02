@@ -14,3 +14,8 @@ packages/db/migrations/
 packages/sdk/src/proofs/generated/
 test-results/
 playwright-report/
+
+# Generated from the brand kit by scripts/generate-brand.ts (step 4.2.1); checked with --check
+packages/ui/src/brand/logos.tsx
+# The approved brand kit, kept exactly as delivered (step 4.2.1)
+design/brand-kit/

@@ -75,6 +75,8 @@ describe("the trust page", () => {
       expect(text).toContain(value);
     }
     expect(text).toContain("devUSD is a test token Sotto issues on devnet");
+    // Every card has its icon: none shows an empty icon box.
+    expect(html).not.toContain('<path d=""');
     expect(text).toContain("It has no freeze authority.");
   });
 

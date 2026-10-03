@@ -83,7 +83,7 @@ test("the entry screens in every state, for the design pass (13 A35, L36)", asyn
     await expect(visitor.getByRole("heading", { level: 1 })).toHaveText(
       "What Sotto can do with your money, and what it cannot.",
     );
-    await expect(visitor.getByTestId("trust-card")).toHaveCount(6);
+    await expect(visitor.getByTestId("trust-card")).toHaveCount(7);
     expect(await visitor.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
     await shoot(visitor, name);
     expect(problems).toEqual([]);

@@ -22,6 +22,8 @@ const ICONS: Record<string, string> = {
   freeze: "M12 2v20 M4.9 7l14.2 10 M19.1 7L4.9 17",
   devnet: "M4 8h13l-3-3 M20 16H7l3 3",
   program: "M5 4h14v16H5z M9 9h6 M9 13h6 M9 17h3",
+  // A test flask: devUSD is a test token (step 4.3).
+  devusd: "M9 3h6 M10 3v6l-5 9a2 2 0 002 3h10a2 2 0 002-3l-5-9V3 M7.5 15h9",
 };
 
 function Row({ label, value, mono = true }: { label: string; value: string; mono?: boolean }) {

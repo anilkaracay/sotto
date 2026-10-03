@@ -128,7 +128,8 @@ test(`seeds Northwind Labs Demo Ltd on ${target.name}`, async ({ page, browser }
     await expect(page.getByTestId("account-status")).toHaveText("Set up");
     await expect(page.getByTestId("account-recorded")).toHaveText("Recorded");
     const funding = page.getByTestId("funding-card");
-    await page.getByLabel("Amount of devUSD").fill(TREASURY.toString());
+    // The funding card's field: on devnet the faucet card has one of the same name.
+    await funding.getByLabel("Amount of devUSD").fill(TREASURY.toString());
     await funding.getByRole("button", { name: "Fund account" }).click();
     await expect(funding.getByTestId("step-done")).toContainText(
       `Funded ${TREASURY} wdevUSD in two steps`,

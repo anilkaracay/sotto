@@ -397,7 +397,8 @@ export function acceptanceScenario(target: AcceptanceTarget): void {
         await expect(page.getByTestId("account-status")).toHaveText("Set up");
         await expect(page.getByTestId("account-recorded")).toHaveText("Recorded");
         const funding = page.getByTestId("funding-card");
-        await page.getByLabel(`Amount of ${S}`).fill(FUNDING.toString());
+        // The funding card's field: on devnet a devUSD organization's faucet card has one too.
+        await funding.getByLabel(`Amount of ${S}`).fill(FUNDING.toString());
         await funding.getByRole("button", { name: "Fund account" }).click();
         await expect(funding.getByTestId("step-done")).toContainText(
           `Funded ${FUNDING} ${W} in two steps`,

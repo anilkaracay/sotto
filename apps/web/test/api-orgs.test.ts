@@ -126,18 +126,18 @@ describe("POST /api/orgs", () => {
     const plain = await create(user.cookie, FIELDS);
     const { org } = (await plain.json()) as { org: { id: string; asset: string } };
     expect(org.asset).toBe("usdc");
-    // Devnet has no devUSD until its mints and its sotto_proofs deployment exist.
     const other = await createUserWithSession(test);
-    expect(await errorOf(await create(other.cookie, { ...FIELDS, asset: "devusd" }))).toBe(
-      "422 asset_unavailable: This currency is not available on this network",
-    );
     expect(await errorOf(await create(other.cookie, { ...FIELDS, asset: "eurc" }))).toBe(
       "400 invalid_request: Invalid request: asset: Choose a currency",
     );
-    // A local ledger whose bootstrap made devUSD offers it.
+    // A local ledger without devUSD refuses it; one whose bootstrap made devUSD offers it, as devnet
+    // does since step 4.3's live run.
     vi.stubEnv("NEXT_PUBLIC_CLUSTER", "localnet");
-    vi.stubEnv("LOCALNET_DEVUSD_MINT", "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
     try {
+      expect(await errorOf(await create(other.cookie, { ...FIELDS, asset: "devusd" }))).toBe(
+        "422 asset_unavailable: This currency is not available on this network",
+      );
+      vi.stubEnv("LOCALNET_DEVUSD_MINT", "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
       const devusd = await create(other.cookie, { ...FIELDS, asset: "devusd" });
       expect(devusd.status).toBe(201);
       const created = ((await devusd.json()) as { org: { id: string; asset: string } }).org;

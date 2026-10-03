@@ -45,7 +45,7 @@ describe("the trust page", () => {
   });
 
   it("states the freeze authority, the devnet test wrap and revocation (D-01, C3, D-05, L6, L7)", () => {
-    expect(text).toContain("The USDC issuer's freeze controls still apply.");
+    expect(text).toContain("The USDC issuer's freeze controls still apply to USDC.");
     expect(text).toContain("so the USDC issuer can freeze it as it can freeze USDC");
     expect(text).toContain("devnet test wrap");
     expect(text).toContain("devnet USDC, which has no value");
@@ -67,7 +67,15 @@ describe("the trust page", () => {
       expect(text).toContain(value);
     }
     expect(text).toContain("63c4002c3db312f82632ba7723725b906c30b9833593cb5de723d6cab92f32d8");
-    expect(text).toContain("A Sotto key, for both programs Sotto deployed, during the beta");
+    expect(text).toContain("A Sotto key, for every program Sotto deployed, during the beta");
+    // Step 4.3: devUSD's mint, its wrapped mint and its own deployment of the same build.
+    const devusd = devnet.assets.find((asset) => asset.id === "devusd");
+    if (!devusd?.sottoProofs) throw new Error("the devnet registry lists devUSD");
+    for (const value of [devusd.baseMint, devusd.wrappedMint, devusd.sottoProofs.program]) {
+      expect(text).toContain(value);
+    }
+    expect(text).toContain("devUSD is a test token Sotto issues on devnet");
+    expect(text).toContain("It has no freeze authority.");
   });
 
   it("links the recovery guide and claims nothing it cannot", () => {

@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { healthState, PROGRAM_BLOCKED, programDetail, UNREACHABLE_TITLE } from "../lib/health.ts";
 import { programHealthOf, readProgramHealth } from "../lib/server/program-health.ts";
-import type { NetworkView } from "../lib/server/network-view.ts";
+import { assetView, type NetworkView } from "../lib/server/network-view.ts";
 import { expectAmountsInside, privacyOn } from "./helpers/amounts.ts";
 import { setUpApiTest, tearDownApiTest } from "./helpers/api.ts";
 
@@ -43,8 +43,10 @@ function network(
     chain: "solana:devnet",
     wrapLabel: "devnet test wrap",
     tokenWrapProgram: "EEvqpjNRQkNRwXzVziuTGGi1wYDiPv7haYVVu3XZCoQn",
-    usdcMint: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
-    usdcTokenProgram: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    asset: assetView("usdc"),
+    assets: [assetView("usdc")],
+    baseMint: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+    baseTokenProgram: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
     wrappedMint: "AhJfP4JJBaHWRtXRiaScZUC7SMm4RqUPSb3g9H5RT8Bd",
     decimals: 6,
     v1: true,
@@ -115,7 +117,11 @@ describe("proof program health (F-19)", () => {
       renderToStaticMarkup(<HealthBannerView network={network("ok", { status: "ok" })} />),
     ).toBe("");
     expect(
-      renderToStaticMarkup(<HealthBannerView network={{ available: false, label: "Mainnet" }} />),
+      renderToStaticMarkup(
+        <HealthBannerView
+          network={{ available: false, label: "Mainnet", asset: assetView("usdc") }}
+        />,
+      ),
     ).toBe("");
   });
 

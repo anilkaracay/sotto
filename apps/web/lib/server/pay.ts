@@ -14,20 +14,23 @@ import {
   users,
   type Database,
 } from "@sotto/db";
+import type { AssetId } from "@sotto/sdk/cluster/assets";
 import { associatedTokenAccount } from "@sotto/sdk/confidential/public";
 import { address } from "@solana/kit";
 import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import type { ServerCluster } from "./cluster.ts";
+import { orgWrappedMint } from "./assets.ts";
 import { apiErrors } from "./errors.ts";
 import { readableGrantCondition } from "./grants.ts";
 import { requireMoneyAccess } from "./orgs.ts";
 import type { Session } from "./session.ts";
 
 export type PayView = {
-  org: { id: string; displayName: string };
+  /** The organization's asset (step 4.3): its payslips say USDC or devUSD. */
+  org: { id: string; displayName: string; asset: AssetId };
   ownerWallet: string;
   recipient: { displayName: string; roleTitle: string | null; wallet: string };
-  /** The recipient's associated wUSDC account on this cluster; null while the cluster has no mint. */
+  /** The recipient's associated account of the org's wrapped asset; null while the cluster has no mint. */
   tokenAccount: string | null;
   payments: {
     id: string;
@@ -51,7 +54,12 @@ export async function readPay(
   await requireMoneyAccess(db, session, orgId, ["recipient"]);
   if (!session) throw apiErrors.unauthenticated();
   const [org] = await db
-    .select({ id: orgs.id, displayName: orgs.displayName, ownerWallet: users.wallet })
+    .select({
+      id: orgs.id,
+      displayName: orgs.displayName,
+      asset: orgs.asset,
+      ownerWallet: users.wallet,
+    })
     .from(orgs)
     .innerJoin(users, eq(users.id, orgs.ownerUserId))
     .where(eq(orgs.id, orgId))
@@ -87,9 +95,9 @@ export async function readPay(
           ),
         )
     : [];
-  const tokenAccount = cluster?.wrappedUsdcMint
-    ? await associatedTokenAccount(address(recipient.wallet), cluster.wrappedUsdcMint)
-    : null;
+  // The organization's asset (step 4.3).
+  const mint = await orgWrappedMint(db, cluster, orgId);
+  const tokenAccount = mint ? await associatedTokenAccount(address(recipient.wallet), mint) : null;
   const chain = tokenAccount
     ? await db
         .select({
@@ -110,7 +118,7 @@ export async function readPay(
         .limit(24)
     : [];
   return {
-    org: { id: org.id, displayName: org.displayName },
+    org: { id: org.id, displayName: org.displayName, asset: org.asset },
     ownerWallet: org.ownerWallet,
     recipient: {
       displayName: recipient.displayName,

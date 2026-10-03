@@ -2,7 +2,7 @@
 
 // One attempt of a single confidential payment in the owner's tab (06 section 5, AC-06.4, AC-06.5;
 // step 1.9), after the server authorized it (I-6: the client executes only then):
-// 1. read the sender's and the recipient's wUSDC accounts and the mint fresh from chain; apply a
+// 1. read the sender's and the recipient's wrapped accounts (wUSDC or wdevUSD) and the mint fresh from chain; apply a
 //    pending balance first (06 section 5 step 1);
 // 2. build the transfer plan in the tab's crypto worker (the keys stay there; rent is read here);
 // 3. send its transactions in order through the wallet path of 06 section 9, the worker adding the
@@ -35,6 +35,7 @@ import { reportComparison } from "../../../../../lib/client/wallet-report.ts";
 import type { CryptoWorkerClient } from "../../../../../lib/crypto-worker/client.ts";
 import type { PaymentCategory } from "../../../../../lib/payment.ts";
 import type { Connected } from "../../../_components/confidential/context.tsx";
+import type { AssetWords } from "../../../../../lib/asset-words.ts";
 
 export type ViewerKeyRecord = {
   userId: string;
@@ -53,6 +54,8 @@ export type PaymentRunInput = {
   recipient: { displayName: string; wallet: string; viewerKey: ViewerKeyRecord | null };
   owner: ViewerKeyRecord;
   wrappedMint: string;
+  /** The organization's asset (step 4.3): the record's currency and the words of a failure. */
+  asset: AssetWords;
 };
 
 export type PaymentRunOutcome =
@@ -98,7 +101,11 @@ export async function runPayment(options: {
   // 06 section 5 step 1: a pending balance is applied first, from fresh state.
   onProgress("Reading your account and the recipient's from the network…");
   let source = await readAccount(sourceToken);
-  if (!source) return { kind: "failed", message: "Your wUSDC account does not exist yet." };
+  if (!source)
+    return {
+      kind: "failed",
+      message: `Your ${input.asset.wrappedSymbol} account does not exist yet.`,
+    };
   const decrypted = await options.worker().decrypt(source);
   if (decrypted.pending > 0n) {
     onProgress("Applying your pending balance first…");
@@ -111,16 +118,24 @@ export async function runPayment(options: {
       onSignedMessage,
     });
     source = await readAccount(sourceToken);
-    if (!source) return { kind: "failed", message: "Your wUSDC account could not be read." };
+    if (!source)
+      return {
+        kind: "failed",
+        message: `Your ${input.asset.wrappedSymbol} account could not be read.`,
+      };
   }
   const [destination, mintAccount] = await Promise.all([
     readAccount(destinationToken),
     readAccount(mint),
   ]);
   if (!destination) {
-    return { kind: "failed", message: "The recipient's wUSDC account does not exist onchain." };
+    return {
+      kind: "failed",
+      message: `The recipient's ${input.asset.wrappedSymbol} account does not exist onchain.`,
+    };
   }
-  if (!mintAccount) return { kind: "failed", message: "The wUSDC mint could not be read." };
+  if (!mintAccount)
+    return { kind: "failed", message: `The ${input.asset.wrappedSymbol} mint could not be read.` };
 
   onProgress("Preparing the proofs in this tab…");
   const plan = await options.worker().transferPlan(
@@ -256,7 +271,7 @@ async function disclose(
       category: input.category,
       subject: input.paymentId,
       amount: input.amount.toString(),
-      currency: "USDC",
+      currency: input.asset.symbol,
       memo: input.memo,
       gross: null,
       tax: null,

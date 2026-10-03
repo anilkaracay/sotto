@@ -29,6 +29,7 @@ Files that grow during the build (append only, never rewrite history):
 
 **Parallel sessions** (founder, 2026-10-02; ENGINEERING-RULES.md, Git workflow 5 and 6): each working session works in its own git worktree under `../sotto-worktrees/<branch>`, never switches the shared working copy's branch (it stays on `main`) or another session's worktree, and runs CI only from a worktree of the branch under test.
 - `QUESTIONS.md`: open questions for the founder.
+- `DEMO-RUNBOOK.md`: how to show the seeded demo organization (step 4.3): Elif's demo key in Phantom in a separate Chrome profile.
 
 ## Glossary
 

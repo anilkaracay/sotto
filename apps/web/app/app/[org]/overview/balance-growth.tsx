@@ -6,7 +6,6 @@
 // a day), then reads the owner's snapshots, verifies them against the owner's manifests (I-9), opens
 // them with the viewing key and adds the public deposits and withdrawals of chain_activity
 // (lib/balance-history.ts). Every figure goes through Amount, so the privacy screen blurs it (F-15).
-import { formatTokenAmount } from "@sotto/sdk/confidential/public";
 import { Card } from "@sotto/ui";
 import { useEffect, useState } from "react";
 import {
@@ -31,9 +30,8 @@ import { useConfidential } from "../../_components/confidential/context.tsx";
 import { useKeySession } from "../../_components/key-session.tsx";
 import { MonthBars } from "../../_components/month-bars.tsx";
 import styles from "./overview.module.css";
-
-const DECIMALS = 6;
-const formatWusdc = (base: bigint) => `${formatTokenAmount(base, DECIMALS)} wUSDC`;
+import { formatWrapped } from "../../../../lib/asset-words.ts";
+import { useAssetWords } from "../../_components/asset.tsx";
 
 export type GrowthState =
   | { kind: "locked" }
@@ -60,7 +58,8 @@ export function BalanceGrowth({
   userId: string;
   ownerKey: OwnerViewerKey | null;
 }) {
-  const { orgId, wallet, data, vault, connected } = useConfidential();
+  const { orgId, wallet, data, vault, connected, network } = useConfidential();
+  const currency = network.asset.symbol;
   const { session, viewing } = useKeySession();
   const balance = data.confidential.kind === "decrypted" ? data.confidential : null;
   const unlocked = viewing?.wallet === wallet && balance !== null && vault.unlocked !== null;
@@ -95,6 +94,7 @@ export function BalanceGrowth({
         try {
           saved = await saveDailySnapshot({
             orgId,
+            currency,
             owner: ownerKey,
             available: balance.available,
             pending: balance.pending,
@@ -171,6 +171,7 @@ export function BalanceGrowth({
     ownerKey,
     connected,
     orgId,
+    currency,
     wallet,
     userId,
     session,
@@ -193,11 +194,13 @@ export function BalanceGrowthView({
   note: string | null;
   onRetry: () => void;
 }) {
+  const asset = useAssetWords();
+  const formatWusdc = (base: bigint) => formatWrapped(base, asset);
   return (
     <Card tone="dark" className={styles.wide} data-testid="balance-growth">
       <div className={styles.darkHead}>
         <h3>Balance growth</h3>
-        <span className={styles.darkChip}>Confidential, wUSDC</span>
+        <span className={styles.darkChip}>Confidential, {asset.wrappedSymbol}</span>
       </div>
       {state.kind === "locked" ? (
         <p className={styles.darkEmpty} data-testid="growth-locked">

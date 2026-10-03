@@ -33,7 +33,7 @@ export default async function PayrollPage({ params }: { params: Promise<{ org: s
       if (error instanceof ApiError && error.status === 404) return null;
       throw error;
     }),
-    loadNetworkView(),
+    loadNetworkView({ orgId }),
   ]);
   return (
     <AppShell me={me} network={network} nav={ownerNav(orgId, "payroll")}>

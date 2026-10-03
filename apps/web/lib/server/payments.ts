@@ -29,6 +29,7 @@ import { and, asc, desc, eq, gt, inArray, isNotNull, ne } from "drizzle-orm";
 import { z } from "zod";
 import { payability } from "../recipient.ts";
 import type { ServerCluster } from "./cluster.ts";
+import { orgAssetId, orgWrappedMint } from "./assets.ts";
 import { ApiError, apiErrors } from "./errors.ts";
 import { log } from "./log.ts";
 import { requireMoneyAccess } from "./orgs.ts";
@@ -36,6 +37,7 @@ import { readinessFromChain, recipientErrors } from "./recipients.ts";
 import { readViewerKey } from "./viewer-keys.ts";
 import { recentScreening, screeningProvider, screenWallet } from "./screening.ts";
 import type { Session } from "./session.ts";
+import { ASSET_WORDS } from "@sotto/sdk/cluster/assets";
 
 /** A proof program check older than this does not count (the job runs every 5 minutes). */
 export const PROOF_PROGRAM_MAX_AGE_MS = 15 * 60 * 1000;
@@ -421,7 +423,9 @@ export async function authorizePayment(
     throw paymentErrors.status(payment.status);
   }
   const cluster = chain.cluster;
-  if (!cluster?.wrappedUsdcMint) throw paymentErrors.confidentialUnavailable();
+  // The organization's asset (step 4.3, D-29).
+  const mint = await orgWrappedMint(db, cluster, orgId);
+  if (!cluster || !mint) throw paymentErrors.confidentialUnavailable();
 
   // I-7: never send again a transfer that landed; the job settles it.
   if (payment.status === "failed_clean" && (await landedTransfers(db, chain.rpc, payment.id))) {
@@ -433,13 +437,16 @@ export async function authorizePayment(
   }
 
   // The recipient's account, read from chain right before the payment (step 1.8 choice 6).
-  const readiness = await readinessFromChain(chain.rpc, cluster, row.wallet);
+  const readiness = await readinessFromChain(chain.rpc, mint, row.wallet);
   if (readiness === null) throw paymentErrors.readinessUnavailable();
   await db
     .update(recipients)
     .set({ readiness, readinessCheckedAt: now })
     .where(eq(recipients.id, payment.recipientId));
-  if (readiness !== "ready") throw paymentErrors.recipientNotReady(payability(readiness).reason);
+  if (readiness !== "ready") {
+    const asset = ASSET_WORDS[await orgAssetId(db, orgId)];
+    throw paymentErrors.recipientNotReady(payability(readiness, asset).reason);
+  }
 
   // D-10, AC-06.2: a clear result within 24 hours, or a new screening now; a hit blocks.
   let screening = await recentScreening(db, orgId, row.wallet, now);

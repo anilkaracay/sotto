@@ -4,12 +4,9 @@
 // and the tax withheld when the payroll CSV gave them (`gross,tax`). The months and totals are sums
 // of those records. Only a record of category payroll reads as a payslip; every other category reads
 // as a payment received, without gross or tax (founder, 2026-09-30; 13 A49).
-import { formatTokenAmount } from "@sotto/sdk/confidential/public";
 import type { DisclosurePayloadV1 } from "@sotto/sdk/disclosure";
 import { monthLabel } from "./books.ts";
 import type { PayView } from "./server/pay.ts";
-
-const DECIMALS = 6;
 
 export type Payslip = {
   id: string;
@@ -88,8 +85,6 @@ export function readersWords(orgName: string, readers: readonly string[]): strin
     ? `You and ${last} can read this`
     : `You, ${names.join(", ")} and ${last} can read this`;
 }
-
-export const formatUsdc = (base: bigint) => `${formatTokenAmount(base, DECIMALS)} USDC`;
 
 /**
  * The organizations whose pay the page groups: this page's first, then every other active one that

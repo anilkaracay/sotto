@@ -32,7 +32,7 @@ export default async function SetupPage({ params }: { params: Promise<{ org: str
       if (error instanceof ApiError && error.status === 404) return null;
       throw error;
     }),
-    loadNetworkView(),
+    loadNetworkView({ orgId }),
   ]);
   const recorded = network.available
     ? await readOrgTokenAccount(db, session.userId, orgId, network.cluster)

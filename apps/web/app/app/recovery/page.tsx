@@ -2,7 +2,8 @@
 // standard Solana command line tools when a wallet refuses to sign the key message in Sotto, or Sotto is
 // not available. Public, no session. The commands were run on localnet with spl-token-cli 5.6.1 and
 // solana-keygen 4.2.2 (VERIFICATION-LOG steps 1.5 and 1.6); scripts/recover-balance.ts prints the exact
-// amount (founder, 2026-09-27), and scripts/build-token-wrap.sh --cli builds the unwrap tool.
+// amount (founder, 2026-09-27), and scripts/build-token-wrap.sh --cli builds the unwrap tool. Step 4.3
+// (D-29): where the devnet registry lists devUSD, the guide names its mints for a devUSD account.
 import { getClusterConfig } from "@sotto/sdk/cluster";
 import { Card, Chip } from "@sotto/ui";
 import type { Metadata } from "next";
@@ -25,6 +26,7 @@ export default function RecoveryPage() {
   const devnet = getClusterConfig("devnet");
   const mint = devnet.available && devnet.wrappedUsdcMint ? devnet.wrappedUsdcMint : "<wUSDC mint>";
   const usdc = devnet.available && devnet.usdcMint ? devnet.usdcMint : "<USDC mint>";
+  const devusd = devnet.available ? devnet.assets.find((asset) => asset.id === "devusd") : null;
   return (
     <div className={styles.page}>
       <header className={styles.top}>
@@ -130,6 +132,14 @@ export default function RecoveryPage() {
             The wUSDC token account is the one the script printed. Unwrap amounts are in base units:
             1 wUSDC is 1000000.
           </p>
+          {devusd ? (
+            <p data-testid="recovery-devusd">
+              An organization that holds devUSD, Sotto&apos;s devnet test dollar with no value, uses
+              the same steps with its mints: wrapped devUSD{" "}
+              <code className="mono">{devusd.wrappedMint}</code> in place of the wUSDC mint, and
+              devUSD <code className="mono">{devusd.baseMint}</code> in place of USDC.
+            </p>
+          ) : null}
           <p className={styles.back}>
             <Link href="/app">Back to Sotto</Link>
           </p>

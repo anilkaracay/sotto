@@ -40,7 +40,8 @@ import {
 import { reportComparison } from "../../../../../lib/client/wallet-report.ts";
 import { withWalletWords } from "../../../../../lib/client/wallet-words.ts";
 import type { CryptoWorkerClient } from "../../../../../lib/crypto-worker/client.ts";
-import { formatUsdc, type PayrollLinePrivate } from "../../../../../lib/payroll.ts";
+import { formatAmount, type AssetWords } from "../../../../../lib/asset-words.ts";
+import type { PayrollLinePrivate } from "../../../../../lib/payroll.ts";
 import type { PayrollLineView } from "../../../../../lib/server/payroll.ts";
 import type { Connected } from "../../../_components/confidential/context.tsx";
 
@@ -127,6 +128,8 @@ export async function discloseLines(options: {
   owner: ViewerKeyRecord;
   connected: Connected;
   worker: () => CryptoWorkerClient;
+  /** The organization's asset: the records' currency (step 4.3). */
+  asset: AssetWords;
 }): Promise<DisclosureResult> {
   const none = { saved: 0, ownerOnly: 0, grantCopiesMissing: false };
   if (options.lines.length === 0) return { ...none, problem: null };
@@ -147,7 +150,7 @@ export async function discloseLines(options: {
       category: "payroll",
       subject: line.line.id,
       amount: line.secret.amount,
-      currency: "USDC",
+      currency: options.asset.symbol,
       memo: line.secret.memo,
       gross: line.secret.gross,
       tax: line.secret.tax,
@@ -218,6 +221,7 @@ export async function runPayroll(options: {
   lines: readonly RunLine[];
   owner: ViewerKeyRecord;
   wrappedMint: string;
+  asset: AssetWords;
   connected: Connected;
   worker: () => CryptoWorkerClient;
   onProgress: (text: string) => void;
@@ -253,7 +257,12 @@ export async function runPayroll(options: {
   // 06 section 7 step 1: a pending balance is applied once, from fresh state.
   onProgress("Reading your account from the network…");
   let source = await readAccount(sourceToken);
-  if (!source) return stop("Your wUSDC account does not exist yet.", 0, "no_source_account");
+  if (!source)
+    return stop(
+      `Your ${options.asset.wrappedSymbol} account does not exist yet.`,
+      0,
+      "no_source_account",
+    );
   let decrypted = await options.worker().decrypt(source);
   if (decrypted.pending > 0n) {
     onProgress("Applying your pending balance first…");
@@ -266,13 +275,18 @@ export async function runPayroll(options: {
       onSignedMessage,
     });
     source = await readAccount(sourceToken);
-    if (!source) return stop("Your wUSDC account could not be read.", 0, "no_source_account");
+    if (!source)
+      return stop(
+        `Your ${options.asset.wrappedSymbol} account could not be read.`,
+        0,
+        "no_source_account",
+      );
     decrypted = await options.worker().decrypt(source);
   }
   const total = options.lines.reduce((sum, line) => sum + BigInt(line.secret.amount), 0n);
   if (decrypted.available < total) {
     return stop(
-      `Your available confidential balance is below what these lines pay (${formatUsdc(total)}). Nothing was sent.`,
+      `Your available confidential balance is below what these lines pay (${formatAmount(total, options.asset)}). Nothing was sent.`,
       0,
       "insufficient_balance",
     );
@@ -399,6 +413,7 @@ export async function runPayroll(options: {
               transferSignature: paid.transferSignature,
             })),
             owner: options.owner,
+            asset: options.asset,
             connected,
             worker: options.worker,
           });

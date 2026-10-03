@@ -4,6 +4,7 @@
 // account, the balances, funding and the viewing key, in one confidential session. Step 3.5 (13 A36,
 // A37): the balances first, then the three steps in the order they are done (unlock the keys, set up
 // the account, fund it), numbered, the next one marked, and what the account is made of beside them.
+// Step 4.3: a devUSD organization on devnet also gets the devUSD faucet, where the faucet runs.
 import type { ReactNode } from "react";
 import styles from "../../_components/confidential/cards.module.css";
 import { BalancesSection } from "../../_components/confidential/balances-section.tsx";
@@ -25,6 +26,7 @@ import {
   WrappedMintCard,
   type RecordedAccount,
 } from "../../_components/confidential/account-cards.tsx";
+import { FaucetCard } from "../../_components/confidential/faucet-card.tsx";
 
 /** Which of the three steps comes next: the keys, the account, or funding once both are done. */
 export function nextStep(unlocked: boolean, accountKind: string): 1 | 2 | 3 {
@@ -85,6 +87,7 @@ export function SetupPanel({
         <BalancesSection />
         <Steps recorded={recorded} />
         <div className={styles.column}>
+          {network.cluster === "devnet" && network.asset.devnetTestAsset ? <FaucetCard /> : null}
           <WalletCard />
           <ViewingKeyCard viewerKey={viewerKey} className={styles.viewingCard} />
           <WrappedMintCard />

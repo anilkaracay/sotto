@@ -13,10 +13,12 @@ import { createHash } from "node:crypto";
 import { insertAccessEvent, orgs, proofRecords, users, type Database } from "@sotto/db";
 import { attestationAddress, decodeBusinessAttestation } from "@sotto/sdk/attestation";
 import { getConfigDecoder, getProofRecordDecoder } from "@sotto/sdk/proofs";
+import type { AssetId } from "@sotto/sdk/cluster/assets";
 import type { SolanaRpc } from "@sotto/sdk/tx";
 import { address, getBase64Encoder, isAddress, type Address } from "@solana/kit";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
+import { orgAsset } from "./assets.ts";
 import type { ServerCluster } from "./cluster.ts";
 import { ApiError, apiErrors } from "./errors.ts";
 import { requireMoneyAccess } from "./orgs.ts";
@@ -25,6 +27,8 @@ import type { Session } from "./session.ts";
 /** A proof record as the chain holds it; amounts and slots as decimal strings, times as ISO. */
 export type RecordView = {
   address: string;
+  /** The asset whose sotto_proofs deployment wrote the record (step 4.3): its symbol names the amount. */
+  asset: AssetId;
   owner: string;
   tokenAccount: string;
   threshold: string;
@@ -68,25 +72,41 @@ async function accountBytes(
   };
 }
 
-/** The record at `target` if it is one of this cluster's program, else null. */
+/** Each asset's sotto_proofs deployment (step 4.3: one per asset, since a config holds one mint). */
+function deployments(cluster: ServerCluster) {
+  return cluster.assets.flatMap((asset) =>
+    asset.sottoProofs ? [{ asset: asset.id, mint: asset.wrappedMint, ...asset.sottoProofs }] : [],
+  );
+}
+
+/** The record at `target` if one of this cluster's deployments owns it, with that deployment. */
 async function readRecord(
   rpc: SolanaRpc,
-  program: Address,
+  programs: ReturnType<typeof deployments>,
   target: Address,
-): Promise<RecordView | "missing" | "not_a_record"> {
+): Promise<
+  | { record: RecordView; deployment: ReturnType<typeof deployments>[number] }
+  | "missing"
+  | "not_a_record"
+> {
   const account = await accountBytes(rpc, target);
   if (!account) return "missing";
-  if (account.owner !== program || account.data.length !== RECORD_LEN) return "not_a_record";
+  const deployment = programs.find((entry) => entry.program === account.owner);
+  if (!deployment || account.data.length !== RECORD_LEN) return "not_a_record";
   const record = getProofRecordDecoder().decode(account.data);
-  if (record.version !== 1) return "not_a_record";
+  if (record.version !== 1 || record.mint !== deployment.mint) return "not_a_record";
   return {
-    address: target,
-    owner: record.owner,
-    tokenAccount: record.tokenAccount,
-    threshold: record.threshold.toString(),
-    slot: record.slot.toString(),
-    writtenAt: new Date(Number(record.unixTime) * 1000).toISOString(),
-    expiry: new Date(Number(record.expiry) * 1000).toISOString(),
+    deployment,
+    record: {
+      address: target,
+      asset: deployment.asset,
+      owner: record.owner,
+      tokenAccount: record.tokenAccount,
+      threshold: record.threshold.toString(),
+      slot: record.slot.toString(),
+      writtenAt: new Date(Number(record.unixTime) * 1000).toISOString(),
+      expiry: new Date(Number(record.expiry) * 1000).toISOString(),
+    },
   };
 }
 
@@ -136,13 +156,14 @@ export async function readPublicProof(
   raw: string,
   options: { label?: (recordAddress: string) => Promise<string | null>; now?: Date } = {},
 ): Promise<PublicProofView> {
-  if (!cluster?.sottoProofs) return { state: "unavailable" };
+  const programs = cluster ? deployments(cluster) : [];
+  if (!cluster || programs.length === 0) return { state: "unavailable" };
   if (!isAddress(raw)) return { state: "not_found", address: raw };
   const target = address(raw);
   const now = options.now ?? new Date();
-  const record = await readRecord(rpc, cluster.sottoProofs.program, target);
-  if (record === "not_a_record") return { state: "not_a_record", address: raw };
-  if (record === "missing") {
+  const found = await readRecord(rpc, programs, target);
+  if (found === "not_a_record") return { state: "not_a_record", address: raw };
+  if (found === "missing") {
     const history = await rpc
       .getSignaturesForAddress(target, { limit: 1, commitment: "confirmed" })
       .send();
@@ -150,8 +171,9 @@ export async function readPublicProof(
       ? { state: "closed", address: raw }
       : { state: "not_found", address: raw };
   }
+  const { record, deployment } = found;
   const [paused, organization, counterpartyLabel] = await Promise.all([
-    readPaused(rpc, cluster.sottoProofs.program, cluster.sottoProofs.config),
+    readPaused(rpc, deployment.program, deployment.config),
     cluster.sas
       ? readOrganization(rpc, cluster.sas, address(record.owner), now)
       : Promise.resolve({ status: "not_verified" as const }),
@@ -168,13 +190,19 @@ export async function readPublicProof(
   };
 }
 
-/** Whether the cluster's sotto_proofs config is paused (14 section 7), for the owner's proofs page. */
+/**
+ * Whether the organization's asset's sotto_proofs config is paused (14 section 7), for the owner's
+ * proofs page; false where the asset has no deployment (the page then shows proofs unavailable).
+ */
 export async function proofsPaused(
   rpc: SolanaRpc,
+  db: Database,
   cluster: ServerCluster | null,
+  orgId: string,
 ): Promise<boolean> {
-  if (!cluster?.sottoProofs) return false;
-  return readPaused(rpc, cluster.sottoProofs.program, cluster.sottoProofs.config);
+  const proofs = cluster ? (await orgAsset(db, cluster, orgId))?.sottoProofs : null;
+  if (!proofs) return false;
+  return readPaused(rpc, proofs.program, proofs.config);
 }
 
 /** The counterparty label the owner gave a record, if Sotto stored it (display only). */
@@ -252,15 +280,17 @@ export async function recordProof(
 ): Promise<{ proof: IssuedProof }> {
   await requireMoneyAccess(db, session, orgId, ["owner"]);
   if (!session) throw apiErrors.unauthenticated();
-  if (!cluster?.sottoProofs || !cluster.wrappedUsdcMint) throw proofErrors.unavailable();
+  // The organization's asset and its own sotto_proofs deployment (step 4.3, D-29).
+  const asset = cluster ? await orgAsset(db, cluster, orgId) : null;
+  if (!cluster || !asset?.sottoProofs) throw proofErrors.unavailable();
   const target = address(input.recordAddress);
   const account = await accountBytes(rpc, target);
   if (!account) throw proofErrors.recordNotFound();
-  if (account.owner !== cluster.sottoProofs.program || account.data.length !== RECORD_LEN) {
+  if (account.owner !== asset.sottoProofs.program || account.data.length !== RECORD_LEN) {
     throw proofErrors.notYours();
   }
   const record = getProofRecordDecoder().decode(account.data);
-  if (record.owner !== (await ownerWallet(db, orgId)) || record.mint !== cluster.wrappedUsdcMint) {
+  if (record.owner !== (await ownerWallet(db, orgId)) || record.mint !== asset.wrappedMint) {
     throw proofErrors.notYours();
   }
   const salt = new Uint8Array(Buffer.from(input.counterpartySalt, "base64"));

@@ -3,7 +3,10 @@
 // e2e server's log) or devnet (pnpm acceptance:devnet, scripts/acceptance-devnet.ts: the running
 // devnet app and worker, fresh keypairs that wallet A funded before the run, a run admin seeded
 // through ADMIN_WALLETS, the services' logs). Devnet amounts are small, so wallet A's devnet USDC
-// lasts several runs, and each amount and memo of the scenario stays a unique string for I-2.
+// lasts several runs, and each amount and memo of the scenario stays a unique string for I-2. Step 4.3:
+// SOTTO_ACCEPTANCE_ASSET (or the spec) picks the organization's asset, USDC by default or devUSD; on
+// localnet a devUSD owner's devUSD comes from the ledger's devUSD mint authority, as the devnet faucet's
+// would. Devnet runs devUSD once it exists there (D-29).
 import { readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,8 +14,13 @@ import { parseEnv } from "node:util";
 import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
 import { createDb } from "@sotto/db";
 import { getClusterConfig, GENESIS_HASHES, type AvailableClusterConfig } from "@sotto/sdk/cluster";
+import { ASSET_WORDS, type AssetId } from "@sotto/sdk/cluster/assets";
 import { associatedTokenAccount } from "@sotto/sdk/confidential/public";
-import { fundLocalnetWallet, readLocalnetBootstrap } from "@sotto/sdk/testing/localnet";
+import {
+  fundLocalnetWallet,
+  mintLocalnetDevusd,
+  readLocalnetBootstrap,
+} from "@sotto/sdk/testing/localnet";
 import { createRetryingRpc, type SolanaRpc } from "@sotto/sdk/tx";
 import type { Address } from "@solana/kit";
 import { sql } from "drizzle-orm";
@@ -22,8 +30,11 @@ type Line = { net: bigint; tax: bigint };
 
 export type AcceptanceTarget = {
   name: "localnet" | "devnet";
+  /** The organization's asset and its words (step 4.3). */
+  asset: { id: AssetId } & (typeof ASSET_WORDS)[AssetId];
   rpc: SolanaRpc;
-  wrappedUsdcMint: Address;
+  /** The asset's wrapped mint, the owner's and the recipients' accounts' mint. */
+  wrappedMint: Address;
   sasCredential: Address;
   sottoProofsProgram: Address;
   legalName: string;
@@ -38,8 +49,8 @@ export type AcceptanceTarget = {
   /** The proof of funds threshold as typed, and the statement the public page shows for it. */
   proofDollars: string;
   statement: string;
-  /** A wallet's public USDC account, funded here on localnet (SOL and whole USDC). */
-  prepare(wallet: Address, sol: bigint, usdc: bigint): Promise<Address>;
+  /** A wallet's public account of the asset, funded here on localnet (SOL and whole units). */
+  prepare(wallet: Address, sol: bigint, whole: bigint): Promise<Address>;
   /** The server side log lines written since the run began. */
   serverLog(): Promise<string>;
   /**
@@ -82,40 +93,56 @@ async function readFrom(paths: readonly string[], offsets: readonly number[]): P
   return texts.join("\n");
 }
 
-async function localnet(): Promise<AcceptanceTarget> {
+async function localnet(assetId: AssetId): Promise<AcceptanceTarget> {
   const bootstrap = readLocalnetBootstrap();
   const rpc = createRetryingRpc(bootstrap.rpcUrl);
-  if (!bootstrap.sottoProofs) throw new Error("sotto_proofs is not deployed on this ledger");
+  const devusd = assetId === "devusd" ? bootstrap.devusd : null;
+  if (assetId === "devusd" && !devusd) throw new Error("this ledger has no devUSD");
+  const proofs = devusd ? devusd.sottoProofs : bootstrap.sottoProofs;
+  if (!proofs) throw new Error("sotto_proofs is not deployed on this ledger");
   const log = join(ROOT, ".localnet/e2e-server.log");
+  // Each asset's run has its own wallets: a wallet owns at most one organization.
+  const tag = devusd ? "acceptance-devusd" : "acceptance";
   return {
     name: "localnet",
+    asset: { id: assetId, ...ASSET_WORDS[assetId] },
     rpc,
-    wrappedUsdcMint: bootstrap.wrappedUsdcMint,
+    wrappedMint: devusd ? devusd.wrappedMint : bootstrap.wrappedUsdcMint,
     sasCredential: bootstrap.sas.credential,
-    sottoProofsProgram: bootstrap.sottoProofs.programId,
-    legalName: "Acceptance Test Ltd",
-    owner: seededKeypair("sotto-e2e-acceptance-owner/v1").keypair,
-    people: [1, 2, 3].map((n) => seededKeypair(`sotto-e2e-acceptance-person-${n}/v1`).keypair),
-    accountant: seededKeypair("sotto-e2e-acceptance-accountant/v1").keypair,
+    sottoProofsProgram: proofs.programId,
+    legalName: devusd ? "Acceptance Dollar Test Ltd" : "Acceptance Test Ltd",
+    owner: seededKeypair(`sotto-e2e-${tag}-owner/v1`).keypair,
+    people: [1, 2, 3].map((n) => seededKeypair(`sotto-e2e-${tag}-person-${n}/v1`).keypair),
+    accountant: seededKeypair(`sotto-e2e-${tag}-accountant/v1`).keypair,
     admin: e2eKeypair(),
     funding: 40n,
     lines: LOCALNET_LINES,
     proofDollars: "10",
-    statement: "Balance is at least $10",
-    prepare: async (wallet, sol, usdc) =>
-      (await fundLocalnetWallet(rpc, bootstrap, wallet, { sol, usdc })).usdc,
+    statement: devusd ? "Balance is at least 10 devUSD" : "Balance is at least $10",
+    prepare: async (wallet, sol, whole) => {
+      // SOL for the fees and the asset: USDC from the local USDC mint, devUSD from devUSD's.
+      const funded = await fundLocalnetWallet(rpc, bootstrap, wallet, {
+        sol,
+        usdc: devusd ? 0n : whole,
+      });
+      return devusd ? mintLocalnetDevusd(rpc, bootstrap, wallet, whole) : funded.usdc;
+    },
     // The e2e server writes its log for this run only (tests/e2e/server.ts).
     serverLog: () => readFile(log, "utf8"),
     databaseText: async () => null,
-    shotsDir: (stamp) => join(ROOT, ".demo-shots", stamp),
+    shotsDir: (stamp) => join(ROOT, ".demo-shots", devusd ? `${stamp}-devusd` : stamp),
     stepShotsOnly: false,
-    visual: true,
+    // The approved screens' baselines show USDC; the devUSD run checks its words instead.
+    visual: !devusd,
     slow: 1,
     record: async () => {},
   };
 }
 
-async function devnet(): Promise<AcceptanceTarget> {
+async function devnet(assetId: AssetId): Promise<AcceptanceTarget> {
+  if (assetId !== "usdc") {
+    throw new Error("devUSD runs on devnet once its mints and sotto_proofs exist there (D-29)");
+  }
   const dir = process.env.SOTTO_DEVNET_ACCEPTANCE_DIR;
   if (!dir) throw new Error("SOTTO_DEVNET_ACCEPTANCE_DIR is not set: run pnpm acceptance:devnet");
   const cluster = getClusterConfig("devnet") as AvailableClusterConfig;
@@ -144,8 +171,9 @@ async function devnet(): Promise<AcceptanceTarget> {
   const offsets = await sizes(logs);
   return {
     name: "devnet",
+    asset: { id: "usdc", ...ASSET_WORDS.usdc },
     rpc,
-    wrappedUsdcMint: cluster.wrappedUsdcMint,
+    wrappedMint: cluster.wrappedUsdcMint,
     sasCredential: cluster.sasCredential,
     sottoProofsProgram: cluster.sottoProofs.program,
     legalName: run.legalName,
@@ -193,6 +221,8 @@ async function devnet(): Promise<AcceptanceTarget> {
   };
 }
 
-export function acceptanceTarget(): Promise<AcceptanceTarget> {
-  return process.env.SOTTO_ACCEPTANCE_TARGET === "devnet" ? devnet() : localnet();
+export function acceptanceTarget(
+  assetId: AssetId = process.env.SOTTO_ACCEPTANCE_ASSET === "devusd" ? "devusd" : "usdc",
+): Promise<AcceptanceTarget> {
+  return process.env.SOTTO_ACCEPTANCE_TARGET === "devnet" ? devnet(assetId) : localnet(assetId);
 }

@@ -17,9 +17,11 @@ export default async function OnboardingPage() {
   if (!session) redirect("/app/sign-in");
   const db = getDb();
   const [me, org] = await Promise.all([loadMe(db, session), ownedOrg(db, session.userId)]);
+  const network = await loadNetworkView(org ? { orgId: org.id } : {});
   return (
-    <AppShell me={me} network={await loadNetworkView()}>
+    <AppShell me={me} network={network}>
       <OrgOnboarding
+        assets={network.available ? network.assets : []}
         org={
           org
             ? {

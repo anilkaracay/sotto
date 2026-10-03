@@ -7,6 +7,8 @@
 // to its pay page (step 1.10); Sotto admins also get the business review console. Signing out ends the tab's keys.
 // Step 2.9: the design's privacy screen toggle (F-15) and, on every /app page, the proof program
 // banner (F-19) or, when the network cannot be reached, "Network unreachable, retrying" (D-14).
+// Step 4.3: the organization's asset words for every page under it. The devnet test badge is not in
+// the top bar (founder, 2026-10-03): it sits next to balances and amounts.
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
@@ -15,6 +17,7 @@ import { shortWallet } from "../../../lib/format.ts";
 import { orgStatusLabel } from "../../../lib/org.ts";
 import type { MeView } from "../../../lib/server/me.ts";
 import type { NetworkView } from "../../../lib/server/network-view.ts";
+import { AssetWordsProvider } from "./asset.tsx";
 import { HealthBanner } from "./health-banner.tsx";
 import { useKeySession } from "./key-session.tsx";
 import { Chip, SottoMarkInk, TopNav, type TopNavItem } from "@sotto/ui";
@@ -237,7 +240,7 @@ export function AppShell({
       </header>
       <main className={styles.body}>
         <HealthBanner network={network} />
-        {children}
+        <AssetWordsProvider asset={network.asset}>{children}</AssetWordsProvider>
       </main>
     </div>
   );

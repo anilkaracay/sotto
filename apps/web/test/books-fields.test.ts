@@ -139,12 +139,16 @@ describe("accountant books in the tab (F-11)", () => {
   it("AC-11.4 exports exactly the rows the ledger shows as CSV, quoted where needed", () => {
     const rows = ledgerRows(payloads, payments);
     const shown = filterRows(rows, { month: null, chip: "needs_receipt", search: "" });
-    expect(ledgerCsv(shown).split("\r\n")).toEqual([
+    expect(ledgerCsv(shown, "USDC").split("\r\n")).toEqual([
       "date,counterparty,memo,category,amount,currency,type,reconciliation,transaction",
       '2026-09-28,"Stratus ""Cloud"", Inc.",,Software,4120,USDC,Payment,Needs receipt,sig-3',
       '2026-07-15,Hollis Supply Co.,"Invoice 1042, housings",Supplier,38000,USDC,Payment,Needs receipt,sig-1',
       "",
     ]);
-    expect(ledgerCsv([]).split("\r\n")).toHaveLength(2);
+    expect(ledgerCsv([], "USDC").split("\r\n")).toHaveLength(2);
+    // Step 4.3: a devUSD organization's export names devUSD, and never USDC.
+    const devusd = ledgerCsv(shown, "devUSD");
+    expect(devusd.split("\r\n")[1]).toContain(",4120,devUSD,");
+    expect(devusd).not.toContain("USDC");
   });
 });

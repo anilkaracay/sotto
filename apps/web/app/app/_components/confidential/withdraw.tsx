@@ -36,16 +36,17 @@ import { useConfidential } from "./context.tsx";
 import extra from "./confidential.module.css";
 import { Amount, WithAmounts } from "../privacy.tsx";
 
-const ROLE_WORDS: Record<TransferTransactionRole, string> = {
+const roleWords = (wrappedSymbol: string): Record<TransferTransactionRole, string> => ({
   proof: "verifying a proof",
-  transfer: "withdrawing to your public wUSDC",
+  transfer: `withdrawing to your public ${wrappedSymbol}`,
   cleanup: "closing the proof accounts",
-};
+});
 
 type Outcome = { busy: string | null; problem: string | null; done: string | null };
 
 export function WithdrawForm({ onDone }: { onDone?: () => void }) {
   const { network, connected, vault, refresh, data, blocked } = useConfidential();
+  const { symbol, wrappedSymbol } = network.asset;
   const id = useId();
   const [amount, setAmount] = useState("");
   const [unwrap, setUnwrap] = useState(true);
@@ -60,13 +61,13 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
   /** Token Wrap `Unwrap` of public wUSDC to USDC (06 section 6, step 3), signed by the wallet. */
   async function sendUnwrap(amount: bigint): Promise<string> {
     const signer = connected?.signer;
-    if (!signer || !connected || !network.usdcMint || !network.usdcTokenProgram) {
-      throw new Error("This network has no USDC mint configured.");
+    if (!signer || !connected || !network.baseMint || !network.baseTokenProgram) {
+      throw new Error(`This network has no ${symbol} mint configured.`);
     }
     const built = await unwrapInstructions({
       owner: createNoopSigner(signer.address),
-      unwrappedMint: address(network.usdcMint),
-      unwrappedTokenProgram: address(network.usdcTokenProgram),
+      unwrappedMint: address(network.baseMint),
+      unwrappedTokenProgram: address(network.baseTokenProgram),
       programAddress: address(network.tokenWrapProgram),
       amount,
     });
@@ -84,13 +85,17 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
   async function unwrapPublic(amount: bigint) {
     const release = vault.hold();
     const shown = formatTokenAmount(amount, decimals);
-    setOutcome({ busy: "Unwrapping the wUSDC to USDC…", problem: null, done: null });
+    setOutcome({
+      busy: `Unwrapping the ${wrappedSymbol} to ${symbol}…`,
+      problem: null,
+      done: null,
+    });
     try {
       const signature = await sendUnwrap(amount);
       setOutcome({
         busy: null,
         problem: null,
-        done: `Unwrapped ${shown} wUSDC to ${shown} USDC (transaction ${signature.slice(0, 12)}…).`,
+        done: `Unwrapped ${shown} ${wrappedSymbol} to ${shown} ${symbol} (transaction ${signature.slice(0, 12)}…).`,
       });
     } catch (error) {
       setOutcome({
@@ -125,7 +130,7 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
       const token = await associatedTokenAccount(signer.address, address(network.wrappedMint));
       const read = async () => {
         const account = await fetchEncodedAccount(rpc, token, { commitment: "confirmed" });
-        if (!account.exists) throw new Error("Your wUSDC account does not exist yet.");
+        if (!account.exists) throw new Error(`Your ${wrappedSymbol} account does not exist yet.`);
         return new Uint8Array(account.data);
       };
       say("Reading your account from the network…");
@@ -166,7 +171,8 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
             transactions: plan.transactions,
             cosign,
             onSignedMessage,
-            onStep: (index, role) => say(`Step ${index + 1} of ${total}: ${ROLE_WORDS[role]}…`),
+            onStep: (index, role) =>
+              say(`Step ${index + 1} of ${total}: ${roleWords(wrappedSymbol)[role]}…`),
           })
         ).transferSignature;
       } catch (error) {
@@ -183,7 +189,7 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
           () => true,
           () => false,
         );
-        const where = `Step ${error.index + 1} of ${total} (${ROLE_WORDS[error.role]}) failed: ${describeTransactionError(error.cause, connected.info.name)}`;
+        const where = `Step ${error.index + 1} of ${total} (${roleWords(wrappedSymbol)[error.role]}) failed: ${describeTransactionError(error.cause, connected.info.name)}`;
         const rent = cleaned
           ? " Sotto closed the proof accounts this attempt created, so no rent is left behind."
           : " Sotto could not close every proof account this attempt created; they keep their rent until they are closed.";
@@ -203,15 +209,15 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
         note = ` ${where}${rent}`;
       }
       const shown = `${formatTokenAmount(base, decimals)}`;
-      let done = `Withdrew ${shown} wUSDC to your public balance (transaction ${withdrawSignature.slice(0, 12)}…).`;
+      let done = `Withdrew ${shown} ${wrappedSymbol} to your public balance (transaction ${withdrawSignature.slice(0, 12)}…).`;
       if (unwrap) {
-        say("Unwrapping the wUSDC to USDC…");
+        say(`Unwrapping the ${wrappedSymbol} to ${symbol}…`);
         try {
           const unwrapped = await sendUnwrap(base);
-          done = `Withdrew ${shown} wUSDC and unwrapped it to ${shown} USDC (transactions ${withdrawSignature.slice(0, 12)}… and ${unwrapped.slice(0, 12)}…).`;
+          done = `Withdrew ${shown} ${wrappedSymbol} and unwrapped it to ${shown} ${symbol} (transactions ${withdrawSignature.slice(0, 12)}… and ${unwrapped.slice(0, 12)}…).`;
         } catch (error) {
           // The withdraw landed: say so, and why the unwrap did not.
-          done = `${done} The unwrap to USDC did not complete: ${describeTransactionError(error, connected.info.name)} The ${shown} wUSDC is in your public balance; unwrap it below.`;
+          done = `${done} The unwrap to ${symbol} did not complete: ${describeTransactionError(error, connected.info.name)} The ${shown} ${wrappedSymbol} is in your public balance; unwrap it below.`;
         }
       }
       setOutcome({ busy: null, problem: null, done: `${done}${note}` });
@@ -240,18 +246,22 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
   return (
     <form onSubmit={submit} noValidate data-testid="withdraw-form">
       <p className={styles.lead}>
-        Moves wUSDC from your confidential available balance to your public balance, then, if you
-        choose, unwraps it to USDC. The withdrawn amount is public onchain; your remaining balance
-        stays confidential.
+        Moves {wrappedSymbol} from your confidential available balance to your public balance, then,
+        if you choose, unwraps it to {symbol}. The withdrawn amount is public onchain; your
+        remaining balance stays confidential.
         {available !== null ? (
           <>
             {" "}
-            Available now: <Amount>{formatTokenAmount(available, decimals)} wUSDC</Amount>.
+            Available now:{" "}
+            <Amount>
+              {formatTokenAmount(available, decimals)} {wrappedSymbol}
+            </Amount>
+            .
           </>
         ) : null}
       </p>
       <label className={extra.field} htmlFor={`${id}-amount`}>
-        Amount of wUSDC
+        Amount of {wrappedSymbol}
         <span className={extra.amountRow}>
           <input
             id={`${id}-amount`}
@@ -277,20 +287,22 @@ export function WithdrawForm({ onDone }: { onDone?: () => void }) {
           checked={unwrap}
           onChange={(event) => setUnwrap(event.target.checked)}
         />
-        Also unwrap it to USDC
+        Also unwrap it to {symbol}
       </label>
       <div className={styles.actions}>
         <Button type="submit" variant="blue" disabled={!canRun || outcome.busy !== null}>
           {outcome.busy ? "Withdrawing…" : unwrap ? "Withdraw and unwrap" : "Withdraw"}
         </Button>
-        {publicWusdc > 0n && network.usdcMint ? (
+        {publicWusdc > 0n && network.baseMint ? (
           <Button
             variant="line"
             disabled={!connected?.signer || outcome.busy !== null}
             onClick={() => void unwrapPublic(publicWusdc)}
           >
             Unwrap{" "}
-            <Amount inControl>{formatTokenAmount(publicWusdc, decimals)} public wUSDC</Amount>
+            <Amount inControl>
+              {formatTokenAmount(publicWusdc, decimals)} public {wrappedSymbol}
+            </Amount>
           </Button>
         ) : null}
       </div>

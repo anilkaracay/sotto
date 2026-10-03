@@ -63,6 +63,7 @@ async function owner() {
 function save(record: Awaited<ReturnType<typeof owner>>["record"], sign = vi.fn()) {
   return saveDailySnapshot({
     orgId: ORG,
+    currency: "USDC",
     owner: record,
     available: AVAILABLE,
     pending: PENDING,

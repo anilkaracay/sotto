@@ -1,11 +1,18 @@
 // The trust page's statements (step 3.3, built in step 3.4; 13 L6, L7, L36), each from the document
-// that decides it, so the page and its tests say only what holds. No server only imports.
+// that decides it, so the page and its tests say only what holds. No server only imports. Step 4.3
+// (D-29): once the devnet registry lists devUSD, the page adds what holds for it (Sotto issues it, its
+// mint authority can mint more, it has no freeze authority and no value) and its addresses.
 import { getClusterConfig } from "@sotto/sdk/cluster";
+import type { AssetConfig } from "@sotto/sdk/cluster/assets";
 
 const devnet = getClusterConfig("devnet");
 if (!devnet.available || !devnet.sottoProofs || !devnet.wrappedUsdcMint || !devnet.usdcMint) {
   throw new Error("the devnet cluster config lacks the trust page's addresses");
 }
+
+/** devUSD where the devnet registry lists it (D-29), else null. */
+export const DEVUSD: AssetConfig | null =
+  devnet.assets.find((asset) => asset.id === "devusd") ?? null;
 
 /** The onchain facts in the page's table, from the devnet cluster config (D-01; step 2.7). */
 export const ONCHAIN = {
@@ -21,7 +28,35 @@ export const ONCHAIN = {
 
 export type TrustCard = { id: string; title: string; body: string[] };
 
-export const TRUST_CARDS: TrustCard[] = [
+/** The cards, with devUSD's where the registry has it (D-29). */
+export function trustCards(devusd: AssetConfig | null): TrustCard[] {
+  const cards = BASE_CARDS.map((card) =>
+    devusd && card.id === "custody"
+      ? {
+          ...card,
+          body: [
+            "Your organization's confidential account (wUSDC, or wdevUSD for devUSD) belongs to your owner wallet. Sotto has no signing authority over any token account: every payment, deposit and withdrawal is a transaction your wallet signs.",
+            "The USDC issuer's freeze controls still apply to USDC.",
+          ],
+        }
+      : card,
+  );
+  if (!devusd) return cards;
+  return [
+    ...cards,
+    {
+      // D-29.
+      id: "devusd",
+      title: "devUSD, the devnet test dollar",
+      body: [
+        "devUSD is a test token Sotto issues on devnet for trying Sotto with realistic amounts. It has no value and is not a US dollar.",
+        "Its mint authority is a key on Sotto's server, which can mint more: the faucet gives each wallet at most 10,000 devUSD a day. It has no freeze authority. It is wrapped one to one by the same Token Wrap test deployment as USDC.",
+      ],
+    },
+  ];
+}
+
+const BASE_CARDS: TrustCard[] = [
   {
     // D-02, ENGINEERING-RULES.md rules 4 and 5; 13 L7.
     id: "custody",
@@ -84,3 +119,5 @@ export const NEVER_HELD = [
   "Anyone's viewing key",
   "A plaintext amount or memo of yours",
 ];
+
+export const TRUST_CARDS: TrustCard[] = trustCards(DEVUSD);

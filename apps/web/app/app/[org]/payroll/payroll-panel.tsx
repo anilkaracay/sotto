@@ -16,7 +16,6 @@ import { formatDate, shortWallet } from "../../../../lib/format.ts";
 import {
   CSV_COLUMNS,
   CSV_EXTENSION_COLUMNS,
-  formatUsdc,
   linePrivateOf,
   parsePayrollCsv,
   runStatusChip,
@@ -34,6 +33,8 @@ import {
 } from "../../_components/confidential/context.tsx";
 import styles from "./payroll.module.css";
 import { Amount } from "../../_components/privacy.tsx";
+import { formatAmount } from "../../../../lib/asset-words.ts";
+import { AssetBadge, useAssetWords } from "../../_components/asset.tsx";
 
 export type ViewerKeyRecord = {
   userId: string;
@@ -102,6 +103,8 @@ function NewRunCard({
   ownerKey: ViewerKeyRecord | null;
 }) {
   const { wallet, orgId, vault } = useConfidential();
+  const asset = useAssetWords();
+  const formatUsdc = (base: bigint) => formatAmount(base, asset);
   const router = useRouter();
   const id = useId();
   const [period, setPeriod] = useState(currentPeriod);
@@ -129,7 +132,7 @@ function NewRunCard({
       setDraft(null);
       return;
     }
-    const parsed = parsePayrollCsv(await file.text(), recipients);
+    const parsed = parsePayrollCsv(await file.text(), recipients, asset);
     // One idempotency key per run and per line the owner means to create (I-7).
     setDraft({
       parsed,
@@ -186,11 +189,11 @@ function NewRunCard({
       <p className={styles.lead}>
         Upload a CSV with the header <code className="mono">{CSV_COLUMNS.join(",")}</code>, and
         optionally <code className="mono">{CSV_EXTENSION_COLUMNS.join(",")}</code> for payslips.
-        Amounts are in USDC with at most 6 decimals. Each row must be a recipient you already added.
-        Save the file as CSV UTF-8; a value with a comma, a double quote or a line break goes in
-        double quotes, with each double quote in it written as two. The file is read in this tab;
-        the amounts and memos are encrypted in this tab to your viewing key, and Sotto stores them
-        sealed.
+        Amounts are in {asset.symbol} with at most 6 decimals. Each row must be a recipient you
+        already added. Save the file as CSV UTF-8; a value with a comma, a double quote or a line
+        break goes in double quotes, with each double quote in it written as two. The file is read
+        in this tab; the amounts and memos are encrypted in this tab to your viewing key, and Sotto
+        stores them sealed. <AssetBadge />
       </p>
       {!ownerKey ? (
         <p className={styles.warning} role="status">

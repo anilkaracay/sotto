@@ -90,18 +90,19 @@ function Outcome({ state, network }: { state: SendState; network: string }) {
 
 export function WrappedMintCard() {
   const { network, connected, ready } = useConfidential();
+  const { symbol, wrappedSymbol } = network.asset;
   const router = useRouter();
   const sending = useSend();
   const check = network.check;
   const missing = check.status === "wrapped_missing";
 
   async function create() {
-    if (!connected || !network.usdcMint) return;
+    if (!connected || !network.baseMint) return;
     const owner = connected.account.address;
-    const usdcMint = network.usdcMint;
+    const usdcMint = network.baseMint;
     await sending.send({
-      busy: "Creating the wrapped USDC mint…",
-      done: "The wrapped USDC mint exists now.",
+      busy: `Creating the wrapped ${symbol} mint…`,
+      done: `The wrapped ${symbol} mint exists now.`,
       build: async () =>
         (
           await createWrappedMintInstructions({
@@ -119,7 +120,7 @@ export function WrappedMintCard() {
   return (
     <Card data-testid="wrapped-mint-card">
       <div className={styles.head}>
-        <h2 className={styles.cardTitle}>Wrapped USDC</h2>
+        <h2 className={styles.cardTitle}>Wrapped {symbol}</h2>
         <Chip
           tone={ready ? "green" : missing ? "amber" : "neutral"}
           data-testid="wrapped-mint-status"
@@ -130,12 +131,12 @@ export function WrappedMintCard() {
       {ready ? (
         <>
           <p className={styles.lead}>
-            Confidential balances hold wUSDC: USDC wrapped one to one by Token Wrap. On{" "}
-            {network.label} the wrapping program is Sotto&apos;s test deployment, so wUSDC here is
-            labeled {network.wrapLabel}.
+            Confidential balances hold {wrappedSymbol}: {symbol} wrapped one to one by Token Wrap.
+            On {network.label} the wrapping program is Sotto&apos;s test deployment, so{" "}
+            {wrappedSymbol} here is labeled {network.wrapLabel}.
           </p>
           <dl className={styles.details}>
-            <dt>wUSDC mint</dt>
+            <dt>{wrappedSymbol} mint</dt>
             <dd className="mono" data-testid="wrapped-mint">
               {network.wrappedMint}
             </dd>
@@ -145,16 +146,17 @@ export function WrappedMintCard() {
                 {network.wrapLabel}
               </span>
             </dd>
-            <dt>USDC mint</dt>
-            <dd className="mono">{network.usdcMint}</dd>
+            <dt>{symbol} mint</dt>
+            <dd className="mono">{network.baseMint}</dd>
           </dl>
         </>
       ) : missing ? (
         <>
           <p className={styles.lead}>
-            The wrapped USDC mint does not exist on {network.label} yet, so confidential balances
-            are off. Anyone can create it: your wallet pays the rent of its accounts, and it will be
-            the mint at <span className="mono">{check.address}</span>, labeled {network.wrapLabel}.
+            The wrapped {symbol} mint does not exist on {network.label} yet, so confidential
+            balances are off. Anyone can create it: your wallet pays the rent of its accounts, and
+            it will be the mint at <span className="mono">{check.address}</span>, labeled{" "}
+            {network.wrapLabel}.
           </p>
           <div className={styles.actions}>
             <Button
@@ -162,13 +164,14 @@ export function WrappedMintCard() {
               disabled={!sending.canSend || sending.busy !== null}
               onClick={create}
             >
-              Create the wrapped USDC mint
+              Create the wrapped {symbol} mint
             </Button>
           </div>
         </>
       ) : (
         <p className={styles.lead}>
-          Confidential balances are off on this network until Sotto can check the wrapped USDC mint.
+          Confidential balances are off on this network until Sotto can check the wrapped {symbol}{" "}
+          mint.
         </p>
       )}
       <Outcome state={sending} network={network.cluster} />
@@ -178,6 +181,7 @@ export function WrappedMintCard() {
 
 export function AccountCard({ recorded }: { recorded: RecordedAccount | null }) {
   const { wallet, orgId, network, ready, vault, connected, data, blocked } = useConfidential();
+  const { wrappedSymbol } = network.asset;
   const router = useRouter();
   const sending = useSend();
   const [problem, setProblem] = useState<string | null>(null);
@@ -304,8 +308,8 @@ export function AccountCard({ recorded }: { recorded: RecordedAccount | null }) 
       ) : !vault.unlocked ? (
         <p className={styles.lead}>
           {configuredPublicly
-            ? "Your wUSDC account is configured for confidential balances. Unlock your keys to check it with your key and to fund it."
-            : "Unlock your keys to set up your confidential wUSDC account."}
+            ? `Your ${wrappedSymbol} account is configured for confidential balances. Unlock your keys to check it with your key and to fund it.`
+            : `Unlock your keys to set up your confidential ${wrappedSymbol} account.`}
         </p>
       ) : !status ? (
         <p className={styles.lead}>Reading your account from the network…</p>
@@ -315,8 +319,8 @@ export function AccountCard({ recorded }: { recorded: RecordedAccount | null }) 
             Setting up asks your wallet to sign the key message once more, to check that it gives
             the same signature every time, and then to approve one transaction that{" "}
             {status.created
-              ? "configures your wUSDC account"
-              : "creates your wUSDC account and configures it"}{" "}
+              ? `configures your ${wrappedSymbol} account`
+              : `creates your ${wrappedSymbol} account and configures it`}{" "}
             for confidential balances with your encryption key. Your wallet pays the network fee
             {status.created ? "" : " and the account's rent"}.
           </p>
@@ -334,7 +338,7 @@ export function AccountCard({ recorded }: { recorded: RecordedAccount | null }) 
       ) : status.kind === "configured" ? (
         <>
           <dl className={styles.details}>
-            <dt>wUSDC account</dt>
+            <dt>{wrappedSymbol} account</dt>
             <dd className="mono" data-testid="token-account">
               {data.wusdcAccount}
             </dd>
@@ -361,19 +365,19 @@ export function AccountCard({ recorded }: { recorded: RecordedAccount | null }) 
         </>
       ) : status.kind === "other_key" ? (
         <p className={styles.problem} role="alert">
-          Your wUSDC account is configured with another encryption key, so the keys this wallet
-          derives in Sotto cannot read it: it was set up with another key scheme or by another app.
-          Sotto will not change it.
+          Your {wrappedSymbol} account is configured with another encryption key, so the keys this
+          wallet derives in Sotto cannot read it: it was set up with another key scheme or by
+          another app. Sotto will not change it.
         </p>
       ) : status.kind === "not_approved" ? (
         <p className={styles.problem} role="alert">
-          Your wUSDC account waits for approval by the mint, so it cannot hold confidential balances
-          yet.
+          Your {wrappedSymbol} account waits for approval by the mint, so it cannot hold
+          confidential balances yet.
         </p>
       ) : (
         <p className={styles.problem} role="alert">
-          The account at your wUSDC address is not a wUSDC account of this wallet, so Sotto cannot
-          use it.
+          The account at your {wrappedSymbol} address is not a {wrappedSymbol} account of this
+          wallet, so Sotto cannot use it.
         </p>
       )}
       {problem ? (
@@ -388,6 +392,7 @@ export function AccountCard({ recorded }: { recorded: RecordedAccount | null }) 
 
 export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) {
   const { wallet, network, ready, vault, data, connected, blocked } = useConfidential();
+  const { symbol, wrappedSymbol } = network.asset;
   const sending = useSend();
   const [text, setText] = useState("");
   const [split, setSplit] = useState<string | null>(null);
@@ -414,7 +419,7 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
         const account = await fetchEncodedAccount(browserRpc(), address(token), {
           commitment: "confirmed",
         });
-        if (!account.exists) throw new StepError("Your wUSDC account does not exist.");
+        if (!account.exists) throw new StepError(`Your ${wrappedSymbol} account does not exist.`);
         return [await vault.worker().applyInstruction(token, new Uint8Array(account.data))];
       },
     });
@@ -426,12 +431,12 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
    * applies after a fresh read.
    */
   async function fund() {
-    if (amount === null || !connected || !network.usdcMint || !network.usdcTokenProgram) return;
+    if (amount === null || !connected || !network.baseMint || !network.baseTokenProgram) return;
     setSplit(null);
     const plan = await wrapAndDepositTransactions({
       owner,
-      unwrappedMint: address(network.usdcMint),
-      unwrappedTokenProgram: address(network.usdcTokenProgram),
+      unwrappedMint: address(network.baseMint),
+      unwrappedTokenProgram: address(network.baseTokenProgram),
       programAddress: address(network.tokenWrapProgram),
       amount,
       decimals,
@@ -452,20 +457,20 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
     for (const [index, instructions] of plan.transactions.entries()) {
       const what =
         parts === 1
-          ? `wrapping ${shown} USDC and depositing it`
+          ? `wrapping ${shown} ${symbol} and depositing it`
           : index === 0
-            ? `wrapping ${shown} USDC (transaction 1 of 2)`
-            : `depositing ${shown} wUSDC (transaction 2 of 2)`;
+            ? `wrapping ${shown} ${symbol} (transaction 1 of 2)`
+            : `depositing ${shown} ${wrappedSymbol} (transaction 2 of 2)`;
       const landed = await sending.send({
         busy: `Step 1 of 2: ${what}…`,
-        done: `Step 1 of 2 done: ${shown} wUSDC is in your pending balance.`,
+        done: `Step 1 of 2 done: ${shown} ${wrappedSymbol} is in your pending balance.`,
         build: async () => instructions,
       });
       if (!landed) return;
     }
     await applyStep(
-      `Step 2 of 2: applying ${shown} wUSDC to your available balance…`,
-      `Funded ${shown} wUSDC in two steps: wrapped and deposited, then applied to your available balance.`,
+      `Step 2 of 2: applying ${shown} ${wrappedSymbol} to your available balance…`,
+      `Funded ${shown} ${wrappedSymbol} in two steps: wrapped and deposited, then applied to your available balance.`,
     );
   }
 
@@ -475,8 +480,8 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
     const mint = network.wrappedMint;
     const all = publicWusdc;
     void sending.send({
-      busy: "Depositing your public wUSDC…",
-      done: `Deposited ${formatTokenAmount(all, decimals)} public wUSDC into your pending balance.`,
+      busy: `Depositing your public ${wrappedSymbol}…`,
+      done: `Deposited ${formatTokenAmount(all, decimals)} public ${wrappedSymbol} into your pending balance.`,
       build: async () => [
         confidentialDepositInstruction({
           token: address(token),
@@ -526,12 +531,13 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
       ) : (
         <>
           <p className={styles.lead}>
-            Funding takes two signatures. Step 1 wraps USDC into wUSDC ({network.wrapLabel}) and
-            deposits it into your confidential pending balance; step 2 applies it to your available
-            balance. The funded amount is public onchain; your confidential balance is not.
+            Funding takes two signatures. Step 1 wraps {symbol} into {wrappedSymbol} (
+            {network.wrapLabel}) and deposits it into your confidential pending balance; step 2
+            applies it to your available balance. The funded amount is public onchain; your
+            confidential balance is not.
           </p>
           <label className={extra.field} htmlFor={inputId}>
-            Amount of USDC
+            Amount of {symbol}
             <span className={extra.amountRow}>
               <input
                 id={inputId}
@@ -567,7 +573,9 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
             {publicWusdc ? (
               <Button variant="line" disabled={!idle} onClick={depositPublic}>
                 Deposit{" "}
-                <Amount inControl>{formatTokenAmount(publicWusdc, decimals)} public wUSDC</Amount>
+                <Amount inControl>
+                  {formatTokenAmount(publicWusdc, decimals)} public {wrappedSymbol}
+                </Amount>
               </Button>
             ) : null}
             {decrypted && decrypted.pending > 0n && !promptNeeded ? (
@@ -578,7 +586,7 @@ export function FundingCard({ recorded }: { recorded: RecordedAccount | null }) 
           </div>
           {amount !== null && publicUsdc !== null && amount > publicUsdc ? (
             <div className={extra.note} data-testid="amount-limits">
-              {shown} is more than your public USDC.
+              {shown} is more than your public {symbol}.
             </div>
           ) : null}
           {!vault.unlocked ? (

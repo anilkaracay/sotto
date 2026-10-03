@@ -58,6 +58,19 @@ export type LocalnetBootstrap = {
   /** sotto_proofs under a throwaway program keypair, the payer its upgrade authority (step 2.7); null
    * when it was not built before the bootstrap. */
   sottoProofs: { programId: Address; config: Address; programKeypair: string } | null;
+  /**
+   * devUSD (step 4.3): its own mint under its own mint authority, its wrapped mint and escrow, and its
+   * own sotto_proofs deployment. Absent from a record written before step 4.3.
+   */
+  devusd?: {
+    mint: Address;
+    decimals: number;
+    mintAuthority: Address;
+    mintAuthorityKeypair: string;
+    wrappedMint: Address;
+    escrow: Address;
+    sottoProofs: { programId: Address; config: Address; programKeypair: string } | null;
+  };
 };
 
 const DEFAULT_BOOTSTRAP = new URL("../../../../.localnet/bootstrap.json", import.meta.url);
@@ -66,9 +79,52 @@ export function readLocalnetBootstrap(path: string | URL = DEFAULT_BOOTSTRAP): L
   return JSON.parse(readFileSync(path, "utf8")) as LocalnetBootstrap;
 }
 
-async function mintAuthority(bootstrap: LocalnetBootstrap): Promise<KeyPairSigner> {
-  const bytes = JSON.parse(readFileSync(bootstrap.payer.keypair, "utf8")) as number[];
+async function keypairSigner(path: string): Promise<KeyPairSigner> {
+  const bytes = JSON.parse(readFileSync(path, "utf8")) as number[];
   return createKeyPairSignerFromBytes(new Uint8Array(bytes));
+}
+
+async function mintAuthority(bootstrap: LocalnetBootstrap): Promise<KeyPairSigner> {
+  return keypairSigner(bootstrap.payer.keypair);
+}
+
+/**
+ * Mints `whole` devUSD into the wallet's associated devUSD account, creating it (step 4.3), signed by
+ * the ledger's devUSD mint authority as the devnet faucet's would be. Localnet only.
+ */
+export async function mintLocalnetDevusd(
+  rpc: SolanaRpc,
+  bootstrap: LocalnetBootstrap,
+  wallet: Address,
+  whole: bigint,
+): Promise<Address> {
+  const devusd = bootstrap.devusd;
+  if (!devusd) throw new Error("this ledger's bootstrap made no devUSD (before step 4.3)");
+  const account = await associatedTokenAccount(wallet, devusd.mint, TOKEN_PROGRAM_ADDRESS);
+  const authority = await keypairSigner(devusd.mintAuthorityKeypair);
+  await sendWithKeypairSigners({
+    rpc,
+    feePayer: authority,
+    instructions: [
+      getCreateAssociatedTokenIdempotentInstruction({
+        payer: authority,
+        ata: account,
+        owner: wallet,
+        mint: devusd.mint,
+      }),
+      ...(whole > 0n
+        ? [
+            getMintToInstruction({
+              mint: devusd.mint,
+              token: account,
+              mintAuthority: authority,
+              amount: whole * 10n ** BigInt(devusd.decimals),
+            }),
+          ]
+        : []),
+    ],
+  });
+  return account;
 }
 
 /** Airdrops SOL to a wallet and mints it whole USDC into its associated USDC account. */

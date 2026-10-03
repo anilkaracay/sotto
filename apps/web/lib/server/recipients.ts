@@ -10,10 +10,11 @@ import {
   recipientReadiness,
 } from "@sotto/sdk/confidential/public";
 import type { SolanaRpc } from "@sotto/sdk/tx";
-import { address } from "@solana/kit";
+import { address, type Address } from "@solana/kit";
 import { and, eq, isNull } from "drizzle-orm";
 import type { Readiness, RecipientCreate, RecipientUpdate } from "../recipient.ts";
 import type { ServerCluster } from "./cluster.ts";
+import { orgWrappedMint } from "./assets.ts";
 import { ApiError } from "./errors.ts";
 import { requireMoneyAccess } from "./orgs.ts";
 import type { Session } from "./session.ts";
@@ -75,13 +76,15 @@ function view(row: Row, inviteRows: InviteRow[], now = new Date()): RecipientVie
   };
 }
 
-/** AC-07.2 from chain; null when the cluster has no wUSDC mint or the chain cannot be read. */
+/**
+ * AC-07.2 from chain, for the organization's wrapped mint (step 4.3: orgWrappedMint); null when there
+ * is no such mint or the chain cannot be read.
+ */
 export async function readinessFromChain(
   rpc: SolanaRpc,
-  cluster: ServerCluster | null,
+  mint: Address | null,
   wallet: string,
 ): Promise<Readiness | null> {
-  const mint = cluster?.wrappedUsdcMint;
   if (!mint) return null;
   try {
     const owner = address(wallet);
@@ -134,7 +137,11 @@ export async function createRecipient(
   chain: { rpc: SolanaRpc; cluster: ServerCluster | null },
 ): Promise<RecipientView> {
   await requireMoneyAccess(db, session, orgId, ["owner"]);
-  const readiness = await readinessFromChain(chain.rpc, chain.cluster, input.wallet);
+  const readiness = await readinessFromChain(
+    chain.rpc,
+    await orgWrappedMint(db, chain.cluster, orgId),
+    input.wallet,
+  );
   const inserted = await db
     .insert(recipients)
     .values({
@@ -212,7 +219,11 @@ export async function checkRecipientReadiness(
 ): Promise<RecipientView> {
   await requireMoneyAccess(db, session, orgId, ["owner"]);
   const current = await ownedRecipient(db, orgId, recipientId);
-  const readiness = await readinessFromChain(chain.rpc, chain.cluster, current.wallet);
+  const readiness = await readinessFromChain(
+    chain.rpc,
+    await orgWrappedMint(db, chain.cluster, orgId),
+    current.wallet,
+  );
   if (readiness === null) {
     throw new ApiError(
       503,

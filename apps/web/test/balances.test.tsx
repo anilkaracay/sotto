@@ -14,6 +14,7 @@ import {
   type BalanceCardsProps,
 } from "../app/app/_components/confidential/balances.tsx";
 import { expectAmountsInside, privacyOn } from "./helpers/amounts.ts";
+import { assetWords } from "../lib/asset-words.ts";
 
 const OWNER = address("EQMW3o1DVsB72Ej1RRRmHLW1XaEpbjLKrMHUbS8cRLZC");
 const MINT = address("AhJfP4JJBaHWRtXRiaScZUC7SMm4RqUPSb3g9H5RT8Bd");
@@ -46,6 +47,7 @@ function render(props: Partial<BalanceCardsProps>) {
   return renderToStaticMarkup(
     privacyOn(
       <BalanceCards
+        asset={assetWords("usdc")}
         decimals={6}
         wrapLabel="devnet test wrap"
         loading={false}

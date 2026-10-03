@@ -1,9 +1,11 @@
 // Creates the sotto_proofs config on devnet for the devnet wrapped USDC mint (14 sections 4 and 5,
 // step 2.7). It checks that the endpoint serves devnet, that the program's ProgramData account names
 // wallet A as its upgrade authority (the only signer initialize_config accepts, D-16) and that no
-// config exists yet, simulates, sends, and reads the config back. Wallet A signs and pays.
+// config exists yet, simulates, sends, and reads the config back. Wallet A signs and pays. Step 4.3
+// (D-29): with --program and --wrapped-mint it creates the config of the second deployment, for the
+// wrapped devUSD mint, before the registry names them.
 //
-// Usage: node scripts/init-proofs-config.ts --cluster devnet
+// Usage: node scripts/init-proofs-config.ts --cluster devnet [--program <id> --wrapped-mint <mint>]
 import { parseArgs } from "node:util";
 import { getClusterConfig, type AvailableClusterConfig } from "@sotto/sdk/cluster";
 import {
@@ -12,15 +14,30 @@ import {
   programDataAddress,
 } from "@sotto/sdk/proofs";
 import { sendWithKeypairSigners, simulateInstructions } from "@sotto/sdk/tx";
-import { fetchEncodedAccount, getAddressDecoder } from "@solana/kit";
+import { address, fetchEncodedAccount, getAddressDecoder } from "@solana/kit";
+import { findConfigPda } from "@sotto/sdk/proofs";
 import { devnetRpc, sottoKeypair } from "./devnet.ts";
 
-const { values } = parseArgs({ options: { cluster: { type: "string" } } });
+const { values } = parseArgs({
+  options: {
+    cluster: { type: "string" },
+    program: { type: "string" },
+    "wrapped-mint": { type: "string" },
+  },
+});
 if (values.cluster !== "devnet") throw new Error("only --cluster devnet is supported");
 const cluster = getClusterConfig("devnet") as AvailableClusterConfig;
 if (!cluster.sottoProofs || !cluster.wrappedUsdcMint)
   throw new Error("no devnet sotto_proofs config");
-const { program, config } = cluster.sottoProofs;
+const second = values.program !== undefined || values["wrapped-mint"] !== undefined;
+if (second && (!values.program || !values["wrapped-mint"])) {
+  throw new Error("--program and --wrapped-mint go together");
+}
+const program = second ? address(values.program as string) : cluster.sottoProofs.program;
+const config = second
+  ? (await findConfigPda({ programAddress: program }))[0]
+  : cluster.sottoProofs.config;
+const wrappedMint = second ? address(values["wrapped-mint"] as string) : cluster.wrappedUsdcMint;
 
 const rpc = await devnetRpc();
 const authority = await sottoKeypair("wallet-a.json");
@@ -39,7 +56,7 @@ if ((await fetchEncodedAccount(rpc, config, { commitment: "finalized" })).exists
 }
 
 const instruction = await getInitializeConfigInstructionAsync(
-  { authority, programData, payer: authority, wrappedUsdcMint: cluster.wrappedUsdcMint },
+  { authority, programData, payer: authority, wrappedUsdcMint: wrappedMint },
   { programAddress: program },
 );
 if (instruction.accounts[0]?.address !== config) throw new Error("unexpected config address");

@@ -1,5 +1,6 @@
 // Organization fields and status (F-02, 08 sections 2 and 3), shared by the API and the onboarding
 // form so both validate the same way. No server only imports.
+import { ASSET_IDS, type AssetId } from "@sotto/sdk/cluster/assets";
 import { z } from "zod";
 import { isCountryCode } from "./countries.ts";
 
@@ -39,8 +40,14 @@ export const orgFieldsSchema = z
   })
   .strict();
 
-/** POST /api/orgs: the display name is optional and defaults to the legal name. */
-export const orgCreateSchema = orgFieldsSchema.partial({ displayName: true });
+/**
+ * POST /api/orgs: the display name is optional and defaults to the legal name. The asset (step 4.3,
+ * D-29) is chosen here once, USDC when not given; the server takes only an asset of its network's
+ * registry, and no request changes it later (orgUpdateSchema has no asset).
+ */
+export const orgCreateSchema = orgFieldsSchema
+  .extend({ asset: z.enum(ASSET_IDS as [AssetId, ...AssetId[]], "Choose a currency").optional() })
+  .partial({ displayName: true });
 
 /** PATCH /api/orgs/:id: any subset, at least one field. */
 export const orgUpdateSchema = orgFieldsSchema

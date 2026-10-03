@@ -6,7 +6,7 @@
 // one. A confidential transfer's amount is sealed; the panel says so and never shows a number for it.
 import { Button, Card, Chip, Table, Td, Th } from "@sotto/ui";
 import { useEffect, useState } from "react";
-import { chainAmountWords, CHAIN_TYPE_WORDS } from "../../../../lib/chain-activity.ts";
+import { chainAmountWords, chainTypeWords } from "../../../../lib/chain-activity.ts";
 import { callApi } from "../../../../lib/client/api.ts";
 import { WithAmounts } from "../../_components/privacy.tsx";
 import { formatDate, shortWallet } from "../../../../lib/format.ts";
@@ -14,6 +14,7 @@ import type { ChainActivityView } from "../../../../lib/server/chain-activity.ts
 import cards from "../../_components/confidential/cards.module.css";
 import { useConfidential } from "../../_components/confidential/context.tsx";
 import styles from "./overview.module.css";
+import { useAssetWords } from "../../_components/asset.tsx";
 
 const SHOWN = 8;
 
@@ -109,6 +110,7 @@ export function ChainView({
   wrapLabel: string;
   onRetry: () => void;
 }) {
+  const asset = useAssetWords();
   return (
     <Card className={styles.wide} data-testid="chain-panel">
       <div className={styles.head}>
@@ -121,7 +123,7 @@ export function ChainView({
       </div>
       <p className={cards.lead}>
         Anyone can see this on Solana: the accounts, the times and what happened. Confidential
-        amounts stay sealed. wUSDC figures are the {wrapLabel}.
+        amounts stay sealed. {asset.wrappedSymbol} figures are the {wrapLabel}.
       </p>
       {state.kind === "error" ? (
         <div className={cards.problem} role="alert" data-testid="chain-error">
@@ -154,7 +156,7 @@ export function ChainView({
           </thead>
           <tbody>
             {state.activity.map((row) => {
-              const amount = chainAmountWords(row);
+              const amount = chainAmountWords(row, asset);
               return (
                 <tr key={row.id} data-testid="chain-row" data-type={row.type}>
                   <Td>
@@ -165,7 +167,7 @@ export function ChainView({
                   <Td>
                     <span className={styles.chainKind}>
                       <KindIcon type={row.type} />
-                      {CHAIN_TYPE_WORDS[row.type]}
+                      {chainTypeWords(row.type, asset)}
                     </span>
                   </Td>
                   <Td>

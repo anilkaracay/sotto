@@ -9,22 +9,31 @@ import {
   recipientFieldsSchema,
   recipientUpdateSchema,
 } from "../lib/recipient.ts";
+import { assetWords } from "../lib/asset-words.ts";
+
+const USDC_WORDS = assetWords("usdc");
 
 const WALLET = "EQMW3o1DVsB72Ej1RRRmHLW1XaEpbjLKrMHUbS8cRLZC";
 
 describe("recipient readiness wording", () => {
   it("AC-07.4 says that recipients who are not ready cannot be paid confidentially, and why", () => {
-    expect(payability("ready")).toEqual({
+    expect(payability("ready", USDC_WORDS)).toEqual({
       payable: true,
       reason: "Ready: the wUSDC account at this wallet can receive confidential payments.",
     });
-    expect(payability("no_account")).toMatchObject({ payable: false });
-    expect(payability("no_account").reason).toContain("there is no wUSDC account at this wallet");
-    expect(payability("not_configured")).toMatchObject({ payable: false });
-    expect(payability("not_configured").reason).toContain("not set up for confidential payments");
+    expect(payability("no_account", USDC_WORDS)).toMatchObject({ payable: false });
+    expect(payability("no_account", USDC_WORDS).reason).toContain(
+      "there is no wUSDC account at this wallet",
+    );
+    expect(payability("not_configured", USDC_WORDS)).toMatchObject({ payable: false });
+    expect(payability("not_configured", USDC_WORDS).reason).toContain(
+      "not set up for confidential payments",
+    );
     for (const readiness of ["no_account", "not_configured"] as const) {
-      expect(payability(readiness).reason).toMatch(/^Cannot be paid confidentially yet: /);
-      expect(payability(readiness).reason).toContain("invite link");
+      expect(payability(readiness, USDC_WORDS).reason).toMatch(
+        /^Cannot be paid confidentially yet: /,
+      );
+      expect(payability(readiness, USDC_WORDS).reason).toContain("invite link");
     }
     expect(READINESS_LABEL).toEqual({
       no_account: "No account",

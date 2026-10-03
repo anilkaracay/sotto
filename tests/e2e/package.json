@@ -7,7 +7,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "e2e": "playwright test",
-    "e2e:localnet": "playwright test --config playwright.localnet.config.ts"
+    "e2e:localnet": "playwright test --config playwright.localnet.config.ts",
+    "seed:northwind": "playwright test --config playwright.seed.config.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "catalog:",

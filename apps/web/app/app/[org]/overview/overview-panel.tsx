@@ -104,7 +104,7 @@ function Overview({
         <Drawer
           open={withdrawing}
           title="Withdraw"
-          subtitle={`wUSDC, ${network.wrapLabel}`}
+          subtitle={`${network.asset.wrappedSymbol}, ${network.wrapLabel}`}
           onClose={close}
         >
           <WithdrawForm />

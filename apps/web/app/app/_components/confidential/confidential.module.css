@@ -18,6 +18,12 @@
   gap: 12px;
   margin-bottom: 18px;
 }
+/* The title and, for a devnet test asset, its badge (step 4.3). */
+.balancesTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .sectionTitle {
   font-size: 17px;
   font-weight: 500;

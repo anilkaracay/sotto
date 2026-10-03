@@ -24,7 +24,6 @@ import { shortWallet } from "../../../../../lib/format.ts";
 import {
   blockedReason,
   filledTicks,
-  formatUsdc,
   gaugeTicks,
   lineStatusChip,
   parseLinePrivate,
@@ -50,6 +49,8 @@ import {
   type ViewerKeyRecord,
 } from "./payroll-run.ts";
 import { Amount, WithAmounts } from "../../../_components/privacy.tsx";
+import { formatAmount } from "../../../../../lib/asset-words.ts";
+import { AssetBadge, useAssetWords } from "../../../_components/asset.tsx";
 
 type Progress = { busy: string | null; problem: string | null; done: string | null };
 const IDLE: Progress = { busy: null, problem: null, done: null };
@@ -93,6 +94,8 @@ export function RunView(props: {
   viewerKeys: Record<string, ViewerKeyRecord>;
   ownerKey: ViewerKeyRecord | null;
 }) {
+  const asset = useAssetWords();
+  const formatUsdc = (base: bigint) => formatAmount(base, asset);
   const { orgId, ownerKey, viewerKeys } = props;
   const { wallet, network, connected, vault, blocked } = useConfidential();
   const { session, viewing } = useKeySession();
@@ -197,6 +200,7 @@ export function RunView(props: {
       orgId,
       lines: pending,
       owner: ownerKey,
+      asset: network.asset,
       connected,
       worker: vault.worker,
     });
@@ -248,6 +252,7 @@ export function RunView(props: {
         lines: toPay,
         owner: ownerKey,
         wrappedMint: network.wrappedMint,
+        asset: network.asset,
         connected,
         worker: vault.worker,
         onProgress: (busy) => setProgress({ busy, problem: null, done: null }),
@@ -372,6 +377,7 @@ export function RunView(props: {
               <b className="num" data-testid="run-total-amount">
                 <Amount>{formatUsdc(total)}</Amount>
               </b>
+              <AssetBadge />
               <small>
                 {lines} {lines === 1 ? "line" : "lines"}, by team
               </small>
@@ -531,7 +537,7 @@ export function RunView(props: {
                   line.status !== "settled" && landed.has(line.id) && line.status !== "failed"
                     ? { label: "Settling", tone: "amber" as const }
                     : lineStatusChip(line.status, line.errorCode);
-                const reason = blockedReason(line.errorCode);
+                const reason = blockedReason(line.errorCode, asset);
                 return (
                   <tr
                     key={line.id}

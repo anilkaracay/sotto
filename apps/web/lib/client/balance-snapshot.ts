@@ -10,6 +10,7 @@ import type { CryptoWorkerClient } from "../crypto-worker/client.ts";
 import type { DisclosureItemView } from "../server/disclosures.ts";
 import { ApiCallError, callApi } from "./api.ts";
 import { storeRecords } from "./records.ts";
+import type { AssetSymbol } from "@sotto/sdk/cluster/assets";
 
 export type OwnerViewerKey = {
   userId: string;
@@ -35,6 +36,8 @@ export const snapshotDay = (now: Date) => now.toISOString().slice(0, 10);
 
 export async function saveDailySnapshot(input: {
   orgId: string;
+  /** The organization's asset's symbol, the record's currency (step 4.3). */
+  currency: AssetSymbol;
   owner: OwnerViewerKey;
   available: bigint;
   pending: bigint;
@@ -61,7 +64,7 @@ export async function saveDailySnapshot(input: {
     category: "other",
     subject: day,
     amount: input.available.toString(),
-    currency: "USDC",
+    currency: input.currency,
     memo: null,
     gross: null,
     tax: null,

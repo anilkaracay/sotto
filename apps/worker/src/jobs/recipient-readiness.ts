@@ -3,8 +3,11 @@
 // is read from chain (public fields, no keys) and the readiness stored (no account, not set up for
 // confidential payments, or ready). The cluster comes from the RPC's genesis hash (facts H6); devnet
 // takes its wUSDC mint from the cluster config, a local ledger derives it from LOCALNET_USDC_MINT, and
-// without a mint the job waits and logs. With nothing to check it makes no RPC call.
-import { recipients, type Database } from "@sotto/db";
+// without a mint the job waits and logs. With nothing to check it makes no RPC call. Since step 4.3
+// (D-29) each recipient is read for its organization's asset: devnet's registry, or on a local ledger
+// LOCALNET_USDC_MINT and LOCALNET_DEVUSD_MINT.
+import { orgs, recipients, type Database } from "@sotto/db";
+import type { AssetId } from "@sotto/sdk/cluster/assets";
 import {
   clusterFromGenesisHash,
   getClusterConfig,
@@ -29,58 +32,73 @@ export type RecipientReadinessDeps = {
   db: Database;
   rpc: SolanaRpc;
   localnetUsdcMint: Address | null;
+  /** The local ledger's devUSD mint (step 4.3), when the bootstrap created one. */
+  localnetDevusdMint?: Address | null;
   now?: () => Date;
 };
 
-async function clusterMint(
+/** Each asset's wrapped mint on the RPC's cluster (step 4.3). */
+async function clusterMints(
   rpc: SolanaRpc,
-  localnetUsdcMint: Address | null,
-): Promise<Address | null> {
+  localnet: Partial<Record<AssetId, Address | null>>,
+): Promise<Map<AssetId, Address>> {
+  const mints = new Map<AssetId, Address>();
   const cluster = clusterFromGenesisHash(await rpc.getGenesisHash().send());
-  if (cluster === "mainnet") return null;
+  if (cluster === "mainnet") return mints;
   if (cluster === "devnet") {
     const devnet = getClusterConfig("devnet") as AvailableClusterConfig;
-    return devnet.wrappedUsdcMint;
+    for (const asset of devnet.assets) mints.set(asset.id, asset.wrappedMint);
+    return mints;
   }
-  if (!localnetUsdcMint) return null;
-  const localnet = getClusterConfig("localnet") as AvailableClusterConfig;
-  return wrappedMintAddress(localnetUsdcMint, localnet.programs.tokenWrap);
+  const config = getClusterConfig("localnet") as AvailableClusterConfig;
+  for (const [id, base] of Object.entries(localnet) as [AssetId, Address | null][]) {
+    if (base) mints.set(id, await wrappedMintAddress(base, config.programs.tokenWrap));
+  }
+  return mints;
 }
 
 export function recipientReadinessJob(deps: RecipientReadinessDeps): Job {
-  let mint: Address | null | undefined;
+  let mints: Map<AssetId, Address> | undefined;
   return {
     name: "recipient-readiness",
     intervalMs: RECIPIENT_READINESS_INTERVAL_MS,
     run: async ({ log }) => {
       const rows = await deps.db
-        .select({ id: recipients.id, wallet: recipients.wallet })
+        .select({ id: recipients.id, wallet: recipients.wallet, asset: orgs.asset })
         .from(recipients)
+        .innerJoin(orgs, eq(orgs.id, recipients.orgId))
         .where(ne(recipients.readiness, "ready"))
         .orderBy(sql`${recipients.readinessCheckedAt} asc nulls first`, asc(recipients.id))
         .limit(BATCH);
       if (rows.length === 0) return { checked: 0, ready: 0 };
-      mint ??= await clusterMint(deps.rpc, deps.localnetUsdcMint);
-      if (!mint) {
-        log("recipient_readiness_no_mint", { waiting: rows.length }, "warn");
-        return { checked: 0, ready: 0 };
+      mints ??= await clusterMints(deps.rpc, {
+        usdc: deps.localnetUsdcMint,
+        devusd: deps.localnetDevusdMint ?? null,
+      });
+      const known = mints;
+      const readable = rows.filter((row) => known.has(row.asset));
+      if (readable.length < rows.length) {
+        log("recipient_readiness_no_mint", { waiting: rows.length - readable.length }, "warn");
       }
-      const wusdc = mint;
+      if (readable.length === 0) return { checked: 0, ready: 0 };
+      const mintOf = (row: (typeof readable)[number]) => known.get(row.asset) as Address;
       const accounts = await fetchEncodedAccounts(
         deps.rpc,
-        await Promise.all(rows.map((row) => associatedTokenAccount(address(row.wallet), wusdc))),
+        await Promise.all(
+          readable.map((row) => associatedTokenAccount(address(row.wallet), mintOf(row))),
+        ),
         { commitment: "confirmed" },
       );
       const checkedAt = deps.now?.() ?? new Date();
       let ready = 0;
-      for (const [index, row] of rows.entries()) {
+      for (const [index, row] of readable.entries()) {
         const account = accounts[index];
         let readiness: RecipientReadiness = "not_configured";
         try {
           if (account) {
             readiness = recipientReadiness(tokenAccountState(account), {
               owner: address(row.wallet),
-              mint: wusdc,
+              mint: mintOf(row),
             });
           }
         } catch {
@@ -92,7 +110,7 @@ export function recipientReadinessJob(deps: RecipientReadinessDeps): Job {
           .set({ readiness, readinessCheckedAt: checkedAt })
           .where(eq(recipients.id, row.id));
       }
-      return { checked: rows.length, ready };
+      return { checked: readable.length, ready };
     },
   };
 }

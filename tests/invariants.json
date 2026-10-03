@@ -27,7 +27,7 @@
       "invariant": "No key material or plaintext amount leaves the browser except as ciphertext",
       "tests": [
         {
-          "file": "tests/e2e/localnet/acceptance.spec.ts",
+          "file": "tests/e2e/acceptance-scenario.ts",
           "title": "the hackathon acceptance scenario runs end to end on ${target.name}, amounts never leave the browsers"
         },
         {

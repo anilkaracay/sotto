@@ -21,6 +21,8 @@ export const RATE_LIMITS = {
   publicReadIp: { name: "public-read-ip", limit: 60, windowSeconds: 60, by: "ip" },
   /** Step 3.2: request access from the landing, a few per address and hour. */
   waitlistIp: { name: "waitlist-ip", limit: 10, windowSeconds: 3600, by: "ip" },
+  /** The devUSD faucet (step 4.3): a few requests an hour per session, besides its 24 hour limit. */
+  faucetSession: { name: "faucet-session", limit: 6, windowSeconds: 3600, by: "session" },
 } as const satisfies Record<string, RateLimitPolicy>;
 
 export type RateLimitResult = { allowed: boolean; count: number; retryAfterSeconds: number };

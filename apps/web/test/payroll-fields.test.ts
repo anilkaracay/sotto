@@ -14,6 +14,9 @@ import {
   parsePayrollCsv,
   type CsvRecipient,
 } from "../lib/payroll.ts";
+import { assetWords } from "../lib/asset-words.ts";
+
+const USDC_WORDS = assetWords("usdc");
 
 const MAYA = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin";
 const IDRIS = "7SSpLJh516AbWiV5GM7ooZFTHoQN64pdohYxbDs3Gq4L";
@@ -102,7 +105,7 @@ describe("payroll CSV (AC-08.1)", () => {
       `${UNKNOWN},5,"Bonus"Q3,,,`,
       `${UNKNOWN},6,"Bonus,,,`,
     ].join("\r\n");
-    const { rows, fileErrors } = parsePayrollCsv(csv, recipients);
+    const { rows, fileErrors } = parsePayrollCsv(csv, recipients, USDC_WORDS);
     expect(fileErrors).toEqual([]);
     expect(rows).toHaveLength(5);
     expect(rows[0]).toMatchObject({ memo: "Salary, October", errors: [] });
@@ -120,19 +123,27 @@ describe("payroll CSV (AC-08.1)", () => {
       "The memo value opens a double quote that is never closed, so the rest of the file was read into it. Close the quote.",
     );
     // A quoted memo with a line break is read whole; the memo rule refuses the control character.
-    const broken = parsePayrollCsv(`${HEADER}\n${MAYA},1,"Salary\nOctober",,,`, recipients);
+    const broken = parsePayrollCsv(
+      `${HEADER}\n${MAYA},1,"Salary\nOctober",,,`,
+      recipients,
+      USDC_WORDS,
+    );
     expect(broken.rows).toHaveLength(1);
     expect(broken.rows[0]?.errors).toEqual(["Memo: Remove the control characters."]);
   });
 
   it("AC-08.1 refuses a file that is not UTF-8 and a header that breaks the quoting rules", () => {
     // The browser decodes a Windows-1252 file as UTF-8 and turns its accented bytes into U+FFFD.
-    expect(parsePayrollCsv(`${HEADER}\n${MAYA},1,Caf\uFFFD,,,`, recipients).fileErrors).toEqual([
+    expect(
+      parsePayrollCsv(`${HEADER}\n${MAYA},1,Caf\uFFFD,,,`, recipients, USDC_WORDS).fileErrors,
+    ).toEqual([
       'The file is not UTF-8 text. Save it as "CSV UTF-8" in your spreadsheet and upload it again.',
     ]);
-    expect(parsePayrollCsv(`wallet,"amount\n${MAYA},1`, recipients).fileErrors).toEqual([
-      "Value 2 opens a double quote that is never closed, so the rest of the file was read into it. Close the quote.",
-    ]);
+    expect(parsePayrollCsv(`wallet,"amount\n${MAYA},1`, recipients, USDC_WORDS).fileErrors).toEqual(
+      [
+        "Value 2 opens a double quote that is never closed, so the rest of the file was read into it. Close the quote.",
+      ],
+    );
   });
 
   it("AC-08.1 matches rows to recipients by wallet and validates every row with its own errors", () => {
@@ -146,7 +157,7 @@ describe("payroll CSV (AC-08.1)", () => {
       `${LUCIA},300,,Someone Else,,XX`,
       `${MAYA},1,,,`,
     ].join("\n");
-    const { rows, fileErrors } = parsePayrollCsv(csv, recipients);
+    const { rows, fileErrors } = parsePayrollCsv(csv, recipients, USDC_WORDS);
     expect(fileErrors).toEqual([]);
     expect(rows.map((row) => row.row)).toEqual([2, 3, 4, 5, 6, 7, 8]);
     expect(rows[0]).toMatchObject({
@@ -182,7 +193,7 @@ describe("payroll CSV (AC-08.1)", () => {
       `${IDRIS},800,,,,,1000,`,
       `${LUCIA},800,,,,,1000,100`,
     ].join("\n");
-    const { rows, extension } = parsePayrollCsv(csv, recipients);
+    const { rows, extension } = parsePayrollCsv(csv, recipients, USDC_WORDS);
     expect(extension).toBe(true);
     expect(rows[0]?.errors).toEqual([]);
     expect(linePrivateOf(rows[0] as never)).toEqual({
@@ -197,11 +208,11 @@ describe("payroll CSV (AC-08.1)", () => {
   });
 
   it("AC-08.1 refuses a file without the header or rows", () => {
-    expect(parsePayrollCsv("", recipients).fileErrors).toEqual(["The file is empty."]);
-    expect(parsePayrollCsv("wallet,amount\nx,1", recipients).fileErrors[0]).toContain(
+    expect(parsePayrollCsv("", recipients, USDC_WORDS).fileErrors).toEqual(["The file is empty."]);
+    expect(parsePayrollCsv("wallet,amount\nx,1", recipients, USDC_WORDS).fileErrors[0]).toContain(
       "The first row must be the header wallet,amount,memo,name,team,country",
     );
-    expect(parsePayrollCsv(HEADER, recipients).fileErrors).toEqual([
+    expect(parsePayrollCsv(HEADER, recipients, USDC_WORDS).fileErrors).toEqual([
       "The file has no payroll rows.",
     ]);
   });
@@ -247,12 +258,12 @@ describe("settlement gauge (X-18)", () => {
       tone: "red",
     });
     expect(lineStatusChip("draft", "recipient_not_ready:no_account").label).toBe("Not ready");
-    expect(blockedReason("recipient_not_ready:no_account")).toContain(
+    expect(blockedReason("recipient_not_ready:no_account", USDC_WORDS)).toContain(
       "there is no wUSDC account at this wallet",
     );
-    expect(blockedReason("screening_hit")).toBe(
+    expect(blockedReason("screening_hit", USDC_WORDS)).toBe(
       "The recipient's wallet is on the screening list, so the payment is blocked",
     );
-    expect(blockedReason(null)).toBeNull();
+    expect(blockedReason(null, USDC_WORDS)).toBeNull();
   });
 });

@@ -127,6 +127,7 @@ describe("public verification page (AC-13.3)", () => {
     balanceDisclosed: "none",
     record: {
       address: RECORD,
+      asset: "usdc",
       owner: OWNER,
       tokenAccount: "DFqVbjLfr1edLKBrmGB6tATRc2vvEqdRr5DVubyhqGXf",
       threshold: "500000",

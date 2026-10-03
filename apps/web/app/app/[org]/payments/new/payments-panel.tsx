@@ -54,6 +54,8 @@ import { useKeySession } from "../../../_components/key-session.tsx";
 import styles from "./payments.module.css";
 import { runPayment, type PaymentRunOutcome, type ViewerKeyRecord } from "./payment-run.ts";
 import { Amount, WithAmounts } from "../../../_components/privacy.tsx";
+import { formatAmount } from "../../../../../lib/asset-words.ts";
+import { AssetBadge, useAssetWords } from "../../../_components/asset.tsx";
 
 export type PayableRecipient = {
   id: string;
@@ -155,6 +157,7 @@ function usePaymentAttempt(ownerKey: ViewerKeyRecord | null) {
           },
           owner: ownerKey,
           wrappedMint: network.wrappedMint,
+          asset: network.asset,
         },
         connected,
         worker: vault.worker,
@@ -186,7 +189,7 @@ function usePaymentAttempt(ownerKey: ViewerKeyRecord | null) {
       status = (await callApi<{ payment: PaymentView }>(`/api/orgs/${orgId}/payments/${paymentId}`))
         .payment.status;
     }
-    const amount = `${formatTokenAmount(BigInt(secret.amount), DECIMALS)} USDC`;
+    const amount = formatAmount(BigInt(secret.amount), network.asset);
     const record = outcome.disclosed.problem
       ? ` ${outcome.disclosed.problem}`
       : `${
@@ -242,6 +245,7 @@ export function PayCard({
   ownerKey: ViewerKeyRecord | null;
 }) {
   const { wallet, orgId, vault, connected, blocked } = useConfidential();
+  const asset = useAssetWords();
   const { viewing } = useKeySession();
   const id = useId();
   const { progress, setProgress, attempt } = usePaymentAttempt(ownerKey);
@@ -283,7 +287,8 @@ export function PayCard({
     event.preventDefault();
     const found: Record<string, string> = {};
     if (!chosen) found.recipient = "Choose a recipient";
-    else if (chosen.readiness !== "ready") found.recipient = payability(chosen.readiness).reason;
+    else if (chosen.readiness !== "ready")
+      found.recipient = payability(chosen.readiness, asset).reason;
     const base = parseTokenAmount(amount, DECIMALS);
     if (base === null || base <= 0n) {
       found.amount = `Enter an amount above zero with at most ${DECIMALS} decimals`;
@@ -339,9 +344,9 @@ export function PayCard({
     <Card data-testid="pay-card">
       <h2 className={cards.cardTitle}>Pay a recipient</h2>
       <p className={cards.lead}>
-        A confidential wUSDC payment: the amount is encrypted onchain, and only you, the recipient
-        and the people you share it with can read it. The amount, memo and category are encrypted in
-        this tab to your viewing key; Sotto stores them sealed.
+        A confidential {asset.wrappedSymbol} payment: the amount is encrypted onchain, and only you,
+        the recipient and the people you share it with can read it. The amount, memo and category
+        are encrypted in this tab to your viewing key; Sotto stores them sealed. <AssetBadge />
       </p>
       {!ownerKey ? (
         <p className={cards.warning} role="status">
@@ -378,7 +383,7 @@ export function PayCard({
               ))}
             </Select>
           </Field>
-          <Field label="Amount (USDC)" htmlFor={`${id}-amount`} error={errors.amount}>
+          <Field label={`Amount (${asset.symbol})`} htmlFor={`${id}-amount`} error={errors.amount}>
             <Input
               id={`${id}-amount`}
               inputMode="decimal"
@@ -473,7 +478,7 @@ function PaymentsTable({
       return <span className={styles.muted}>Not readable with this key</span>;
     return (
       <span className="num" data-testid="payment-amount">
-        <Amount>{formatTokenAmount(BigInt(value.amount), DECIMALS)} USDC</Amount>
+        <Amount>{formatAmount(BigInt(value.amount), network.asset)}</Amount>
       </span>
     );
   };

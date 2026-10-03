@@ -36,7 +36,7 @@ export default async function NewPaymentPage({ params }: { params: Promise<{ org
       if (error instanceof ApiError && error.status === 404) return null;
       throw error;
     }),
-    loadNetworkView(),
+    loadNetworkView({ orgId }),
   ]);
   return (
     <AppShell me={me} network={network} nav={ownerNav(orgId, "payments")}>

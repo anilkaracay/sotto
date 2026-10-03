@@ -22,8 +22,8 @@ import { callApi } from "../../../../lib/client/api.ts";
 import { openDisclosures } from "../../../../lib/client/disclosures.ts";
 import { browserRpc } from "../../../../lib/client/rpc.ts";
 import { formatDate, shortWallet } from "../../../../lib/format.ts";
+import { assetWords, formatAmount } from "../../../../lib/asset-words.ts";
 import {
-  formatUsdc,
   isPayslip,
   lastMonths,
   netByMonth,
@@ -49,6 +49,8 @@ import { PausedNote } from "../../_components/confidential/paused-note.tsx";
 import { StepError, useSend } from "../../_components/confidential/use-send.ts";
 import { WithdrawForm } from "../../_components/confidential/withdraw.tsx";
 import { useKeySession } from "../../_components/key-session.tsx";
+import { useAssetWords } from "../../_components/asset.tsx";
+import { DevnetTestBadge } from "../../_components/devnet-badge.tsx";
 import { MonthBars } from "../../_components/month-bars.tsx";
 import { SkyArt } from "../../_components/sky-art.tsx";
 import styles from "./pay.module.css";
@@ -79,7 +81,7 @@ export function PayPanel(props: {
         ))}
         <BalancesSection />
         <Card data-testid="withdraw-card">
-          <h2 className={cards.cardTitle}>Withdraw to USDC</h2>
+          <WithdrawTitle />
           <ApplyPending />
           <WithdrawForm />
         </Card>
@@ -90,6 +92,11 @@ export function PayPanel(props: {
       </div>
     </ConfidentialProvider>
   );
+}
+
+function WithdrawTitle() {
+  const asset = useAssetWords();
+  return <h2 className={cards.cardTitle}>Withdraw to {asset.symbol}</h2>;
 }
 
 /** 06 section 4, step 3: a pending balance is applied from fresh account state, with the keys. */
@@ -104,8 +111,10 @@ export function ApplyPending() {
     <div className={styles.apply}>
       {pending > 0n ? (
         <p className={cards.lead}>
-          <Amount>{formatTokenAmount(pending, network.decimals ?? DECIMALS)} wUSDC</Amount> is in
-          your pending balance. Apply it to your available balance to use it.
+          <Amount>
+            {formatTokenAmount(pending, network.decimals ?? DECIMALS)} {network.asset.wrappedSymbol}
+          </Amount>{" "}
+          is in your pending balance. Apply it to your available balance to use it.
         </p>
       ) : null}
       {pending > 0n ? (
@@ -124,7 +133,10 @@ export function ApplyPending() {
                   const account = await fetchEncodedAccount(browserRpc(), address(token), {
                     commitment: "confirmed",
                   });
-                  if (!account.exists) throw new StepError("Your wUSDC account does not exist.");
+                  if (!account.exists)
+                    throw new StepError(
+                      `Your ${network.asset.wrappedSymbol} account does not exist.`,
+                    );
                   return [
                     await vault.worker().applyInstruction(token, new Uint8Array(account.data)),
                   ];
@@ -282,6 +294,7 @@ export type PayGroupState =
 function downloadPayslip(orgName: string, pay: PayView, slip: Payslip) {
   const pdf = payslipPdf({
     orgName,
+    asset: assetWords(pay.org.asset),
     recipientName: pay.recipient.displayName,
     roleTitle: pay.recipient.roleTitle,
     wallet: pay.recipient.wallet,
@@ -338,6 +351,9 @@ export function PayGroupView({
     );
   }
   const { pay, slips, sealed, unverified } = state;
+  // Each group in its own organization's asset (step 4.3): one recipient may be paid in USDC and devUSD.
+  const asset = assetWords(pay.org.asset);
+  const formatUsdc = (base: bigint) => formatAmount(base, asset);
   const latest = slips?.[0] ?? null;
   const latestIsPayslip = latest ? isPayslip(latest) : true;
   const payslipCount = slips?.filter(isPayslip).length ?? 0;
@@ -423,8 +439,9 @@ export function PayGroupView({
         <div className={styles.cardHead}>
           <h3>Last 6 months</h3>
           <span className={styles.darkChip}>
-            {slips && payslipCount < slips.length ? "Received, USDC" : "Net, USDC"}
+            {slips && payslipCount < slips.length ? "Received" : "Net"}, {asset.symbol}
           </span>
+          <DevnetTestBadge asset={asset} onDark />
         </div>
         {slips ? (
           <MonthBars totals={history} selected={litMonth} format={formatUsdc} testId="pay-bar" />

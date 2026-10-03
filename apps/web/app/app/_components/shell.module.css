@@ -173,6 +173,8 @@
   box-shadow: 0 0 0 1px var(--line);
   color: var(--ink2);
   font-size: 13.5px;
+  /* "Privacy screen" stays on one line (step 4.3). */
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background-color 0.2s ease,

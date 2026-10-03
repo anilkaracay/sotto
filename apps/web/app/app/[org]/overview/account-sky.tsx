@@ -38,7 +38,7 @@ export function AccountSky({ orgName }: { orgName: string }) {
     text =
       network.check.status === "wrapped_missing" ? (
         <>
-          The wrapped USDC mint does not exist on this network yet.{" "}
+          The wrapped {network.asset.symbol} mint does not exist on this network yet.{" "}
           <Link href={`/app/${orgId}/setup`}>Open the setup page</Link>
         </>
       ) : (
@@ -51,8 +51,8 @@ export function AccountSky({ orgName }: { orgName: string }) {
   } else {
     text = (
       <>
-        Set up your confidential wUSDC account to send and receive encrypted payments.{" "}
-        <Link href={`/app/${orgId}/setup`}>Open the setup page</Link>
+        Set up your confidential {network.asset.wrappedSymbol} account to send and receive encrypted
+        payments. <Link href={`/app/${orgId}/setup`}>Open the setup page</Link>
       </>
     );
   }

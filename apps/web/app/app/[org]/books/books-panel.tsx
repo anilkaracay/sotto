@@ -22,7 +22,6 @@ import {
   BOOKS_CATEGORY_LABEL,
   categoryTotals,
   filterRows,
-  formatUsdc,
   ledgerCsv,
   ledgerRows,
   monthLabel,
@@ -51,6 +50,8 @@ import { useKeySession } from "../../_components/key-session.tsx";
 import { MonthBars } from "../../_components/month-bars.tsx";
 import styles from "./books.module.css";
 import { Amount } from "../../_components/privacy.tsx";
+import { formatAmount } from "../../../../lib/asset-words.ts";
+import { AssetBadge, useAssetWords } from "../../_components/asset.tsx";
 
 type Records = { items: DisclosureItemView[]; manifests: ManifestView[] };
 
@@ -182,6 +183,8 @@ export function BooksScreen({
   /** The wallet and viewing key cards, which need the page's confidential session. */
   side?: ReactNode;
 }) {
+  const asset = useAssetWords();
+  const formatUsdc = (base: bigint) => formatAmount(base, asset);
   const orgName = books.org.displayName;
   const grant = books.grants[0];
   const [month, setMonth] = useState<string | null>(null);
@@ -229,7 +232,9 @@ export function BooksScreen({
           searched: search.trim() !== "",
         },
       });
-      const url = URL.createObjectURL(new Blob([ledgerCsv(shown)], { type: "text/csv" }));
+      const url = URL.createObjectURL(
+        new Blob([ledgerCsv(shown, asset.symbol)], { type: "text/csv" }),
+      );
       const link = document.createElement("a");
       link.href = url;
       link.download = `books-${activeMonth ?? "all"}.csv`;
@@ -325,6 +330,7 @@ export function BooksScreen({
           <div className={styles.cardHead}>
             <h3>Money out{months.length > 0 ? `, ${rangeLabel(months)}` : ""}</h3>
             <span className={styles.darkChip}>{rows ? "Decrypted for you" : "Sealed"}</span>
+            <AssetBadge onDark />
           </div>
           <div className={styles.bigd}>
             {rows ? (
@@ -552,6 +558,8 @@ function PaymentDrawer({
   onClose: () => void;
   onReconcile: (paymentId: string, status: "matched" | "needs_receipt") => Promise<void>;
 }) {
+  const asset = useAssetWords();
+  const formatUsdc = (base: bigint) => formatAmount(base, asset);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const matched = row?.reconciliation === "matched";

@@ -10,7 +10,7 @@
 //    Every transfer is simulated first, then sent and finalized; the signatures go to funding.json.
 // 4. Makes the run's admin a Sotto admin through the configured path (ADMIN_WALLETS in
 //    packages/db/.env.local and pnpm --filter @sotto/db seed:admins), for this run only.
-// 5. Runs tests/e2e/localnet/acceptance.spec.ts with SOTTO_ACCEPTANCE_TARGET=devnet
+// 5. Runs tests/e2e/localnet/acceptance.spec.ts (the scenario of acceptance-scenario.ts) with SOTTO_ACCEPTANCE_TARGET=devnet
 //    (tests/e2e/acceptance-target.ts): its checks of step 2.10 stay on (I-2 over requests, browser
 //    consoles, the services' logs and the app's database; no console error; no health banner; every
 //    balance equal to the chain). The eight step screenshots go to .demo-shots/devnet-acceptance/.

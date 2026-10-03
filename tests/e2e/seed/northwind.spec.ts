@@ -72,6 +72,17 @@ test(`seeds Northwind Labs Demo Ltd on ${target.name}`, async ({ page, browser }
   for (const member of [...RECIPIENTS, DANIEL]) wallets.set(member.key, await addressOf(member));
   await target.prepare(elif.address, 5n, TREASURY);
   for (const member of RECIPIENTS) await target.prepare(wallets.get(member.key) as Address, 1n, 0n);
+  // What each wallet spends, for the live plan's cost (lamports before and after the seed).
+  const lamports = async (wallet: Address) => (await target.rpc.getBalance(wallet).send()).value;
+  const everyone: [string, Address][] = [
+    ["elif", elif.address],
+    ...RECIPIENTS.map((member): [string, Address] => [
+      member.key,
+      wallets.get(member.key) as Address,
+    ]),
+  ];
+  const before = new Map<string, bigint>();
+  for (const [key, wallet] of everyone) before.set(key, await lamports(wallet));
   await page.addInitScript({ content: V1_WALLET });
   let orgId = "";
   let recordAddress = "";
@@ -310,7 +321,13 @@ test(`seeds Northwind Labs Demo Ltd on ${target.name}`, async ({ page, browser }
     await expect(page).toHaveURL(OVERVIEW_URL);
   });
 
+  const spent: Record<string, string> = {};
+  for (const [key, wallet] of everyone) {
+    spent[key] = ((before.get(key) ?? 0n) - (await lamports(wallet))).toString();
+  }
+  console.log(`lamports spent per wallet: ${JSON.stringify(spent)}`);
   await target.record({
+    lamportsSpent: spent,
     target: target.name,
     organization: NORTHWIND.legalName,
     orgId,

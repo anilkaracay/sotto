@@ -50,7 +50,7 @@ import {
 } from "./payroll-run.ts";
 import { Amount, WithAmounts } from "../../../_components/privacy.tsx";
 import { formatAmount } from "../../../../../lib/asset-words.ts";
-import { useAssetWords } from "../../../_components/asset.tsx";
+import { AssetBadge, useAssetWords } from "../../../_components/asset.tsx";
 
 type Progress = { busy: string | null; problem: string | null; done: string | null };
 const IDLE: Progress = { busy: null, problem: null, done: null };
@@ -377,6 +377,7 @@ export function RunView(props: {
               <b className="num" data-testid="run-total-amount">
                 <Amount>{formatUsdc(total)}</Amount>
               </b>
+              <AssetBadge />
               <small>
                 {lines} {lines === 1 ? "line" : "lines"}, by team
               </small>

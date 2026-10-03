@@ -34,7 +34,7 @@ import {
 import styles from "./payroll.module.css";
 import { Amount } from "../../_components/privacy.tsx";
 import { formatAmount } from "../../../../lib/asset-words.ts";
-import { useAssetWords } from "../../_components/asset.tsx";
+import { AssetBadge, useAssetWords } from "../../_components/asset.tsx";
 
 export type ViewerKeyRecord = {
   userId: string;
@@ -193,7 +193,7 @@ function NewRunCard({
         already added. Save the file as CSV UTF-8; a value with a comma, a double quote or a line
         break goes in double quotes, with each double quote in it written as two. The file is read
         in this tab; the amounts and memos are encrypted in this tab to your viewing key, and Sotto
-        stores them sealed.
+        stores them sealed. <AssetBadge />
       </p>
       {!ownerKey ? (
         <p className={styles.warning} role="status">

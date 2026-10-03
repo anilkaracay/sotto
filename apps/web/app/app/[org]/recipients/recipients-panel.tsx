@@ -46,7 +46,7 @@ import { ReadinessCell } from "./readiness-cell.tsx";
 import styles from "./recipients.module.css";
 import { Amount } from "../../_components/privacy.tsx";
 import { formatAmount } from "../../../../lib/asset-words.ts";
-import { useAssetWords } from "../../_components/asset.tsx";
+import { AssetBadge, useAssetWords } from "../../_components/asset.tsx";
 
 export type OwnerViewerKey = { publicKey: string; signature: string };
 
@@ -217,7 +217,7 @@ function AddRecipientCard({ viewerKey }: { viewerKey: OwnerViewerKey | null }) {
       <p className={cards.lead}>
         A person or company you pay in {asset.wrappedSymbol}. The default amount and notes are
         encrypted in this tab to your viewing key, so only you can read them; Sotto stores them
-        sealed.
+        sealed. <AssetBadge />
       </p>
       <form onSubmit={submit} noValidate>
         <FieldGrid>

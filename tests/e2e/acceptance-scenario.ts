@@ -262,10 +262,14 @@ export function acceptanceScenario(target: AcceptanceTarget): void {
             animation.effect?.getTiming().iterations === Infinity,
         ),
     );
-    // Step 4.3: a devUSD organization's pages never say USDC and show the devnet test badge.
+    // Step 4.3: a devUSD organization's pages never say USDC, and the devnet test badge sits next
+    // to balances and amounts (not in the top bar; the viewing keys page shows no amount).
     if (target.asset.devnetTestAsset) {
       expect(await page.locator("body").innerText(), `USDC on ${name}`).not.toMatch(/USDC/);
-      await expect(page.getByTestId("devnet-test-badge").first()).toBeVisible();
+      if (name !== "05a-viewing-keys.png") {
+        await expect(page.getByTestId("devnet-test-badge").first()).toBeVisible();
+      }
+      await expect(page.locator("header").getByTestId("devnet-test-badge")).toHaveCount(0);
     }
     const path = test.info().outputPath(name);
     await page.screenshot({ path, fullPage: true });

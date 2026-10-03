@@ -6,6 +6,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { DEFAULT_ASSET } from "@sotto/sdk/cluster/assets";
 import { assetWords, type AssetWords } from "../../../lib/asset-words.ts";
+import { DevnetTestBadge } from "./devnet-badge.tsx";
 
 export const AssetWordsContext = createContext<AssetWords>(assetWords(DEFAULT_ASSET));
 
@@ -22,4 +23,12 @@ export function AssetWordsProvider({
   children: ReactNode;
 }) {
   return <AssetWordsContext value={asset}>{children}</AssetWordsContext>;
+}
+
+/**
+ * The "Devnet test dollar" badge of the organization's asset, next to balances and amounts (founder,
+ * 2026-10-03); nothing for USDC.
+ */
+export function AssetBadge({ onDark = false }: { onDark?: boolean }) {
+  return <DevnetTestBadge asset={useAssetWords()} onDark={onDark} />;
 }

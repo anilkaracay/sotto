@@ -41,7 +41,7 @@ import { SkyArt } from "../../_components/sky-art.tsx";
 import { runProof, type ProofRunOutcome } from "./proof-run.ts";
 import styles from "./proofs.module.css";
 import { Amount, WithAmounts } from "../../_components/privacy.tsx";
-import { useAssetWords } from "../../_components/asset.tsx";
+import { AssetBadge, useAssetWords } from "../../_components/asset.tsx";
 
 type Stage =
   | { kind: "idle" }
@@ -177,7 +177,9 @@ export function Builder(props: {
   return (
     <Card tone="dark" className={styles.builder} data-testid="proof-builder">
       <h3 className={styles.cardTitle}>New proof</h3>
-      <p className={styles.dsub}>Pick a statement and who it is for.</p>
+      <p className={styles.dsub}>
+        Pick a statement and who it is for. <AssetBadge onDark />
+      </p>
       <div className={styles.dfl} id={`${id}-threshold`}>
         Balance is at least
       </div>

@@ -55,7 +55,7 @@ import styles from "./payments.module.css";
 import { runPayment, type PaymentRunOutcome, type ViewerKeyRecord } from "./payment-run.ts";
 import { Amount, WithAmounts } from "../../../_components/privacy.tsx";
 import { formatAmount } from "../../../../../lib/asset-words.ts";
-import { useAssetWords } from "../../../_components/asset.tsx";
+import { AssetBadge, useAssetWords } from "../../../_components/asset.tsx";
 
 export type PayableRecipient = {
   id: string;
@@ -346,7 +346,7 @@ export function PayCard({
       <p className={cards.lead}>
         A confidential {asset.wrappedSymbol} payment: the amount is encrypted onchain, and only you,
         the recipient and the people you share it with can read it. The amount, memo and category
-        are encrypted in this tab to your viewing key; Sotto stores them sealed.
+        are encrypted in this tab to your viewing key; Sotto stores them sealed. <AssetBadge />
       </p>
       {!ownerKey ? (
         <p className={cards.warning} role="status">

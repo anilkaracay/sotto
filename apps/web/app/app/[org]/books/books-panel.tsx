@@ -51,7 +51,7 @@ import { MonthBars } from "../../_components/month-bars.tsx";
 import styles from "./books.module.css";
 import { Amount } from "../../_components/privacy.tsx";
 import { formatAmount } from "../../../../lib/asset-words.ts";
-import { useAssetWords } from "../../_components/asset.tsx";
+import { AssetBadge, useAssetWords } from "../../_components/asset.tsx";
 
 type Records = { items: DisclosureItemView[]; manifests: ManifestView[] };
 
@@ -330,6 +330,7 @@ export function BooksScreen({
           <div className={styles.cardHead}>
             <h3>Money out{months.length > 0 ? `, ${rangeLabel(months)}` : ""}</h3>
             <span className={styles.darkChip}>{rows ? "Decrypted for you" : "Sealed"}</span>
+            <AssetBadge onDark />
           </div>
           <div className={styles.bigd}>
             {rows ? (

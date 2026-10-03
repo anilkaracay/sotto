@@ -66,7 +66,12 @@ const walletA = await sottoKeypair("wallet-a.json");
 const balance = async (wallet: Address) =>
   (await rpc.getBalance(wallet, { commitment: "confirmed" }).send()).value;
 
-/** One `sotto-compose` command on the server as the sotto user; its output, never a secret. */
+/**
+ * One `sotto-compose` command on the server as the sotto user; its output, never a secret. The
+ * connection is kept alive and given up after a minute without an answer: in the live seed of
+ * 2026-10-03 a silent connection kept the admin's removal waiting for 26 minutes after the server had
+ * done it.
+ */
 function sottoCompose(args: string): { ok: boolean; out: string } {
   if (!/^[A-Za-z0-9 -]+$/.test(args)) fail("unexpected sotto-compose arguments");
   const result = spawnSync(
@@ -78,7 +83,7 @@ function sottoCompose(args: string): { ok: boolean; out: string } {
       "-c",
       `ssh "$OPERATOR_HOST" sotto-compose ${args}`,
     ],
-    { cwd: ROOT, encoding: "utf8" },
+    { cwd: ROOT, encoding: "utf8", timeout: 300_000 },
   );
   return { ok: result.status === 0, out: `${result.stdout}${result.stderr}`.trim() };
 }

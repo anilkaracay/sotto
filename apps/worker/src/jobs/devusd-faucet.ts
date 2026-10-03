@@ -46,10 +46,41 @@ export type DevusdFaucetDeps = {
   genesisHash?: string;
 };
 
+/** Creates the wallet's associated devUSD account if needed and mints `amount` base units into it. */
+export async function devusdMintInstructions(
+  authority: KeyPairSigner,
+  mint: Address,
+  wallet: Address,
+  amount: bigint,
+) {
+  const [account] = await findAssociatedTokenPda({
+    owner: wallet,
+    mint,
+    tokenProgram: TOKEN_PROGRAM_ADDRESS,
+  });
+  return [
+    getCreateAssociatedTokenIdempotentInstruction({
+      payer: authority,
+      ata: account,
+      owner: wallet,
+      mint,
+    }),
+    getMintToCheckedInstruction({
+      mint,
+      token: account,
+      mintAuthority: authority,
+      amount,
+      decimals: DECIMALS,
+    }),
+  ];
+}
+
 type Readiness = { ok: true } | { ok: false; code: "wrong_cluster" | "wrong_authority" };
 
 /** Whether this worker may mint: devnet's ledger, and the mint's authority is the signer. */
-async function readiness(deps: DevusdFaucetDeps): Promise<Readiness> {
+export async function readiness(
+  deps: Pick<DevusdFaucetDeps, "rpc" | "authority" | "mint" | "genesisHash">,
+): Promise<Readiness> {
   if ((await deps.rpc.getGenesisHash().send()) !== (deps.genesisHash ?? GENESIS_HASHES.devnet)) {
     return { ok: false, code: "wrong_cluster" };
   }
@@ -120,12 +151,6 @@ export function devusdFaucetJob(deps: DevusdFaucetDeps): Job {
           continue;
         }
 
-        const wallet = address(row.wallet);
-        const [account] = await findAssociatedTokenPda({
-          owner: wallet,
-          mint: deps.mint,
-          tokenProgram: TOKEN_PROGRAM_ADDRESS,
-        });
         const lifetime = (await deps.rpc.getLatestBlockhash({ commitment: "confirmed" }).send())
           .value;
         let message;
@@ -135,21 +160,12 @@ export function devusdFaucetJob(deps: DevusdFaucetDeps): Job {
             version: 0,
             feePayer: deps.authority,
             lifetime,
-            instructions: [
-              getCreateAssociatedTokenIdempotentInstruction({
-                payer: deps.authority,
-                ata: account,
-                owner: wallet,
-                mint: deps.mint,
-              }),
-              getMintToCheckedInstruction({
-                mint: deps.mint,
-                token: account,
-                mintAuthority: deps.authority,
-                amount: row.amountBaseUnits,
-                decimals: DECIMALS,
-              }),
-            ],
+            instructions: await devusdMintInstructions(
+              deps.authority,
+              deps.mint,
+              address(row.wallet),
+              row.amountBaseUnits,
+            ),
           }));
         } catch (error) {
           // The simulation refused it: sending would fail too.

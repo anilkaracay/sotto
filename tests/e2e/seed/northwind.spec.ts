@@ -156,7 +156,7 @@ test(`seeds Northwind Labs Demo Ltd on ${target.name}`, async ({ page, browser }
       await signInFromInvite(recipient);
       await recipient.getByRole("button", { name: "Accept invite" }).click();
       await expect(recipient.getByTestId("invite-joined")).toContainText(
-        `You joined ${NORTHWIND.legalName}`,
+        `You joined ${NORTHWIND.displayName}`,
       );
       await unlock(recipient);
       await recipient.getByRole("button", { name: "Create viewing key" }).click();

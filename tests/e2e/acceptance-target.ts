@@ -140,9 +140,6 @@ async function localnet(assetId: AssetId): Promise<AcceptanceTarget> {
 }
 
 async function devnet(assetId: AssetId): Promise<AcceptanceTarget> {
-  if (assetId !== "usdc") {
-    throw new Error("devUSD runs on devnet once its mints and sotto_proofs exist there (D-29)");
-  }
   const dir = process.env.SOTTO_DEVNET_ACCEPTANCE_DIR;
   if (!dir) throw new Error("SOTTO_DEVNET_ACCEPTANCE_DIR is not set: run pnpm acceptance:devnet");
   const cluster = getClusterConfig("devnet") as AvailableClusterConfig;
@@ -163,7 +160,13 @@ async function devnet(assetId: AssetId): Promise<AcceptanceTarget> {
     stamp: string;
     legalName: string;
   };
-  const usdcMint = cluster.usdcMint;
+  // The asset's mints and its own sotto_proofs deployment (step 4.3: devUSD from the registry).
+  const devusd =
+    assetId === "devusd" ? cluster.assets.find((entry) => entry.id === "devusd") : null;
+  if (assetId === "devusd" && !devusd?.sottoProofs) {
+    throw new Error("the devnet registry has no devUSD with its sotto_proofs");
+  }
+  const baseMint = devusd ? devusd.baseMint : cluster.usdcMint;
   // The running services' logs (14 section 2: .localnet/devnet-run/), from this point on.
   const logs = [".localnet/devnet-run/web.log", ".localnet/devnet-run/worker.log"].map((path) =>
     join(ROOT, path),
@@ -171,11 +174,13 @@ async function devnet(assetId: AssetId): Promise<AcceptanceTarget> {
   const offsets = await sizes(logs);
   return {
     name: "devnet",
-    asset: { id: "usdc", ...ASSET_WORDS.usdc },
+    asset: { id: assetId, ...ASSET_WORDS[assetId] },
     rpc,
-    wrappedMint: cluster.wrappedUsdcMint,
+    wrappedMint: devusd ? devusd.wrappedMint : cluster.wrappedUsdcMint,
     sasCredential: cluster.sasCredential,
-    sottoProofsProgram: cluster.sottoProofs.program,
+    sottoProofsProgram: devusd?.sottoProofs
+      ? devusd.sottoProofs.program
+      : cluster.sottoProofs.program,
     legalName: run.legalName,
     owner: await keypair("owner"),
     people: await Promise.all([1, 2, 3].map((n) => keypair(`person-${n}`))),
@@ -184,9 +189,10 @@ async function devnet(assetId: AssetId): Promise<AcceptanceTarget> {
     funding: 1n,
     lines: DEVNET_LINES,
     proofDollars: "0.5",
-    statement: "Balance is at least $0.50",
-    // Funded by wallet A before the run (scripts/acceptance-devnet.ts); here only its address.
-    prepare: (wallet) => associatedTokenAccount(wallet, usdcMint, TOKEN_PROGRAM_ADDRESS),
+    statement: devusd ? "Balance is at least 0.50 devUSD" : "Balance is at least $0.50",
+    // Funded before the run (scripts/acceptance-devnet.ts: USDC from wallet A, devUSD from the
+    // operator's mint on the server); here only its address.
+    prepare: (wallet) => associatedTokenAccount(wallet, baseMint, TOKEN_PROGRAM_ADDRESS),
     serverLog: () => readFrom(logs, offsets),
     databaseText: async () => {
       // The app's own database, from its env file; the URL is never printed.
@@ -209,7 +215,8 @@ async function devnet(assetId: AssetId): Promise<AcceptanceTarget> {
         await client.close();
       }
     },
-    shotsDir: (stamp) => join(ROOT, ".demo-shots/devnet-acceptance", stamp),
+    shotsDir: (stamp) =>
+      join(ROOT, ".demo-shots/devnet-acceptance", devusd ? `${stamp}-devusd` : stamp),
     stepShotsOnly: true,
     visual: false,
     slow: 3,

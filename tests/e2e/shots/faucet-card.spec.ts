@@ -86,5 +86,8 @@ test("the faucet card at 1440 and 390", async ({ page }) => {
     "Minted 10000 devUSD to your wallet",
   );
   await expect(card.getByTestId("faucet-remaining")).toContainText("0 devUSD");
+  await expect(card.getByTestId("faucet-limit")).toContainText(
+    "A wallet can get at most 10,000 devUSD in 24 hours",
+  );
   await shoot(page, "ui-05-faucet-card-minted", card);
 });

@@ -6,5 +6,5 @@
     "lib": ["ES2023", "DOM"],
     "types": ["node"]
   },
-  "include": ["*.ts", "specs", "localnet", "seed"]
+  "include": ["*.ts", "specs", "localnet", "seed", "shots"]
 }

@@ -77,7 +77,8 @@ const database = await createTestDatabase();
 const DATABASE_URL_FILE = fileURLToPath(
   new URL("../../.localnet/e2e-database-url", import.meta.url),
 );
-if (bootstrap) writeFileSync(DATABASE_URL_FILE, `${database.url}\n`, { mode: 0o600 });
+// Since step 4.3 also without --localnet, for the faucet card's screenshots (shots/faucet-card.spec.ts).
+writeFileSync(DATABASE_URL_FILE, `${database.url}\n`, { mode: 0o600 });
 // The fixed keypair wallet of the keys spec is a Sotto admin, so the spec approves its own org.
 await database.db.insert(admins).values({ wallet: E2E_ADMIN_WALLET });
 // Step 2.10: on localnet the web's and the worker's output also goes to .localnet/e2e-server.log

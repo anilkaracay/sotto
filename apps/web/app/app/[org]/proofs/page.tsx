@@ -5,6 +5,7 @@
 import { PageHeader } from "@sotto/ui";
 import { notFound, redirect } from "next/navigation";
 import { ownerNav } from "../../../../lib/org-nav.ts";
+import { orgAsset } from "../../../../lib/server/assets.ts";
 import { serverRpc } from "../../../../lib/server/chain.ts";
 import { serverCluster } from "../../../../lib/server/cluster.ts";
 import { currentSession } from "../../../../lib/server/current-session.ts";
@@ -27,7 +28,10 @@ export default async function ProofsPage({ params }: { params: Promise<{ org: st
   if (!owned) notFound();
   if (owned.orgStatus !== "active") redirect("/app/onboarding");
   const [cluster, network] = await Promise.all([serverCluster(), loadNetworkView({ orgId })]);
-  const program = cluster?.sottoProofs?.program ?? null;
+  // The organization's asset's own sotto_proofs deployment (step 4.3, D-29): a config holds one mint.
+  const program = cluster
+    ? ((await orgAsset(db, cluster, orgId))?.sottoProofs?.program ?? null)
+    : null;
   const [{ proofs }, paused] = program
     ? await Promise.all([
         listProofs(db, session, orgId, serverRpc()),

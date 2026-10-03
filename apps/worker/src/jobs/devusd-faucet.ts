@@ -84,7 +84,7 @@ export async function readiness(
   if ((await deps.rpc.getGenesisHash().send()) !== (deps.genesisHash ?? GENESIS_HASHES.devnet)) {
     return { ok: false, code: "wrong_cluster" };
   }
-  const mint = await fetchMint(deps.rpc, deps.mint, { commitment: "finalized" });
+  const mint = await fetchMint(deps.rpc, deps.mint, { commitment: "confirmed" });
   const authority = mint.data.mintAuthority;
   if (authority.__option !== "Some" || authority.value !== deps.authority.address) {
     return { ok: false, code: "wrong_authority" };

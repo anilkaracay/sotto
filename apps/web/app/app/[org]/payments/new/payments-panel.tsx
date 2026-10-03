@@ -497,7 +497,7 @@ function PaymentsTable({
             <tr>
               <Th>Recipient</Th>
               <Th>Amount</Th>
-              <Th>Created</Th>
+              <Th className={styles.date}>Created</Th>
               <Th>Status</Th>
               <Th>Transaction</Th>
               <Th align="right">Actions</Th>
@@ -517,7 +517,7 @@ function PaymentsTable({
                     </span>
                   </Td>
                   <Td>{amountCell(payment)}</Td>
-                  <Td>{formatDate(payment.createdAt)}</Td>
+                  <Td className={styles.date}>{formatDate(payment.createdAt)}</Td>
                   <Td>
                     <Chip
                       tone={paymentStatusChip(payment.status, payment.errorCode).tone}

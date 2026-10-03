@@ -487,7 +487,7 @@ export function IssuedProofsView(props: {
               <Th>Shared with</Th>
               <Th>Statement</Th>
               <Th>Result</Th>
-              <Th>Issued</Th>
+              <Th className={styles.date}>Issued</Th>
               <Th>Record</Th>
               <Th align="right"> </Th>
             </tr>
@@ -506,7 +506,7 @@ export function IssuedProofsView(props: {
                     {PROVEN}
                   </Chip>
                 </Td>
-                <Td className="num">{formatDate(proof.createdAt)}</Td>
+                <Td className={`num ${styles.date}`}>{formatDate(proof.createdAt)}</Td>
                 <Td>
                   {proof.state === "closed"
                     ? RECORD_STATE_WORDS.closed

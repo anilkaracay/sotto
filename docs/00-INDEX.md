@@ -26,6 +26,8 @@ Files that grow during the build (append only, never rewrite history):
 
 - `VERIFICATION-LOG.md`: output of every gate you ran, with date, cluster, command and result.
 - `VERSIONS.md`: every pinned tool, crate and package version.
+
+**Parallel sessions** (founder, 2026-10-02; ENGINEERING-RULES.md, Git workflow 5 and 6): each working session works in its own git worktree under `../sotto-worktrees/<branch>`, never switches the shared working copy's branch (it stays on `main`) or another session's worktree, and runs CI only from a worktree of the branch under test.
 - `QUESTIONS.md`: open questions for the founder.
 
 ## Glossary

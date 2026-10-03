@@ -103,6 +103,16 @@ export function confirmExecutionsJob(deps: ConfirmExecutionsDeps): Job {
           continue;
         }
         if (status.confirmationStatus === "finalized") {
+          // Step 4.2.2: the settlement is logged at its block's time, when it settled on Solana. The
+          // browser writes the payment's records only after it saw the transfer confirmed, so the log
+          // always lists them after the settlement, whichever of the two reaches the database first.
+          const blockTime =
+            row.kind === "single"
+              ? await deps.rpc
+                  .getBlockTime(status.slot)
+                  .send()
+                  .catch(() => null)
+              : null;
           // The attempt, the payment and the access log event (AC-14.1) in one transaction, so a
           // stop between them cannot leave a finalized attempt on a payment that is not settled.
           await deps.db.transaction(async (tx) => {
@@ -129,6 +139,7 @@ export function confirmExecutionsJob(deps: ConfirmExecutionsDeps): Job {
                 subjectType: "payment",
                 subjectId: attempt.paymentId,
                 metadata: { slot: status.slot.toString(), attemptNo: attempt.attemptNo },
+                ...(blockTime === null ? {} : { at: new Date(Number(blockTime) * 1000) }),
               });
             }
           });

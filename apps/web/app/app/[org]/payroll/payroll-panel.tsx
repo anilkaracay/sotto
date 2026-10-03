@@ -366,7 +366,7 @@ function RunsCard({ runs }: { runs: PayrollRunSummary[] }) {
                 <Th>Period</Th>
                 <Th>Lines</Th>
                 <Th>Status</Th>
-                <Th>Created</Th>
+                <Th className={styles.date}>Created</Th>
               </tr>
             </thead>
             <tbody>
@@ -400,7 +400,7 @@ function RunsCard({ runs }: { runs: PayrollRunSummary[] }) {
                       {runStatusChip(run.status).label}
                     </Chip>
                   </Td>
-                  <Td>{formatDate(run.createdAt)}</Td>
+                  <Td className={styles.date}>{formatDate(run.createdAt)}</Td>
                 </tr>
               ))}
             </tbody>

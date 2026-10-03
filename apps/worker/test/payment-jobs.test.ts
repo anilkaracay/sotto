@@ -42,9 +42,13 @@ const context = (lines: string[] = []) => ({
 
 type Status = { err: unknown; confirmationStatus: "confirmed" | "finalized"; slot: bigint } | null;
 
-function statusRpc(statuses: Map<string, Status>) {
+/** The block time the stub gives every slot (step 4.2.2), or null for a block without one. */
+const BLOCK_TIME = 1_790_000_000n;
+
+function statusRpc(statuses: Map<string, Status>, blockTime: bigint | null = BLOCK_TIME) {
   const calls = { statuses: 0 };
   const rpc = {
+    getBlockTime: () => ({ send: async () => blockTime }),
     getSignatureStatuses: (signatures: string[]) => ({
       send: async () => {
         calls.statuses += 1;
@@ -175,6 +179,8 @@ describe("confirm-executions job", () => {
     expect(events).toMatchObject([
       { action: "payment_settled", actorUserId: null, metadata: { slot: "1234", attemptNo: 1 } },
     ]);
+    // Step 4.2.2: dated by the block's time, when the payment settled on Solana.
+    expect(events[0]?.createdAt.getTime()).toBe(Number(BLOCK_TIME) * 1000);
     expect(settled.attempt?.status).toBe("finalized");
     const failed = await stateOf(bad.paymentId);
     expect(failed.payment?.status).toBe("failed");
@@ -193,14 +199,22 @@ describe("confirm-executions job", () => {
       paymentStatus: "failed_clean",
       attemptStatus: "failed_clean",
     });
+    // No block time from the RPC: the settlement keeps the worker's own time (step 4.2.2).
     const { rpc } = statusRpc(
       new Map([[late.transfer, { err: null, confirmationStatus: "finalized", slot: 77n }]]),
+      null,
     );
+    const before = Date.now();
     await confirmExecutionsJob({ db: database.db, rpc }).run(context());
     expect((await stateOf(late.paymentId)).payment).toMatchObject({
       status: "settled",
       settledSlot: 77n,
     });
+    const [event] = await database.db
+      .select()
+      .from(accessLog)
+      .where(eq(accessLog.subjectId, late.paymentId));
+    expect(event?.createdAt.getTime()).toBeGreaterThanOrEqual(before - 1000);
     // Outside the landing window a failed_clean attempt is not read again.
     const old = await paymentWithAttempt({
       paymentStatus: "failed_clean",

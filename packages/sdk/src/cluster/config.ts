@@ -7,7 +7,7 @@
 import { address, type Address } from "@solana/kit";
 import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022";
 import { ZK_ELGAMAL_PROOF_PROGRAM_ADDRESS } from "@solana-program/zk-elgamal-proof";
-import { DEVNET_USDC, type AssetConfig } from "./assets.ts";
+import { DEVNET_DEVUSD, DEVNET_USDC, type AssetConfig } from "./assets.ts";
 
 export type ClusterName = "localnet" | "devnet" | "mainnet";
 
@@ -110,8 +110,7 @@ export const clusters: Readonly<Record<ClusterName, ClusterConfig>> = {
     usdcMint: DEVNET_USDC.baseMint,
     wrappedUsdcMint: DEVNET_USDC.wrappedMint,
     sottoProofs: DEVNET_USDC.sottoProofs,
-    // devUSD joins once its mints and its sotto_proofs deployment exist on devnet (step 4.3).
-    assets: [DEVNET_USDC],
+    assets: [DEVNET_USDC, DEVNET_DEVUSD],
   },
   mainnet: {
     name: "mainnet",

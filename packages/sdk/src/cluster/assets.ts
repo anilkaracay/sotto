@@ -86,3 +86,18 @@ export const DEVNET_USDC: AssetConfig = assetConfig("usdc", {
     config: address("Gxhkhq4QDvv2y2GK7ZjHF1J8rThwsSdfxDziMCdWFnFe"),
   },
 });
+
+/**
+ * Devnet devUSD (D-29; created in step 4.3, VERIFICATION-LOG 2026-10-03): the "Sotto Devnet Test
+ * Dollar" mint, whose mint authority `8QJKvfopLPfyBEgir4VwPRVyst9HFYtNW3GU6vmFVZS6` is a key on the
+ * hosting server and which has no freeze authority; its wrapped mint under the Sotto Token Wrap test
+ * deployment; and the second deployment of the same sotto_proofs build with its config.
+ */
+export const DEVNET_DEVUSD: AssetConfig = assetConfig("devusd", {
+  baseMint: address("KttR31BxvWErtewYs1uNiywFWwi3nwxUToixi5A2Akx"),
+  wrappedMint: address("A5GbnS1bRjgShuemLgbK8fazrgmkV3wmeizsnmVNhdBq"),
+  sottoProofs: {
+    program: address("A7pejhdwBy4a2VtzmCpWiL1jVymiWEn42NZoDwMTQRhG"),
+    config: address("7hiauDS2GUY9XU39SEeDjFKxMkT71weer8qyApUY8JGM"),
+  },
+});

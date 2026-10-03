@@ -15,7 +15,11 @@
 # the buffer's lamports to the payer before paying for the program data account, so the payer needs
 # the program data rent, the program account rent and the fees, no more (Q-17, facts N1).
 #
-# Usage: scripts/deploy-program.sh --cluster devnet [--url https://api.devnet.solana.com] [--yes]
+# Step 4.3 (D-29): --asset devusd makes the second deployment of the same build, for wrapped devUSD
+# (a config holds one mint), under its own program keypair, created once (mode 600, outside the
+# repository, only its public key printed).
+#
+# Usage: scripts/deploy-program.sh --cluster devnet [--asset devusd] [--url https://api.devnet.solana.com] [--yes]
 # The public devnet endpoint is the default: the CLI may print its URL, so no private endpoint is used.
 set -euo pipefail
 
@@ -33,9 +37,11 @@ KIB10=10240
 cluster=""
 url="https://api.devnet.solana.com"
 yes=""
+asset="usdc"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --cluster) cluster="$2"; shift 2 ;;
+    --asset) asset="$2"; shift 2 ;;
     --url) url="$2"; shift 2 ;;
     --yes) yes=1; shift ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
@@ -43,6 +49,17 @@ while [[ $# -gt 0 ]]; do
 done
 if [[ "$cluster" != "devnet" ]]; then
   echo "error: only --cluster devnet is supported (localnet: scripts/bootstrap-localnet.ts; mainnet after G7)" >&2
+  exit 2
+fi
+
+if [[ "$asset" == "devusd" ]]; then
+  PROGRAM_KEYPAIR="$HOME/.config/solana/sotto/sotto-proofs-devusd-devnet.json"
+  if [[ ! -f "$PROGRAM_KEYPAIR" ]]; then
+    (umask 077 && solana-keygen new --no-bip39-passphrase --silent --outfile "$PROGRAM_KEYPAIR" >/dev/null)
+  fi
+  PROGRAM_ID="$(solana-keygen pubkey "$PROGRAM_KEYPAIR")"
+elif [[ "$asset" != "usdc" ]]; then
+  echo "error: --asset is usdc or devusd" >&2
   exit 2
 fi
 

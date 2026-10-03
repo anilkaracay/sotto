@@ -5,7 +5,6 @@
 import { faucetMints, orgs } from "@sotto/db";
 import type { TestDatabase } from "@sotto/db/testing";
 import { GENESIS_HASHES } from "@sotto/sdk/cluster";
-import { assetConfig } from "@sotto/sdk/cluster/assets";
 import type { SolanaRpc } from "@sotto/sdk/tx";
 import { address } from "@solana/kit";
 import { eq } from "drizzle-orm";
@@ -44,17 +43,13 @@ beforeEach(() => {
 const ledger = (genesisHash: string) => () =>
   ({ getGenesisHash: () => ({ send: async () => genesisHash }) }) as unknown as SolanaRpc;
 
-/** Devnet's configuration with devUSD in its registry, as it will be once devUSD exists there. */
+/** Devnet's configuration, whose registry lists devUSD since step 4.3's live run. */
 async function devnetWithDevusd(): Promise<ServerCluster> {
   const devnet = await serverCluster({ NEXT_PUBLIC_CLUSTER: "devnet" });
-  if (!devnet) throw new Error("devnet is available");
-  return {
-    ...devnet,
-    assets: [
-      ...devnet.assets,
-      assetConfig("devusd", { baseMint: MINT, wrappedMint: MINT, sottoProofs: null }),
-    ],
-  };
+  if (!devnet?.assets.some((asset) => asset.id === "devusd")) {
+    throw new Error("the devnet registry lists devUSD");
+  }
+  return devnet;
 }
 
 async function devusdOwner(status: "active" | "pending_review" = "active") {
@@ -75,11 +70,11 @@ async function refusal(promise: Promise<unknown>): Promise<string> {
 }
 
 describe("the devUSD faucet's cluster guard (CI proof)", () => {
-  it("refuses localnet, mainnet, and devnet without devUSD, through the route", async () => {
+  it("refuses localnet and mainnet, through the route", async () => {
     const owner = await devusdOwner();
     const path = `/api/orgs/${owner.orgId}/faucet`;
     const params = { params: Promise.resolve({ id: owner.orgId }) };
-    for (const cluster of ["localnet", "mainnet", "devnet"]) {
+    for (const cluster of ["localnet", "mainnet"]) {
       vi.stubEnv("NEXT_PUBLIC_CLUSTER", cluster);
       vi.stubEnv("LOCALNET_DEVUSD_MINT", MINT);
       try {

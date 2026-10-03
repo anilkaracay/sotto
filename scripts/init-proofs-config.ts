@@ -75,11 +75,11 @@ const stored = await fetchConfig(rpc, config, { commitment: "confirmed" });
 console.log(`config:            ${config}`);
 console.log(`signature:         ${sent.signature}`);
 console.log(`admin:             ${stored.data.admin}`);
-console.log(`wrapped USDC mint: ${stored.data.wrappedUsdcMint}`);
+console.log(`wrapped mint:      ${stored.data.wrappedUsdcMint}`);
 console.log(`paused:            ${stored.data.paused}, bump ${stored.data.bump}`);
 if (
   stored.data.admin !== authority.address ||
-  stored.data.wrappedUsdcMint !== cluster.wrappedUsdcMint ||
+  stored.data.wrappedUsdcMint !== wrappedMint ||
   stored.data.paused
 ) {
   throw new Error("the config read back is not the one sent");

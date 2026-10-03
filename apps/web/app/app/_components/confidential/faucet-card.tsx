@@ -91,6 +91,9 @@ export function FaucetCard() {
     }
   }
 
+  // The 24 hour limit, said before the server has to refuse (it refuses too: 429 faucet_limit).
+  const overLimit =
+    remaining !== null && !open && (remaining === 0n || (amount !== null && amount > remaining));
   const latest = faucet?.mints[0] ?? null;
   return (
     <Card data-testid="faucet-card">
@@ -126,16 +129,20 @@ export function FaucetCard() {
           />
         </span>
       </label>
+      {overLimit ? (
+        <div className={extra.note} role="status" data-testid="faucet-limit">
+          A wallet can get at most 10,000 {network.asset.symbol} in 24 hours;{" "}
+          <Amount>
+            {formatTokenAmount(remaining ?? 0n, DECIMALS)} {network.asset.symbol}
+          </Amount>{" "}
+          is left for yours now.
+        </div>
+      ) : null}
       <div className={styles.actions}>
         <Button
           variant="blue"
           disabled={
-            busy ||
-            open ||
-            amount === null ||
-            amount <= 0n ||
-            remaining === null ||
-            amount > remaining
+            busy || open || amount === null || amount <= 0n || remaining === null || overLimit
           }
           onClick={() => void ask()}
         >

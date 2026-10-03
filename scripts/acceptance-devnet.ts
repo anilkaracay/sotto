@@ -21,6 +21,11 @@
 //
 // The founder's Solflare accounts are never used. Each run needs 1 devnet USDC in wallet A (Circle's
 // devnet faucet refills it) and about 0.14 SOL.
+//
+// Step 4.3 (D-29): `--asset devusd` runs the scenario for an organization that holds devUSD. The
+// owner's 1 devUSD comes from the operator's mint on the hosting server (`sotto-compose devusd-mint`,
+// through the redacting loader), since only the server holds the mint authority; wallet A sends SOL
+// only. The proof record is checked against devUSD's own sotto_proofs deployment.
 import { spawnSync } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
 import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
@@ -61,6 +66,17 @@ const FUNDING: Record<string, { sol: bigint; usdc: bigint }> = {
   "person-3": { sol: (2n * SOL) / 100n, usdc: 0n },
 };
 const ROLES = ["owner", "person-1", "person-2", "person-3", "accountant", "admin"] as const;
+const DEVUSD = process.argv.includes("--asset")
+  ? process.argv[process.argv.indexOf("--asset") + 1] === "devusd"
+  : false;
+if (
+  process.argv.includes("--asset") &&
+  !DEVUSD &&
+  process.argv[process.argv.indexOf("--asset") + 1] !== "usdc"
+) {
+  console.error("acceptance:devnet: --asset is usdc or devusd");
+  process.exit(1);
+}
 const DB_ENV = join(ROOT, "packages/db/.env.local");
 
 function fail(message: string): never {
@@ -92,6 +108,11 @@ if (!cluster.usdcMint || !cluster.sasCredential || !cluster.sottoProofs) {
   fail("the devnet cluster config has no USDC mint, SAS credential or sotto_proofs");
 }
 const usdcMint = cluster.usdcMint;
+const devusd = DEVUSD ? cluster.assets.find((asset) => asset.id === "devusd") : null;
+if (DEVUSD && !devusd?.sottoProofs) fail("the devnet registry has no devUSD with sotto_proofs");
+const proofsProgram = devusd?.sottoProofs
+  ? devusd.sottoProofs.program
+  : cluster.sottoProofs.program;
 const rpc: SolanaRpc = await devnetRpc();
 const walletA = await sottoKeypair("wallet-a.json");
 
@@ -100,7 +121,11 @@ const stamp = new Date()
   .toISOString()
   .replace(/\.\d+Z$/, "Z")
   .replaceAll(":", "-");
-const dir = join(homedir(), ".config/solana/sotto/devnet-acceptance", stamp);
+const dir = join(
+  homedir(),
+  ".config/solana/sotto/devnet-acceptance",
+  DEVUSD ? `${stamp}-devusd` : stamp,
+);
 mkdirSync(dir, { recursive: true, mode: 0o700 });
 const wallets: Record<string, Address> = {};
 for (const role of ROLES) {
@@ -112,7 +137,7 @@ for (const role of ROLES) {
   writeFileSync(join(dir, `${role}.json`), JSON.stringify(bytes), { mode: 0o600, flag: "wx" });
   wallets[role] = (await createKeyPairSignerFromBytes(new Uint8Array(bytes))).address;
 }
-const legalName = `Acceptance Devnet ${stamp.slice(0, 16).replace("T", " ")} Ltd`;
+const legalName = `Acceptance ${DEVUSD ? "Dollar " : ""}Devnet ${stamp.slice(0, 16).replace("T", " ")} Ltd`;
 writeFileSync(
   join(dir, "run.json"),
   `${JSON.stringify({ stamp, legalName, wallets }, null, 2)}\n`,
@@ -134,7 +159,9 @@ const usdcA = BigInt(
       .send()
   ).value.amount,
 );
-if (usdcA < USDC) fail("wallet A holds less than 1 devnet USDC; refill it from Circle's faucet");
+if (!DEVUSD && usdcA < USDC) {
+  fail("wallet A holds less than 1 devnet USDC; refill it from Circle's faucet");
+}
 if (balanceA < SOL / 5n) fail("wallet A holds less than 0.2 SOL");
 const funding: { role: string; what: string; signature: string }[] = [];
 for (const [role, amount] of Object.entries(FUNDING)) {
@@ -151,7 +178,7 @@ for (const [role, amount] of Object.entries(FUNDING)) {
       ],
     },
   ];
-  if (amount.usdc > 0n) {
+  if (amount.usdc > 0n && !DEVUSD) {
     transfers.push({
       what: `${Number(amount.usdc) / Number(USDC)} USDC`,
       instructions: [
@@ -191,6 +218,24 @@ for (const [role, amount] of Object.entries(FUNDING)) {
       `funded ${role} ${transfer.what} (simulated ${simulated.unitsConsumed} units): ${sent.signature}`,
     );
   }
+}
+if (DEVUSD) {
+  // The owner's 1 devUSD: the operator's mint on the hosting server, which alone holds the authority.
+  const minted = spawnSync(
+    "node",
+    [
+      "scripts/hosting-env.ts",
+      "--",
+      "bash",
+      "-c",
+      `ssh "$OPERATOR_HOST" sotto-compose devusd-mint ${wallets.owner} 1`,
+    ],
+    { cwd: ROOT, encoding: "utf8" },
+  );
+  const signature = /minted 1 devUSD to \S+: (\S+)/.exec(minted.stdout)?.[1];
+  if (minted.status !== 0 || !signature) fail("the operator's devUSD mint for the owner failed");
+  funding.push({ role: "owner", what: "1 devUSD (operator mint)", signature });
+  console.log(`funded owner 1 devUSD (operator mint on the server): ${signature}`);
 }
 writeFileSync(join(dir, "funding.json"), `${JSON.stringify(funding, null, 2)}\n`, { mode: 0o600 });
 
@@ -233,7 +278,12 @@ try {
         "--config",
         "playwright.devnet.config.ts",
       ],
-      { ...process.env, SOTTO_ACCEPTANCE_TARGET: "devnet", SOTTO_DEVNET_ACCEPTANCE_DIR: dir },
+      {
+        ...process.env,
+        SOTTO_ACCEPTANCE_TARGET: "devnet",
+        SOTTO_DEVNET_ACCEPTANCE_DIR: dir,
+        SOTTO_ACCEPTANCE_ASSET: DEVUSD ? "devusd" : "usdc",
+      },
     ) === 0;
 } finally {
   restore();
@@ -317,7 +367,7 @@ const record = await fetchProofRecord(rpc, address(result.proofRecord), {
 const recordAccount = await fetchEncodedAccount(rpc, address(result.proofRecord), {
   commitment: "finalized",
 });
-if (!recordAccount.exists || recordAccount.programAddress !== cluster.sottoProofs.program) {
+if (!recordAccount.exists || recordAccount.programAddress !== proofsProgram) {
   problems.push("the proof record is not an account of sotto_proofs");
 }
 if (record.data.owner !== result.owner) problems.push("proof record: owner");

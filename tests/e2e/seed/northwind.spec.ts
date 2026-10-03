@@ -42,6 +42,8 @@ const target = await seedTarget();
 const PAY_URL = /\/app\/[0-9a-f-]{36}\/pay$/;
 const RUN_URL = /\/app\/[0-9a-f-]{36}\/payroll\/[0-9a-f-]{36}$/;
 const V1_WALLET = "window.__sottoTestWalletVersions = ['legacy', 0, 1];";
+/** Review screenshots at 1440 and 390 where SOTTO_SHOTS_DIR is set (the live run). */
+const shot = process.env.SOTTO_SHOTS_DIR ? (await import("../shots/shoot.ts")).shoot : null;
 
 /** "48200.00" as the app shows it: "48200". */
 const shown = (amount: string) => amount.replace(/\.?0+$/, "");
@@ -53,9 +55,10 @@ async function addressOf(member: Member): Promise<Address> {
 
 async function newPage(browser: Browser): Promise<Page> {
   const baseURL = test.info().project.use.baseURL;
+  // A client address of its own per page only on the local server; the live app sees the real one.
   const context = await browser.newContext({
     ...(baseURL ? { baseURL } : {}),
-    extraHTTPHeaders: clientAddress(),
+    ...(target.name === "localnet" ? { extraHTTPHeaders: clientAddress() } : {}),
   });
   const page = await context.newPage();
   await page.addInitScript({ content: V1_WALLET });
@@ -86,6 +89,7 @@ test(`seeds Northwind Labs Demo Ltd on ${target.name}`, async ({ page, browser }
   await page.addInitScript({ content: V1_WALLET });
   let orgId = "";
   let recordAddress = "";
+  let danielBooks = 0;
 
   await test.step("1. Elif creates the organization in devUSD; it is approved and attested", async () => {
     await signIn(page, elifKeypair);
@@ -96,6 +100,7 @@ test(`seeds Northwind Labs Demo Ltd on ${target.name}`, async ({ page, browser }
     await page.getByLabel("Website").fill(NORTHWIND.website);
     await page.getByLabel("Contact email").fill(NORTHWIND.contactEmail);
     await page.getByLabel("Currency").selectOption("devusd");
+    await shot?.(page, "seed-01-onboarding-currency-field");
     await page.getByRole("button", { name: "Send for review" }).click();
     await expect(page.getByTestId("org-status")).toHaveText("In review");
     await expect(page.getByTestId("org-asset")).toContainText("devUSD");
@@ -107,6 +112,7 @@ test(`seeds Northwind Labs Demo Ltd on ${target.name}`, async ({ page, browser }
       await page.goto("/app/onboarding");
       await expect(page.getByTestId("attestation-address")).toBeVisible({ timeout: 2_000 });
     }).toPass({ timeout: 180_000 * target.slow });
+    await shot?.(page, "seed-02-business-details-currency-row");
     await page.goto("/app");
     await expect(page).toHaveURL(OVERVIEW_URL);
     orgId = OVERVIEW_URL.exec(new URL(page.url()).pathname)?.[1] ?? "";
@@ -128,6 +134,10 @@ test(`seeds Northwind Labs Demo Ltd on ${target.name}`, async ({ page, browser }
       `Funded ${TREASURY} wdevUSD in two steps`,
       { timeout: 300_000 * target.slow },
     );
+    await expect(page.getByTestId("balance-available-value")).toHaveText(`${TREASURY} wdevUSD`, {
+      timeout: 120_000 * target.slow,
+    });
+    await shot?.(page, "seed-03-balance-cards-badge", page.getByTestId("balances"));
   });
 
   await test.step("3. The twelve and the two counterparties join and set up their accounts", async () => {
@@ -276,6 +286,8 @@ test(`seeds Northwind Labs Demo Ltd on ${target.name}`, async ({ page, browser }
     await expect(daniel.getByTestId("ledger-row")).toHaveCount(records, {
       timeout: 120_000 * target.slow,
     });
+    danielBooks = await daniel.getByTestId("ledger-row").count();
+    await shot?.(daniel, "seed-06-daniel-books");
     await daniel.context().close();
   });
 
@@ -315,6 +327,7 @@ test(`seeds Northwind Labs Demo Ltd on ${target.name}`, async ({ page, browser }
       "Balance is at least 250,000 devUSD",
     );
     await expect(visitor.getByTestId("devnet-test-badge")).toBeVisible();
+    await shot?.(visitor, "seed-08-public-proof");
     await visitor.context().close();
     // Today's balance snapshot for the overview's growth card.
     await go(page, "Overview");
@@ -335,6 +348,7 @@ test(`seeds Northwind Labs Demo Ltd on ${target.name}`, async ({ page, browser }
     wallets: Object.fromEntries(wallets),
     proofRecord: recordAddress,
     publicProof: `/v/${recordAddress}`,
+    danielBooksCount: danielBooks,
     seededAt: new Date().toISOString(),
   });
 });

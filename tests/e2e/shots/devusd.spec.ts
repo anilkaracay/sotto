@@ -67,7 +67,7 @@ test("the devUSD elements at 1440 and 390", async ({ page, browser }) => {
   await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
   await page.getByRole("button", { name: "Set up the account" }).click();
   await expect(page.getByTestId("account-recorded")).toHaveText("Recorded");
-  await page.getByLabel("Amount of devUSD").fill("15000");
+  await page.getByTestId("funding-card").getByLabel("Amount of devUSD").fill("15000");
   await page.getByTestId("funding-card").getByRole("button", { name: "Fund account" }).click();
   await expect(page.getByTestId("funding-card").getByTestId("step-done")).toContainText(
     "Funded 15000 wdevUSD in two steps",

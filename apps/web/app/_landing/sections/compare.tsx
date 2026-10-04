@@ -42,25 +42,25 @@ export function Compare({ v }: { v: LandingView }) {
               <span>{"What it reveals"}</span>
             </div>
             <div className="xr">
-              <span className="d">{"Sep 30"}</span>
+              <span className="d">{"Oct 30"}</span>
               <span className="mono w2">{"7Fq2\u20269kLm"}</span>
               <span className="v">{"$9,400.00"}</span>
               <span className="s hot">{"Reads as a salary"}</span>
             </div>
             <div className="xr">
-              <span className="d">{"Sep 30"}</span>
+              <span className="d">{"Oct 30"}</span>
               <span className="mono w2">{"Hn4P\u20262xQe"}</span>
               <span className="v">{"$11,150.00"}</span>
               <span className="s hot">{"Reads as a salary"}</span>
             </div>
             <div className="xr">
-              <span className="d">{"Sep 28"}</span>
+              <span className="d">{"Oct 28"}</span>
               <span className="mono w2">{"K2mD\u2026Lc07"}</span>
               <span className="v">{"$38,000.00"}</span>
               <span className="s hot">{"Your supplier price"}</span>
             </div>
             <div className="xr">
-              <span className="d">{"Sep 14"}</span>
+              <span className="d">{"Oct 14"}</span>
               <span className="mono w2">{"Batch 0917"}</span>
               <span className="v">{"$75,900.00"}</span>
               <span className="s hot">{"Creator economics"}</span>
@@ -102,7 +102,7 @@ export function Compare({ v }: { v: LandingView }) {
               <span>{"Status"}</span>
             </div>
             <div className="xr">
-              <span className="d">{"Sep 30"}</span>
+              <span className="d">{"Oct 30"}</span>
               <span className="mono w2">{"7Fq2\u20269kLm"}</span>
               <span className="v">
                 <span className="frz">{"$9,400.00"}</span>
@@ -128,7 +128,7 @@ export function Compare({ v }: { v: LandingView }) {
               </span>
             </div>
             <div className="xr">
-              <span className="d">{"Sep 30"}</span>
+              <span className="d">{"Oct 30"}</span>
               <span className="mono w2">{"Hn4P\u20262xQe"}</span>
               <span className="v">
                 <span className="frz">{"$11,150.00"}</span>
@@ -154,7 +154,7 @@ export function Compare({ v }: { v: LandingView }) {
               </span>
             </div>
             <div className="xr">
-              <span className="d">{"Sep 28"}</span>
+              <span className="d">{"Oct 28"}</span>
               <span className="mono w2">{"K2mD\u2026Lc07"}</span>
               <span className="v">
                 <span className="frz">{"$38,000.00"}</span>
@@ -180,7 +180,7 @@ export function Compare({ v }: { v: LandingView }) {
               </span>
             </div>
             <div className="xr">
-              <span className="d">{"Sep 14"}</span>
+              <span className="d">{"Oct 14"}</span>
               <span className="mono w2">{"Batch 0917"}</span>
               <span className="v">
                 <span className="frz">{"$75,900.00"}</span>

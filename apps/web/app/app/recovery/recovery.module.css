@@ -87,6 +87,9 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.word {
+  white-space: nowrap;
+}
 .card .back {
   margin-top: 24px;
 }
@@ -99,4 +102,31 @@
   border-radius: 6px;
   background: var(--soft);
   font-size: 0.92em;
+  /* Step 4.4: a tool name such as spl-token-wrap never breaks at its hyphens. */
+  white-space: nowrap;
+}
+/* A mint address breaks anywhere instead of widening the page at 390 pixels (the class twice: the
+   rule above is more specific). */
+.card code.address.address {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+/* Step 4.4: on a phone the card gives the commands and the text the width of the screen. */
+@media (max-width: 720px) {
+  .top {
+    padding: 0 20px;
+  }
+  .body {
+    padding: 8px 16px 48px;
+  }
+  .card {
+    padding: 28px 20px 26px;
+  }
+  .title {
+    font-size: 30px;
+    text-wrap: balance;
+  }
+  .command {
+    padding: 12px 14px;
+  }
 }

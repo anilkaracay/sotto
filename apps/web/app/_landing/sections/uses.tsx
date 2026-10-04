@@ -504,7 +504,7 @@ export function UseCases() {
                     <span className="av5 pho u-maya" role="img" aria-label="Maya Chen" />
                     <div>
                       <b>{"Maya Chen"}</b>
-                      <small>{"Payslip, September"}</small>
+                      <small>{"Payslip, October"}</small>
                     </div>
                     <span className="pillb">
                       <svg
@@ -566,7 +566,7 @@ export function UseCases() {
                     {"Paid"}
                   </span>
                 </div>
-                <div className="co">{"Hollis Supply Co."}</div>
+                <div className="co">{"Atlas Freight"}</div>
                 <div className="li">
                   <span>{"Aluminium housings"}</span>
                   <span className="amt sealed">

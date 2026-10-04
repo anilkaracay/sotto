@@ -692,6 +692,7 @@ body:has(> main.theme-landing) {
 }
 .theme-landing .more {
   color: var(--faint);
+  white-space: nowrap;
 }
 .theme-landing .cap5 {
   display: flex;
@@ -744,6 +745,14 @@ body:has(> main.theme-landing) {
 .theme-landing .built5 b svg {
   color: var(--blue);
 }
+/* Step 4.4: the founder's original logos. The Solana lockup carries its own word; the USDC token logo
+   stays at its 32 pixel minimum, inset like an avatar. */
+.theme-landing .built5 b.solana {
+  padding: 0 18px;
+}
+.theme-landing .built5 b.usdc {
+  padding: 0 16px 0 5px;
+}
 
 .theme-landing .pho {
   background-size: cover;
@@ -776,8 +785,14 @@ body:has(> main.theme-landing) {
 .theme-landing .u-anyone {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><rect width='40' height='40' fill='%23E6EDF7'/><g fill='none' stroke='%232A3852' stroke-width='1.6'><circle cx='20' cy='20' r='9'/><path d='M11 20h18M20 11c2.6 2.8 3.8 5.8 3.8 9s-1.2 6.2-3.8 9c-2.6-2.8-3.8-5.8-3.8-9s1.2-6.2 3.8-9z'/></g></svg>");
 }
-.theme-landing .u-hollis {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><rect width='40' height='40' fill='%2312704A'/><path d='M12 11v18M28 11v18M12 20h16' stroke='%23FFFFFF' stroke-width='3.2' stroke-linecap='round'/></svg>");
+/* Step 4.4: Atlas Freight, the sample supplier, as a company mark (a globe on a shipping route), and
+   Northwind Labs, the sample company, with its own mark for its runway. Both drawn here, no files. */
+.theme-landing .u-atlas {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%231A8763'/><stop offset='1' stop-color='%230B4A37'/></linearGradient></defs><rect width='40' height='40' fill='url(%23g)'/><g fill='none' stroke='%23FFFFFF' stroke-width='1.8'><circle cx='20' cy='19.5' r='8.5'/><ellipse cx='20' cy='19.5' rx='3.8' ry='8.5'/><path d='M11.5 19.5h17'/></g><g transform='rotate(-16 20 21)'><path d='M5.5 21a14.5 4.6 0 0 0 29 0' fill='none' stroke='%23F5B544' stroke-width='2.3' stroke-linecap='round'/></g></svg>");
+  border-radius: 10px !important;
+}
+.theme-landing .u-northwind {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><defs><linearGradient id='n' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%231E2E4D'/><stop offset='1' stop-color='%230B1830'/></linearGradient></defs><rect width='40' height='40' fill='url(%23n)'/><circle cx='20' cy='20' r='8.6' fill='none' stroke='%23FFFFFF' stroke-width='2.3'/><path d='M20 11.4a8.6 8.6 0 000 17.2z' fill='%23FFFFFF'/></svg>");
   border-radius: 10px !important;
 }
 .theme-landing .flag {
@@ -899,17 +914,6 @@ body:has(> main.theme-landing) {
   font-size: 12.5px;
   color: var(--faint);
   margin-top: 2px;
-}
-.theme-landing .xg {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: #eaf1fb;
-  color: #1f5be8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
 }
 .theme-landing .xt {
   margin-left: auto;
@@ -1146,6 +1150,16 @@ body:has(> main.theme-landing) {
 .theme-landing .snav .slogo svg {
   display: block;
 }
+/* Step 4.4: the wordmark sits below the mark's center line, so beside the links the lockup rises until
+   "sotto" lines up with them, in a pill tall enough for it. Phones show no links and keep it centered. */
+@media (min-width: 721px) {
+  .theme-landing .snav {
+    padding: 9px 9px 9px 20px;
+  }
+  .theme-landing .snav .slogo svg {
+    transform: translateY(-6px);
+  }
+}
 .theme-landing .snav nav {
   display: flex;
   gap: 2px;
@@ -1297,13 +1311,13 @@ body:has(> main.theme-landing) {
 }
 .theme-landing .vc.who-team .rb .av5:not(.u-maya),
 .theme-landing .vc.who-accountant .rb .av5:not(.u-acct),
-.theme-landing .vc.who-counterparty .rb .av5:not(.u-hollis) {
+.theme-landing .vc.who-counterparty .rb .av5:not(.u-atlas) {
   opacity: 0.5;
   filter: grayscale(1);
 }
 .theme-landing .vc.who-team .rb .u-maya,
 .theme-landing .vc.who-accountant .rb .u-acct,
-.theme-landing .vc.who-counterparty .rb .u-hollis {
+.theme-landing .vc.who-counterparty .rb .u-atlas {
   box-shadow:
     0 0 0 2px #ffffff,
     0 0 0 4px #1f5be8;
@@ -1607,7 +1621,6 @@ body:has(> main.theme-landing) {
   align-items: center;
   gap: 10px;
   margin: 84px auto 0;
-  max-width: 760px;
   padding: 0 24px;
   font-size: 15px;
   line-height: 1.5;
@@ -1617,6 +1630,25 @@ body:has(> main.theme-landing) {
 .theme-landing .why7 svg {
   color: var(--blue);
   flex: none;
+}
+/* Step 4.4: one line on wide screens; below 1080px the bolt flows with a balanced text. */
+.theme-landing .p5 .why7 span {
+  white-space: nowrap;
+}
+@media (max-width: 1080px) {
+  .theme-landing .p5 .why7 {
+    display: block;
+    max-width: 640px;
+    text-wrap: balance;
+  }
+  .theme-landing .p5 .why7 span {
+    white-space: normal;
+  }
+  .theme-landing .why7 svg {
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: -2px;
+  }
 }
 .theme-landing .hand .drag {
   position: absolute;
@@ -4685,8 +4717,31 @@ body:has(> main.theme-landing) {
   .theme-landing .kicker b {
     white-space: nowrap;
   }
-  .theme-landing .kicker > span {
-    display: none;
+  /* Step 4.4: the eyebrow is too long to share the pill with the beta badge on a phone, so it reads
+     as its own line under the badge. */
+  .theme-landing .hero5 .kicker {
+    flex-direction: column;
+    gap: 12px;
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+  .theme-landing .hero5 .kicker > span {
+    text-wrap: balance;
+  }
+  /* The sample caption: a gutter at both sides, its icon flowing with a balanced text. */
+  .theme-landing .cap5 {
+    display: block;
+    max-width: 520px;
+    padding: 0 16px;
+    text-align: center;
+    text-wrap: balance;
+  }
+  .theme-landing .cap5 svg {
+    display: inline-block;
+    margin-right: 6px;
+    vertical-align: -2px;
   }
 }
 
@@ -4844,4 +4899,80 @@ body:has(> main.theme-landing) {
     overflow: hidden;
     text-overflow: ellipsis;
   }
+}
+
+/* Step 4.4: the public pages on phones (430 and 390 pixels) without squeezed numbers or broken lines. */
+@media (max-width: 720px) {
+  /* Same payments, two worlds: each row's date above its amount, so the amounts sit left of the
+     divider and are read whole. */
+  .theme-landing .cmp .ly {
+    padding: 22px 20px 14px;
+  }
+  .theme-landing .tg.pub {
+    height: auto;
+    min-height: 32px;
+    max-width: 150px;
+    padding: 6px 12px;
+    border-radius: 16px;
+    line-height: 1.3;
+    text-wrap: balance;
+  }
+  .theme-landing .xhd {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .theme-landing .xhd > span:nth-child(1) {
+    display: none;
+  }
+  .theme-landing .xhd span:nth-child(3) {
+    text-align: left;
+  }
+  .theme-landing .xr {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    align-content: center;
+  }
+  .theme-landing .xr .d {
+    font-size: 12px;
+  }
+  .theme-landing .xr .v {
+    text-align: left;
+  }
+  /* The sample statement: its title above the count of readable amounts. */
+  .theme-landing .vtop {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 22px 20px;
+  }
+  .theme-landing .cnt {
+    white-space: nowrap;
+  }
+  /* The payouts tile: the sealed total moves under the title instead of squeezing it. */
+  .theme-landing .mtop {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+  .theme-landing .mtop > div {
+    flex: 1 1 200px;
+  }
+  .theme-landing .mtop b {
+    text-wrap: balance;
+  }
+  /* The SDK specs in two columns: the first of each row has no divider. */
+  .theme-landing .specs div + div {
+    padding-left: 16px;
+  }
+  .theme-landing .specs div:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .theme-landing .specs span {
+    text-wrap: balance;
+  }
+}
+/* A name such as Token-2022 never breaks at its hyphen. */
+.theme-landing .specs span.nw {
+  display: inline;
+  margin: 0;
+  white-space: nowrap;
 }

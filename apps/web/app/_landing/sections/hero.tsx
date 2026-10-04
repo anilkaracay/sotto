@@ -1,6 +1,7 @@
 // The landing's hero section (F-17, step 3.1), from design/sotto-landing.html.
 import Link from "next/link";
 import { SottoLockupWhite } from "@sotto/ui";
+import { SolanaLockup, UsdcToken } from "../brand-logos.tsx";
 import type { LandingView } from "../use-landing.ts";
 
 export function Hero({ v }: { v: LandingView }) {
@@ -157,7 +158,7 @@ export function Hero({ v }: { v: LandingView }) {
             </svg>
             {"Beta on Solana devnet"}
           </b>
-          <span>{"Confidential payments on Solana"}</span>
+          <span>{"Selective privacy for onchain finance"}</span>
         </div>
         <h1 className="H1">
           <span className="L">
@@ -169,7 +170,7 @@ export function Hero({ v }: { v: LandingView }) {
         </h1>
         <p className="lead">
           {
-            "The business account for companies that pay in stablecoins. Every payment settles on Solana. Only the people you hand a key to can read the numbers."
+            "Amounts sealed on Solana. Every reader sees only their scope. Prove your balance without showing it."
           }
         </p>
         <div className="hcta">
@@ -219,7 +220,7 @@ export function Hero({ v }: { v: LandingView }) {
                     <span>{"Payroll"}</span>
                   </div>
                   {/* Step 3.10: a card title, not a heading: an h3 here broke the heading order under the h1. */}
-                  <p className="sheetTitle">{"September payroll"}</p>
+                  <p className="sheetTitle">{"October payroll"}</p>
                   <div className="facts5">
                     <span>
                       <svg
@@ -637,43 +638,17 @@ export function Hero({ v }: { v: LandingView }) {
         </svg>
         <span>
           {
-            "Solana switched native confidential transfers back on in June 2026. Sotto is the business account built on top of them."
+            "Solana switched confidential transfers back on in June 2026. Sotto is the business account built on them."
           }
         </span>
       </p>
       <div className="w5 built5">
         <span>{"Built with"}</span>
-        <b>
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M5 7h12l2 2-2 2H5M19 13H7l-2 2 2 2h12" />
-          </svg>
-          {"Solana"}
+        <b className="solana">
+          <SolanaLockup />
         </b>
-        <b>
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="9" />
-            <path d="M14.5 9.5c-.4-1-1.4-1.5-2.5-1.5-1.5 0-2.5.8-2.5 2 0 2.8 5 1.6 5 4.2 0 1.2-1.1 1.8-2.5 1.8-1.2 0-2.2-.6-2.6-1.6M12 6.5v1.5M12 16v1.5" />
-          </svg>
+        <b className="usdc">
+          <UsdcToken />
           {"USDC"}
         </b>
         <b>

@@ -60,7 +60,7 @@ describe("the landing (AC-17.1)", () => {
   it("AC-17.1 says Proven and at least, never True, False or above (L3, L5, L26)", () => {
     expect(text).not.toMatch(/\b(True|False)\b/);
     expect(text).toContain("Proven");
-    expect(text).toContain("Balance is at least $100,000");
+    expect(text).toContain("Balance is at least 250,000 USDC");
     expect(text).toContain("Prove the balance is at least");
     expect(text).not.toMatch(/Balance above|Statement: above/);
     expect(proofWords(true)).toEqual({
@@ -149,7 +149,7 @@ describe("the landing (AC-17.1)", () => {
 
   it("AC-17.1 answers the FAQ with what the build does (L8, L9, L10, L21, L22, D-05)", () => {
     expect(text).toContain(
-      "During the beta, Sotto runs on Solana devnet with devnet USDC, wrapped one to one by a test deployment of Solana's Token Wrap program. Mainnet assets are not decided yet.",
+      "During the beta, Sotto runs on Solana devnet with devnet USDC, wrapped one to one by Token Wrap, and devUSD, a test dollar with no value. On mainnet, USDG and PYUSD already carry the confidential extension, but each confidential account needs the issuer's approval, so Sotto uses Token Wrap until then.",
     );
     expect(text).toContain("Devnet USDC during the beta");
     expect(text).toContain("Today they connect a Solana wallet. Email claim is coming.");
@@ -181,6 +181,42 @@ describe("the landing (AC-17.1)", () => {
     for (const label of ["Privacy", "Terms"]) {
       expect(links.some((link) => link.label === label)).toBe(false);
     }
+  });
+});
+
+describe("the landing's copy of step 4.4 (founder, 2026-10-04)", () => {
+  it("names the category in the eyebrow and keeps the headline", () => {
+    expect(text).toContain("Selective privacy for onchain finance");
+    expect(text).toContain("Private books.");
+    expect(text).toContain("Public chain.");
+    expect(text).toContain(
+      "Amounts sealed on Solana. Every reader sees only their scope. Prove your balance without showing it.",
+    );
+    expect(text).toContain(
+      "Solana switched confidential transfers back on in June 2026. Sotto is the business account built on them.",
+    );
+    expect(text).not.toContain("Confidential payments on Solana");
+  });
+
+  it("never says selective privacy and confidential in one sentence", () => {
+    for (const sentence of text.split(/(?<=[.!?])\s+/)) {
+      if (/selective privacy/i.test(sentence)) expect(sentence).not.toMatch(/confidential/i);
+    }
+  });
+
+  it("shows Atlas Freight, October and 250,000 USDC in the sample data", () => {
+    expect(text).not.toMatch(/Hollis|September payroll|Payslip, September|\$100,000/);
+    expect(text).toContain("Atlas Freight");
+    expect(text).toContain("October payroll");
+    expect(text).toContain("Northwind Labs, October 2026");
+  });
+
+  it("shows the original Solana lockup and USDC token logo, with the trademark line", () => {
+    expect(html).toContain('aria-label="Solana"');
+    expect(html).toContain('viewBox="189 116 2190 411"');
+    expect(html).toContain('fill="#2775ca"');
+    expect(html).toContain('viewBox="0 0 2000 2000"');
+    expect(text).toContain("All trademarks are property of their respective owners.");
   });
 });
 

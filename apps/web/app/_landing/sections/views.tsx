@@ -26,7 +26,7 @@ export function Views({ v }: { v: LandingView }) {
           <div className="vtop">
             <div>
               <b>{"Sample statement of account"}</b>
-              <small>{"Northwind Labs, September 2026"}</small>
+              <small>{"Northwind Labs, October 2026"}</small>
             </div>
             <span className="cnt">
               <svg
@@ -122,11 +122,11 @@ export function Views({ v }: { v: LandingView }) {
           <div className="vr">
             <div className="w">
               <b>{"Supplier invoice 1042"}</b>
-              <span>{"Hollis Supply Co."}</span>
+              <span>{"Atlas Freight"}</span>
             </div>
             <span className="a wl mono">{"K2mD\u2026Lc07"}</span>
             <span className="rb">
-              <span className="av5 pho u-hollis" title="hollis" />
+              <span className="av5 pho u-atlas" title="atlas" />
               <span className="av5 pho u-acct" title="acct" />
             </span>
             <span className={`amt ${v.vSupplier}`}>
@@ -216,11 +216,11 @@ export function Views({ v }: { v: LandingView }) {
           <div className="vr">
             <div className="w">
               <b>{"Proof of funds"}</b>
-              <span>{"Balance is at least $100,000"}</span>
+              <span>{"Balance is at least 250,000 USDC"}</span>
             </div>
             <span className="a wl mono">{"Proof record"}</span>
             <span className="rb">
-              <span className="av5 pho u-hollis" title="hollis" />
+              <span className="av5 pho u-atlas" title="atlas" />
               <span className="av5 pho u-acct" title="acct" />
             </span>
             <span className={`amt ${v.vProof}`}>

@@ -6,7 +6,7 @@
 useDefault = true
 
 [[allowlists]]
-description = "Public Solana addresses and keys (facts A11, C8, D5, E7, N7)"
+description = "Public Solana addresses and keys (facts A11, C8, D5, E7, N7, N8)"
 regexes = [
   # Sotto devnet test deployment of Token Wrap (C8).
   '''^EEvqpjNRQkNRwXzVziuTGGi1wYDiPv7haYVVu3XZCoQn$''',
@@ -20,6 +20,8 @@ regexes = [
   '''^4QHNHpkTVwssfTGM4ygotqKnf7Qiwq5FWifh9D16Z8aQ$''',
   # The wUSDC account of the step 2.7 devnet proof of funds owner (N7), in the step 2.8 tests.
   '''^DFqVbjLfr1edLKBrmGB6tATRc2vvEqdRr5DVubyhqGXf$''',
+  # The devUSD mint authority's public key (N8): the log says "only the public key was printed".
+  '''^8QJKvfopLPfyBEgir4VwPRVyst9HFYtNW3GU6vmFVZS6$''',
 ]
 
 [[allowlists]]

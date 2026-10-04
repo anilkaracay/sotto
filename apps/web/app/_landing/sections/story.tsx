@@ -178,21 +178,7 @@ export function Story() {
             <div className="xc c3">
               <div className="xh">
                 <span className="xi">
-                  <span className="xg">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M4 19h16M6 15l4-4 3 3 5-6" />
-                    </svg>
-                  </span>
+                  <span className="av5 pho u-northwind" style={{ width: "38px", height: "38px" }} />
                 </span>
                 <div>
                   <b>{"Runway"}</b>

@@ -785,8 +785,14 @@ body:has(> main.theme-landing) {
 .theme-landing .u-anyone {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><rect width='40' height='40' fill='%23E6EDF7'/><g fill='none' stroke='%232A3852' stroke-width='1.6'><circle cx='20' cy='20' r='9'/><path d='M11 20h18M20 11c2.6 2.8 3.8 5.8 3.8 9s-1.2 6.2-3.8 9c-2.6-2.8-3.8-5.8-3.8-9s1.2-6.2 3.8-9z'/></g></svg>");
 }
+/* Step 4.4: Atlas Freight, the sample supplier, as a company mark (a globe on a shipping route), and
+   Northwind Labs, the sample company, with its own mark for its runway. Both drawn here, no files. */
 .theme-landing .u-atlas {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><rect width='40' height='40' fill='%2312704A'/><path d='M12 29L20 11l8 18M15.2 22h9.6' fill='none' stroke='%23FFFFFF' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%231A8763'/><stop offset='1' stop-color='%230B4A37'/></linearGradient></defs><rect width='40' height='40' fill='url(%23g)'/><g fill='none' stroke='%23FFFFFF' stroke-width='1.8'><circle cx='20' cy='19.5' r='8.5'/><ellipse cx='20' cy='19.5' rx='3.8' ry='8.5'/><path d='M11.5 19.5h17'/></g><g transform='rotate(-16 20 21)'><path d='M5.5 21a14.5 4.6 0 0 0 29 0' fill='none' stroke='%23F5B544' stroke-width='2.3' stroke-linecap='round'/></g></svg>");
+  border-radius: 10px !important;
+}
+.theme-landing .u-northwind {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><defs><linearGradient id='n' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%231E2E4D'/><stop offset='1' stop-color='%230B1830'/></linearGradient></defs><rect width='40' height='40' fill='url(%23n)'/><circle cx='20' cy='20' r='8.6' fill='none' stroke='%23FFFFFF' stroke-width='2.3'/><path d='M20 11.4a8.6 8.6 0 000 17.2z' fill='%23FFFFFF'/></svg>");
   border-radius: 10px !important;
 }
 .theme-landing .flag {
@@ -908,17 +914,6 @@ body:has(> main.theme-landing) {
   font-size: 12.5px;
   color: var(--faint);
   margin-top: 2px;
-}
-.theme-landing .xg {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: #eaf1fb;
-  color: #1f5be8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
 }
 .theme-landing .xt {
   margin-left: auto;
@@ -1154,6 +1149,16 @@ body:has(> main.theme-landing) {
 /* Step 4.2.1: the brand kit's lockup sizes itself (27 pixels tall, above its 96 pixel minimum width). */
 .theme-landing .snav .slogo svg {
   display: block;
+}
+/* Step 4.4: the wordmark sits below the mark's center line, so beside the links the lockup rises until
+   "sotto" lines up with them, in a pill tall enough for it. Phones show no links and keep it centered. */
+@media (min-width: 721px) {
+  .theme-landing .snav {
+    padding: 9px 9px 9px 20px;
+  }
+  .theme-landing .snav .slogo svg {
+    transform: translateY(-6px);
+  }
 }
 .theme-landing .snav nav {
   display: flex;

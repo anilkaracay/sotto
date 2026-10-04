@@ -113,7 +113,11 @@ export function Footer({ v }: { v: LandingView }) {
           </div>
         </div>
         <div className="fbase">
-          <span>{"\u00a9 2026 Sotto. Built for Colosseum's Crypto World's Fair."}</span>
+          <span>
+            {"\u00a9 2026 Sotto. Built for Colosseum's Crypto World's Fair."}
+            <br />
+            {"All trademarks are property of their respective owners."}
+          </span>
           <nav aria-label="Legal">
             <a href="/trust">{"Security"}</a>
           </nav>

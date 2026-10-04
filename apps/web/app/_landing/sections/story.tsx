@@ -130,7 +130,7 @@ export function Story() {
             <div className="xc c2">
               <div className="xh">
                 <span className="xi">
-                  <span className="av5 pho u-hollis" style={{ width: "38px", height: "38px" }} />
+                  <span className="av5 pho u-atlas" style={{ width: "38px", height: "38px" }} />
                 </span>
                 <div>
                   <b>{"Supplier price"}</b>

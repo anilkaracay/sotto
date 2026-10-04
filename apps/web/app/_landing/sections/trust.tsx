@@ -56,7 +56,7 @@ export function Trust({ v }: { v: LandingView }) {
             <span className="rk">{"From"}</span>
             <span className="rval">
               <span
-                className="av5 pho u-hollis"
+                className="av5 pho u-atlas"
                 style={{
                   width: "24px",
                   height: "24px",
@@ -119,7 +119,7 @@ export function Trust({ v }: { v: LandingView }) {
           </div>
           <div className="rr g-public">
             <span className="rk">{"When"}</span>
-            <span className="rval">{"Sep 30, 2026, 09:14 UTC"}</span>
+            <span className="rval">{"Oct 30, 2026, 09:14 UTC"}</span>
             <span className="rt public">
               <svg
                 width="12"
@@ -197,7 +197,7 @@ export function Trust({ v }: { v: LandingView }) {
                     <path d="M8 11V8a4 4 0 018 0v3" />
                   </svg>
                 </span>
-                <span className="v">{"September salary"}</span>
+                <span className="v">{"October salary"}</span>
               </span>
             </span>
             <span className="rt sealed">

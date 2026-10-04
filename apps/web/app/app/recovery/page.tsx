@@ -9,10 +9,11 @@ import { Card, Chip } from "@sotto/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { currentNetworkLabel } from "../../../lib/network.ts";
+import { LANDING_TITLE } from "../../../lib/site-metadata.ts";
 import { Logo } from "../_components/logo.tsx";
 import styles from "./recovery.module.css";
 
-export const metadata: Metadata = { title: "Recovery guide · Sotto" };
+export const metadata: Metadata = { title: LANDING_TITLE };
 
 function Command({ children }: { children: string }) {
   return (

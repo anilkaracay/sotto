@@ -6,11 +6,12 @@
 import type { Metadata } from "next";
 import { SottoLockupWhite } from "@sotto/ui";
 import Link from "next/link";
+import { LANDING_TITLE } from "../../lib/site-metadata.ts";
 import { DEVUSD, NEVER_HELD, ONCHAIN, TRUST_CARDS } from "./trust-facts.ts";
 import styles from "./trust.module.css";
 
 export const metadata: Metadata = {
-  title: "Trust: Sotto",
+  title: LANDING_TITLE,
   description:
     "What Sotto can and cannot do with your money and your numbers, during the beta on Solana devnet.",
 };

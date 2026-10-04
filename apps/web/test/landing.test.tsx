@@ -60,7 +60,7 @@ describe("the landing (AC-17.1)", () => {
   it("AC-17.1 says Proven and at least, never True, False or above (L3, L5, L26)", () => {
     expect(text).not.toMatch(/\b(True|False)\b/);
     expect(text).toContain("Proven");
-    expect(text).toContain("Balance is at least $100,000");
+    expect(text).toContain("Balance is at least 250,000 USDC");
     expect(text).toContain("Prove the balance is at least");
     expect(text).not.toMatch(/Balance above|Statement: above/);
     expect(proofWords(true)).toEqual({
@@ -149,7 +149,7 @@ describe("the landing (AC-17.1)", () => {
 
   it("AC-17.1 answers the FAQ with what the build does (L8, L9, L10, L21, L22, D-05)", () => {
     expect(text).toContain(
-      "During the beta, Sotto runs on Solana devnet with devnet USDC, wrapped one to one by a test deployment of Solana's Token Wrap program. Mainnet assets are not decided yet.",
+      "During the beta, Sotto runs on Solana devnet with devnet USDC, wrapped one to one by Token Wrap, and devUSD, a test dollar with no value. On mainnet, USDG and PYUSD already carry the confidential extension, but each confidential account needs the issuer's approval, so Sotto uses Token Wrap until then.",
     );
     expect(text).toContain("Devnet USDC during the beta");
     expect(text).toContain("Today they connect a Solana wallet. Email claim is coming.");
@@ -181,6 +181,27 @@ describe("the landing (AC-17.1)", () => {
     for (const label of ["Privacy", "Terms"]) {
       expect(links.some((link) => link.label === label)).toBe(false);
     }
+  });
+});
+
+  it("never says selective privacy and confidential in one sentence", () => {
+    for (const sentence of text.split(/(?<=[.!?])\s+/)) {
+      if (/selective privacy/i.test(sentence)) expect(sentence).not.toMatch(/confidential/i);
+    }
+  });
+
+  it("shows Atlas Freight, October and 250,000 USDC in the sample data", () => {
+    expect(text).not.toMatch(/Hollis|September payroll|Payslip, September|\$100,000/);
+    expect(text).toContain("Atlas Freight");
+    expect(text).toContain("October payroll");
+    expect(text).toContain("Northwind Labs, October 2026");
+  });
+
+  it("shows the Solana mark in its brand color and Circle's USDC lockup, with the trademark line", () => {
+    expect(html).toContain('fill="#9945FF"');
+    expect(html).toContain('aria-label="USDC"');
+    expect(html).toContain('viewBox="0 0 1068 309"');
+    expect(text).toContain("All trademarks are property of their respective owners.");
   });
 });
 

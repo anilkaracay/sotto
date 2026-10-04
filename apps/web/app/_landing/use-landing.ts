@@ -32,7 +32,7 @@ const THRESHOLDS = [
   { value: 2_500_000, label: "$2.5M", full: "$2,500,000" },
 ];
 const DEFAULT_THRESHOLD = { value: 1_000_000, label: "$1M", full: "$1,000,000" };
-const TARGETS = ["Hollis Supply Co.", "Your landlord", "Northbank credit desk"];
+const TARGETS = ["Atlas Freight", "Your landlord", "Northbank credit desk"];
 /** The illustration's sealed balance, the same sample figure the other sections show. */
 const SAMPLE_BALANCE = 1_840_300;
 const SCALE_MAX = 2_800_000;
@@ -59,8 +59,8 @@ const ROLES = [
   {
     id: "counterparty",
     label: "Supplier",
-    avatar: "av5 pho u-hollis",
-    note: "Hollis Supply sees the answer to the one question you chose to prove.",
+    avatar: "av5 pho u-atlas",
+    note: "Atlas Freight sees the answer to the one question you chose to prove.",
   },
 ] as const;
 const OPEN_BY: Record<string, string[]> = {

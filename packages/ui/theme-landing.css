@@ -776,8 +776,8 @@ body:has(> main.theme-landing) {
 .theme-landing .u-anyone {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><rect width='40' height='40' fill='%23E6EDF7'/><g fill='none' stroke='%232A3852' stroke-width='1.6'><circle cx='20' cy='20' r='9'/><path d='M11 20h18M20 11c2.6 2.8 3.8 5.8 3.8 9s-1.2 6.2-3.8 9c-2.6-2.8-3.8-5.8-3.8-9s1.2-6.2 3.8-9z'/></g></svg>");
 }
-.theme-landing .u-hollis {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><rect width='40' height='40' fill='%2312704A'/><path d='M12 11v18M28 11v18M12 20h16' stroke='%23FFFFFF' stroke-width='3.2' stroke-linecap='round'/></svg>");
+.theme-landing .u-atlas {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><rect width='40' height='40' fill='%2312704A'/><path d='M12 29L20 11l8 18M15.2 22h9.6' fill='none' stroke='%23FFFFFF' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
   border-radius: 10px !important;
 }
 .theme-landing .flag {
@@ -1297,13 +1297,13 @@ body:has(> main.theme-landing) {
 }
 .theme-landing .vc.who-team .rb .av5:not(.u-maya),
 .theme-landing .vc.who-accountant .rb .av5:not(.u-acct),
-.theme-landing .vc.who-counterparty .rb .av5:not(.u-hollis) {
+.theme-landing .vc.who-counterparty .rb .av5:not(.u-atlas) {
   opacity: 0.5;
   filter: grayscale(1);
 }
 .theme-landing .vc.who-team .rb .u-maya,
 .theme-landing .vc.who-accountant .rb .u-acct,
-.theme-landing .vc.who-counterparty .rb .u-hollis {
+.theme-landing .vc.who-counterparty .rb .u-atlas {
   box-shadow:
     0 0 0 2px #ffffff,
     0 0 0 4px #1f5be8;
@@ -1607,7 +1607,6 @@ body:has(> main.theme-landing) {
   align-items: center;
   gap: 10px;
   margin: 84px auto 0;
-  max-width: 760px;
   padding: 0 24px;
   font-size: 15px;
   line-height: 1.5;
@@ -1617,6 +1616,25 @@ body:has(> main.theme-landing) {
 .theme-landing .why7 svg {
   color: var(--blue);
   flex: none;
+}
+/* Step 4.4: one line on wide screens; below 1080px the bolt flows with a balanced text. */
+.theme-landing .p5 .why7 span {
+  white-space: nowrap;
+}
+@media (max-width: 1080px) {
+  .theme-landing .p5 .why7 {
+    display: block;
+    max-width: 640px;
+    text-wrap: balance;
+  }
+  .theme-landing .p5 .why7 span {
+    white-space: normal;
+  }
+  .theme-landing .why7 svg {
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: -2px;
+  }
 }
 .theme-landing .hand .drag {
   position: absolute;

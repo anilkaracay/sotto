@@ -4,9 +4,11 @@
 // only a title and a description inherit it (Next.js merges openGraph and twitter from the layout).
 import type { Metadata } from "next";
 
-export const LANDING_TITLE = "Sotto: confidential business payments on Solana";
+// Step 4.4 (founder, 2026-10-04): "selective privacy" names the category, "confidential" the mechanism
+// and the product, never both in one sentence or heading. Every public page but /v/ uses this title.
+export const LANDING_TITLE = "Sotto · Selective privacy for onchain finance";
 export const LANDING_DESCRIPTION =
-  "The business account for companies that pay in stablecoins. Every payment settles on Solana. Only the people you hand a key to can read the numbers. Beta on Solana devnet.";
+  "The confidential business account on Solana. Amounts sealed, each reader sees only their scope, and balances proven without being shown.";
 
 const OG_IMAGE = {
   url: "/sotto-og-1200x630.png",

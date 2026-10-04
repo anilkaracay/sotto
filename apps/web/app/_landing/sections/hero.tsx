@@ -157,7 +157,7 @@ export function Hero({ v }: { v: LandingView }) {
             </svg>
             {"Beta on Solana devnet"}
           </b>
-          <span>{"Confidential payments on Solana"}</span>
+          <span>{"Selective privacy for onchain finance"}</span>
         </div>
         <h1 className="H1">
           <span className="L">
@@ -169,7 +169,7 @@ export function Hero({ v }: { v: LandingView }) {
         </h1>
         <p className="lead">
           {
-            "The business account for companies that pay in stablecoins. Every payment settles on Solana. Only the people you hand a key to can read the numbers."
+            "Amounts sealed on Solana. Every reader sees only their scope. Prove your balance without showing it."
           }
         </p>
         <div className="hcta">
@@ -219,7 +219,7 @@ export function Hero({ v }: { v: LandingView }) {
                     <span>{"Payroll"}</span>
                   </div>
                   {/* Step 3.10: a card title, not a heading: an h3 here broke the heading order under the h1. */}
-                  <p className="sheetTitle">{"September payroll"}</p>
+                  <p className="sheetTitle">{"October payroll"}</p>
                   <div className="facts5">
                     <span>
                       <svg
@@ -637,7 +637,7 @@ export function Hero({ v }: { v: LandingView }) {
         </svg>
         <span>
           {
-            "Solana switched native confidential transfers back on in June 2026. Sotto is the business account built on top of them."
+            "Solana switched confidential transfers back on in June 2026. Sotto is the business account built on them."
           }
         </span>
       </p>

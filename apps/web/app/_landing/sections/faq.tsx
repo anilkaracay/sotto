@@ -238,7 +238,7 @@ export function Faq({ v }: { v: LandingView }) {
                 <div className="fab">
                   <p>
                     {
-                      "During the beta, Sotto runs on Solana devnet with devnet USDC, wrapped one to one by a test deployment of Solana's Token Wrap program. Mainnet assets are not decided yet."
+                      "During the beta, Sotto runs on Solana devnet with devnet USDC, wrapped one to one by Token Wrap, and devUSD, a test dollar with no value. On mainnet, USDG and PYUSD already carry the confidential extension, but each confidential account needs the issuer's approval, so Sotto uses Token Wrap until then."
                     }
                   </p>
                   <div className="fx">

@@ -692,6 +692,7 @@ body:has(> main.theme-landing) {
 }
 .theme-landing .more {
   color: var(--faint);
+  white-space: nowrap;
 }
 .theme-landing .cap5 {
   display: flex;
@@ -4707,8 +4708,31 @@ body:has(> main.theme-landing) {
   .theme-landing .kicker b {
     white-space: nowrap;
   }
-  .theme-landing .kicker > span {
-    display: none;
+  /* Step 4.4: the eyebrow is too long to share the pill with the beta badge on a phone, so it reads
+     as its own line under the badge. */
+  .theme-landing .hero5 .kicker {
+    flex-direction: column;
+    gap: 12px;
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+  .theme-landing .hero5 .kicker > span {
+    text-wrap: balance;
+  }
+  /* The sample caption: a gutter at both sides, its icon flowing with a balanced text. */
+  .theme-landing .cap5 {
+    display: block;
+    max-width: 520px;
+    padding: 0 16px;
+    text-align: center;
+    text-wrap: balance;
+  }
+  .theme-landing .cap5 svg {
+    display: inline-block;
+    margin-right: 6px;
+    vertical-align: -2px;
   }
 }
 
@@ -4866,4 +4890,80 @@ body:has(> main.theme-landing) {
     overflow: hidden;
     text-overflow: ellipsis;
   }
+}
+
+/* Step 4.4: the public pages on phones (430 and 390 pixels) without squeezed numbers or broken lines. */
+@media (max-width: 720px) {
+  /* Same payments, two worlds: each row's date above its amount, so the amounts sit left of the
+     divider and are read whole. */
+  .theme-landing .cmp .ly {
+    padding: 22px 20px 14px;
+  }
+  .theme-landing .tg.pub {
+    height: auto;
+    min-height: 32px;
+    max-width: 150px;
+    padding: 6px 12px;
+    border-radius: 16px;
+    line-height: 1.3;
+    text-wrap: balance;
+  }
+  .theme-landing .xhd {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .theme-landing .xhd > span:nth-child(1) {
+    display: none;
+  }
+  .theme-landing .xhd span:nth-child(3) {
+    text-align: left;
+  }
+  .theme-landing .xr {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    align-content: center;
+  }
+  .theme-landing .xr .d {
+    font-size: 12px;
+  }
+  .theme-landing .xr .v {
+    text-align: left;
+  }
+  /* The sample statement: its title above the count of readable amounts. */
+  .theme-landing .vtop {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 22px 20px;
+  }
+  .theme-landing .cnt {
+    white-space: nowrap;
+  }
+  /* The payouts tile: the sealed total moves under the title instead of squeezing it. */
+  .theme-landing .mtop {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+  .theme-landing .mtop > div {
+    flex: 1 1 200px;
+  }
+  .theme-landing .mtop b {
+    text-wrap: balance;
+  }
+  /* The SDK specs in two columns: the first of each row has no divider. */
+  .theme-landing .specs div + div {
+    padding-left: 16px;
+  }
+  .theme-landing .specs div:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .theme-landing .specs span {
+    text-wrap: balance;
+  }
+}
+/* A name such as Token-2022 never breaks at its hyphen. */
+.theme-landing .specs span.nw {
+  display: inline;
+  margin: 0;
+  white-space: nowrap;
 }

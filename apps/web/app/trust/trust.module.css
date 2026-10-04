@@ -232,3 +232,6 @@
     align-items: flex-start;
   }
 }
+.nw {
+  white-space: nowrap;
+}

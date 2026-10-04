@@ -3,7 +3,7 @@
 // 1440, and at 390 and 360 without a horizontal scroll; Sign in opens the app. Since step 3.2 (AC-17.2)
 // the request access form stores a request with the visitor's consent and says thanks. Since step 3.8
 // the approved landing at 1440 and 390 is compared with its baselines, its clock paused so the hero's
-// views hold still.
+// views hold still; since step 4.4 also at 1280 and 430.
 import { expect, firefox, test, type Page } from "@playwright/test";
 import { expectVisual, VISUAL } from "../visual.ts";
 
@@ -190,7 +190,7 @@ test("AC-17.2 stores a request with the visitor's consent and says thanks", asyn
   expect(problems).toEqual([]);
 });
 
-for (const width of [1440, 390]) {
+for (const width of [1440, 1280, 430, 390]) {
   test(`AC-17.1 matches the approved landing at ${width}`, async ({ page }) => {
     test.skip(!VISUAL, "visual checks run in the local CI (SOTTO_VISUAL=1)");
     const at = new Date("2026-10-01T09:00:00.000Z");

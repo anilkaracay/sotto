@@ -292,7 +292,9 @@ export function Developers({ v }: { v: LandingView }) {
               <path d="M8 11V8a4 4 0 018 0v3" />
             </Icon>
             <b>No new cryptography</b>
-            <span>Built on Token-2022 confidential transfers</span>
+            <span>
+              Built on <span className="nw">Token-2022</span> confidential transfers
+            </span>
           </div>
         </div>
       </div>

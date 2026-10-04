@@ -27,6 +27,19 @@ const ICONS: Record<string, string> = {
   devusd: "M9 3h6 M10 3v6l-5 9a2 2 0 002 3h10a2 2 0 002-3l-5-9V3 M7.5 15h9",
 };
 
+/** Step 4.4: a name such as Token-2022 never breaks at its hyphen on a phone. */
+function keepNames(text: string) {
+  return text.split(/(Token-2022)/).map((part, index) =>
+    index % 2 === 1 ? (
+      <span key={index} className={styles.nw}>
+        {part}
+      </span>
+    ) : (
+      part
+    ),
+  );
+}
+
 function Row({ label, value, mono = true }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className={styles.row}>
@@ -101,7 +114,7 @@ export default function TrustPage() {
               </span>
               <h2>{card.title}</h2>
               {card.body.map((text) => (
-                <p key={text}>{text}</p>
+                <p key={text}>{keepNames(text)}</p>
               ))}
             </article>
           ))}

@@ -15,10 +15,22 @@ import styles from "./recovery.module.css";
 
 export const metadata: Metadata = { title: LANDING_TITLE };
 
+// Step 4.4: on a phone a command wraps between its words, never inside an option or a tool name such
+// as --keypair or apply-pending-balance; a word longer than a line (an address, a path) still wraps.
 function Command({ children }: { children: string }) {
   return (
     <pre className={styles.command}>
-      <code className="mono">{children}</code>
+      <code className="mono">
+        {children.split(/( )/).map((word, index) =>
+          word.includes("-") && word.length <= 32 ? (
+            <span key={index} className={styles.word}>
+              {word}
+            </span>
+          ) : (
+            word
+          ),
+        )}
+      </code>
     </pre>
   );
 }
@@ -137,8 +149,9 @@ export default function RecoveryPage() {
             <p data-testid="recovery-devusd">
               An organization that holds devUSD, Sotto&apos;s devnet test dollar with no value, uses
               the same steps with its mints: wrapped devUSD{" "}
-              <code className="mono">{devusd.wrappedMint}</code> in place of the wUSDC mint, and
-              devUSD <code className="mono">{devusd.baseMint}</code> in place of USDC.
+              <code className={`mono ${styles.address}`}>{devusd.wrappedMint}</code> in place of the
+              wUSDC mint, and devUSD{" "}
+              <code className={`mono ${styles.address}`}>{devusd.baseMint}</code> in place of USDC.
             </p>
           ) : null}
           <p className={styles.back}>

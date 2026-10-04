@@ -211,10 +211,11 @@ describe("the landing's copy of step 4.4 (founder, 2026-10-04)", () => {
     expect(text).toContain("Northwind Labs, October 2026");
   });
 
-  it("shows the Solana mark in its brand color and Circle's USDC lockup, with the trademark line", () => {
-    expect(html).toContain('fill="#9945FF"');
-    expect(html).toContain('aria-label="USDC"');
-    expect(html).toContain('viewBox="0 0 1068 309"');
+  it("shows the original Solana lockup and USDC token logo, with the trademark line", () => {
+    expect(html).toContain('aria-label="Solana"');
+    expect(html).toContain('viewBox="189 116 2190 411"');
+    expect(html).toContain('fill="#2775ca"');
+    expect(html).toContain('viewBox="0 0 2000 2000"');
     expect(text).toContain("All trademarks are property of their respective owners.");
   });
 });

@@ -1,7 +1,7 @@
 // The landing's hero section (F-17, step 3.1), from design/sotto-landing.html.
 import Link from "next/link";
 import { SottoLockupWhite } from "@sotto/ui";
-import { SolanaMark, UsdcLockup } from "../brand-logos.tsx";
+import { SolanaLockup, UsdcToken } from "../brand-logos.tsx";
 import type { LandingView } from "../use-landing.ts";
 
 export function Hero({ v }: { v: LandingView }) {
@@ -644,12 +644,12 @@ export function Hero({ v }: { v: LandingView }) {
       </p>
       <div className="w5 built5">
         <span>{"Built with"}</span>
-        <b>
-          <SolanaMark />
-          {"Solana"}
+        <b className="solana">
+          <SolanaLockup />
         </b>
         <b className="usdc">
-          <UsdcLockup />
+          <UsdcToken />
+          {"USDC"}
         </b>
         <b>
           <svg

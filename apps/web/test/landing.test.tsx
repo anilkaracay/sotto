@@ -184,6 +184,20 @@ describe("the landing (AC-17.1)", () => {
   });
 });
 
+describe("the landing's copy of step 4.4 (founder, 2026-10-04)", () => {
+  it("names the category in the eyebrow and keeps the headline", () => {
+    expect(text).toContain("Selective privacy for onchain finance");
+    expect(text).toContain("Private books.");
+    expect(text).toContain("Public chain.");
+    expect(text).toContain(
+      "Amounts sealed on Solana. Every reader sees only their scope. Prove your balance without showing it.",
+    );
+    expect(text).toContain(
+      "Solana switched confidential transfers back on in June 2026. Sotto is the business account built on them.",
+    );
+    expect(text).not.toContain("Confidential payments on Solana");
+  });
+
   it("never says selective privacy and confidential in one sentence", () => {
     for (const sentence of text.split(/(?<=[.!?])\s+/)) {
       if (/selective privacy/i.test(sentence)) expect(sentence).not.toMatch(/confidential/i);

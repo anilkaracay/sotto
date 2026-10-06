@@ -6,8 +6,8 @@ Confidential business account on Solana. Private books, public chain.
 
 Sotto runs on Solana devnet with test money.
 
-See a live proof of funds: https://sottoapp.xyz/v/HCYoTbRwzcoa9NqPwRuqbHiL6jLXAHgJk11Di2RXrk5M
-It states that Northwind Labs Demo Ltd holds at least 250,000 devUSD. Status: Proven, valid until 2 November 2026. Balance disclosed: none.
+See a live proof of funds: https://sottoapp.xyz/v/7ssfLgVmvaC4zAFm9aVBw4jrJdb9mSisCKQXvFHjUbEX
+It states that Northwind Labs Demo Ltd holds at least 250,000 devUSD. Status: Proven, valid until 4 April 2027. Balance disclosed: none.
 
 Open your own account:
 
@@ -24,7 +24,7 @@ Demo video: TODO-VIDEO
 ## Verify it
 
 - A payment on the explorer shows the sender, the recipient and the token, but not the amount: https://explorer.solana.com/tx/4y8odT3AYxoZvcW5Xnbf6DMMNA3pcdHhqQVGJVffiTEkVEgq6Gc4vwGYeEmf8vMNeXCibxhnWqiuzTJUHanKTqD3?cluster=devnet
-- The proof record is checked onchain by the sotto_proofs program with the ZK ElGamal proof program: https://explorer.solana.com/address/HCYoTbRwzcoa9NqPwRuqbHiL6jLXAHgJk11Di2RXrk5M?cluster=devnet
+- The proof record is checked onchain by the sotto_proofs program with the ZK ElGamal proof program: https://explorer.solana.com/address/7ssfLgVmvaC4zAFm9aVBw4jrJdb9mSisCKQXvFHjUbEX?cluster=devnet
 - A reader decrypts only what their grant covers. Grants, shares, revocations, payments, payroll runs, exports and proofs are recorded in the access log, and every viewing key shows when it was last used.
 - No secret key and no private amount reaches Sotto's servers. They store public keys, and only amounts that are already public onchain, such as deposits and withdrawals.
 

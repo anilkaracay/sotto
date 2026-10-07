@@ -28,6 +28,9 @@ test-ledger
 **/*.tsbuildinfo
 target
 
+# The demo video's project (step 4.5): no image needs it, and its cut media is large
+video
+
 # Repository metadata
 .git
 **/.DS_Store

@@ -19,3 +19,6 @@ playwright-report/
 packages/ui/src/brand/logos.tsx
 # The approved brand kit, kept exactly as delivered (step 4.2.1)
 design/brand-kit/
+
+# Generated from the cut list by video/tools/build.py film (step 4.5)
+video/edit/film.json

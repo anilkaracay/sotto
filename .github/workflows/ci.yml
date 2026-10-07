@@ -1,7 +1,7 @@
 name: CI
 
-# Manual runs only while the repository is private (D-25). The push and pull_request triggers are
-# restored by the public launch checklist.
+# Manual runs only (D-25): the project's CI runs locally with pnpm ci:local. The push and
+# pull_request triggers are turned on once a run here has passed.
 on:
   workflow_dispatch:
 

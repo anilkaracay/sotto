@@ -419,6 +419,7 @@ Commands (in `video/`; steps in `video/README.md`):
 node record/<clip>.mjs                                   # one recording
 VIRTUAL_ENV=$V PATH=$V/bin:$PATH python audio/tts.py     # the voice, V=~/.cache/sotto-video/tts/.venv
 python tools/build.py film && python tools/build.py clips && python tools/build.py audio
-bash render-parts.sh <seconds>                           # 30 second parts into output/parts; ffmpeg joins them with the mix
+bash render-parts.sh <seconds>                           # 30 second parts into output/parts
+bash join.sh <out.mp4>                                   # joins the parts, adds the mix, copies the .srt
 python tools/qa.py <final mp4>
 ```

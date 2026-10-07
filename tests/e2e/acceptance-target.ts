@@ -167,7 +167,7 @@ async function devnet(assetId: AssetId): Promise<AcceptanceTarget> {
     throw new Error("the devnet registry has no devUSD with its sotto_proofs");
   }
   const baseMint = devusd ? devusd.baseMint : cluster.usdcMint;
-  // The running services' logs (14 section 2: .localnet/devnet-run/), from this point on.
+  // The running services' logs (.localnet/devnet-run/), from this point on.
   const logs = [".localnet/devnet-run/web.log", ".localnet/devnet-run/worker.log"].map((path) =>
     join(ROOT, path),
   );

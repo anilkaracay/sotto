@@ -1,4 +1,4 @@
-// The trust page's statements (step 3.3, built in step 3.4; 13 L6, L7, L36), each from the document
+// The trust page's statements (step 3.3, built in step 3.4; L7, L36), each from the document
 // that decides it, so the page and its tests say only what holds. No server only imports. Step 4.3
 // (D-29): once the devnet registry lists devUSD, the page adds what holds for it (Sotto issues it, its
 // mint authority can mint more, it has no freeze authority and no value) and its addresses.
@@ -21,7 +21,7 @@ export const ONCHAIN = {
   tokenWrap: devnet.programs.tokenWrap,
   wrappedMint: devnet.wrappedUsdcMint,
   proofsProgram: devnet.sottoProofs.program,
-  // VERIFICATION-LOG.md step 2.7: the build of commit 87fbc40, 44360 bytes; `solana program dump`
+  // Measured in step 2.7: the build of commit 87fbc40, 44360 bytes; `solana program dump`
   // of the deployed program hashes to it over those bytes (the rest of the account is zeros).
   proofsBuildSha256: "63c4002c3db312f82632ba7723725b906c30b9833593cb5de723d6cab92f32d8",
 } as const;
@@ -58,7 +58,7 @@ export function trustCards(devusd: AssetConfig | null): TrustCard[] {
 
 const BASE_CARDS: TrustCard[] = [
   {
-    // D-02, ENGINEERING-RULES.md rules 4 and 5; 13 L7.
+    // D-02, ENGINEERING-RULES.md rules 4 and 5.
     id: "custody",
     title: "Non-custodial",
     body: [
@@ -76,7 +76,7 @@ const BASE_CARDS: TrustCard[] = [
     ],
   },
   {
-    // D-05, 07 section 4; 13 L6.
+    // D-05, 07 section 4.
     id: "access",
     title: "Access per person and scope",
     body: [
@@ -93,7 +93,7 @@ const BASE_CARDS: TrustCard[] = [
     ],
   },
   {
-    // D-01, the devnet beta rule of 13, L8.
+    // D-01, the devnet beta rule.
     id: "devnet",
     title: "Devnet test wrap",
     body: [

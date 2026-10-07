@@ -1,6 +1,6 @@
 // The balance states of the org pages (step 1.7 exit test, component level): Locked never shows a
 // number (AC-03.5), decrypted and public balances (AC-03.4, AC-05.1) with the devnet test wrap label on
-// wUSDC (13 A25, D-01), absent accounts said in words, and the apply prompt (AC-04.3).
+// wUSDC (D-01), absent accounts said in words, and the apply prompt (AC-04.3).
 import type { PublicTokenBalance, TokenAccountState } from "@sotto/sdk/confidential/public";
 import { address } from "@solana/kit";
 import { renderToStaticMarkup } from "react-dom/server";

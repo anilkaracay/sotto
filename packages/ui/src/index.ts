@@ -1,4 +1,4 @@
-/** CSS scope classes for the two themes (X-42). */
+/** CSS scope classes for the two themes. */
 export const themeClass = {
   landing: "theme-landing",
   app: "theme-app",

@@ -1,5 +1,5 @@
-// The sharing and records screens in every state (step 3.6 with the admin console of step 3.4, 13 A35,
-// A38, A42 to A47, A52): the admin reviews and approves a new owner's business; the owner meets the
+// The sharing and records screens in every state (step 3.6 with the admin console of step 3.4):
+// the admin reviews and approves a new owner's business; the owner meets the
 // recipients page empty, with a refused wallet address, with a ready recipient and one without an
 // account, sealed and unlocked, and an invite link shown once; the recipient meets the invite before
 // sign in, signed in with another wallet, signed in with the invited wallet and after joining; the
@@ -160,7 +160,7 @@ async function uploadCsv(page: Page, name: string, rows: string[]) {
 
 test.use({ extraHTTPHeaders: { "x-forwarded-for": "198.51.100.15" } });
 
-test("the sharing and records screens in every state, for the design pass (13 A35, A38, A42 to A47, A52)", async ({
+test("the sharing and records screens in every state, for the design pass (A38, A42 to A47, A52)", async ({
   page,
   browser,
 }) => {

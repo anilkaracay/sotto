@@ -2,7 +2,7 @@
 //! section 7): the happy path and its record and event, a negative test for every error of the checks
 //! 1 to 10 in their order, a balance that changes between the proof and the verification, contexts of
 //! another authority and of any other program (the deprecated ZK Token Proof program included), the
-//! token account left untouched, only System Program calls, the close only after expiry (X-31) with
+//! token account left untouched, only System Program calls, the close only after expiry with
 //! the rent to the owner, and the compute units of the whole instruction.
 
 mod common;
@@ -661,7 +661,7 @@ async fn closes_a_record_only_after_its_expiry_and_only_for_its_owner() {
     let (record, _) = ix::proof_record_address(&env.program_id, &proven.token_address, &args.nonce);
     let close = ix::close_proof_record(&env.program_id, &record, &proven.owner.pubkey());
 
-    // Before the expiry, and at one second before: NotExpired (X-31).
+    // Before the expiry, and at one second before: NotExpired.
     for time in [now, now + DAY - 1] {
         env.set_time(time).await;
         let error = env

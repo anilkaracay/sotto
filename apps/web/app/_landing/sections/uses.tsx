@@ -1,4 +1,4 @@
-// The landing's uses section (F-17, step 3.1), from design/sotto-landing.html.
+// The landing's uses section (F-17, step 3.1), from the approved landing design.
 
 export function UseCases() {
   return (

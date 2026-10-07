@@ -1,7 +1,7 @@
 // POST /api/orgs/:id/payroll-runs/:rid/lines/:lid/executions (owner, active org; 08 section 3; step
 // 2.3): each signature of a line's attempt before its transaction is sent, and the end of an attempt
 // the page stopped. The first signature of the run makes it executing and records the initiator's
-// approval with that execution signature (Q-11, 13 A31).
+// approval with that execution signature.
 import { apiRoute } from "../../../../../../../../../lib/server/api-route.ts";
 import { readJson } from "../../../../../../../../../lib/server/body.ts";
 import { serverCluster } from "../../../../../../../../../lib/server/cluster.ts";

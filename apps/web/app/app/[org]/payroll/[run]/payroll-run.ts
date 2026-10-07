@@ -10,7 +10,7 @@
 //    line by line, every signature recorded before its transaction is sent (I-7);
 // 3. after each chunk: the balance checked against the chunk's prediction, the chunk waited to
 //    finality, then the self and recipient disclosures of its lines, and since step 2.4 one for every
-//    active grant covering each line, under one manifest the owner signs (X-33, AC-08.6, AC-06.4);
+//    active grant covering each line, under one manifest the owner signs (AC-08.6, AC-06.4);
 // 4. a failed line stops the run: its proof accounts are closed, its attempt and the run's stop are
 //    recorded, and Resume pays the rest from chain state.
 import {
@@ -118,7 +118,7 @@ async function verified(key: ViewerKeyRecord | null): Promise<boolean> {
 }
 
 /**
- * AC-08.6, X-33: the owner's self disclosure and the recipient's of each settled line, and since step
+ * AC-08.6: the owner's self disclosure and the recipient's of each settled line, and since step
  * 2.4 one for every grant whose scope covers the line, by its settlement time when Sotto holds it
  * (07 section 6), under one manifest the owner wallet signs (`storeRecords`).
  */
@@ -389,7 +389,7 @@ export async function runPayroll(options: {
             // No verdict.
           }
         }
-        // X-33: the chunk's records once it is final; if that cannot be done now, the run page and a
+        // The chunk's records once it is final; if that cannot be done now, the run page and a
         // resume save the missing ones later.
         onProgress(`Waiting for ${lineWords(lines)} to settle on Solana…`);
         let saved: DisclosureResult;

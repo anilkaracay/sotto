@@ -40,7 +40,7 @@ import {
 import type { RentReply, WorkerRequest, WorkerResponse } from "../lib/crypto-worker/protocol.ts";
 import { createVault, loadVaultModules } from "../lib/crypto-worker/vault.ts";
 
-// The spl-token CLI check keypair (VERIFICATION-LOG step 1.5).
+// The spl-token CLI check keypair (verified in step 1.5).
 const CLI_SEED = createHash("sha256").update("sotto-cli-key-check/v1").digest();
 const CLI_ELGAMAL_KEY = "BxMVLbjVntF9DJtDjfpQLrgw4hopedMgNkZZKGcVkZp6";
 

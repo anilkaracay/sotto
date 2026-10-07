@@ -1,4 +1,4 @@
-// The sas-issue job against SAS on localnet (12 step 1.4 exit test, AC-02.3 and AC-02.4) with a
+// The sas-issue job against SAS on localnet (the step 1.4 exit test, AC-02.3 and AC-02.4) with a
 // fresh test database. Skipped unless SOTTO_LOCALNET_RPC_URL is set; scripts/ci-local.sh runs it in
 // the localnet job. Uses a throwaway signer funded by airdrop.
 import { orgs, users } from "@sotto/db";

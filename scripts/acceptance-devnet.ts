@@ -1,4 +1,4 @@
-// pnpm acceptance:devnet (step 3.11, 14 section 5): the hackathon acceptance scenario on devnet, end
+// pnpm acceptance:devnet (step 3.11): the hackathon acceptance scenario on devnet, end
 // to end and unattended, against the devnet app and worker running on this machine.
 //
 // 1. Checks the running services: apps/web on http://localhost:3000 configured for devnet and
@@ -23,8 +23,8 @@
 // devnet faucet refills it) and about 0.14 SOL.
 //
 // Step 4.3 (D-29): `--asset devusd` runs the scenario for an organization that holds devUSD. The
-// owner's 1 devUSD comes from the operator's mint on the hosting server (`sotto-compose devusd-mint`,
-// through the redacting loader), since only the server holds the mint authority; wallet A sends SOL
+// owner's 1 devUSD comes from the operator's mint on the hosting server (the `devusd-mint`
+// command, through scripts/ops.sh), since only the server holds the mint authority; wallet A sends SOL
 // only. The proof record is checked against devUSD's own sotto_proofs deployment.
 import { spawnSync } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
@@ -222,15 +222,12 @@ for (const [role, amount] of Object.entries(FUNDING)) {
 if (DEVUSD) {
   // The owner's 1 devUSD: the operator's mint on the hosting server, which alone holds the authority.
   const minted = spawnSync(
-    "node",
-    [
-      "scripts/hosting-env.ts",
-      "--",
-      "bash",
-      "-c",
-      `ssh "$OPERATOR_HOST" sotto-compose devusd-mint ${wallets.owner} 1`,
-    ],
-    { cwd: ROOT, encoding: "utf8" },
+    "scripts/ops.sh",
+    ["remote-compose", "devusd-mint", String(wallets.owner), "1"],
+    {
+      cwd: ROOT,
+      encoding: "utf8",
+    },
   );
   const signature = /minted 1 devUSD to \S+: (\S+)/.exec(minted.stdout)?.[1];
   if (minted.status !== 0 || !signature) fail("the operator's devUSD mint for the owner failed");

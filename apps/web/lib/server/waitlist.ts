@@ -1,6 +1,6 @@
 // Request access (F-17, AC-17.2; step 3.2): the landing's form stores a work email and a company with
 // the visitor's explicit consent, one row per email. Nothing is sent: double opt in by email is
-// Post-hackathon with D-19 (13 L24, 15). The email is personal data, so it is never logged, and a
+// Post-hackathon with D-19 (15). The email is personal data, so it is never logged, and a
 // repeated request answers the same as the first, so the form does not tell who has asked before.
 import { waitlist, type Database } from "@sotto/db";
 import { z } from "zod";

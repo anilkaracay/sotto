@@ -1,4 +1,4 @@
-// The wallet's own words next to Sotto's explanation (Q-15, founder 2026-09-29; step 2.1): for every
+// The wallet's own words next to Sotto's explanation (founder 2026-09-29; step 2.1): for every
 // wallet and every request, an error the wallet raised is shown with the wallet's name and the
 // error's name, text and code; errors that are not the wallet's keep Sotto's words alone.
 import { SimulationFailedError, WalletSigningError } from "@sotto/sdk/tx";
@@ -21,8 +21,8 @@ import {
 const named = (name: string, message: string, code?: number | string) =>
   Object.assign(new Error(message), { name, ...(code === undefined ? {} : { code }) });
 
-describe("the wallet's own words (Q-15)", () => {
-  it("Q-15 takes the wallet's error name, text and code, cleaned, whatever the wallet threw", () => {
+describe("the wallet's own words", () => {
+  it("takes the wallet's error name, text and code, cleaned, whatever the wallet threw", () => {
     expect(
       walletWords("Backpack", named("WalletSignTransactionError", "Transaction blocked")),
     ).toEqual({ wallet: "Backpack", text: "WalletSignTransactionError: Transaction blocked" });
@@ -44,7 +44,7 @@ describe("the wallet's own words (Q-15)", () => {
     expect(walletWords("Backpack", new WalletRequestError(new Error("nope"))).text).toBe("nope");
   });
 
-  it("Q-15 puts the wallet's words after Sotto's explanation, and says when the wallet gave none", () => {
+  it("puts the wallet's words after Sotto's explanation, and says when the wallet gave none", () => {
     expect(withWalletWords("Nothing was sent.", { wallet: "Backpack", text: "blocked" })).toBe(
       'Nothing was sent. Backpack said: "blocked"',
     );
@@ -54,7 +54,7 @@ describe("the wallet's own words (Q-15)", () => {
     expect(withWalletWords("Nothing was sent.", null)).toBe("Nothing was sent.");
   });
 
-  it("Q-15 shows a transaction the wallet refused or cancelled with its words, and other errors without", () => {
+  it("shows a transaction the wallet refused or cancelled with its words, and other errors without", () => {
     const refused = new WalletSigningError(
       named("WalletSignTransactionError", "Transaction blocked"),
     );
@@ -90,7 +90,7 @@ describe("the wallet's own words (Q-15)", () => {
     );
   });
 
-  it("Q-15 shows a refused connect or sign in with the wallet's words, a server refusal with the server's", async () => {
+  it("shows a refused connect or sign in with the wallet's words, a server refusal with the server's", async () => {
     const refusal = await fromWallet(async () => {
       throw named("WalletSignInError", "Sign in is not available");
     }).catch((error: unknown) => error);
@@ -112,9 +112,9 @@ describe("the wallet's own words (Q-15)", () => {
   });
 });
 
-// Step 3.5 (13 A41): the page sets the wallet's words apart from Sotto's explanation; the message
+// Step 3.5: the page sets the wallet's words apart from Sotto's explanation; the message
 // itself does not change.
-describe("the wallet's words set apart (13 A41)", () => {
+describe("the wallet's words set apart", () => {
   const joined = (message: string) =>
     splitWalletWords(message)
       .map((part) => part.text)

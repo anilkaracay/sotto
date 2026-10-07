@@ -1,4 +1,4 @@
-// Sends a transaction the user's wallet signs (06 section 9, Q-08; the browser path of step 1.7). The
+// Sends a transaction the user's wallet signs (06 section 9, the browser path of step 1.7). The
 // transaction is prepared by the rules (prepare.ts) and signed through the wallet's modifying signer
 // (@solana/react useWalletAccountTransactionSigner). Then the signed message check
 // (signed-message.ts) decides, before anything is sent:
@@ -44,7 +44,7 @@ export class WalletChangedTransactionError extends Error {
 }
 
 /**
- * The wallet raised an error instead of signing (Q-15, step 2.1). The transaction had passed Sotto's
+ * The wallet raised an error instead of signing (step 2.1). The transaction had passed Sotto's
  * simulation, so the refusal is the wallet's; `cause` is the wallet's own error, which the page shows
  * with the wallet's name next to its explanation.
  */

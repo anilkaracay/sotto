@@ -1,4 +1,4 @@
-// The sign in screen in every state (step 3.4.1, 13 A34): with the test wallet only, with a wallet
+// The sign in screen in every state (step 3.4.1): with the test wallet only, with a wallet
 // for each capability group of D-26 (the test wallet, a wallet that signs in but signs no messages,
 // a wallet that cannot sign transactions), connected, a wallet that shares no account, and with no
 // wallet at all; each at 1440 and 390 with no horizontal scroll and no console error, compared with
@@ -52,7 +52,7 @@ async function shoot(page: Page, name: string) {
 }
 
 for (const width of [1440, 390]) {
-  test(`the sign in screen in every state at ${width} (13 A34)`, async ({ browser }) => {
+  test(`the sign in screen in every state at ${width}`, async ({ browser }) => {
     const baseURL = test.info().project.use.baseURL;
     const open = async (wallets: "test" | "all" | "none") => {
       const context = await browser.newContext({

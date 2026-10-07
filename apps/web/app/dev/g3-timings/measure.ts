@@ -3,7 +3,7 @@
 // account setup proof, a transfer plan and a withdraw plan in both transaction versions. The proofs
 // of a proof of funds (06 section 8) are the withdraw plan's two proofs for the threshold: the
 // equality proof over the available balance minus X and the 64 bit batched range proof over the same
-// commitment (token-2022 0.19.0 `buildConfidentialWithdrawProofData`, VERIFICATION-LOG step 2.2), so
+// commitment (token-2022 0.19.0 `buildConfidentialWithdrawProofData`, verified in step 2.2), so
 // the version 1 withdraw plan for X measures them. The accounts are built in memory; nothing is sent.
 const RUNS = 5;
 

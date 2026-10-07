@@ -162,11 +162,11 @@ export function buildSelfTransfer(
 }
 
 /**
- * Step 2.1 probes (Q-15): does a wallet refuse a devnet transaction because of what it touches?
+ * Step 2.1 probes: does a wallet refuse a devnet transaction because of what it touches?
  * R11 moves 1 base unit of devnet USDC from the owner's associated account to itself (SPL Token only;
  * the mint and the account exist on devnet only). R12 is one ZK ElGamal Proof verification with its
  * proof inline for a fixed throwaway ElGamal key (no account; the program exists on mainnet too,
- * facts B1). Both simulate successfully on devnet (VERIFICATION-LOG step 2.1).
+ * facts B1). Both simulate successfully on devnet (verified in step 2.1).
  */
 export const DEVNET_USDC_MINT = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
 const SPL_TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
@@ -218,11 +218,11 @@ export function buildProbe(
 }
 
 /**
- * Step 2.1 probe R13 (Q-15): the product's account setup transaction for a fresh account, built by
+ * Step 2.1 probe R13: the product's account setup transaction for a fresh account, built by
  * the SDK's confidentialAccountSetupInstructions for the test wallet and the G1 test mint (Token-2022
  * with confidential transfers, auto approve, no auditor; the test wallet has no account for it), with
  * the ElGamal and AES keys of a throwaway keypair. It creates the associated account 4QHNHpkTVwssfTGM4ygotqKnf7Qiwq5FWifh9D16Z8aQ, reallocates it, configures it and verifies the key's proof. Devnet
- * simulation passes as version 1 and version 0 (VERIFICATION-LOG step 2.1). For the test wallet only.
+ * simulation passes as version 1 and version 0 (verified in step 2.1). For the test wallet only.
  */
 export const R13_MINT = "4hteAX4eGnP5qyjYPhfnmnZ83uTVEy9RP3PKaZXHXejp";
 export const R13_TOKEN_ACCOUNT = "4QHNHpkTVwssfTGM4ygotqKnf7Qiwq5FWifh9D16Z8aQ";

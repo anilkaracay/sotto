@@ -1,5 +1,5 @@
 {
-  "$comment": "Step 3.8 (X-46, docs/11-TESTING.md sections 1 and 6): the screens the founder approved, each with a baseline at <spec folder>/__screenshots__/<spec>/<name>.png that the e2e runs compare (tests/e2e/visual.ts). scripts/checks/ac-manifest.py fails when a listed baseline is missing or a baseline is not listed. Add a screen here only after the founder approved it.",
+  "$comment": "Step 3.8 (docs/11-TESTING.md sections 1 and 6): the screens the founder approved, each with a baseline at <spec folder>/__screenshots__/<spec>/<name>.png that the e2e runs compare (tests/e2e/visual.ts). scripts/checks/ac-manifest.py fails when a listed baseline is missing or a baseline is not listed. Add a screen here only after the founder approved it.",
   "screens": {
     "specs/landing.spec.ts": ["landing-1440", "landing-1280", "landing-430", "landing-390"],
     "specs/public-pages.spec.ts": [

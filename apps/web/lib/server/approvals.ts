@@ -1,10 +1,10 @@
-// Approval messages (D-04, Q-11, Q-12 (a); 08 section 3; step 1.9). POST /approvals stores an
+// Approval messages (D-04; 08 section 3; step 1.9). POST /approvals stores an
 // approver's wallet signature over the approval message of a payment or, since step 2.3, a payroll
 // run: the org, the cluster, the subject and the contents hash of its lines as they are now. The
 // approver is an owner or approver of the org other than the initiator (whose execution is their
 // approval), and the subject has not started executing. A message over older contents is refused,
 // and approving again replaces the earlier signature. Policies above 1 cannot be set in the hackathon
-// build (Q-12), so this path is exercised through the API and its tests; the approver screen is
+// build, so this path is exercised through the API and its tests; the approver screen is
 // Post-hackathon.
 import { approvals, insertAccessEvent, payments, recipients, type Database } from "@sotto/db";
 import { approvalMessage } from "@sotto/sdk/approvals";

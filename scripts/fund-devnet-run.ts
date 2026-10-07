@@ -1,7 +1,7 @@
 // The devnet release run's accounts (step 3.11, 11 section 5): wallet A tops up the founder's fresh
 // Solflare accounts for the acceptance scenario, as approved by the founder on 2026-10-02: SOL for
 // the owner and the recipient, devnet USDC for the owner; the accountant only signs messages and gets
-// nothing. Amounts from the measured runs plus a margin (VERIFICATION-LOG step 3.11). Read only by
+// nothing. Amounts from the measured runs plus a margin (verified in step 3.11). Read only by
 // default: it checks the cluster, the addresses and the balances and prints the plan. With --send
 // it simulates each transfer, sends it from wallet A and waits for finalized; it only tops up to
 // the target, so a second run sends nothing.

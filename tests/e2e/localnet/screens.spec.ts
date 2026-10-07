@@ -1,10 +1,10 @@
-// The account and money screens in every state (step 3.5, 13 A36 to A41): one owner meets the unlock
+// The account and money screens in every state (step 3.5): one owner meets the unlock
 // explainer, a refused viewing key signature, the determinism refusal, a wallet that refuses the
 // account setup, the setup, the funding in two signatures, the overview locked and unlocked, the
 // withdraw drawer, and New payment blocked by screening, in progress, settled and refused by the
 // wallet; a recipient meets the pay page locked, with a pending balance and after applying it, holding
 // a payslip (category payroll) and a payment (category supplier) in one list, and saves the PDF of
-// each (13 A49); the recovery guide last. Each state is checked for its words and saved as a full page screenshot at
+// each; the recovery guide last. Each state is checked for its words and saved as a full page screenshot at
 // 1440 to this test's output directory and, once the run passes, to .demo-shots/screens/<UTC time>/
 // (git ignored), for the founder's approval of the design pass. Runs in the localnet job of
 // scripts/ci-local.sh against the bootstrapped validator, never devnet.
@@ -162,9 +162,7 @@ async function unlock(page: Page) {
 
 test.use({ extraHTTPHeaders: { "x-forwarded-for": "198.51.100.14" } });
 
-test("the account and money screens in every state, for the design pass (13 A36 to A41)", async ({
-  browser,
-}) => {
+test("the account and money screens in every state, for the design pass", async ({ browser }) => {
   test.setTimeout(900_000);
   const owner = await createKeyPairSignerFromBytes(new Uint8Array(OWNER.keypair));
   await fundLocalnetWallet(rpc, bootstrap, owner.address, { sol: 10n, usdc: 100n });

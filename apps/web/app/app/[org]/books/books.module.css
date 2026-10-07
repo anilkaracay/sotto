@@ -1,6 +1,6 @@
 /* The accountant's books (step 2.5) on the design's Books screen (design .pg with .dkc, .bigd, .gbw,
    .gbars, .bmv, .bmr, .bmb, .rec8, .chipf, .srch8, .t8 and the payment drawer's .anat and .log). The
-   dark hero shows money out by month (money in is Post-hackathon, M1; 13 A45); the scope banner and
+   dark hero shows money out by month (money in is Post-hackathon, M1); the scope banner and
    the export result have no approved design and use the app tokens. Pixel fidelity and motion get the
    Phase 3 design pass (M2). */
 .page {
@@ -109,7 +109,7 @@
 }
 
 /* The scope banner (AC-11.1). */
-/* The scope banner (design pass C, step 3.6, 13 A46): the design's shield beside the words. */
+/* The scope banner (design pass C, step 3.6): the design's shield beside the words. */
 .banner {
   display: flex;
   align-items: center;

@@ -1,5 +1,5 @@
 /* The cards of the confidential pages (setup, overview, invite, payments, pay), on the app tokens. No
-   design exists for the keys, account and funding parts or the invite page (13 A36, A37, A38); step
+   design exists for the keys, account and funding parts or the invite page (A37, A38); step
    3.5 gives them the design's language: the card head of .c, the drawer's Preview table for details
    (.pv8 rows), its fields, and notices with an icon for warnings, problems and results. */
 .grid {

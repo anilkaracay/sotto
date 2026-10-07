@@ -1,7 +1,7 @@
 "use client";
 
-// Gate G2 wallet capability matrix (docs/12-MILESTONES.md, step 0.6), with the step 2.1 probes R11 and
-// R12 (Q-15). Development only.
+// Gate G2 wallet capability matrix (step 0.6), with the step 2.1 probes R11 and
+// R12. Development only.
 import { associatedTokenAccount } from "@sotto/sdk/confidential/public";
 import { sendWithWallet, type SolanaRpc } from "@sotto/sdk/tx";
 import { transactionPath, walletCapabilities } from "@sotto/sdk/wallet";
@@ -441,7 +441,7 @@ function SingleTransactionRow({
   );
 }
 
-/** Step 2.1 probes (Q-15): a devnet only token account, then a lone ZK proof verification. */
+/** Step 2.1 probes: a devnet only token account, then a lone ZK proof verification. */
 function ProbeRow({
   id,
   kind,
@@ -488,7 +488,7 @@ function ProbeRow({
 }
 
 /**
- * Step 2.1 probe R13 (Q-15): the product's setup transaction for a fresh account, sent exactly as the
+ * Step 2.1 probe R13: the product's setup transaction for a fresh account, sent exactly as the
  * product sends it (sendWithWallet: Sotto's compute budget, simulation first, the version the wallet
  * declares on devnet).
  */

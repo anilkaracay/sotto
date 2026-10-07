@@ -15,7 +15,7 @@ const SECRET_ENV = [
 ];
 
 /**
- * URL path prefixes followed by a bearer secret (Q-16, step 2.1): the invite link token of
+ * URL path prefixes followed by a bearer secret (step 2.1): the invite link token of
  * /app/invite/[token] and /api/invites/[token]. Whoever holds such a URL holds the link, so the
  * segment after the prefix becomes ":token" in every logged string, also URL encoded (a ?next=
  * value). `apps/web/test/log-bearer.test.ts` fails if a dynamic route segment named like a secret

@@ -1,12 +1,12 @@
 // E2E web server: a fresh migrated database on the test Postgres (scripts/db-local.sh test-up) with the
 // E2E admin wallet, then the production build of apps/web through next start on port 3200. Configuration
-// comes from this process's environment, which wins over apps/web/.env.local in Next.js (14 section 2).
+// comes from this process's environment, which wins over apps/web/.env.local in Next.js.
 // With --localnet (the localnet specs, step 1.7) the app runs on the bootstrapped local validator:
 // NEXT_PUBLIC_CLUSTER localnet, its RPC URL and the local USDC mint from .localnet/bootstrap.json.
 // Since step 1.9 --localnet also runs the worker's job loop on that validator and database (payment
 // settlement, the proof program check, readiness, attestations with the bootstrap's SAS signer). The
 // worker runs from a copy without apps/worker/.env.local, whose values would win over this
-// environment (14 section 2), as the worker's start test does. Since step 2.8 the web also gets the
+// environment, as the worker's start test does. Since step 2.8 the web also gets the
 // ledger's sotto_proofs program and SAS credential and schema, for the proofs page and /v/<address>.
 // Since step 3.6 --localnet writes the database's address to .localnet/e2e-database-url (git ignored,
 // removed on stop) for the sharing screens spec, which shows the paused proof program banner. Since

@@ -5,12 +5,12 @@
 //   same draft, I-7);
 // - authorize (AC-06.2, AC-06.3): the organization is active (the gate), the recipient's account is
 //   read from chain right now and must be ready (founder, step 1.8 choice 6), the wallet is screened
-//   clear within 24 hours (D-10), the approvals meet the policy (D-04, Q-11: the initiator's execution
+//   clear within 24 hours (D-10), the approvals meet the policy (D-04: the initiator's execution
 //   counts as one, the rest are signed messages over the current contents hash), and the proof
 //   program verified a proof recently (F-19). A retry after a failed attempt first checks chain
 //   state for that attempt's transfer signature, so a transfer that landed is never sent again;
 // - executions: the signatures of each attempt, recorded before each transaction is sent, with the
-//   transfer transaction marked; with the first signature the initiator's approval is recorded (Q-11).
+//   transfer transaction marked; with the first signature the initiator's approval is recorded.
 //   The worker's confirm-executions job settles the payment when the transfer is finalized.
 import {
   approvals,
@@ -464,7 +464,7 @@ export async function authorizePayment(
   }
   if (screening === "error") throw paymentErrors.screeningUnavailable();
 
-  // D-04, Q-11: the initiator's execution is one approval; the others are signed messages.
+  // D-04: the initiator's execution is one approval; the others are signed messages.
   const hash = await paymentContentsHash(payment, row.wallet);
   const required = await requiredApprovals(db, orgId);
   const signed = await messageApprovals(
@@ -632,7 +632,7 @@ export async function recordExecution(
         metadata: { attemptNo: input.attemptNo },
       });
     }
-    // Q-11: the initiator's execution is their approval, with the first execution signature.
+    // The initiator's execution is their approval, with the first execution signature.
     await tx
       .insert(approvals)
       .values({

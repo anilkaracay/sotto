@@ -1,7 +1,7 @@
 // Confidential keys (06 section 1, D-03 `standard_v1`): the standard `deriveConfidentialKeys` of
 // `@solana-program/token-2022/confidential`, fed with the signature the wallet produced on the main
 // thread, so the keys can be derived inside the crypto Web Worker (04 section 5, 10 section 3). The
-// spl-token CLI derives the same ElGamal key for the same keypair (VERIFICATION-LOG step 1.5).
+// spl-token CLI derives the same ElGamal key for the same keypair (verified in step 1.5).
 import { deriveConfidentialKeys } from "@solana-program/token-2022/confidential";
 import type { Address, MessagePartialSigner, SignatureBytes } from "@solana/kit";
 import { bytesEqual, confidentialKeysMessage } from "./messages.ts";

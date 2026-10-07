@@ -60,7 +60,7 @@ export type BooksPaymentView = {
   chain: { signature: string; from: string; to: string; blockTime: string | null } | null;
   /** The recipient's latest screening at or before the payment settled (D-10). */
   screening: "clear" | "hit" | "error" | null;
-  /** The initiator's approval, recorded with the execution signature (Q-11). */
+  /** The initiator's approval, recorded with the execution signature. */
   approvedBy: { name: string | null; wallet: string; at: string } | null;
   reconciliation: { status: "matched" | "needs_receipt"; updatedAt: string } | null;
 };

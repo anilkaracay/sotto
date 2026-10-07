@@ -1,4 +1,4 @@
-/* The landing theme (X-42, step 3.1): the stylesheet of design/sotto-landing.html (landing v8),
+/* The landing theme (step 3.1): the stylesheet of the approved landing design (landing v8),
    every rule scoped to .theme-landing, the landing's root, so nothing reaches the app. Keyframes
    carry a landing- prefix; the portraits and flags the design embeds are files in
    apps/web/public/landing. Generated once from the design, then kept by hand. */
@@ -2456,7 +2456,7 @@ body:has(> main.theme-landing) {
   color: var(--faint);
   margin-top: 10px;
 }
-/* Step 3.1 (13 L11): four measured facts in the .srcs row. */
+/* Step 3.1: four measured facts in the .srcs row. */
 .theme-landing .srcs.four {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -4212,7 +4212,7 @@ body:has(> main.theme-landing) {
 .theme-landing .form input::placeholder {
   color: var(--faint);
 }
-/* Step 3.1 (13 L24): the pill holds "Work email" and "Company", with a hairline between them. */
+/* Step 3.1: the pill holds "Work email" and "Company", with a hairline between them. */
 .theme-landing .form:has(input + label + input) {
   max-width: 640px;
 }

@@ -2,7 +2,7 @@
 
 // The admin console's client part: status filters, the organization table and the review actions.
 // Every action asks for a second click to confirm. No approved design exists for this screen; it is
-// built on the app tokens (13 A35), and since design pass C (step 3.6) in the design's language: each
+// built on the app tokens, and since design pass C (step 3.6) in the design's language: each
 // business with its mark, the card head with the count, and the empty state of the other pages.
 import { Button, Card, Chip, PageHeader, Person, Table, Td, Th, type ChipTone } from "@sotto/ui";
 import Link from "next/link";

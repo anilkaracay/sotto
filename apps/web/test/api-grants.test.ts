@@ -1,6 +1,6 @@
 // Viewing grants (F-10, F-14, 07 sections 6 and 7, 08 section 3; step 2.4) against a test database:
 // a grant is created through an invite with one of the hackathon scopes and an expiry, "No expiry"
-// included (AC-10.1, X-52); the holder accepts with their wallet, becomes the org's accountant, and
+// included (AC-10.1); the holder accepts with their wallet, becomes the org's accountant, and
 // the grant activates with their viewing key (AC-10.2); the back fill lists the owner's records in
 // scope the grant does not have yet (AC-10.3); revoking deletes the grant's records in the same
 // transaction (AC-10.4); every change is in the access log, which the owner reads and which holds no
@@ -499,7 +499,7 @@ describe("viewing grants", () => {
     });
     expect((await read()).items).toEqual([]);
     expect((await grants_(owner.cookie, orgId)).grants[0]).toMatchObject({ missing: 0, items: 1 });
-    // 13 A26: the run's "Who can read this run" names the holder with the lines they hold.
+    // The run's "Who can read this run" names the holder with the lines they hold.
     const [{ runId } = { runId: null }] = await test.db
       .select({ runId: payments.runId })
       .from(payments)

@@ -1,4 +1,4 @@
-// The landing's quick nav section (F-17, step 3.1), from design/sotto-landing.html; the logo is the
+// The landing's quick nav section (F-17, step 3.1), from the approved landing design; the logo is the
 // brand kit's lockup since step 4.2.1 (27 pixels tall, 99 wide, above the 96 pixel minimum).
 import { SottoLockupInk } from "@sotto/ui";
 

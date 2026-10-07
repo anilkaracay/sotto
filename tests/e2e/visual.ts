@@ -1,4 +1,4 @@
-// Visual baselines (step 3.8, X-46; docs/11-TESTING.md sections 1 and 6): a screen that the founder
+// Visual baselines (step 3.8, docs/11-TESTING.md sections 1 and 6): a screen that the founder
 // approved is compared with its baseline, taken from our own build, with at most 0.5 percent of its
 // pixels different and its dynamic regions masked: addresses, keys, signatures and links (the mono
 // face and the link fields), dates, times, slots and relative times, month names (the charts shift

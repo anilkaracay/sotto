@@ -2,7 +2,7 @@
 
 // The onboarding screen's client part: the organization form (create, and edit while in review) and
 // the status card. The form validates with the same schema as the API (lib/org.ts). No approved
-// design exists for this screen; it is built on the app tokens (13 A35). Step 3.4 (design pass A,
+// design exists for this screen; it is built on the app tokens. Step 3.4 (design pass A,
 // founder 2026-10-01): the shared fields of packages/ui beside the three steps of verification, and the
 // status as a tracker of those steps with the attestation as the last. Step 4.3 (D-29): where the
 // network has more than one asset, the form asks which one the account holds (USDC by default); the

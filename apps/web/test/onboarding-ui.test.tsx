@@ -1,4 +1,4 @@
-// Onboarding's verification tracker (13 A35; step 3.4): the three steps of verification as they stand
+// Onboarding's verification tracker (step 3.4): the three steps of verification as they stand
 // for an organization in review, verified with and without its attestation, and not verified. Step
 // 4.3: the currency choice where the network has more than one asset, and the organization's currency.
 import { renderToStaticMarkup } from "react-dom/server";

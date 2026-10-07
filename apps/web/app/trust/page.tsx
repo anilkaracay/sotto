@@ -1,4 +1,4 @@
-// /trust (step 3.3, built in step 3.4 by the founder's change of 2026-10-01; 13 L6, L7, L36): what
+// /trust (step 3.3, built in step 3.4 by the founder's change of 2026-10-01; L7, L36): what
 // Sotto can and cannot do with a business's money and numbers, in the landing's language. Public and
 // static. Every statement comes from trust-facts.ts, where each names the decision it rests on (D-01,
 // D-02, D-05, D-16, facts C3, 10 section 4, ENGINEERING-RULES.md rules 4 and 5); the addresses come from the

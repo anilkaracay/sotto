@@ -3,14 +3,14 @@
 // The payroll run page's client part (F-08; step 2.3), on the design's payroll screen:
 // - Run total: the lines' amounts opened in the tab with the viewing key, by team, and the steps
 //   Upload, Validate, Approve, Settle on Solana;
-// - Settlement: the gauge (X-18: a tick per line from 12 to 48 lines, filled as lines settle), the
-//   approvals block with the initiator's approval only (Q-12, 13 A31) and Approve and run, which asks
+// - Settlement: the gauge (a tick per line from 12 to 48 lines, filled as lines settle), the
+//   approvals block with the initiator's approval only and Approve and run, which asks
 //   the server to authorize the run (every line ready from chain and screened, before anything is
 //   signed), then pays the lines in chunks in this tab (payroll-run.ts); Resume after a stop;
 // - Recipients: each line's status (AC-08.4), a blocked line's reason, and removing it from a draft;
 // - Who can read this run: you, each recipient with a viewing key for their own line, since step 2.4
 //   each holder of a viewing grant with the lines they hold records of, and the chain without amounts
-//   (13 A26: no board line).
+//   (no board line).
 import { Button, Card, Chip, initials, Person, Table, Td, Th } from "@sotto/ui";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
@@ -177,7 +177,7 @@ export function RunView(props: {
       }));
   }
 
-  /** X-33: the records of settled lines that have none yet, under one manifest. */
+  /** The records of settled lines that have none yet, under one manifest. */
   async function saveRecords(run: PayrollRunView): Promise<DisclosureResult | null> {
     if (!connected || !ownerKey) return null;
     const pending = run.lines
@@ -648,7 +648,7 @@ export function RunView(props: {
   );
 }
 
-/** The radial tick gauge (design .rd2): X-18 ticks, lit as lines settle. */
+/** The radial tick gauge (design .rd2): its ticks, lit as lines settle. */
 /** One of the run's four steps (design .stp8): done with a check, the current one lit. */
 function RunStep({
   no,

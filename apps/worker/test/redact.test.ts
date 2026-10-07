@@ -15,7 +15,7 @@ describe("redact", () => {
     );
   });
 
-  it("Q-16 replaces the bearer token of an invite link path, plain or URL encoded", () => {
+  it("replaces the bearer token of an invite link path, plain or URL encoded", () => {
     // An invite link token has the shape of 32 random bytes in base64url (43 characters).
     const token = randomBytes(32).toString("base64url");
     const lines = [

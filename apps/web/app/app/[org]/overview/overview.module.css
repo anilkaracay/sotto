@@ -285,7 +285,7 @@
   cursor: pointer;
 }
 
-/* What the chain shows (design pass C, step 3.6, 13 A44): a glyph per kind of event. */
+/* What the chain shows (design pass C, step 3.6): a glyph per kind of event. */
 .chainKind {
   display: inline-flex;
   align-items: center;

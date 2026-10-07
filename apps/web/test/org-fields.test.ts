@@ -15,7 +15,7 @@ describe("organization rules", () => {
     expect(moneyEnabled("suspended")).toBe(false);
   });
 
-  it("names the statuses as the app shows them (13 A35)", () => {
+  it("names the statuses as the app shows them", () => {
     expect(orgStatusLabel("pending_review")).toBe("In review");
     expect(orgStatusLabel("active")).toBe("Verified");
     expect(orgStatusLabel("suspended")).toBe("Not verified");

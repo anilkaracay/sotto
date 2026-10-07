@@ -174,7 +174,7 @@ test.describe.serial("confidential account on localnet", () => {
     await expect(value(page, "balance-public-wusdc")).toHaveText("5 wUSDC");
     await expect(value(page, "balance-available")).toHaveText("Not set up yet");
 
-    // Q-15 (steps 2.1 and 2.2): a wallet whose own security check blocks the setup; Sotto shows the
+    // Steps 2.1 and 2.2: a wallet whose own security check blocks the setup; Sotto shows the
     // neutral message, true for any refusal, and the wallet's words, and nothing is sent.
     await page.evaluate(() =>
       (

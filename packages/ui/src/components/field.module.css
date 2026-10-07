@@ -1,4 +1,4 @@
-/* The form fields (13 A35; step 3.6, from the fields of design pass B, step 3.5): the design has no
+/* The form fields (step 3.6, from the fields of design pass B, step 3.5): the design has no
    form, so they follow its drawer (design .drawer .fl): the label above, a tall soft control, a blue
    ring on focus, the hint and the problem under it. */
 .grid {

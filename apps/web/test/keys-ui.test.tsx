@@ -1,6 +1,6 @@
 // The viewing keys page (step 2.4, component level): the coverage bars compute each active key's share
 // of the owner's own records from counts (09 section 3) and say that none of the holders are at Sotto
-// (13 A5); the access log reads as words with metadata only (AC-14.1), naming the owner "You" and the
+//; the access log reads as words with metadata only (AC-14.1), naming the owner "You" and the
 // worker "Sotto".
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";

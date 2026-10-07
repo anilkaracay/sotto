@@ -9,7 +9,7 @@ Sotto is the business account for companies that pay in stablecoins: every payme
 | Role | Who | Can do | Can read |
 |------|-----|--------|----------|
 | Owner | Company founder or finance lead. Holds the owner wallet. | Everything, including signing all money operations | Everything of the org |
-| Approver | Another company member | Approve payroll runs and payments (D-04) on `/app/[org]/payroll/[run]`, seeing the contents hash they sign. With the default policy of 1, the initiator's execution is the approval (Q-11). Post-hackathon (D-27, Q-12): in the hackathon build the policy stays at 1, so the initiator's execution is the only approval and there is no approver screen | What their grant allows |
+| Approver | Another company member | Approve payroll runs and payments (D-04) on `/app/[org]/payroll/[run]`, seeing the contents hash they sign. With the default policy of 1, the initiator's execution is the approval. Post-hackathon (D-27): in the hackathon build the policy stays at 1, so the initiator's execution is the only approval and there is no approver screen | What their grant allows |
 | Accountant | Internal or external | Read, reconcile, annotate, export within grant scope | Grant scope |
 | Board viewer (Post-hackathon, D-27) | Board member or investor | Read totals and treasury balance within grant scope on the board screen `/app/[org]/board` | Totals only |
 | Recipient | Employee, contractor, supplier | Configure their confidential account, read their own payslips, withdraw | Their own payments |
@@ -21,8 +21,8 @@ A person can hold several roles in several orgs. Roles live on memberships, not 
 ## 3. Scope
 
 **MVP (the hackathon build, devnet only; mainnet is Post-hackathon per D-01):** the scope of D-27: F-01 to F-15, F-17 and F-19, except where marked.
-**Post-hackathon:** income proof (D-07), email claim (D-08), Squads (D-04), KYB provider (D-09), and per D-27: F-16 command palette, F-18 privacy score, AC-11.5 close checklist and the Close and export page, the board viewer role and route and the `totals_only` scope, reconciliation notes, the approver screen including the payroll run Approve action (AC-08.3, Q-12).
-"Phase 0 to 4" means only the schedule in `12-MILESTONES.md`.
+**Post-hackathon:** income proof (D-07), email claim (D-08), Squads (D-04), KYB provider (D-09), and per D-27: F-16 command palette, F-18 privacy score, AC-11.5 close checklist and the Close and export page, the board viewer role and route and the `totals_only` scope, reconciliation notes, the approver screen including the payroll run Approve action (AC-08.3).
+"Phase 0 to 4" means only the schedule of the build plan.
 
 ## 4. Features and acceptance criteria
 
@@ -60,8 +60,8 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 ### F-06 Single confidential payment
 - AC-06.1 Owner picks a recipient whose confidential account is configured, enters amount and memo.
 - AC-06.2 The recipient address is screened (D-10). A hit blocks the payment and logs the event.
-- AC-06.3 Approval policy (D-04) is enforced before a plan is issued. The default policy is 1 approval, and the initiator's own execution counts as it, recorded with the execution signature; with a policy of 2 or more, the other approvers' signed approval messages are required before authorization (Q-11). In the hackathon build a policy above 1 cannot be set (Q-12): the settings page does not offer it and the API refuses it with `approval_policy_not_available`; the rule for 2 or more is tested through the API.
-- AC-06.4 The client builds and executes the confidential transfer (v1 single transaction when available, else the multi transaction plan). On success, the client creates disclosures for every active grant whose scope covers the payment, plus a self disclosure for the owner and a recipient disclosure. Self and recipient disclosures are scheduled for Phase 1; the grant part of this criterion is scheduled for Phase 2 (`12-MILESTONES.md`).
+- AC-06.3 Approval policy (D-04) is enforced before a plan is issued. The default policy is 1 approval, and the initiator's own execution counts as it, recorded with the execution signature; with a policy of 2 or more, the other approvers' signed approval messages are required before authorization. In the hackathon build a policy above 1 cannot be set: the settings page does not offer it and the API refuses it with `approval_policy_not_available`; the rule for 2 or more is tested through the API.
+- AC-06.4 The client builds and executes the confidential transfer (v1 single transaction when available, else the multi transaction plan). On success, the client creates disclosures for every active grant whose scope covers the payment, plus a self disclosure for the owner and a recipient disclosure. Self and recipient disclosures are scheduled for Phase 1; the grant part of this criterion is scheduled for Phase 2.
 - AC-06.5 If any transaction in the plan fails, the app shows exactly which step failed, closes any proof context accounts it created, and lets the owner retry safely. Tokens are never lost: a failed transfer leaves balances unchanged.
 
 ### F-07 Recipients
@@ -73,7 +73,7 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 ### F-08 Payroll run
 - AC-08.1 Owner uploads a CSV with header `wallet,amount,memo,name,team,country`. Amounts are decimal strings with at most 6 decimals. The app validates every row and shows errors per row. Rows match existing recipients by wallet; an unknown wallet is a row error with the message "Add this recipient first". The file is read as RFC 4180: a value in double quotes may hold commas, line breaks and double quotes written as two; UTF-8 with or without a byte order mark and CRLF or LF line ends are accepted; a row that breaks the quoting rules or has the wrong number of values is a row error with a clear message, never a silent split, and a file that is not UTF-8 is refused.
 - AC-08.2 A run has statuses: `draft`, `awaiting_approval`, `approved`, `executing`, `settled`, `partially_settled`, `failed`.
-- AC-08.3 **Post-hackathon (D-27, Q-12).** Approvers approve with a signed message (D-04) using the "Approve" action on `/app/[org]/payroll/[run]`, and see the contents hash they sign; the required count comes from org policy, and the initiator's execution counts as one approval (Q-11). In the hackathon build the run page shows only the initiator's approval (13 A31).
+- AC-08.3 **Post-hackathon (D-27).** Approvers approve with a signed message (D-04) using the "Approve" action on `/app/[org]/payroll/[run]`, and see the contents hash they sign; the required count comes from org policy, and the initiator's execution counts as one approval. In the hackathon build the run page shows only the initiator's approval.
 - AC-08.4 Execution follows D-21. Each line gets its own status and signature(s). Progress is shown live on the payroll gauge: it has as many ticks as lines, clamped to 12 minimum and 48 maximum; above 48, each tick represents ceil(lines/48) lines. Ticks fill as lines settle.
 - AC-08.5 A partially settled run can be resumed; already settled lines are never paid twice (idempotency key per line stored before signing, and chain check before retry).
 - AC-08.6 Disclosures for each line are created after that line settles.
@@ -98,7 +98,7 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 ### F-12 Recipient: My pay
 - AC-12.1 Shows the recipient's payslips from recipient disclosures (gross, tax withheld, net if provided by the payroll CSV extension columns `gross,tax`; otherwise net only).
 - AC-12.2 "What your colleagues see" shows the public view of their incoming payments.
-- AC-12.3 Payslip PDF is generated in the browser. A payment outside category payroll is not a payslip: it shows the amount received and its PDF is a payment receipt (founder, 2026-09-30, 13 A49).
+- AC-12.3 Payslip PDF is generated in the browser. A payment outside category payroll is not a payslip: it shows the amount received and its PDF is a payment receipt (founder, 2026-09-30).
 
 ### F-13 Proof of funds
 - AC-13.1 Owner chooses threshold and counterparty label. The browser generates the equality and range proofs, verifies them into context state accounts, and calls `sotto_proofs::verify_balance_threshold`. On success a `ProofRecord` exists onchain.
@@ -116,7 +116,7 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 - AC-16.1 Cmd or Ctrl plus K opens it; commands are role aware and only include implemented actions.
 
 ### F-17 Marketing site
-- AC-17.1 The landing page matches `design/sotto-landing.html` with the copy corrections applied.
+- AC-17.1 The landing page matches the approved landing design with the copy corrections applied.
 - AC-17.2 The "Request access" form has "Work email" and "Company" fields and an explicit consent checkbox, stores both in the waitlist table once the box is ticked, and shows "Thanks, we will be in touch". The hackathon build sends no email: double opt in with a confirmation email (through Resend, DEFAULT) is Post-hackathon, together with D-19 (founder, 2026-09-30; 15).
 
 ### F-18 Privacy score (Post-hackathon, D-27)

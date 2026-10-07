@@ -1,6 +1,6 @@
 # Sotto build documentation
 
-Read in this order. Each document states what it owns. If two documents seem to disagree: lower authority number wins. On a tie, the row listed earlier wins. Every conflict still gets an entry in `QUESTIONS.md`.
+Read in this order. Each document states what it owns. If two documents seem to disagree: lower authority number wins. On a tie, the row listed earlier wins. Every conflict is still raised with the founder.
 
 | # | File | What it owns | Authority |
 |---|------|--------------|-----------|
@@ -16,20 +16,15 @@ Read in this order. Each document states what it owns. If two documents seem to 
 | 10 | `09-FRONTEND.md` | App and landing implementation, screen by screen | 6 |
 | 11 | `10-SECURITY.md` | Threat model, invariants, key handling | 5 |
 | 12 | `11-TESTING.md` | Test strategy, environments, acceptance suite | 6 |
-| 13 | `12-MILESTONES.md` | Phases, verification gates, deadlines | 6 |
-| 14 | `13-COPY-CORRECTIONS.md` | Design copy that must change before launch | 6 |
-| 15 | `14-ENVIRONMENTS-DEPLOY.md` | Localnet, devnet, mainnet, runbooks | 6 |
-| 16 | `RESOLUTIONS-0.1.md` | Record of step 0.1 decisions (already applied to the documents above) | Record |
-| 17 | `15-POST-HACKATHON.md` | The post-hackathon roadmap, built only from what the documents above record (step 2.11); it owns nothing and follows them | Record |
 
-Files that grow during the build (append only, never rewrite history):
+`VERSIONS.md` grows with the build: every pinned tool, crate and package version.
 
-- `VERIFICATION-LOG.md`: output of every gate you ran, with date, cluster, command and result.
-- `VERSIONS.md`: every pinned tool, crate and package version.
+## How to read the citations
 
-**Parallel sessions** (founder, 2026-10-02; ENGINEERING-RULES.md, Git workflow 5 and 6): each working session works in its own git worktree under `../sotto-worktrees/<branch>`, never switches the shared working copy's branch (it stays on `main`) or another session's worktree, and runs CI only from a worktree of the branch under test.
-- `QUESTIONS.md`: open questions for the founder.
-- `DEMO-RUNBOOK.md`: how to show the seeded demo organization (step 4.3): Elif's demo key in Phantom in a separate Chrome profile.
+Documents and code comments cite where a thing comes from:
+
+- `D-28` is a decision in `03-DECISIONS.md`; `F-13` and `AC-13.2` are a feature and an acceptance criterion in `01-PRODUCT.md`; `I-4` is an invariant in `10-SECURITY.md`; "facts C3" is an entry of `02-VERIFIED-FACTS.md`; "08 section 3" is a section of the document with that number.
+- "step 2.5" names the build step that added or changed the thing, and "Gate G2" a verification gate that came before a phase. They are labels of the build's history, not links: the build plan, the verification log with every gate's output, the design mockups and the operations runbooks are kept outside this repository.
 
 ## Glossary
 

@@ -1,5 +1,5 @@
 /* The confidential account parts of the org pages (setup, overview), built on the app tokens: no
-   approved design exists for them (13 A37); the balance figures follow the design's card label and
+   approved design exists for them; the balance figures follow the design's card label and
    figure (.lbl2, .bmv). Two classes where the theme's paragraph reset would win. */
 /* Step 3.5: the four balances in one card, the design's KPI language (.kpi): the available balance
    first and largest, the others after a hairline, each with its note and the devnet label as a tag. */
@@ -116,7 +116,7 @@
   color: #8a5200; /* step 3.10: --amber was 4.24:1 on white */
   font-weight: 500;
 }
-/* The devnet label of a wUSDC figure (13 A25), a tag under the figure. */
+/* The devnet label of a wUSDC figure, a tag under the figure. */
 .wrapTag {
   align-self: flex-start;
   display: inline-flex;

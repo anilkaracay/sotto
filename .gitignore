@@ -55,6 +55,7 @@ test-ledger/
 next-env.d.ts
 
 # Local files, never committed.
+/CLAUDE.md
 apps/web/AGENTS.md
 apps/web/CLAUDE.md
 

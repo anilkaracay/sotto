@@ -1,4 +1,4 @@
-// Server configuration (14 section 2), read from process.env on each use: Next.js env loading locally
+// Server configuration, read from process.env on each use: Next.js env loading locally
 // (.env.local), only the platform's variables when hosted. Errors name the variable, never its value.
 export class ConfigError extends Error {
   constructor(message: string) {

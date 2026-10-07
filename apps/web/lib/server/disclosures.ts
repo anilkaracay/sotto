@@ -462,7 +462,7 @@ export async function listDisclosures(
     .orderBy(asc(disclosures.createdAt))
     .limit(query.limit ?? 1000);
   const rows = found.map((row) => row.disclosure);
-  // X-24: a viewer's successful fetch is the last use of their active grants in this org.
+  // A viewer's successful fetch is the last use of their active grants in this org.
   await db
     .update(grants)
     .set({ lastUsedAt: now })

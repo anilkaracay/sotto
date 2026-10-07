@@ -1,4 +1,4 @@
-// The step 2.1 wallet lab probes (Q-15, development only): R11 transfers 1 base unit of devnet USDC
+// The step 2.1 wallet lab probes (development only): R11 transfers 1 base unit of devnet USDC
 // from the owner's account to itself with SPL Token alone; R12 is one ZK ElGamal proof verification
 // with no account. Both are version 0, with the owner as fee payer and only signer.
 import { getCompiledTransactionMessageDecoder, type Blockhash } from "@solana/kit";
@@ -11,8 +11,8 @@ const BLOCKHASH = {
 };
 const ACCOUNT = "GP1RuDnt44CvuujDmsUq5XyrD5Rbagt6cbEbW2rfh1zZ";
 
-describe("wallet lab probes (Q-15)", () => {
-  it("Q-15 builds R11 as an SPL Token self transfer of 1 base unit of devnet USDC", () => {
+describe("wallet lab probes", () => {
+  it("builds R11 as an SPL Token self transfer of 1 base unit of devnet USDC", () => {
     const { messageBytes } = buildProbe(TEST_ADDRESS, "usdc", ACCOUNT, BLOCKHASH);
     const message = getCompiledTransactionMessageDecoder().decode(messageBytes);
     if (message.version !== 0) throw new Error("R11 must be a version 0 transaction");
@@ -26,7 +26,7 @@ describe("wallet lab probes (Q-15)", () => {
     expect([...(instruction?.data ?? [])]).toEqual([12, 1, 0, 0, 0, 0, 0, 0, 0, 6]);
   });
 
-  it("Q-15 builds R12 as a lone ZK ElGamal proof verification with no account", () => {
+  it("builds R12 as a lone ZK ElGamal proof verification with no account", () => {
     const { messageBytes } = buildProbe(TEST_ADDRESS, "zk", ACCOUNT, BLOCKHASH);
     const message = getCompiledTransactionMessageDecoder().decode(messageBytes);
     if (message.version !== 0) throw new Error("R12 must be a version 0 transaction");

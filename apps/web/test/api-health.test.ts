@@ -1,4 +1,4 @@
-// GET /api/health (08 section 3, 14 section 6).
+// GET /api/health (08 section 3).
 import type { TestDatabase } from "@sotto/db/testing";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { GET } from "../app/api/health/route.ts";

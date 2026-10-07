@@ -1,5 +1,5 @@
 // Removes database and RPC URLs and API keys from text before it is printed (ENGINEERING-RULES.md: configuration values are
-// never printed), and the bearer token of an invite link path (Q-16, step 2.1: the same prefixes as
+// never printed), and the bearer token of an invite link path (step 2.1: the same prefixes as
 // BEARER_PATH_PREFIXES in apps/web/lib/server/log.ts; the worker serves no such URL, but an error
 // text could carry one).
 const BEARER_PATTERNS = [

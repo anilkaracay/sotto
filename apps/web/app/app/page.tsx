@@ -3,7 +3,7 @@
 // suspended goes to /app/onboarding; otherwise the user's places are the books of each active
 // organization where they hold a viewing key (step 2.5, AC-11.1) and the pay page of each active
 // organization that pays them (step 1.10): one place opens directly, several are listed to choose
-// from, each a tile of the app theme (design pass C, step 3.6, 13 A47). A user with no organization goes
+// from, each a tile of the app theme (design pass C, step 3.6). A user with no organization goes
 // to onboarding. Members with other roles see the shell until
 // their pages exist.
 import { Card, PageHeader } from "@sotto/ui";

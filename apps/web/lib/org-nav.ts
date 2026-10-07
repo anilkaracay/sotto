@@ -55,7 +55,7 @@ export function ownerNav(
   ];
 }
 
-/** An accountant's nav (step 2.5): Books; Close and export is Post-hackathon (D-27, 13 A30). */
+/** An accountant's nav (step 2.5): Books; Close and export is Post-hackathon (D-27). */
 export function accountantNav(orgId: string): TopNavItem[] {
   return [{ key: "books", label: "Books", href: `/app/${orgId}/books`, active: true }];
 }

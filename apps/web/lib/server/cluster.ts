@@ -1,4 +1,4 @@
-// The web server's cluster (14 sections 1 and 2). NEXT_PUBLIC_CLUSTER names it, devnet when unset, as
+// The web server's cluster. NEXT_PUBLIC_CLUSTER names it, devnet when unset, as
 // the network label reads it. Devnet values come from the verified cluster config (facts C8, F1). A
 // local ledger gets a new USDC-like mint from each bootstrap, so localnet reads LOCALNET_USDC_MINT
 // (server only; scripts/bootstrap-localnet.ts prints it) and derives the wrapped mint from it under the

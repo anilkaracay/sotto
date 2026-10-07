@@ -82,7 +82,7 @@ export type Connected = {
   /** Signs exactly these bytes, or says why not; the signature verifies for the wallet. */
   sign: (message: Uint8Array) => Promise<Uint8Array | SignProblem>;
   /**
-   * The wallet's own words for the last `sign` it refused or cancelled (Q-15), null after a
+   * The wallet's own words for the last `sign` it refused or cancelled, null after a
    * signature or a problem Sotto found itself (a changed message, a bad signature).
    */
   walletWords: () => WalletWords | null;
@@ -145,7 +145,7 @@ export type ContextValue = {
 /** Exported for the component tests, which render confidential actions without a wallet. */
 export const ConfidentialContext = createContext<ContextValue | null>(null);
 
-/** Holds the wallet's words of the last refused signature (Q-15), set and read outside rendering. */
+/** Holds the wallet's words of the last refused signature, set and read outside rendering. */
 class WalletWordsBox {
   #words: WalletWords | null = null;
   set(words: WalletWords | null): void {

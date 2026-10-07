@@ -1,12 +1,12 @@
 // Proofs of funds on the server (F-13, AC-13.1, AC-13.3; step 2.8; 08 section 3 "Proofs").
 // - readPublicProof: what the public page /v/<address> shows, from chain alone (the record, the
 //   config's pause flag, the organization's legal name from its SAS attestation found through the
-//   record's owner, X-21), plus the counterparty label from the database when a caller passes a
+//   record's owner), plus the counterparty label from the database when a caller passes a
 //   lookup; nothing it proves comes from the database. A record whose account is gone but whose
 //   address has a transaction history was closed; one without history was never written.
 // - recordProof: after the owner's tab wrote a record, the server reads it from chain, checks that it
 //   is this organization's (the owner's wallet, the cluster's program and wrapped mint) and that its
-//   counterparty hash is SHA-256 of the salt and label it is given (X-32), then stores the label and
+//   counterparty hash is SHA-256 of the salt and label it is given, then stores the label and
 //   salt, which never go onchain, and logs "proof_issued" without an amount (AC-14.1).
 // - listProofs: the issued list with each record's state now (valid, expired, closed).
 import { createHash } from "node:crypto";
@@ -45,7 +45,7 @@ export type PublicProofView =
   | {
       state: "found";
       record: RecordView;
-      /** valid, expired, or paused (the program is paused: the 14 section 7 runbook). */
+      /** valid, expired, or paused (the program is paused). */
       status: "valid" | "expired" | "paused";
       organization:
         | { status: "verified"; legalName: string; country: string }
@@ -191,7 +191,7 @@ export async function readPublicProof(
 }
 
 /**
- * Whether the organization's asset's sotto_proofs config is paused (14 section 7), for the owner's
+ * Whether the organization's asset's sotto_proofs config is paused, for the owner's
  * proofs page; false where the asset has no deployment (the page then shows proofs unavailable).
  */
 export async function proofsPaused(
@@ -236,7 +236,7 @@ export const recordProofSchema = z
   .object({
     recordAddress: z.string().refine(isAddress, "must be a base58 address"),
     counterpartyLabel: z.string().trim().min(1).max(120),
-    /** The 16 byte salt of X-32, base64. */
+    /** The 16 byte salt, base64. */
     counterpartySalt: z
       .string()
       .refine((value) => Buffer.from(value, "base64").length === 16, "must be 16 bytes, base64"),
@@ -263,7 +263,7 @@ async function ownerWallet(db: Database, orgId: string): Promise<string> {
   return org.wallet;
 }
 
-/** X-32: SHA-256 of the 16 byte salt followed by the UTF-8 label. */
+/** SHA-256 of the 16 byte salt followed by the UTF-8 label. */
 export function counterpartyHashOf(salt: Uint8Array, label: string): Uint8Array {
   return new Uint8Array(createHash("sha256").update(salt).update(label, "utf8").digest());
 }

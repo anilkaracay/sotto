@@ -1,6 +1,6 @@
 // PUT /api/orgs/:id/policy (owner): sets the organization's approval policy (D-04). The hackathon
 // build accepts only the default of 1 and refuses anything higher with 422
-// approval_policy_not_available (Q-12). Membership is checked before the body is read.
+// approval_policy_not_available. Membership is checked before the body is read.
 import { orgPolicy } from "@sotto/db";
 import { apiRoute } from "../../../../../lib/server/api-route.ts";
 import { readJson } from "../../../../../lib/server/body.ts";

@@ -6,7 +6,7 @@
 // and the tab proves "Balance is at least $X" (proof-run.ts). Proven shows the certificate from the
 // record just written, with the link to its public page; Not proven says so and sends nothing
 // (AC-13.2). The issued list shows each record's state from chain; an expired record can be closed,
-// its rent back to the owner (X-31).
+// its rent back to the owner.
 import { getCloseProofRecordInstruction } from "@sotto/sdk/proofs";
 import { Button, Card, Chip, Person, Table, Td, Th } from "@sotto/ui";
 import { address } from "@solana/kit";
@@ -55,7 +55,7 @@ export function ProofsPanel(props: {
   network: AvailableNetwork;
   program: string;
   proofs: IssuedProof[];
-  /** The sotto_proofs config is paused (14 section 7): no new record can be written. */
+  /** The sotto_proofs config is paused: no new record can be written. */
   paused: boolean;
 }) {
   return (

@@ -7,7 +7,7 @@
 //    stops before any proof exists and the result is Not proven, with nothing sent (AC-13.2);
 // 3. send the proof transactions through the wallet path of 06 section 9 (the worker adds the proof
 //    accounts' signatures), then verify_balance_threshold with a nonce whose record address has bump
-//    255, the chosen expiry and the counterparty hash of a fresh 16 byte salt (X-32);
+//    255, the chosen expiry and the counterparty hash of a fresh 16 byte salt;
 // 4. if the balance changed since the proofs (CiphertextMismatch), close the proof accounts, read the
 //    account again and try once more, then explain (06 section 8);
 // 5. close the proof accounts, both contexts and the range proof's record account, their rent to the

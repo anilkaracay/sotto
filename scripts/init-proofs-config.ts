@@ -1,5 +1,4 @@
-// Creates the sotto_proofs config on devnet for the devnet wrapped USDC mint (14 sections 4 and 5,
-// step 2.7). It checks that the endpoint serves devnet, that the program's ProgramData account names
+// Creates the sotto_proofs config on devnet for the devnet wrapped USDC mint (step 2.7). It checks that the endpoint serves devnet, that the program's ProgramData account names
 // wallet A as its upgrade authority (the only signer initialize_config accepts, D-16) and that no
 // config exists yet, simulates, sends, and reads the config back. Wallet A signs and pays. Step 4.3
 // (D-29): with --program and --wrapped-mint it creates the config of the second deployment, for the

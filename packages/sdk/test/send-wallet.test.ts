@@ -1,4 +1,4 @@
-// The wallet signed path (06 section 9, Q-08, step 1.7): the three cases of the signed message check
+// The wallet signed path (06 section 9, step 1.7): the three cases of the signed message check
 // decide before anything is sent, and the caller hears each comparison for the log with the wallet
 // name. Also the portable instructions the crypto worker posts to the page.
 import { getTransferSolInstruction } from "@solana-program/system";
@@ -134,7 +134,7 @@ describe("wallet signed transactions (06 section 9)", () => {
     expect(sent).toHaveLength(0);
   });
 
-  it("Q-15 hands back the wallet's own error when it refuses to sign, after the simulation passed", async () => {
+  it("hands back the wallet's own error when it refuses to sign, after the simulation passed", async () => {
     const { rpc, sent } = fakeRpc();
     const refusal = Object.assign(new Error("Transaction blocked"), { name: "WalletSignError" });
     const wallet = {

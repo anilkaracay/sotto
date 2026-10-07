@@ -1,4 +1,4 @@
-// @sotto/sdk/proofs (step 2.7): the counterparty hash of X-32 is SHA-256 of the 16 byte salt and the
+// @sotto/sdk/proofs (step 2.7): the counterparty hash is SHA-256 of the 16 byte salt and the
 // UTF-8 label; the verify instruction's data is laid out as the program reads it (one byte, the
 // threshold, the nonce, the expiry, the hash); a record nonce has bump 255; the context accounts come
 // out of verification instructions of both shapes; and the ProofVerified event reads back from the
@@ -29,7 +29,7 @@ const [EQUALITY, RANGE, RECORD_ACCOUNT, OWNER] = [
 ];
 
 describe("sotto_proofs client", () => {
-  it("hashes the counterparty as SHA-256 of the salt then the UTF-8 label (X-32)", async () => {
+  it("hashes the counterparty as SHA-256 of the salt then the UTF-8 label", async () => {
     const salt = Uint8Array.from({ length: 16 }, (_, index) => index);
     const expected = createHash("sha256")
       .update(salt)

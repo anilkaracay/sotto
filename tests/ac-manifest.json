@@ -1,5 +1,5 @@
 {
-  "$comment": "Phase scoped AC manifest (X-46, docs/11-TESTING.md section 4). A required AC with no test named after its ID fails the build at the end of that phase. Phases follow docs/12-MILESTONES.md. The current phase is set by currentPhase (single source).",
+  "$comment": "Phase scoped AC manifest (docs/11-TESTING.md section 4). A required AC with no test named after its ID fails the build at the end of that phase. Phases follow the build plan. The current phase is set by currentPhase (single source).",
   "currentPhase": 3,
   "phases": {
     "0": {
@@ -97,7 +97,7 @@
         "AC-19.1"
       ],
       "visual": false,
-      "note": "Hackathon scope (D-27) except F-17 (landing, built in Phase 3). AC-11.5 and AC-16.1 are Post-hackathon, and so is AC-08.3 (Q-12, founder 2026-09-27)."
+      "note": "Hackathon scope (D-27) except F-17 (landing, built in Phase 3). AC-11.5 and AC-16.1 are Post-hackathon, and so is AC-08.3 (founder 2026-09-27)."
     },
     "3": {
       "required": [
@@ -158,7 +158,7 @@
         "AC-19.1"
       ],
       "visual": true,
-      "note": "Hackathon scope (D-27, Q-12: without AC-08.3); visual tests required from Phase 3 (X-46)."
+      "note": "Hackathon scope (D-27, without AC-08.3); visual tests required from Phase 3."
     },
     "4": {
       "required": [

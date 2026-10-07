@@ -1,7 +1,7 @@
 /* Proofs (step 2.8) on the design's Proofs screen: the dark "New proof" card (design .dkc.bld with
    .dfl, .dops .op, .btn.wb, .dnote), the sky card with the certificate (design .skyk.cz8, .czph,
    .cert.c8 with .cth, .cres, .stamp, .cf, .cbc) and the issued proofs (design .t8, .cnt8). The design's
-   barcode is left out and its "Share the answer with" chips are a text field (13 A50). */
+   barcode is left out and its "Share the answer with" chips are a text field. */
 .grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -40,7 +40,7 @@
   }
 }
 
-/* The program's pause (14 section 7, step 2.9). */
+/* The program's pause (step 2.9). */
 .pausedBanner {
   grid-column: 1 / -1;
   padding: 14px 18px;

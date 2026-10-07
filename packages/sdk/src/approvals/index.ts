@@ -1,4 +1,4 @@
-// Approval messages (D-04, Q-11, Q-12 (a); 08 section 3; step 1.9). An approver signs, with their
+// Approval messages (D-04; 08 section 3; step 1.9). An approver signs, with their
 // wallet, a message naming the org, the cluster, the subject and `contents_hash`: the lowercase hex
 // SHA-256 of the canonical JSON list of `{ line_id, recipient_wallet, idempotency_key,
 // private_blob_sha256 }`. A single payment is one line whose id is the payment's. Any change to the

@@ -1,7 +1,7 @@
 // The proofs page and the public page at component level (F-13, step 2.8): the certificate of a proven
 // record shows the statement, Proven, the slot, the validity and "Balance disclosed: None" with a copy
 // link (AC-13.1); Not proven shows the 13 words and that nothing was sent, with no link (AC-13.2); the
-// issued list offers Copy link except for a closed record and Close only after expiry (X-31); the
+// issued list offers Copy link except for a closed record and Close only after expiry; the
 // public page shows the organization's legal name, the statement, slot, time, expiry and "Balance
 // disclosed: none", and says when a record expired, was closed, was never written or the program is
 // paused (AC-13.3). No page says True or False (D-06).
@@ -79,7 +79,7 @@ describe("proofs page (F-13)", () => {
     expectAmountsInside(html);
   });
 
-  it("lists issued proofs with Copy link unless closed and Close only after expiry (X-31)", () => {
+  it("lists issued proofs with Copy link unless closed and Close only after expiry", () => {
     const proof = (state: IssuedProof["state"], label: string): IssuedProof => ({
       recordAddress: `${label}${RECORD}`.slice(0, 44),
       threshold: "500000000000",

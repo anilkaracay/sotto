@@ -8,7 +8,7 @@
   margin-top: 6px;
 }
 /* The top padding is the lit bar's tag room: a bar of the highest month reaches the padding's edge and
-   its tag sits in it, inside the chart (13 A54). */
+   its tag sits in it, inside the chart. */
 .gbars {
   display: grid;
   gap: 14px;

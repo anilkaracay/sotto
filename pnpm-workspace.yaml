@@ -54,6 +54,6 @@ minimumReleaseAgeExclude:
 
 # Dependency build scripts, reviewed (pnpm strictDepBuilds). esbuild (drizzle-kit, tsx) is denied: its
 # postinstall only checks and links the platform binary, which pnpm installs as the optional
-# @esbuild/<platform> package; drizzle-kit generate works without it (VERIFICATION-LOG step 1.2).
+# @esbuild/<platform> package; drizzle-kit generate works without it (verified in step 1.2).
 allowBuilds:
   esbuild: false

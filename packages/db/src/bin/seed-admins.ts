@@ -1,4 +1,4 @@
-// pnpm --filter @sotto/db seed:admins: inserts the wallets of ADMIN_WALLETS into admins (X-53).
+// pnpm --filter @sotto/db seed:admins: inserts the wallets of ADMIN_WALLETS into admins.
 import { parseAdminWallets, seedAdmins } from "../admins.ts";
 import { createDb } from "../client.ts";
 import { loadDbEnv, requireDatabaseUrl } from "../env.ts";

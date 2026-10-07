@@ -1,5 +1,5 @@
 // The landing in the browser (F-17, AC-17.1; step 3.1): the production build serves `/` from
-// design/sotto-landing.html with the copy corrections of 13, without a console error or warning, at
+// the approved landing design with the approved copy corrections, without a console error or warning, at
 // 1440, and at 390 and 360 without a horizontal scroll; Sign in opens the app. Since step 3.2 (AC-17.2)
 // the request access form stores a request with the visitor's consent and says thanks. Since step 3.8
 // the approved landing at 1440 and 390 is compared with its baselines, its clock paused so the hero's

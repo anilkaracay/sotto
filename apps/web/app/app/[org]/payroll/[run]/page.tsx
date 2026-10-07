@@ -1,6 +1,6 @@
 // /app/[org]/payroll/[run] (F-08, 09 sections 1 and 3; step 2.3): a payroll run with its run total
-// by team (decrypted in the tab), the settlement gauge (X-18), the approvals block with the
-// initiator's approval only (Q-12, 13 A31), the recipients with each line's status, and Approve and
+// by team (decrypted in the tab), the settlement gauge, the approvals block with the
+// initiator's approval only, the recipients with each line's status, and Approve and
 // run or Resume. Only for the owner of an active org (AC-02.2).
 import { monthLabel } from "../../../../../lib/books.ts";
 import { PageHeader } from "@sotto/ui";

@@ -1,5 +1,5 @@
 /* A person or a business (design .pp and .av): the design's avatars are photographs Sotto does not
-   have, so the circle holds initials, as the overview's readers (13 A48). */
+   have, so the circle holds initials, as the overview's readers. */
 .person {
   display: flex;
   align-items: center;

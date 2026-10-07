@@ -2,7 +2,7 @@
 // the books, what they read and until when (AC-11.1); while the viewing key is locked no figure shows
 // and the records are said to be sealed; opened, the money out hero, the categories and the ledger
 // are sums and rows of the opened records only (AC-11.2), the reconciliation card counts the payments
-// that need a receipt (AC-11.3), and no "Money in" figure exists anywhere (M1, 13 A45).
+// that need a receipt (AC-11.3), and no "Money in" figure exists anywhere (M1).
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { BooksScreen } from "../app/app/[org]/books/books-panel.tsx";

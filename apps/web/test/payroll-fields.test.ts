@@ -1,6 +1,6 @@
 // Payroll CSV and gauge rules (F-08; step 2.3): the header of AC-08.1 with the optional gross and tax
 // columns (AC-12.1), every row validated with its errors, rows matched to existing recipients by
-// wallet ("Add this recipient first"), and the settlement gauge's ticks (X-18, AC-08.4).
+// wallet ("Add this recipient first"), and the settlement gauge's ticks (AC-08.4).
 import { describe, expect, it } from "vitest";
 import {
   blockedReason,
@@ -230,7 +230,7 @@ describe("payroll CSV (AC-08.1)", () => {
   });
 });
 
-describe("settlement gauge (X-18)", () => {
+describe("settlement gauge", () => {
   it("AC-08.4 has as many ticks as lines, at least 12 and at most 48, each standing for ceil(lines / 48) lines above 48", () => {
     expect(gaugeTicks(3)).toEqual({ ticks: 12, perTick: 1 });
     expect(gaugeTicks(12)).toEqual({ ticks: 12, perTick: 1 });

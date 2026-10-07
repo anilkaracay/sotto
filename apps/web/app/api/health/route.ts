@@ -1,4 +1,4 @@
-// GET /api/health (08 section 3, 14 section 6): uptime checks. No session, no rate limit, no secret.
+// GET /api/health (08 section 3): uptime checks. No session, no rate limit, no secret.
 import { sql } from "drizzle-orm";
 import { apiRoute } from "../../../lib/server/api-route.ts";
 

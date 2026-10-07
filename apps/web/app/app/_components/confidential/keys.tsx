@@ -1,7 +1,7 @@
 "use client";
 
 // The wallet, keys and viewing key cards of the confidential pages (F-03, AC-03.2, 10 sections 2 and
-// 3, Q-09; built in step 1.5, shared by the setup page, the overview, the recipients page and the
+// 3; built in step 1.5, shared by the setup page, the overview, the recipients page and the
 // invite page). The wallet signs on the page; the signatures go to the tab's crypto Web Worker, which
 // derives and keeps the keys and answers with public keys only. Nothing is signed before an explicit
 // click. Since step 1.8.1 one Unlock click asks for the confidential key signature and then the
@@ -69,7 +69,7 @@ export function problemText(problem: Problem, detail?: string): ReactNode {
   }
 }
 
-/** What the wallet said when it refused or cancelled (Q-15), after Sotto's explanation. */
+/** What the wallet said when it refused or cancelled, after Sotto's explanation. */
 export function WalletSaid({ words }: { words: WalletWords | null | undefined }) {
   if (!words) return null;
   return (
@@ -219,7 +219,7 @@ export function KeysCard({ className }: { className?: string }) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [viewingProblem, setViewingProblem] = useState<SignProblem | "failed" | null>(null);
-  // The wallet's own words for the signature it refused or cancelled (Q-15).
+  // The wallet's own words for the signature it refused or cancelled.
   const [said, setSaid] = useState<WalletWords | null>(null);
   const viewingOpen = viewing?.wallet === wallet;
 

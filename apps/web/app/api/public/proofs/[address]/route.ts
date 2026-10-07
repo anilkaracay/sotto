@@ -1,6 +1,6 @@
 // GET /api/public/proofs/:address (no sign in; F-13, AC-13.3; step 2.8): the public view of a proof
 // record from chain: the statement's threshold, slot, time and expiry, the organization's legal name
-// from its SAS attestation (X-21), the record's state, and "none" for the balance disclosed. The
+// from its SAS attestation, the record's state, and "none" for the balance disclosed. The
 // database adds only the counterparty label.
 import { apiRoute } from "../../../../../lib/server/api-route.ts";
 import { serverRpc } from "../../../../../lib/server/chain.ts";

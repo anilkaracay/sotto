@@ -1,4 +1,4 @@
-// The landing's footer section (F-17, step 3.1), from design/sotto-landing.html.
+// The landing's footer section (F-17, step 3.1), from the approved landing design.
 import { RequestAccessForm } from "../request-access.tsx";
 import { SottoLockupInk, SottoWordmarkWhite } from "@sotto/ui";
 import type { LandingView } from "../use-landing.ts";
@@ -106,7 +106,7 @@ export function Footer({ v }: { v: LandingView }) {
           </div>
           <div>
             <b>{"Company"}</b>
-            {/* 13 L36: the trust page exists since step 3.4. */}
+            {/* The trust page exists since step 3.4. */}
             <a href="/trust">{"Trust"}</a>
             <a href="/trust">{"Security"}</a>
             <a href="#v8access">{"Contact"}</a>

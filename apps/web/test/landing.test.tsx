@@ -1,5 +1,5 @@
-// The landing (F-17, AC-17.1; step 3.1): design/sotto-landing.html with every copy correction of 13
-// (L1 to L32, the devnet beta rule) and the founder's rules of 2026-09-30 (no open source claim while
+// The landing (F-17, AC-17.1; step 3.1): the approved landing design with every approved copy
+// correction, the devnet beta rule and the founder's rules of 2026-09-30 (no open source claim while
 // the repository is private, the Revenue use case removed, L31 on every board mention, L2 and L19 on
 // every "one transaction" caption, Privacy and Terms hidden until D-23, the event's name).
 import { renderToStaticMarkup } from "react-dom/server";
@@ -31,14 +31,14 @@ describe("the landing (AC-17.1)", () => {
     expect(text).toContain("Sample data. Public view");
     expect(text).toContain("Beta on Solana devnet");
     expect(links.find((link) => link.label === "Sign in")?.href).toBe("/app");
-    // 13 L36: the footer's Trust and Security open the trust page.
+    // The footer's Trust and Security open the trust page.
     expect(links.filter((link) => link.label === "Security").map((link) => link.href)).toEqual([
       "/trust",
       "/trust",
     ]);
   });
 
-  it("AC-17.1 replaces the market statistics with facts from the verification log (L11)", () => {
+  it("AC-17.1 replaces the market statistics with facts from recorded measurements", () => {
     for (const gone of ["733%", "226 billion", "Fewer than 1%", "Fireblocks", "McKinsey"]) {
       expect(text).not.toContain(gone);
     }
@@ -75,13 +75,13 @@ describe("the landing (AC-17.1)", () => {
     expect(text).toContain("A Solana program. Not us.");
   });
 
-  it("AC-17.1 keeps the illustrations' figures sample and invented ids out (L13, L14, L23)", () => {
+  it("AC-17.1 keeps the illustrations' figures sample and invented ids out", () => {
     expect(text).toContain("Example: 2,140 people in 31 countries");
     expect(text).toContain("Sample statement of account");
     for (const gone of ["312,448,901", "7c1e", "99.8%"]) expect(text).not.toContain(gone);
   });
 
-  it("AC-17.1 removes the board, the multisig approvals and the Revenue use case (L16, L30, L31, founder)", () => {
+  it("AC-17.1 removes the board, the multisig approvals and the Revenue use case (founder)", () => {
     expect(text).not.toMatch(/\bboard\b/i);
     expect(html).not.toContain("u-board");
     expect(text).not.toMatch(/multisig|2 of 3/);
@@ -99,7 +99,7 @@ describe("the landing (AC-17.1)", () => {
     expect(text).not.toMatch(/\bRevenue\b|revenue never/);
   });
 
-  it("AC-17.1 claims no open source and calls the real SDK, labelled Preview (L12, L17 to L20, L29, L32)", () => {
+  it("AC-17.1 claims no open source and calls the real SDK, labelled Preview", () => {
     expect(text).not.toMatch(/open source/i);
     expect(html).toContain('data-testid="sdk-preview"');
     expect(text).not.toContain("npm i");

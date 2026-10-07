@@ -40,7 +40,7 @@ pub enum SottoError {
     /// `initialize_config` not signed by the upgrade authority, `set_paused` not by the admin,
     /// `close_proof_record` not by the record's owner.
     Unauthorized = 15,
-    /// `close_proof_record` before the record's expiry (X-31).
+    /// `close_proof_record` before the record's expiry.
     NotExpired = 16,
 }
 

@@ -2,7 +2,7 @@
 // generated with Codama from the hand written IDL (`scripts/proofs-idl.ts`, D-16), and the pieces of
 // the proof of funds flow of 06 section 8 that the program fixes: the proofs of "available balance at
 // least X" and their context accounts, taken from the token-2022 withdraw plan for X (facts K2); the
-// record nonce; the counterparty hash of X-32; and the compute budget of the instruction. The UI flow
+// record nonce; the counterparty hash; and the compute budget of the instruction. The UI flow
 // is step 2.8.
 import { getAddressDecoder, type Address } from "@solana/kit";
 import type { PortableInstruction } from "../tx/portable.ts";
@@ -31,7 +31,7 @@ export async function programDataAddress(program: Address): Promise<Address> {
   return address;
 }
 
-/** 16 random bytes: the nonce of a proof record's address, or the salt of X-32. */
+/** 16 random bytes: the nonce of a proof record's address, or the salt. */
 export function randomBytes16(): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(16));
 }
@@ -52,7 +52,7 @@ export async function recordNonce(
   }
 }
 
-/** X-32: SHA-256 of the 16 byte salt followed by the UTF-8 label. Salt and label stay offchain. */
+/** SHA-256 of the 16 byte salt followed by the UTF-8 label. Salt and label stay offchain. */
 export async function counterpartyHash(salt: Uint8Array, label: string): Promise<Uint8Array> {
   if (salt.length !== 16) throw new Error("the counterparty salt is 16 bytes");
   const labelBytes = new TextEncoder().encode(label);

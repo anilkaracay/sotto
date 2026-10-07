@@ -79,7 +79,7 @@
   const signedMessages = [];
   let refused = new Set();
   // When set, every transaction signature is refused with this error, as a wallet whose own check
-  // blocks a transaction does (step 2.1, Q-15): { name, message }.
+  // blocks a transaction does (step 2.1): { name, message }.
   let transactionRefusal = null;
   let queued = [];
   let signedTransactions = 0;

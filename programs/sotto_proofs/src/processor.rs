@@ -250,7 +250,7 @@ fn verify_balance_threshold(
     Ok(())
 }
 
-/// 4.4: the record's owner closes it once it has expired (X-31); the rent goes to the owner.
+/// 4.4: the record's owner closes it once it has expired; the rent goes to the owner.
 fn close_proof_record(program_id: &Address, accounts: &[AccountInfo]) -> ProgramResult {
     let [record, owner] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);

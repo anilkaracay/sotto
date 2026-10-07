@@ -1,4 +1,4 @@
-// The app origin that sign in messages name (D-15, 14 section 2), decided at build time by
+// The app origin that sign in messages name (D-15), decided at build time by
 // next.config.ts. An explicit NEXT_PUBLIC_APP_URL always wins. Only Vercel preview deployments
 // (VERCEL_TARGET_ENV "preview") may derive it from VERCEL_URL, which the platform sets; production,
 // devnet and any custom environment must set it explicitly, or the build fails. Requests never decide it.

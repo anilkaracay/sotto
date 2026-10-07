@@ -18,7 +18,7 @@
     "ci:local": "scripts/ci-local.sh",
     "ci:local:full": "scripts/ci-local.sh --full",
     "acceptance:devnet": "node scripts/acceptance-devnet.ts",
-    "deploy:hosted": "node scripts/hosting-env.ts -- bash scripts/deploy-hosted.sh"
+    "deploy:hosted": "scripts/ops.sh deploy-hosted"
   },
   "prettier": "@sotto/config/prettier",
   "devDependencies": {

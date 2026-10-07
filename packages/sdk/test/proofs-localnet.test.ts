@@ -5,7 +5,7 @@
 // writes the record and the ProofVerified event, and the Codama client reads the record back; another
 // threshold and a balance that changed after the proofs are refused with CiphertextMismatch; the
 // context accounts are closed with their rent to the fee payer and the token account's lamports are
-// unchanged (11 section 5 item 7); the record closes after its expiry (X-31). Skipped unless
+// unchanged (11 section 5 item 7); the record closes after its expiry. Skipped unless
 // SOTTO_LOCALNET_RPC_URL is set (the ci:local localnet job runs it).
 import { fetchToken } from "@solana-program/token-2022";
 import {
@@ -259,7 +259,7 @@ describe.skipIf(!RPC_URL)("sotto_proofs on localnet (step 2.7)", () => {
     await closeContexts(proofs);
   }, 180_000);
 
-  it("closes the record after its expiry, the rent to the owner (X-31)", async () => {
+  it("closes the record after its expiry, the rent to the owner", async () => {
     const proofs = await prove(THRESHOLD);
     const nonce = await recordNonce(owner.wusdc as Address, programAddress);
     // Far enough ahead that the verification lands before it on a busy machine: at 3 seconds the

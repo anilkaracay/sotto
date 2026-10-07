@@ -1,4 +1,4 @@
-// Compute budget rules (06 section 9, Q-08): the app always sets its own compute budget.
+// Compute budget rules (06 section 9): the app always sets its own compute budget.
 
 export const MAX_COMPUTE_UNIT_LIMIT = 1_400_000;
 

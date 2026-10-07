@@ -1,4 +1,4 @@
-// SAS bootstrap and Gate G5 (08 section 5, 14 section 4). Creates the Sotto credential and the
+// SAS bootstrap and Gate G5 (08 section 5). Creates the Sotto credential and the
 // sotto.business.v1 schema when they are missing. With --test-attestation <owner> it also checks the
 // attestation address derivation, issues a test attestation with nonce = owner, reads it back and
 // closes it. Safe to run again. Writes to devnet or localnet only (D-01): the RPC endpoint's genesis

@@ -1,4 +1,4 @@
-// Worker configuration from the environment (14 section 2). Error messages name the variable and the
+// Worker configuration from the environment. Error messages name the variable and the
 // rule it breaks, never its value.
 import { isAddress, type Address } from "@solana/kit";
 

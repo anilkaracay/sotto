@@ -1,7 +1,7 @@
 // Single payments (F-06, 08 section 3; step 1.9) against a test database and a chain stand in: drafts
 // with idempotency keys (AC-06.1, I-7), screening that blocks a deny-listed wallet and logs it
 // (AC-06.2), the approval policy with the initiator's execution and signed approval messages over the
-// contents hash (AC-06.3, D-04, Q-11, Q-12 (a)), the recipient read from chain right before the
+// contents hash (AC-06.3, D-04), the recipient read from chain right before the
 // payment, the proof program flag (F-19), the executions record and a retry that never resends a
 // transfer that landed, and the money gate of AC-02.2.
 import { randomUUID } from "node:crypto";
@@ -302,7 +302,7 @@ describe("payments", () => {
 
   it("AC-06.3 counts the initiator's execution as the default approval, and with a policy of 2 needs another member's signed message over the current contents", async () => {
     const { owner, orgId, recipient } = await setUp();
-    // Policies above 1 cannot be set through the API in this build (Q-12); set it directly.
+    // Policies above 1 cannot be set through the API in this build; set it directly.
     await test.db
       .update(orgPolicy)
       .set({ paymentApprovalsRequired: 2 })
@@ -430,7 +430,7 @@ describe("payments", () => {
     expect(((await second.json()) as { payment: View }).payment.attempts).toMatchObject([
       { attemptNo: 1, status: "sent", transferSignature: transfer },
     ]);
-    // Q-11: the initiator's approval, with the first execution signature.
+    // The initiator's approval, with the first execution signature.
     const recorded = await test.db
       .select()
       .from(approvals)

@@ -1,7 +1,7 @@
 // The public proof page's view (AC-13.3; step 2.8), a server component, exported for the component
 // tests. Proven only for a record that exists, has not expired and was written while the program was
 // not paused; every other state says what it is (D-06: Proven or Not proven, never True or False).
-// Step 3.4.1 (13 A51; founder, 2026-10-01: designed in the repository): a certificate. The legal name
+// Step 3.4.1 (founder, 2026-10-01: designed in the repository): a certificate. The legal name
 // and the statement are the largest words, the result is a stamped band, the slot, time, expiry and
 // "Balance disclosed: none" sit in a grid of their own, and every other state is a card as clear.
 // Step 4.3: the statement names the record's asset, with the devnet test badge for devUSD.

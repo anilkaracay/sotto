@@ -214,7 +214,7 @@ export function sottoProofsIdl(programId = SOTTO_PROOFS_DEVNET_PROGRAM_ID): Root
         }),
         instructionNode({
           name: "closeProofRecord",
-          docs: ["Closes an expired record; its rent goes to the owner (X-31)."],
+          docs: ["Closes an expired record; its rent goes to the owner."],
           accounts: [
             account("proofRecord", { isWritable: true }, "The record."),
             account("owner", { isWritable: true, isSigner: true }, "The record's owner."),

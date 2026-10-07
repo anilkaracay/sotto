@@ -37,7 +37,7 @@ export function useSend() {
       /** What the page shows once it landed. */
       done: string;
       build: () => Promise<readonly Instruction[]>;
-      /** What to say if the wallet refuses to sign (Q-15); its own words always follow. */
+      /** What to say if the wallet refuses to sign; its own words always follow. */
       refused?: string;
       /** Runs after the transaction landed and the balances were read again. */
       after?: () => Promise<void>;

@@ -1,6 +1,6 @@
 /* My pay (step 2.6) on the design's My pay screen (design .skyk.pay8 with .slipg, .dkc with the glowing
    month bars, .psl8 and .ps8, .today and .pubx); the balances, the withdraw card and the keys cards
-   keep the confidential pages' cards (13 A40). Pixel fidelity and motion get the Phase 3 design pass
+   keep the confidential pages' cards. Pixel fidelity and motion get the Phase 3 design pass
    (M2). */
 .side {
   display: flex;

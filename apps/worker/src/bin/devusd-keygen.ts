@@ -1,5 +1,5 @@
 // Creates the devUSD mint authority's keypair (step 4.3, D-29) on the hosting server, through
-// `sotto-compose devusd-keygen`: a new Ed25519 keypair as a Solana keypair file (mode 600) at the
+// the operator's `devusd-keygen` command: a new Ed25519 keypair as a Solana keypair file (mode 600) at the
 // given path, refused if the file exists. It prints only the public key; the secret key never leaves
 // the file, which never leaves the server.
 //

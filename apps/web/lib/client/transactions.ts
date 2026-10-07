@@ -1,5 +1,5 @@
 // Plain words for what can go wrong around a wallet signed transaction (09 section 4: chain errors
-// are decoded to plain language). Since step 2.1 (Q-15) an error the wallet raised is shown with the
+// are decoded to plain language). Since step 2.1 an error the wallet raised is shown with the
 // wallet's own words next to Sotto's explanation (wallet-words.ts).
 import {
   decodeTransactionError,
@@ -27,7 +27,7 @@ export const WALLET_REFUSED_TRANSACTION =
   "Your wallet did not sign the transaction, so nothing was sent. Sotto had simulated it on this network and it would have succeeded, so the refusal comes from the wallet itself.";
 
 /**
- * The wallet did not sign the confidential account setup (Q-15, founder 2026-09-29): some wallets
+ * The wallet did not sign the confidential account setup (founder 2026-09-29): some wallets
  * verify a transaction with their own security service before signing and refuse ones it cannot
  * verify, and Sotto cannot tell such a block from any other refusal, so the words hold in every case
  * (founder, step 2.2). Neutral by design: it names no wallet, and the wallet's own words follow it.

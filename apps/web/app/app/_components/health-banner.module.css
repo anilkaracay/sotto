@@ -1,5 +1,5 @@
 /* The shell's banner (F-19, D-14; step 2.9), on the app tokens: amber for the paused program, blue grey
-   while the network is retried. Design pass C (step 3.6, 13 A52): the notices of design pass B at the
+   while the network is retried. Design pass C (step 3.6): the notices of design pass B at the
    top of the page, the icon in its own tile, and a turning ring while the network is retried. */
 .banner {
   display: grid;

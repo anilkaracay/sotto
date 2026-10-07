@@ -1,4 +1,4 @@
-// The signed message check (06 section 9, Q-08): after a wallet signs, compare the message it signed
+// The signed message check (06 section 9): after a wallet signs, compare the message it signed
 // with the message the app built.
 // - identical: the same bytes; proceed.
 // - compute_budget_only: the same fee payer, lifetime and instructions (program, accounts with their

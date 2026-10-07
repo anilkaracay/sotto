@@ -1,4 +1,4 @@
-// The run page's settlement gauge (step 2.3, component level; design .rd2, X-18, AC-08.4): as many
+// The run page's settlement gauge (step 2.3, component level; design .rd2, AC-08.4): as many
 // ticks as lines from 12 to 48, lit one per settled line, with the settled count and its line.
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -7,7 +7,7 @@ import { Gauge } from "../app/app/[org]/payroll/[run]/run-panel.tsx";
 const ticks = (html: string) => (html.match(/<line /g) ?? []).length;
 const lit = (html: string) => (html.match(/<line [^>]*class="[^"]+"/g) ?? []).length;
 
-describe("settlement gauge (X-18)", () => {
+describe("settlement gauge", () => {
   it("AC-08.4 draws a tick per line and lights one per settled line", () => {
     const html = renderToStaticMarkup(
       <Gauge

@@ -1,7 +1,7 @@
 // The access log in words (F-14, AC-14.1; step 2.4), for the viewing keys page and its tests. No server
 // only imports. Each event is metadata only: who, what, which subject by its label, counts and dates,
 // never an amount (the design's rows about exports, auditors and the board are not events of this
-// build, 13 A28).
+// build).
 import type { AccessEventView } from "./server/access-log.ts";
 import { formatDate, shortWallet } from "./format.ts";
 import { monthLabel } from "./books.ts";

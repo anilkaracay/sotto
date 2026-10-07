@@ -1,11 +1,11 @@
 // Proofs of funds on the server (F-13, step 2.8) against a test database and an RPC stand in that
 // serves records, the program's config and SAS attestations as the chain holds them:
 // - AC-13.1: the owner records a proof its tab wrote; the server checks it against the chain (the
-//   owner's wallet, the cluster's program and wrapped mint) and the counterparty hash of X-32, stores
+//   owner's wallet, the cluster's program and wrapped mint) and the counterparty hash, stores
 //   the label and salt, and logs proof_issued without an amount; anyone else, another org's record
 //   and a label or salt that does not match are refused; the list shows each record's state now.
 // - AC-13.3: the public view needs no sign in and reads the record, the pause flag and the
-//   organization's legal name from its attestation (X-21) from chain; the database adds only the
+//   organization's legal name from its attestation from chain; the database adds only the
 //   label; expired, paused, closed, never written and foreign accounts each say so.
 import { accessLog, orgs, proofRecords } from "@sotto/db";
 import type { TestDatabase } from "@sotto/db/testing";

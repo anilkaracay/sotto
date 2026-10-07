@@ -1,4 +1,4 @@
-// Bootstraps a local validator started by scripts/localnet.sh (14 section 4, step 1.6): a USDC-like
+// Bootstraps a local validator started by scripts/localnet.sh (step 1.6): a USDC-like
 // SPL Token mint (6 decimals), its wrapped Token-2022 mint through the Sotto Token Wrap deployment
 // that localnet.sh loads, the escrow of unwrapped tokens, and the SAS credential and schema through
 // the worker's bootstrap:sas with a throwaway signer (sas-lib stays in apps/worker, D-24), and, when

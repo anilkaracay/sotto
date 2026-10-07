@@ -1,4 +1,4 @@
-// Browser Solana RPC goes through /api/rpc (X-54, 08 section 3): a single JSON-RPC 2.0 request per
+// Browser Solana RPC goes through /api/rpc (08 section 3): a single JSON-RPC 2.0 request per
 // call, a method allow list, a per session rate limit and a body size limit. The upstream is RPC_URL,
 // which never reaches the browser or a response. Upstream 429 stays 429, so the client's retrying
 // transport backs off (D-14).

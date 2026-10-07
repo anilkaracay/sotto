@@ -1,4 +1,4 @@
-/* The places of a user without an owned organization (13 A47; design pass C, step 3.6): a white
+/* The places of a user without an owned organization (design pass C, step 3.6): a white
    card per place, its icon, the place and what it holds, and an arrow. */
 .places {
   display: grid;

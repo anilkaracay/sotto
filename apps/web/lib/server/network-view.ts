@@ -1,6 +1,6 @@
 // What the setup and overview pages need to know about the network, read on the server at every page
 // load with the server's RPC: the startup verification of 06 section 0 (programs, the wrapped USDC mint,
-// v1 support), the USDC mint's token program and decimals, and the labels of 13 A25 (the network label
+// v1 support), the USDC mint's token program and decimals, and the labels (the network label
 // and "devnet test wrap" for assets of Sotto's Token Wrap deployment, D-01). The browser gets public
 // values only. A network that cannot be reached shows as such; the keys still work without it. Since
 // step 2.9 every /app page loads it for the shell's banner (F-19), with the proof program's health

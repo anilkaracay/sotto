@@ -171,7 +171,7 @@ describe("decoded errors (09 section 4)", () => {
   });
 });
 
-describe("signed message check (06 section 9, Q-08)", () => {
+describe("signed message check (06 section 9)", () => {
   for (const version of [0, 1] as const) {
     const budget = {
       computeUnitLimit: 1200,

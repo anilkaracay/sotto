@@ -1,6 +1,6 @@
 // The worker process (08 section 4). Configuration comes from the environment: apps/worker/.env.local
 // when it exists (local development, src/env.ts), otherwise only the platform's environment variables
-// (hosted, 14 section 2). A missing or invalid variable stops the worker with its name; values are
+// (hosted). A missing or invalid variable stops the worker with its name; values are
 // never printed. With --once each job runs one time and the process exits.
 import { createDb } from "@sotto/db";
 import { getClusterConfig } from "@sotto/sdk/cluster";

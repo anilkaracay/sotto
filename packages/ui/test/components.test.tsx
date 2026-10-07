@@ -61,7 +61,7 @@ describe("components", () => {
     expect(html(<Person name="Northwind Ltd" business />)).toContain('class="avatar business"');
   });
 
-  it("Field puts the label above its control, then the hint and the problem (13 A35)", () => {
+  it("Field puts the label above its control, then the hint and the problem", () => {
     const markup = html(
       <FieldGrid>
         <Field label="Name" htmlFor="name" hint="As on the invoice" error="Enter a name." wide>

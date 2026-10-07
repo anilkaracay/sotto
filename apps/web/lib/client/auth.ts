@@ -74,7 +74,7 @@ export async function signOut(): Promise<void> {
 /**
  * A plain message for a sign in error: the server's words for a refused sign in, and for an error
  * the wallet raised (connect, sign in, sign message) the wallet's own words after Sotto's
- * explanation (Q-15, step 2.1). Wallet rejections read as a cancellation.
+ * explanation (step 2.1). Wallet rejections read as a cancellation.
  */
 export function describeWalletError(error: unknown, wallet?: string): string {
   if (error instanceof SignInError) return error.message;

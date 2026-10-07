@@ -1,4 +1,4 @@
-// Admins seed (X-53): the admins table is the source of truth; ADMIN_WALLETS (comma separated base58)
+// Admins seed: the admins table is the source of truth; ADMIN_WALLETS (comma separated base58)
 // is used only by this seed to insert rows. Existing rows are kept.
 import { isAddress } from "@solana/kit";
 import { inArray } from "drizzle-orm";

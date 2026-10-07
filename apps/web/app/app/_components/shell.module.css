@@ -1,4 +1,4 @@
-/* design/sotto-app.html .dsh.ve2, .vtop, .vtr, .cib, .avb, .rmenu, .ro, .vbody .ct */
+/* The approved app design: .dsh.ve2, .vtop, .vtr, .cib, .avb, .rmenu, .ro, .vbody .ct */
 .shell {
   display: flex;
   flex-direction: column;

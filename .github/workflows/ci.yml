@@ -1,7 +1,7 @@
 name: CI
 
 # Manual runs only while the repository is private (D-25). The push and pull_request triggers are
-# restored by the public launch checklist (docs/12-MILESTONES.md).
+# restored by the public launch checklist.
 on:
   workflow_dispatch:
 

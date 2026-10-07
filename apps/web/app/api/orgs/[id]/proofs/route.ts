@@ -1,7 +1,7 @@
 // GET /api/orgs/:id/proofs: the organization's issued proofs of funds with each record's state read
 // from chain now (valid, expired, closed). POST /api/orgs/:id/proofs { recordAddress,
 // counterpartyLabel, counterpartySalt }: after the owner's tab wrote a record, the server checks it
-// against the chain and its counterparty hash (X-32) and stores the label and salt, which never go
+// against the chain and its counterparty hash and stores the label and salt, which never go
 // onchain (F-13, AC-13.1; step 2.8). The owner of an active organization only.
 import { apiRoute } from "../../../../../lib/server/api-route.ts";
 import { readJson } from "../../../../../lib/server/body.ts";

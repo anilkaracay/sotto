@@ -1,4 +1,4 @@
-// The landing's hero section (F-17, step 3.1), from design/sotto-landing.html.
+// The landing's hero section (F-17, step 3.1), from the approved landing design.
 import Link from "next/link";
 import { SottoLockupWhite } from "@sotto/ui";
 import { SolanaLockup, UsdcToken } from "../brand-logos.tsx";

@@ -1,7 +1,7 @@
 // /app/recovery (10 section 2, mitigation 3; D-03): how to reach confidential balances with the
 // standard Solana command line tools when a wallet refuses to sign the key message in Sotto, or Sotto is
 // not available. Public, no session. The commands were run on localnet with spl-token-cli 5.6.1 and
-// solana-keygen 4.2.2 (VERIFICATION-LOG steps 1.5 and 1.6); scripts/recover-balance.ts prints the exact
+// solana-keygen 4.2.2 (verified in steps 1.5 and 1.6); scripts/recover-balance.ts prints the exact
 // amount (founder, 2026-09-27), and scripts/build-token-wrap.sh --cli builds the unwrap tool. Step 4.3
 // (D-29): where the devnet registry lists devUSD, the guide names its mints for a devUSD account.
 import { getClusterConfig } from "@sotto/sdk/cluster";

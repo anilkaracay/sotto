@@ -329,7 +329,7 @@ test.describe.serial("viewing grants on localnet", () => {
       ["payment", FIRST.base, FIRST.memo],
       ["payroll_line", LINE.base, LINE.memo],
     ]);
-    // 13 A26: the run's "Who can read this run" names the holder once they hold its lines.
+    // The run's "Who can read this run" names the holder once they hold its lines.
     await go(page, "Payroll");
     await page.getByTestId("run-row").first().getByRole("link").click();
     await expect(page).toHaveURL(RUN_URL);

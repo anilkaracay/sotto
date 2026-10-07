@@ -1,6 +1,6 @@
 # Docker build context for images built from the repository root (the worker on Fly, D-13).
 # Images never contain environment files: hosted environments take configuration only from the
-# platform's environment variables (docs/14-ENVIRONMENTS-DEPLOY.md section 2).
+# platform's environment variables.
 # scripts/checks/env-files.sh exports the build context and fails if any env file is in it.
 **/.env
 **/.env.*

@@ -1,5 +1,5 @@
-/* App theme (X-42, 09 section 2), scoped to .theme-app: the tokens and base styles of
-   design/sotto-app.html (its .dsh.ve2 layout). Fonts come from next/font (Geist, Geist Mono) through
+/* App theme (09 section 2), scoped to .theme-app: the tokens and base styles of
+   the approved app design (its .dsh.ve2 layout). Fonts come from next/font (Geist, Geist Mono) through
    --font-geist and --font-geist-mono. Components style themselves with CSS Modules on these tokens
    (D-11). Pixel level polish comes with the visual baselines (plan move M2). */
 .theme-app {

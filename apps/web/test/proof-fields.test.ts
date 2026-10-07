@@ -1,7 +1,7 @@
-// Proof of funds in words (F-13, step 2.8): the statement always says "at least" (X-22) and never
+// Proof of funds in words (F-13, step 2.8): the statement always says "at least" and never
 // rounds the threshold; custom amounts parse as dollars; the chips are the design's; the expiry is
 // counted from now; a record's state and validity read as the chain shows them; every program error
-// has plain words; and the server's counterparty hash is the tab's (X-32). Step 4.3: a devUSD record
+// has plain words; and the server's counterparty hash is the tab's. Step 4.3: a devUSD record
 // names its symbol and never says USDC or "$".
 import { counterpartyHash } from "@sotto/sdk/proofs";
 import { describe, expect, it } from "vitest";
@@ -115,7 +115,7 @@ describe("proof of funds words (F-13)", () => {
     );
   });
 
-  it("hashes the counterparty on the server exactly as the tab does (X-32)", async () => {
+  it("hashes the counterparty on the server exactly as the tab does", async () => {
     const salt = crypto.getRandomValues(new Uint8Array(16));
     for (const label of ["Hollis Supply Co.", "Şişli Bankası", "x"]) {
       expect(counterpartyHashOf(salt, label)).toEqual(await counterpartyHash(salt, label));

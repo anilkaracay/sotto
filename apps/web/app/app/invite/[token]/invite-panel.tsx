@@ -7,11 +7,11 @@
 // records so the recipient shows as ready (readiness from chain). Since step 1.8.1 (founder) the page
 // shows only the organization before sign in; the recipient's name, role and wallet appear only to the
 // invited wallet, and another wallet sees only the refusal with the expected address. Since step 2.4 an
-// accountant invite carries a viewing grant (X-37): once signed in, a wallet that is not the holder yet
+// accountant invite carries a viewing grant: once signed in, a wallet that is not the holder yet
 // sees only the organization, what the grant reads and until when, never the holder's name, an amount,
 // a payment or a recipient (founder, 2026-09-29; no wallet is known before the holder accepts);
 // accepting, which the owner's own wallet cannot, makes the user the org's accountant, and their
-// viewing key, created on the same page, activates the grant. Design pass C (step 3.6, 13 A38, A43):
+// viewing key, created on the same page, activates the grant. Design pass C (step 3.6, A43):
 // the organization's initials beside the invite's title, what the invite offers before the button
 // that accepts it, and the three steps after joining numbered as on the setup page.
 import { Button, Card, initials } from "@sotto/ui";

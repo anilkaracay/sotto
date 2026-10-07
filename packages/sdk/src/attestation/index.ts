@@ -1,6 +1,6 @@
 // `@sotto/sdk/attestation` (step 2.8): reads a Sotto business attestation from its account bytes,
 // without sas-lib (D-24 keeps sas-lib in apps/worker). The public proof page finds an organization's
-// attestation from a proof record's owner alone (X-21: nonce = the owner's wallet), at the PDA of
+// attestation from a proof record's owner alone (nonce = the owner's wallet), at the PDA of
 // `["attestation", credential, schema, nonce]` under the SAS program (facts E4), which only an
 // authorized signer of the Sotto credential can create. Layouts: the attestation account (SAS
 // `state/attestation.rs`: discriminator 2, nonce, credential, schema, data with a u32 length, signer,

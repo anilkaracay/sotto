@@ -1,6 +1,6 @@
 // The demo organization of step 4.3 (founder, 2026-10-02; 12 "Seed design"): Northwind Labs Demo Ltd,
 // a fictional United Kingdom company that holds devUSD, the devnet test dollar. Every name is fictional:
-// the design's people (design/sotto-app.html), Sofia, Jonas and Amara added to reach the team as in
+// the design's people (the approved app design), Sofia, Jonas and Amara added to reach the team as in
 // step 4.3's first seed design, Selin Demir (the design's COO) as the twelfth line, and two fictional
 // counterparties. Amounts are devUSD in whole units with two decimals at most; the payroll lines are
 // between 4,000 and 12,000 each.

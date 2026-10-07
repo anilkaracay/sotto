@@ -1,7 +1,7 @@
 // A confidential transfer to one recipient (06 section 5, F-06, AC-06.4; step 1.9). It needs the
 // sender's confidential keys (the proofs and the new decryptable balance), so it runs where the keys
 // live: the crypto worker, or a keypair in tests. It builds the plan of
-// `@solana-program/token-2022/confidential` 0.19.0 (verified from its source, VERIFICATION-LOG step
+// `@solana-program/token-2022/confidential` 0.19.0 (verified from its source in step
 // 1.9): three proof context accounts created and verified, the transfer instruction, then the three
 // accounts closed with their rent to the fee payer (06 section 5). A version 1 transaction takes the
 // range proof inline; a version 0 transaction cannot hold the inline range proof together with the

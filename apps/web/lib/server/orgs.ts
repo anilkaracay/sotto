@@ -58,8 +58,8 @@ const STATUS_WORD: Record<OrgStatus, string> = {
 
 export type AdminAction = "approve" | "reject" | "suspend";
 
-// Reject has no status of its own in the hackathon build: a rejected org is suspended (Q-13
-// option a, D-09).
+// Reject has no status of its own in the hackathon build: a rejected org is suspended
+// (D-09).
 const TRANSITIONS: Record<
   AdminAction,
   { from: OrgStatus; to: OrgStatus; fromLabel: string; done: string }
@@ -168,7 +168,7 @@ export async function updateOrg(
   return org;
 }
 
-/** Sotto admins are the rows of the admins table (08 section 2, X-53). */
+/** Sotto admins are the rows of the admins table (08 section 2). */
 export async function requireAdmin(
   db: Database,
   session: Session | null,

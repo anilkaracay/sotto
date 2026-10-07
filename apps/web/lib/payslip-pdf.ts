@@ -1,6 +1,6 @@
 // The payslip PDF (F-12, AC-12.3; step 2.6), made in the recipient's tab from their own opened record,
 // never on the server; a record outside category payroll gives a payment receipt instead, with the
-// amount received and no gross or tax (13 A49): one A4 page of text in the standard Helvetica font (PDF 1.4, no embedded font,
+// amount received and no gross or tax: one A4 page of text in the standard Helvetica font (PDF 1.4, no embedded font,
 // no dependency). Text outside Latin-1, which Helvetica's WinAnsi encoding cannot show, is written
 // without its accents where Unicode decomposes it and as "?" otherwise. Step 4.3: amounts in the
 // organization's asset (USDC or devUSD), and a devnet test asset says it has no value.

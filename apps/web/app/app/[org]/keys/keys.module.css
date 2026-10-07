@@ -229,7 +229,7 @@
   gap: 10px;
   margin-top: 14px;
 }
-/* Design pass C (step 3.6, 13 A43): each holder as a person with the records in scope under the name,
+/* Design pass C (step 3.6): each holder as a person with the records in scope under the name,
    one row each between hairlines. */
 .backfillRow {
   display: flex;

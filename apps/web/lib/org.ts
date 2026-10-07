@@ -65,7 +65,7 @@ export function moneyEnabled(status: OrgStatus): boolean {
   return status === "active";
 }
 
-/** Status words in the app (13 A35): suspended covers rejected and revoked verification alike. */
+/** Status words in the app: suspended covers rejected and revoked verification alike. */
 export function orgStatusLabel(status: OrgStatus): string {
   if (status === "active") return "Verified";
   if (status === "suspended") return "Not verified";

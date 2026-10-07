@@ -1,6 +1,6 @@
 // Configuration for the database scripts (migrate, seed): packages/db/.env.local, git ignored, loaded
 // with dotenv (ENGINEERING-RULES.md "Local configuration and secrets"). The file wins over the process
-// environment, like the worker's loader (14 section 2). Hosted runs have no file and use the
+// environment, like the worker's loader. Hosted runs have no file and use the
 // platform's variables; a missing file changes nothing.
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";

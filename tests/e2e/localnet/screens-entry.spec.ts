@@ -1,4 +1,4 @@
-// The entry screens in every state (step 3.4 with /trust of step 3.3, 13 A35 and L36): the trust page
+// The entry screens in every state (step 3.4 with /trust of step 3.3): the trust page
 // at 1440, 390 and 360 (no horizontal scroll at the phone widths), and onboarding empty, refused,
 // in review, verified with its attestation onchain, and not verified, each from the admin console's
 // decision. Each state is checked for its words and saved as a full page screenshot to this test's
@@ -65,7 +65,7 @@ async function decide(admin: Page, legalName: string, action: "Approve" | "Rejec
 
 test.use({ extraHTTPHeaders: { "x-forwarded-for": "198.51.100.16" } });
 
-test("the entry screens in every state, for the design pass (13 A35, L36)", async ({ browser }) => {
+test("the entry screens in every state, for the design pass (L36)", async ({ browser }) => {
   test.setTimeout(600_000);
 
   // L36: the trust page, public, at the desktop and the phone widths.

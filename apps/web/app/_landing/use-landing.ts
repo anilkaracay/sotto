@@ -1,10 +1,10 @@
 "use client";
 
 // The landing's interactive state (F-17, step 3.1), ported from the approved design's component
-// (design/sotto-landing.html, landing v8): the hero's public and accountant views on a timer, the
+// (the approved landing design, landing v8): the hero's public and accountant views on a timer, the
 // four views of the ledger, the three steps, the proof illustration, the SDK tabs, the FAQ filter,
-// the hero tilt and the footer watermark. The data is the design's with the copy corrections of 13
-// (L2, L3, L8 to L10, L16, L18 to L23, L26, L31) and the founder's rules of 2026-09-30 applied. Every
+// the hero tilt and the footer watermark. The data is the design's with the approved copy
+// corrections and the founder's rules of 2026-09-30 applied. Every
 // figure here belongs to an illustration with sample data; nothing is read from Sotto or the chain.
 import {
   useCallback,
@@ -75,7 +75,7 @@ const STEPS = [
     title: "Seal your dollars",
     desc: "Move USDC into your account. It becomes a confidential balance on Solana, still one to one with the dollar.",
   },
-  // 13 L16 with Q-12: the hackathon build records the owner's approval with each run.
+  // The hackathon build records the owner's approval with each run.
   {
     title: "Pay the usual way",
     desc: "Upload a payroll file or pay an invoice. Every run is approved and recorded in Sotto, and the owner wallet executes it.",
@@ -108,7 +108,7 @@ const GROUPS = [
 ] as const;
 
 /**
- * The proof illustration's certificate words for a sample balance and a threshold (13 L3: Proven or
+ * The proof illustration's certificate words for a sample balance and a threshold (Proven or
  * Not proven, never True or False; L2 and L19: no "one transaction").
  */
 export function proofWords(proven: boolean) {
@@ -282,7 +282,7 @@ export function useLanding() {
         update(s.open ? { open: false, auto: false, scanN: s.scanN + 1 } : { auto: false }),
       showOpen: () =>
         update(!s.open ? { open: true, auto: false, scanN: s.scanN + 1 } : { auto: false }),
-      // 13 L15: the hero is visibly an illustration with sample data.
+      // The hero is visibly an illustration with sample data.
       heroCap: s.open
         ? "Sample data. Accountant view: every amount decrypted with a viewing key."
         : "Sample data. Public view: anyone can verify the payments, nobody can read the amounts.",
@@ -343,7 +343,7 @@ export function useLanding() {
         timers.current.push(setTimeout(() => update({ proof: "done" }), 2300));
       },
       scaleCls: running ? "scale run" : "scale",
-      // 13 L26: "Balance is at least $X".
+      // The statement reads "Balance is at least $X".
       thPct: pct,
       thLabel: "Statement: at least " + threshold.label,
       thF: threshold.full,
@@ -352,7 +352,7 @@ export function useLanding() {
       zoneW: proven ? (100 - Number(pct)).toFixed(2) : pct,
       zoneText: proven ? "Your balance is somewhere in here" : "Your balance is below the line",
       spinCls: running ? "spin run" : done ? "spin ok" : "spin",
-      // 13 L2 and L19: a proof of funds takes several transactions, so no "one transaction".
+      // A proof of funds takes several transactions, so no "one transaction".
       capText: running
         ? "Proving against your sealed balance"
         : done

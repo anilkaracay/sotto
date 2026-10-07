@@ -1,4 +1,4 @@
-// Gate G3 browser timings (step 2.2, docs/12-MILESTONES.md). Development only: the .dev.tsx extension
+// Gate G3 browser timings (step 2.2). Development only: the .dev.tsx extension
 // makes this a page only under next dev (next.config.ts pageExtensions), and the 404 outside
 // development stays as a second guard.
 import { notFound } from "next/navigation";

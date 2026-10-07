@@ -25,7 +25,7 @@ import {
   zeroConfidentialKeys,
 } from "../src/keys/index.ts";
 
-// The step 1.5 CLI check (VERIFICATION-LOG): spl-token-cli 5.6.1 configured a confidential account on
+// The step 1.5 CLI check: spl-token-cli 5.6.1 configured a confidential account on
 // localnet for the keypair with this seed and stored this ElGamal key.
 const CLI_SEED = createHash("sha256").update("sotto-cli-key-check/v1").digest();
 const CLI_WALLET = "EQMW3o1DVsB72Ej1RRRmHLW1XaEpbjLKrMHUbS8cRLZC";

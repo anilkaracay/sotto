@@ -4,7 +4,7 @@
 // link expires after 7 days; a new link replaces the open one. Accepting needs a session with the
 // recipient's wallet: it adds the recipient membership, links the recipient to the user and creates
 // the recipient's own_payslips grant (active once the user has a viewing key, 07 section 5). Since
-// step 2.4 an accountant invite carries a viewing grant (grants.ts, X-37): any signed in wallet other
+// step 2.4 an accountant invite carries a viewing grant (grants.ts): any signed in wallet other
 // than the owner's can accept it once; it becomes the org's accountant and the grant's viewer, and the
 // grant activates with their viewing key. A grant revoked or expired first withdraws its invite.
 import { createHash, randomBytes } from "node:crypto";

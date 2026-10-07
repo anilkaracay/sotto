@@ -1,4 +1,4 @@
-// The network banner for the design pass (step 3.6, 13 A52): the node job's web server has no validator
+// The network banner for the design pass (step 3.6): the node job's web server has no validator
 // to reach, so every /app page shows "Network unreachable, retrying". A new wallet's onboarding shows
 // it here (since step 3.8: a page that no other spec's data changes, for its baseline), checked for
 // its words and saved as a full page screenshot at 1440 to this test's output directory
@@ -13,9 +13,7 @@ import { expectVisual } from "../visual.ts";
 
 const DEMO_SHOTS = fileURLToPath(new URL("../../../.demo-shots/screens/", import.meta.url));
 
-test("the network banner on an app page when the network cannot be reached (13 A52)", async ({
-  page,
-}) => {
+test("the network banner on an app page when the network cannot be reached", async ({ page }) => {
   // A wallet of its own, with no organization: sign in lands on onboarding.
   await signIn(page);
   const banner = page.getByTestId("network-unreachable");

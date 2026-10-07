@@ -1,8 +1,8 @@
 "use client";
 
 // The signed in app shell (09 sections 1 and 2): logo, top pill nav (only built screens, rule 6; client
-// side links, so the tab's keys survive the navigation), the network label (13 A25) and the org and role
-// switcher, which lists the user's own memberships and never impersonates anyone (09 section 1, 13 A9).
+// side links, so the tab's keys survive the navigation), the network label and the org and role
+// switcher, which lists the user's own memberships and never impersonates anyone (09 section 1).
 // An owned organization links to its onboarding status and a recipient membership of an active org
 // to its pay page (step 1.10); Sotto admins also get the business review console. Signing out ends the tab's keys.
 // Step 2.9: the design's privacy screen toggle (F-15) and, on every /app page, the proof program

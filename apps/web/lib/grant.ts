@@ -1,6 +1,6 @@
 // Viewing grant words (F-10; step 2.4), shared by the viewing keys page, the invite page and their tests.
 // No server only imports. The scopes are the hackathon ones (D-27): every amount, every amount in a
-// period, payroll only, and a recipient's own payslips; the expiry choices include No expiry (X-52).
+// period, payroll only, and a recipient's own payslips; the expiry choices include No expiry.
 import { formatDate } from "./format.ts";
 
 export type GrantScopeName = "all_payments" | "period" | "payroll_only" | "own_payslips";

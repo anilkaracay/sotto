@@ -1,6 +1,6 @@
 // Proof of funds in words (F-13, step 2.8), for the owner's proofs page, the public verification page and
-// their tests. No server only imports. The statement always says "at least" (X-22, D-06): "Balance is at
-// least $X"; the result is Proven or Not proven (D-06, 13 L3), never True or False. A threshold is in
+// their tests. No server only imports. The statement always says "at least" (D-06): "Balance is at
+// least $X"; the result is Proven or Not proven (D-06), never True or False. A threshold is in
 // base units of the organization's wrapped asset (6 decimals). Step 4.3: a USDC record keeps the dollar
 // words ("$250,000"); a devUSD record names its symbol ("250,000 devUSD") and never says USDC.
 import { parseTokenAmount } from "@sotto/sdk/confidential/public";
@@ -24,7 +24,7 @@ export function thresholdChips(asset: AssetWords): readonly { label: string; bas
 
 /**
  * How long a record stays valid (05 section 3: chosen by the owner, at most 365 days after it is
- * written). The design has no control for it (13 A50); 30 days is the default.
+ * written). The design has no control for it; 30 days is the default.
  */
 export const VALIDITY_OPTIONS = [
   { label: "7 days", days: 7 },
@@ -49,7 +49,7 @@ export function thresholdWords(base: bigint, asset: AssetWords): string {
   return asset.symbol === "USDC" ? `$${number}` : `${number} ${asset.symbol}`;
 }
 
-/** X-22: the statement a record proves. */
+/** The statement a record proves. */
 export function statementWords(threshold: bigint, asset: AssetWords): string {
   return `Balance is at least ${thresholdWords(threshold, asset)}`;
 }
@@ -61,7 +61,7 @@ export function parseThreshold(text: string): bigint | null {
 
 export const PROVEN = "Proven";
 export const NOT_PROVEN = "Not proven";
-/** 13 L3: the subline under Not proven. */
+/** The subline under Not proven. */
 export const NOT_PROVEN_DETAIL = "This statement could not be proven. Nothing else was revealed.";
 export const PROVEN_DETAIL = "The statement holds. The balance stays sealed.";
 

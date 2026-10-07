@@ -1,4 +1,4 @@
-// The landing's steps section (F-17, step 3.1), from design/sotto-landing.html.
+// The landing's steps section (F-17, step 3.1), from the approved landing design.
 import { Fragment } from "react";
 import type { LandingView } from "../use-landing.ts";
 

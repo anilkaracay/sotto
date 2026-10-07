@@ -1,5 +1,5 @@
 // Viewing grant words and choices (F-10; step 2.4): the scopes of the hackathon build (no totals_only,
-// D-27), the expiry choices with No expiry (X-52) computed in the browser exactly as the server does,
+// D-27), the expiry choices with No expiry computed in the browser exactly as the server does,
 // the last day a grant is open, the status chips and the revoke copy of AC-10.4.
 import { describe, expect, it } from "vitest";
 import {

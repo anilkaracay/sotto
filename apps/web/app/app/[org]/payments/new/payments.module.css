@@ -1,4 +1,4 @@
-/* The payments page, built on the app tokens: no approved design exists for it (13 A39); the table
+/* The payments page, built on the app tokens: no approved design exists for it; the table
    follows the design's tables, and the form uses the shared fields of packages/ui (step 3.6). */
 .side {
   display: flex;

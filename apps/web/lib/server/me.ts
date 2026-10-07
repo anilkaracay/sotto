@@ -1,5 +1,5 @@
 // The signed in user's view: profile, active memberships with their orgs (the org and role switcher,
-// 09 section 1) and whether the wallet is a Sotto admin (the admins table, X-53).
+// 09 section 1) and whether the wallet is a Sotto admin (the admins table).
 import { admins, memberships, orgs, users, type Database } from "@sotto/db";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Role } from "./membership.ts";

@@ -232,7 +232,7 @@ describe("Origin check (CSRF, 08 section 6)", () => {
   });
 });
 
-describe("server configuration (14 section 2)", () => {
+describe("server configuration", () => {
   it("validates each variable and names it without its value", () => {
     const cases: [() => unknown, string][] = [
       [() => databaseUrl({}), "DATABASE_URL is not set"],

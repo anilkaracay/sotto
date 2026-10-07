@@ -2,7 +2,7 @@
 
 // Sign in (F-01, D-15, D-26): every Wallet Standard wallet the browser has, grouped by what it can do
 // (lib/wallet-groups.ts), never by name; the user connects, then signs in with an explicit click:
-// solana:signIn when the wallet has it, otherwise a signed message. Step 3.4.1 (13 A34; founder,
+// solana:signIn when the wallet has it, otherwise a signed message. Step 3.4.1 (founder,
 // 2026-10-01: designed in the repository): the landing's sky with
 // what Sotto is in one line and the devnet beta note, beside the sign in panel in the app's language.
 import Link from "next/link";
@@ -207,7 +207,7 @@ function WalletOption({ wallet, group }: { wallet: UiWallet; group: WalletGroup 
 
 type SignerProps = {
   account: UiWalletAccount;
-  /** For the wallet's own words when it refuses (Q-15). */
+  /** For the wallet's own words when it refuses. */
   walletName: string;
   status: Status;
   setStatus: (status: Status) => void;

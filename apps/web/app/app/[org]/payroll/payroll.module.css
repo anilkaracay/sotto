@@ -1,7 +1,7 @@
 /* The payroll pages (step 2.3). The run page follows the design's payroll screen (design .pg with
    .dkc, .gbw, .stp8, .radw2, .apl, .t8, .who8): the run total with its team bars and steps, the
-   settlement gauge with the approvals block (13 A31) and the recipients table. The new run card has no
-   approved design and reuses the recipients page's fields (13 A42). Pixel fidelity and motion get the
+   settlement gauge with the approvals block and the recipients table. The new run card has no
+   approved design and reuses the recipients page's fields. Pixel fidelity and motion get the
    Phase 3 design pass (M2). */
 .page {
   display: grid;
@@ -79,7 +79,7 @@
   font-size: 14px;
   color: var(--muted);
 }
-/* Design pass C (step 3.6, 13 A42): the CSV drop zone, the design's soft field with a dashed edge;
+/* Design pass C (step 3.6): the CSV drop zone, the design's soft field with a dashed edge;
    the file input covers it, transparent, so a click and a drop both reach it. */
 .drop {
   position: relative;
@@ -423,7 +423,7 @@
   color: #a9b4c7;
 }
 
-/* Approvals (design .apl, .apr; 13 A31). */
+/* Approvals (design .apl, .apr). */
 .approvals {
   display: flex;
   flex-direction: column;
@@ -487,7 +487,7 @@
   box-shadow: none;
 }
 
-/* Who can read this run (design .who8; 13 A26). */
+/* Who can read this run (design .who8). */
 .who {
   display: flex;
   flex-direction: column;

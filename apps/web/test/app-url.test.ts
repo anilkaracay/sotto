@@ -1,4 +1,4 @@
-// The sign in origin at build time (14 section 2, D-15): explicit everywhere, derived from VERCEL_URL
+// The sign in origin at build time (D-15): explicit everywhere, derived from VERCEL_URL
 // only on Vercel preview deployments.
 import { describe, expect, it } from "vitest";
 import { buildAppUrl } from "../lib/app-url.ts";

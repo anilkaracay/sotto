@@ -1,4 +1,4 @@
-// The public proof page in every state (step 3.4.1, 13 A51): a certificate for a record the owner
+// The public proof page in every state (step 3.4.1): a certificate for a record the owner
 // generated in the app (Proven, its organization attested, shared with Harbor Bank), a record of a
 // wallet with no organization (Proven, "Not verified by Sotto"), a record that expired, then the same
 // record closed by its owner, the paused proof program (set and put back by the bootstrap's admin
@@ -231,10 +231,7 @@ async function setPaused(paused: boolean) {
 
 test.use({ extraHTTPHeaders: { "x-forwarded-for": "198.51.100.17" } });
 
-test("the public proof page in every state, for the design pass (13 A51)", async ({
-  page,
-  browser,
-}) => {
+test("the public proof page in every state, for the design pass", async ({ page, browser }) => {
   test.setTimeout(900_000);
   const owner = await chainPerson(OWNER.keypair, 100n);
   await setUpLocalnetAccount(rpc, owner, bootstrap);

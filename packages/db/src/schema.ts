@@ -155,7 +155,7 @@ export const sessions = pgTable(
   (t) => [index("sessions_user_id_idx").on(t.userId)],
 );
 
-/** Source of truth for Sotto admins; ADMIN_WALLETS only seeds it (X-53). */
+/** Source of truth for Sotto admins; ADMIN_WALLETS only seeds it. */
 export const admins = pgTable(
   "admins",
   {
@@ -399,7 +399,7 @@ export const payrollRuns = pgTable(
     idempotencyKey: text("idempotency_key").notNull().unique(),
     status: payrollRunStatus("status").notNull().default("draft"),
     lineCount: integer("line_count").notNull(),
-    /** The initiator: running the payroll is their approval (Q-11, 13 A31). */
+    /** The initiator: running the payroll is their approval. */
     createdBy: uuid("created_by")
       .notNull()
       .references(() => users.id),
@@ -431,7 +431,7 @@ export const payments = pgTable(
       .notNull()
       .references(() => recipients.id),
     idempotencyKey: text("idempotency_key").notNull().unique(),
-    /** Step 1.9: the member who created the payment; their execution counts as an approval (Q-11). */
+    /** Step 1.9: the member who created the payment; their execution counts as an approval. */
     createdBy: uuid("created_by")
       .notNull()
       .references(() => users.id),
@@ -507,7 +507,7 @@ export const clusterHealth = pgTable("cluster_health", {
   checkedAt: timestamptz("checked_at").notNull(),
 });
 
-/** Q-11: kind message needs the signed message; kind execution needs the execution signature. */
+/** Kind message needs the signed message; kind execution needs the execution signature. */
 export const approvals = pgTable(
   "approvals",
   {
@@ -724,7 +724,7 @@ export const reconciliations = pgTable("reconciliations", {
 });
 
 /**
- * Step 2.8 (F-13, X-32): the proofs of funds an org issued. The record itself is onchain (sotto_proofs,
+ * Step 2.8 (F-13): the proofs of funds an org issued. The record itself is onchain (sotto_proofs,
  * 05 section 3); this row holds what stays offchain by design, the counterparty label and the 16 byte
  * salt of its hash, with copies of the record's public threshold and expiry for the issued list. The
  * threshold is public onchain, so it is allowed here (ENGINEERING-RULES.md rule 4, 08 section 1).
@@ -769,7 +769,7 @@ export const rateLimits = pgTable("rate_limits", {
 /**
  * Step 3.2 (F-17, AC-17.2): request access from the landing, one row per work email (lowercased),
  * with the company and the time the visitor ticked the consent box. No confirmation email in the
- * hackathon build: double opt in by email is Post-hackathon with D-19 (13 L24, 15).
+ * hackathon build: double opt in by email is Post-hackathon with D-19 (15).
  */
 export const waitlist = pgTable(
   "waitlist",

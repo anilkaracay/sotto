@@ -1,4 +1,4 @@
-// The landing route (F-17, step 3.1; 09 section 6): the public page from design/sotto-landing.html.
+// The landing route (F-17, step 3.1; 09 section 6): the public page from the approved landing design.
 import type { Metadata } from "next";
 import { LANDING_DESCRIPTION, LANDING_TITLE } from "../lib/site-metadata.ts";
 import { Landing } from "./_landing/landing.tsx";

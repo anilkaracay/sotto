@@ -1,5 +1,5 @@
-// The fixed keypair wallet of the keys spec: the keypair of the step 1.5 spl-token CLI check
-// (VERIFICATION-LOG), derived from a public seed, so its keys are test data and it never holds funds.
+// The fixed keypair wallet of the keys spec: the keypair of the step 1.5 spl-token CLI check,
+// derived from a public seed, so its keys are test data and it never holds funds.
 // The CLI configured the ElGamal key below for it; the browser must derive the same key.
 import { createHash, createPrivateKey, createPublicKey } from "node:crypto";
 import { getAddressDecoder } from "@solana/kit";

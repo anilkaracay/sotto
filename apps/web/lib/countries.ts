@@ -2,7 +2,7 @@
 // 08 section 2) and the sotto.business.v1 attestation (08 section 5). Generated from the Debian
 // iso-codes list (salsa.debian.org/iso-codes-team/iso-codes, data/iso_3166-1.json at commit
 // d055275324963c9bce5882eaaa93024cf2bf7ed0, sha256 f01b812b57fba9f31ff621bf33e7c7570a01964dbeb5be2167e94decf538c89f):
-// its 249 codes, the common name where the list has one, sorted by name (VERIFICATION-LOG step 1.4).
+// its 249 codes, the common name where the list has one, sorted by name (verified in step 1.4).
 export const COUNTRIES: readonly (readonly [code: string, name: string])[] = [
   ["AF", "Afghanistan"],
   ["AX", "Åland Islands"],

@@ -1,7 +1,7 @@
 "use client";
 
 // The viewing keys page's client part (F-10, F-14; step 2.4), on the design's Access screen where data
-// exists (13 A5, A19 to A23, A27, A28):
+// exists (A19 to A23, A27, A28):
 // - Who can read <org>: a bar per active key, its records out of the owner's own records of the last
 //   12 months, computed here from counts (09 section 3); none of the holders are at Sotto (A5);
 // - Keys stay yours: the latest active key, its holder, what it reads, its public key and its end;
@@ -12,7 +12,7 @@
 // - Keys: every grant with its holder, scope, expiry, last use and status, a new invite link while
 //   its holder has not accepted, and Revoke with the copy of AC-10.4;
 // - Access log: the last 7 days, metadata only (AC-14.1);
-// - Grant a key: the drawer with the holder, what they can read, the expiry (No expiry included, X-52)
+// - Grant a key: the drawer with the holder, what they can read, the expiry (No expiry included)
 //   and a preview; granting shows the invite link once.
 import { buildManifest, manifestMessage } from "@sotto/sdk/disclosure";
 import { verifyViewKeyRegistration } from "@sotto/sdk/keys/public";

@@ -1,7 +1,7 @@
 // /v/<proof_record_address> (F-13, AC-13.3; step 2.8): anyone can check a Sotto proof of funds without
 // signing in. The page reads the record from chain, and the organization's legal name from its SAS
-// attestation, found through the record's owner (X-21); it states when the record expired, was closed
-// or does not exist, and when the proof program is paused (14 section 7). The database adds only the
+// attestation, found through the record's owner; it states when the record expired, was closed
+// or does not exist, and when the proof program is paused. The database adds only the
 // counterparty label; nothing on the page is proven by it.
 import type { Metadata } from "next";
 import { serverRpc } from "../../../lib/server/chain.ts";

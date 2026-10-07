@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checks the phase scoped AC manifest (X-46, docs/11-TESTING.md section 4).
+"""Checks the phase scoped AC manifest (docs/11-TESTING.md section 4).
 
 The current phase is read from tests/ac-manifest.json ("currentPhase"), the single source.
 Fails if an AC required at the current phase has no test whose title contains the AC ID, or if the

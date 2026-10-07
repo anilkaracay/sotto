@@ -1,4 +1,4 @@
-// POST /api/rpc (X-54, 08 section 3): session, Origin check, method allow list, per session rate limit,
+// POST /api/rpc (08 section 3): session, Origin check, method allow list, per session rate limit,
 // body size limit, upstream error mapping; RPC_URL never leaves the server.
 import { rateLimits } from "@sotto/db";
 import type { TestDatabase } from "@sotto/db/testing";

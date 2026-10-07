@@ -1,4 +1,4 @@
-// Approval messages (D-04, Q-12 (a); step 1.9): the contents hash over the canonical JSON list of
+// Approval messages (D-04; step 1.9): the contents hash over the canonical JSON list of
 // lines, which any change to a line changes, and the exact message an approver's wallet signs.
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";

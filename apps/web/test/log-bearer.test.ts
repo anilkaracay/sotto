@@ -1,4 +1,4 @@
-// Bearer tokens in URLs never reach a log (Q-16, founder 2026-09-29; step 2.1): the invite link
+// Bearer tokens in URLs never reach a log (founder 2026-09-29; step 2.1): the invite link
 // token of /app/invite/[token] and /api/invites/[token] becomes ":token" in every logged string,
 // plain or URL encoded, and every dynamic route segment named like a secret must be covered.
 import { randomBytes } from "node:crypto";
@@ -28,8 +28,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("bearer tokens in logged URLs (Q-16)", () => {
-  it("Q-16 replaces the invite link token in paths, full URLs and URL encoded values", () => {
+describe("bearer tokens in logged URLs", () => {
+  it("replaces the invite link token in paths, full URLs and URL encoded values", () => {
     const token = newToken();
     const cases = [
       [`/api/invites/${token}`, "/api/invites/:token"],
@@ -51,7 +51,7 @@ describe("bearer tokens in logged URLs (Q-16)", () => {
     );
   });
 
-  it("Q-16 covers every dynamic route segment named like a secret", () => {
+  it("covers every dynamic route segment named like a secret", () => {
     const secretRoutes = dynamicRoutes(APP_DIR).filter((dir) =>
       SECRET_SEGMENT.test(dir.split(sep).at(-1) ?? ""),
     );
@@ -77,7 +77,7 @@ describe("bearer tokens in logged URLs (Q-16)", () => {
     }
   });
 
-  it("Q-16 writes no invite link token in a log line, in any field", () => {
+  it("writes no invite link token in a log line, in any field", () => {
     const token = newToken();
     const lines: string[] = [];
     vi.spyOn(console, "log").mockImplementation((line: string) => lines.push(line));

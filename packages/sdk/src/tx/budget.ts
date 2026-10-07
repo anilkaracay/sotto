@@ -1,4 +1,4 @@
-// Compute budget per transaction version (06 section 9, Q-08, facts D3). v0 carries SetComputeUnitLimit
+// Compute budget per transaction version (06 section 9, facts D3). v0 carries SetComputeUnitLimit
 // and SetComputeUnitPrice instructions. v1 carries the same budget in its config: the compute unit limit,
 // a total priority fee in lamports (the v0 price times the limit) and a loaded account data limit,
 // which v1 budgets as zero when unset (kit 8.3 V1TransactionConfig).

@@ -3,7 +3,7 @@
 // and tax are the line's own private blob, sealed in the owner's browser to the owner's viewing key.
 // - create (AC-08.1): a draft run of recipients of the org, one line per recipient, with a client made
 //   idempotency key for the run and for each line, stored before anything is signed (I-7);
-// - authorize (AC-08.2, D-04, Q-11): a resume first reads the chain for every earlier transfer
+// - authorize (AC-08.2, D-04): a resume first reads the chain for every earlier transfer
 //   signature of the lines not settled, and a line whose transfer landed is left to the job to settle,
 //   never sent again (AC-08.5). Every other line not settled is checked like a single payment: the
 //   recipient's account read from chain now, screening within 24 hours (D-10). A line that fails is
@@ -12,7 +12,7 @@
 //   hash) and the proof program (F-19);
 // - executions per line: each signature before its transaction is sent, the end of a stopped attempt;
 //   with the first signature of the run it becomes executing and the initiator's approval is recorded
-//   with that execution signature (Q-11, 13 A31);
+//   with that execution signature;
 // - stop: the page ended the execution before every line landed; the run becomes partially settled
 //   (some line landed) or failed (none did), and can be resumed. The worker's confirm-executions job
 //   settles lines at finality and the run once every line is settled.
@@ -173,7 +173,7 @@ export type PayrollLineView = {
     transferSignature: string | null;
     errorCode: string | null;
   }[];
-  /** The owner's own disclosure of the line exists (07 section 4, X-33). */
+  /** The owner's own disclosure of the line exists (07 section 4). */
   disclosed: boolean;
 };
 
@@ -189,7 +189,7 @@ export type PayrollRunView = {
   createdBy: { userId: string; displayName: string | null; wallet: string };
   lines: PayrollLineView[];
   /**
-   * Step 2.4 (13 A26): each readable grant that holds records of this run's lines, with how many, so
+   * Step 2.4: each readable grant that holds records of this run's lines, with how many, so
    * "Who can read this run" names the holders who can open them now.
    */
   readers: { grantId: string; holder: string; lines: number }[];
@@ -755,7 +755,7 @@ export async function authorizeRun(
     throw payrollErrors.linesBlocked(blocked.map(({ line }) => line.payment.lineNo ?? 0));
   }
 
-  // D-04, Q-11: the initiator's execution is one approval; the others are signed messages.
+  // D-04: the initiator's execution is one approval; the others are signed messages.
   const hash = await runContentsHash(lines);
   const required = await requiredApprovals(db, orgId);
   const signed = await messageApprovals(db, run, runApprovalMessage(run, cluster, hash));
@@ -861,7 +861,7 @@ export async function recordLineExecution(
         updatedAt: now,
       })
       .where(eq(payrollRuns.id, run.id));
-    // Q-11, 13 A31: running the payroll is the initiator's approval, with the execution signature.
+    // Running the payroll is the initiator's approval, with the execution signature.
     await tx
       .insert(approvals)
       .values({

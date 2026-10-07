@@ -3,7 +3,7 @@
 // signs, simulates and sends nothing (AC-13.2); a balance that changed between the proofs and the
 // verification (CiphertextMismatch) closes the proof accounts, reads the account again and tries once
 // more; a second change explains itself; a proven run closes the proof accounts (AC-13.4) and gives
-// the server the label and the salt, which the verify instruction only carries as a hash (X-32).
+// the server the label and the salt, which the verify instruction only carries as a hash.
 import { getAddressEncoder, type Address } from "@solana/kit";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { assetWords } from "../lib/asset-words.ts";
@@ -200,7 +200,7 @@ describe("proof of funds run (06 section 8)", () => {
     expect(calls.api[0]?.path).toBe(`/api/orgs/${input.orgId}/proofs`);
     expect(body.counterpartyLabel).toBe("Harbor Bank");
     expect(Buffer.from(body.counterpartySalt, "base64")).toHaveLength(16);
-    // The verify instruction carries neither the label nor the salt, only their hash (X-32).
+    // The verify instruction carries neither the label nor the salt, only their hash.
     const verify = Buffer.from(calls.sent[3]?.data[0] ?? []);
     expect(verify).toHaveLength(65);
     expect(verify.includes(Buffer.from("Harbor Bank"))).toBe(false);

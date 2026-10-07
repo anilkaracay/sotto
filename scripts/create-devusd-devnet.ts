@@ -1,5 +1,5 @@
 // Creates devUSD on devnet (step 4.3, D-29): "Sotto Devnet Test Dollar", a classic SPL Token mint of 6
-// decimals whose mint authority is the key `sotto-compose devusd-keygen` made on the hosting server (its
+// decimals whose mint authority is the key the operator's `devusd-keygen` command made on the hosting server (its
 // public key is the --authority argument; the secret key never leaves the server) and which has no
 // freeze authority; then its wrapped Token-2022 mint and its escrow through the Sotto Token Wrap test
 // deployment (D-01). Wallet A pays. Without --send it only simulates each transaction and prints the
@@ -38,7 +38,9 @@ const { values } = parseArgs({
   options: { authority: { type: "string" }, send: { type: "boolean", default: false } },
 });
 if (!values.authority || !isAddress(values.authority)) {
-  throw new Error("--authority must be the public key sotto-compose devusd-keygen printed");
+  throw new Error(
+    "--authority must be the public key the operator's devusd-keygen command printed",
+  );
 }
 if (existsSync(RECORD)) throw new Error(`${RECORD} exists: devUSD was created already`);
 const authority = address(values.authority);

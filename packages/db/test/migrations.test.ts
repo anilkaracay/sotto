@@ -134,7 +134,7 @@ describe("constraints", () => {
     ).toBe("memberships_org_user_role_key");
   });
 
-  it("default the approval policy to 1 and refuse 0 (D-04, Q-11)", async () => {
+  it("default the approval policy to 1 and refuse 0 (D-04)", async () => {
     await test.db.execute(sql`insert into org_policy (org_id) values (${orgId})`);
     const [policy] = await rows<{ p: number; r: number }>(
       sql`select payment_approvals_required as p, payroll_approvals_required as r from org_policy where org_id = ${orgId}`,
@@ -306,7 +306,7 @@ describe("constraints", () => {
     expect(count?.count).toBe("3");
   });
 
-  it("AC-13.1 keep a proof record's 16 byte salt, a positive threshold and a short label (step 2.8, X-32)", async () => {
+  it("AC-13.1 keep a proof record's 16 byte salt, a positive threshold and a short label (step 2.8)", async () => {
     let n = 0;
     const record = (salt: Buffer, threshold: bigint, label: string, address?: string) =>
       sql`insert into proof_records (org_id, cluster, record_address, threshold_base_units, counterparty_label, counterparty_salt, expiry)

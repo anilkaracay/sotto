@@ -2,7 +2,7 @@
 // decrypted in this tab for the owner only, and the public wUSDC and USDC balances read from chain
 // (step 4.3: in the organization's asset's words, wdevUSD and devUSD for devUSD, with its badge).
 // Locked keys show Locked, never a number; an account that does not exist says so instead of showing
-// zero; wUSDC amounts carry the "devnet test wrap" label (13 A25, D-01). Presentational only: the
+// zero; wUSDC amounts carry the "devnet test wrap" label (D-01). Presentational only: the
 // values come from chain reads (context.tsx), never from local arithmetic (AC-04.4).
 import { formatTokenAmount } from "@sotto/sdk/confidential/public";
 import { Amount } from "../privacy.tsx";

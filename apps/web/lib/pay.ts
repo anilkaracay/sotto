@@ -3,7 +3,7 @@
 // manifest (I-9) and opened with their viewing key in this tab: the net amount always, and the gross
 // and the tax withheld when the payroll CSV gave them (`gross,tax`). The months and totals are sums
 // of those records. Only a record of category payroll reads as a payslip; every other category reads
-// as a payment received, without gross or tax (founder, 2026-09-30; 13 A49).
+// as a payment received, without gross or tax (founder, 2026-09-30).
 import type { DisclosurePayloadV1 } from "@sotto/sdk/disclosure";
 import { monthLabel } from "./books.ts";
 import type { PayView } from "./server/pay.ts";

@@ -1,5 +1,5 @@
 // Viewing grants (F-10, 07 sections 6 and 7, 08 section 3; step 2.4). Money endpoints (the owner of an
-// active org). A grant is always created through an invite (X-37): the owner names the holder, the
+// active org). A grant is always created through an invite: the owner names the holder, the
 // scope and the expiry, and gets a link; the holder accepts with their wallet, becomes an accountant
 // of the org, registers a viewing key, and the grant activates. The scopes offered are all_payments,
 // period and payroll_only; own_payslips grants are created when a recipient accepts their invite, and

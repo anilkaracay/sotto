@@ -35,7 +35,7 @@
   }
 }
 
-/* Step 3.5 (13 A41): the wallet's own words inside a message, set apart after Sotto's explanation:
+/* Step 3.5: the wallet's own words inside a message, set apart after Sotto's explanation:
    their own line, in the mono face, on a lighter ground. The text is the message's, unchanged. */
 .walletWords {
   display: block;

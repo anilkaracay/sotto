@@ -1,6 +1,6 @@
 "use client";
 
-// Request access on the landing's footer (F-17, AC-17.2, 13 L24; step 3.2): "Work email" and
+// Request access on the landing's footer (F-17, AC-17.2, step 3.2): "Work email" and
 // "Company" in the design's pill form and an explicit consent box. The request is stored by
 // POST /api/waitlist; nothing is sent to the visitor (double opt in by email is Post-hackathon with
 // D-19). Once stored, the form gives way to "Thanks, we will be in touch".
@@ -9,7 +9,7 @@ import { ApiCallError, callApi, invalidField } from "../../lib/client/api.ts";
 
 type State = { kind: "idle"; problem: string | null } | { kind: "sending" } | { kind: "done" };
 
-/** The consent sentence the visitor agrees to (13 L24). */
+/** The consent sentence the visitor agrees to. */
 export const CONSENT_TEXT =
   "I agree that Sotto stores my work email and company to contact me about the beta.";
 export const THANKS_TEXT = "Thanks, we will be in touch";

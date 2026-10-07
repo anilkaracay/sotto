@@ -88,7 +88,7 @@ export const DEVNET_USDC: AssetConfig = assetConfig("usdc", {
 });
 
 /**
- * Devnet devUSD (D-29; created in step 4.3, VERIFICATION-LOG 2026-10-03): the "Sotto Devnet Test
+ * Devnet devUSD (D-29; created in step 4.3 on 2026-10-03): the "Sotto Devnet Test
  * Dollar" mint, whose mint authority `8QJKvfopLPfyBEgir4VwPRVyst9HFYtNW3GU6vmFVZS6` is a key on the
  * hosting server and which has no freeze authority; its wrapped mint under the Sotto Token Wrap test
  * deployment; and the second deployment of the same sotto_proofs build with its config.

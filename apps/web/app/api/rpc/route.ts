@@ -1,4 +1,4 @@
-// POST /api/rpc: the JSON-RPC proxy for all browser Solana RPC (X-54, 08 section 3). Session required,
+// POST /api/rpc: the JSON-RPC proxy for all browser Solana RPC (08 section 3). Session required,
 // Origin checked, per session rate limit, body size limit, method allow list; forwards to RPC_URL.
 import { apiRoute } from "../../../lib/server/api-route.ts";
 import { readJson } from "../../../lib/server/body.ts";

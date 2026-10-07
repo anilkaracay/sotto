@@ -562,7 +562,7 @@
         "kind": "instructionNode",
         "name": "closeProofRecord",
         "docs": [
-          "Closes an expired record; its rent goes to the owner (X-31)."
+          "Closes an expired record; its rent goes to the owner."
         ],
         "optionalAccountStrategy": "programId",
         "accounts": [

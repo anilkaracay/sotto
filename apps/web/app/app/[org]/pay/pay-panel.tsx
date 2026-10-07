@@ -1,13 +1,13 @@
 "use client";
 
 // My pay (F-12, AC-12.1, AC-12.2; step 2.6), growing the recipient's pay page of step 1.10, on the
-// design's My pay screen where data exists (13 A49): for each organization that pays the recipient,
+// design's My pay screen where data exists: for each organization that pays the recipient,
 // grouped (the page's own first), the latest payslip (net, and gross and tax withheld when the payroll
 // CSV gave them, and who can read it), the net pay of the last 6 months, the payslips, and "What your
 // colleagues see" (the organization's transfers into the recipient's account as the chain shows them,
 // never an amount); then the recipient's balances and withdraw (F-09). A record of category payroll
 // reads as a payslip; any other category as a payment from the organization, with the amount
-// received and no gross or tax, and both kinds share one list, each row labelled (13 A49). Every amount is the recipient's
+// received and no gross or tax, and both kinds share one list, each row labelled. Every amount is the recipient's
 // own record, trusted only when its manifest names the organization, carries its owner's signature and
 // lists the item for this recipient (I-9), and opened with the viewing key in this tab; the public
 // view comes from chain_activity through the pay endpoint. Nothing opens before the unlock, and no

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Environment files never reach a build artifact or a container image. Hosted environments (Vercel,
 # Fly) take configuration only from the platform's environment variables
-# (docs/14-ENVIRONMENTS-DEPLOY.md section 2).
+#.
 # 1. The only tracked env file is .env.example.
 # 2. The working tree holds no env file other than .env.example and apps/*/.env.local or
 #    packages/*/.env.local. In particular no .env or .env.production: Next.js loads them and, in

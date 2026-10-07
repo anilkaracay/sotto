@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploys sotto_proofs to devnet for the first time (14 section 4 and 5, step 2.7). Localnet deploys
+# Deploys sotto_proofs to devnet for the first time (step 2.7). Localnet deploys
 # it per ledger in scripts/bootstrap-localnet.ts; mainnet is refused (G7: a verifiable build and a
 # Squads upgrade authority come first).
 #
@@ -13,7 +13,7 @@
 #
 # The CLI funds the temporary buffer with the rent of the program data account, and the loader returns
 # the buffer's lamports to the payer before paying for the program data account, so the payer needs
-# the program data rent, the program account rent and the fees, no more (Q-17, facts N1).
+# the program data rent, the program account rent and the fees, no more (facts N1).
 #
 # Step 4.3 (D-29): --asset devusd makes the second deployment of the same build, for wrapped devUSD
 # (a config holds one mint), under its own program keypair, created once (mode 600, outside the

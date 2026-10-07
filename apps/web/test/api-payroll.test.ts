@@ -2,9 +2,9 @@
 // run of the org's recipients with each line sealed and an idempotency key per run and per line
 // (AC-08.1, I-7); lines not ready or deny listed blocked before anything is signed, with each line's
 // reason (AC-08.2, AC-07.4, D-10); each line's signatures recorded before sending, the run executing
-// with the initiator's approval and stopped as partially settled (AC-08.2, AC-08.4, Q-11, 13 A31); a
+// with the initiator's approval and stopped as partially settled (AC-08.2, AC-08.4); a
 // resume that reads the chain first, so a line whose transfer landed is never authorized again
-// (AC-08.5); a policy of 2 through signed approval messages over the run's contents (D-04, Q-12 (a));
+// (AC-08.5); a policy of 2 through signed approval messages over the run's contents (D-04);
 // and the money gate.
 import { randomUUID } from "node:crypto";
 import { clusterHealth, memberships, orgPolicy, payments, recipients } from "@sotto/db";
@@ -372,7 +372,7 @@ describe("payroll runs", () => {
     const { run: executing } = (await sent.json()) as { run: RunView };
     expect(executing.status).toBe("executing");
     expect(executing.executedAt).not.toBeNull();
-    // Q-11, 13 A31: running the payroll is the initiator's approval, with the execution signature.
+    // Running the payroll is the initiator's approval, with the execution signature.
     expect(executing.approvals.execution?.signature).toBe(signature);
     expect(executing.lines[0]).toMatchObject({
       status: "executing",
@@ -480,7 +480,7 @@ describe("payroll runs", () => {
     ).toBe(200);
   });
 
-  it("Q-12 (a) counts the initiator's execution as the run's default approval, and with a policy of 2 needs another member's signed message over the run's current contents", async () => {
+  it("counts the initiator's execution as the run's default approval, and with a policy of 2 needs another member's signed message over the run's current contents", async () => {
     const { owner, orgId, people } = await setUp([await readyWallet(), await readyWallet()]);
     await test.db
       .update(orgPolicy)

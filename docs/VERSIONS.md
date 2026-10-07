@@ -5,7 +5,7 @@ Every pinned tool, crate and package, with the date it was resolved.
 | Component | Version | Resolved on | Source | Notes |
 |-----------|---------|-------------|--------|-------|
 | Host | macOS 26.6.2 (25G83), arm64, Apple M5 | 2026-09-26 | `sw_vers`, `uname -m` | Development machine, not pinned |
-| Agave CLI suite (`solana`, `solana-test-validator`, `solana-keygen`, `agave-install`) | 4.2.2 (src `e29e5d91`, feat `21b0d33a`, client Agave, channel stable) | 2026-09-26 | https://release.anza.xyz/stable/solana-release-aarch64-apple-darwin.tar.bz2 · https://github.com/anza-xyz/agave/releases/tag/v4.2.2 | `e29e5d9` is tag `v4.2.2` (`c9c6f32`) plus one CI only backport commit. `agave-install info`: "Install is up to date". v1 transactions locally need Solana CLI v4.2+ (see VERIFICATION-LOG G0) |
+| Agave CLI suite (`solana`, `solana-test-validator`, `solana-keygen`, `agave-install`) | 4.2.2 (src `e29e5d91`, feat `21b0d33a`, client Agave, channel stable) | 2026-09-26 | https://release.anza.xyz/stable/solana-release-aarch64-apple-darwin.tar.bz2 · https://github.com/anza-xyz/agave/releases/tag/v4.2.2 | `e29e5d9` is tag `v4.2.2` (`c9c6f32`) plus one CI only backport commit. `agave-install info`: "Install is up to date". v1 transactions locally need Solana CLI v4.2+ (see the verification log, G0) |
 | `cargo-build-sbf` and `cargo-test-sbf` | 4.1.0 | 2026-09-26 | https://github.com/anza-xyz/agave/blob/v4.2.2/scripts/cargo-build-sbf-version.sh | Shipped in the Agave 4.2.2 release and pinned there (`cargoBuildSbfVersion=4.1.0`). Kept as pinned; do not upgrade (founder decision) |
 | Platform tools (onchain program compiler) | v1.54, rustc 1.89.0-dev | 2026-09-26 | `cargo-build-sbf --version`; `~/.cache/solana/v1.54/platform-tools/rust/bin/rustc --version` | Onchain programs build with this rustc, bundled with `cargo-build-sbf` 4.1.0. Separate from the host Rust toolchain |
 | `spl-token-cli` | 5.6.1 | 2026-09-26 | https://crates.io/crates/spl-token-cli | Shipped in the Agave 4.2.2 release tarball; latest on crates.io. Has every confidential command used in G1 step 6 |
@@ -85,14 +85,14 @@ solana-test-validator --reset --quiet \
 | `@types/node` | 24.19.0 | 2026-09-26 | https://registry.npmjs.org/@types/node | Latest 24.x, matching Node 24.21.0 (`latest` is 26.6.3). pnpm 12 added it to `minimumReleaseAgeExclude` in `pnpm-workspace.yaml` at first install because it was published within pnpm's default minimum release age |
 | Next.js | 16.3.6 | 2026-09-26 | https://registry.npmjs.org/next (dist-tag `latest`) | App Router; `next typegen` before `tsc` |
 | React, React DOM, `@types/react`, `@types/react-dom` | 19.3.0 each | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | |
-| `@solana/kit` | 8.3.0 | 2026-09-26 | https://registry.npmjs.org/@solana/kit (dist-tag `latest`) | `sas-lib` 1.0.10 brings its own `@solana/kit` 5.5.1 (Q-07) |
+| `@solana/kit` | 8.3.0 | 2026-09-26 | https://registry.npmjs.org/@solana/kit (dist-tag `latest`) | `sas-lib` 1.0.10 brings its own `@solana/kit` 5.5.1 |
 | `@solana-program/token-2022` | 0.19.0 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | Exports `.` and `./confidential`. `@solana-program/token-wrap` 2.7.1 also pulls `@solana-program/token-2022` 0.17.0 |
 | `@solana/zk-sdk` | 0.5.3 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | Exports `.`, `./node`, `./web`, `./bundler` |
 | `@solana-program/zk-elgamal-proof` | 0.4.0 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | |
 | `@solana-program/token-wrap` | 2.7.1 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | Program ID from the cluster config, never `TOKEN_WRAP_PROGRAM_ADDRESS` (D-01) |
 | `@solana/sysvars` | 8.3.0 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | Peer of `@solana-program/token-2022` 0.19.0 |
-| `sas-lib` (installed) | 1.0.10 | 2026-09-26 | https://registry.npmjs.org/sas-lib (dist-tag `latest`) | Depends on `@solana/kit ^5.0.0`; 2.0.0-beta.1 peers `@solana/kit ^7.0.0` (Q-07) |
-| Wallet Standard React (X-11, verified, not installed) | `@solana/react` 8.3.0, `@wallet-standard/react` 1.0.3 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | Both exist. `@solana/react` peers: `@solana/kit ^8.3.0`, `react >=18`, `swr ^2.5.1`, `@tanstack/react-query ^5.0.0`. `@wallet-standard/react` engines `node >=22`. Installed with the wallet work (step 0.6 or Phase 1) |
+| `sas-lib` (installed) | 1.0.10 | 2026-09-26 | https://registry.npmjs.org/sas-lib (dist-tag `latest`) | Depends on `@solana/kit ^5.0.0`; 2.0.0-beta.1 peers `@solana/kit ^7.0.0` |
+| Wallet Standard React (verified, not installed) | `@solana/react` 8.3.0, `@wallet-standard/react` 1.0.3 | 2026-09-26 | https://registry.npmjs.org (dist-tag `latest`) | Both exist. `@solana/react` peers: `@solana/kit ^8.3.0`, `react >=18`, `swr ^2.5.1`, `@tanstack/react-query ^5.0.0`. `@wallet-standard/react` engines `node >=22`. Installed with the wallet work (step 0.6 or Phase 1) |
 | `sotto_proofs` crates | `solana-account-info` 3.1.1, `solana-address` 2.8.0, `solana-program-entrypoint` 3.1.1, `solana-program-error` 3.0.1 | 2026-09-26 | https://crates.io (max stable; equal to the versions `spl-token-2022` 11.1.0 resolves) | Exact pins (`=`) in `programs/sotto_proofs/Cargo.toml`; `Cargo.lock` committed. Native program (D-16) |
 | Gate G4 probe crates (`programs/g4_probe`, step 2.2; the set `sotto_proofs` takes in step 2.7) | `spl-token-2022-interface` 3.1.2, `solana-zk-elgamal-proof-interface` 0.1.3, `solana-zk-sdk-pod` 0.1.2, `spl-token-confidential-transfer-ciphertext-arithmetic` 0.5.1, `bytemuck` 1.25.0, with the core crates of the row above | 2026-09-29 | the `spl-token-2022` 11.1.0 dependency tree (`cargo tree`; facts K1) | Exact pins (`=`); `Cargo.lock` committed. Built with `cargo-build-sbf --manifest-path programs/g4_probe/Cargo.toml --arch v3 -- --locked` (the local validator refuses SBPF v0 to v2 deployments, facts K8); never deployed beyond a local validator |
 
@@ -354,7 +354,7 @@ No new package versions.
 |---|---|---|---|---|
 | Database migration | `0009_proof_records` | 2026-09-30 | `packages/db/migrations` (drizzle-kit 0.31.11 generate) | The `proof_records` table of 08 section 2 with checks for the address, the 16 byte salt, a positive threshold and the label length |
 | New SDK entries | `@sotto/sdk/attestation`, `@sotto/sdk/proofs/plan` | 2026-09-30 | `packages/sdk/package.json` | The business attestation reader without sas-lib (D-24); the balance threshold proofs, split from `@sotto/sdk/proofs`, which now loads no cryptography |
-| Web server variables | `LOCALNET_SOTTO_PROOFS_PROGRAM`, `LOCALNET_SAS_CREDENTIAL`, `LOCALNET_SAS_SCHEMA` | 2026-09-30 | `apps/web/lib/server/cluster.ts`, `tests/e2e/server.ts` | Localnet only, server only (14 section 2) |
+| Web server variables | `LOCALNET_SOTTO_PROOFS_PROGRAM`, `LOCALNET_SAS_CREDENTIAL`, `LOCALNET_SAS_SCHEMA` | 2026-09-30 | `apps/web/lib/server/cluster.ts`, `tests/e2e/server.ts` | Localnet only, server only |
 
 Commands:
 
@@ -381,14 +381,14 @@ SOTTO_A11Y_REPORT=1 pnpm --filter @sotto/e2e e2e:localnet   # lists every axe vi
 
 | Item | Version | Resolved on | Source | Notes |
 |---|---|---|---|---|
-| Node.js base image | `node:24.21.0-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6` | 2026-10-02 | Docker Hub (`docker buildx imagetools inspect`; `NODE_VERSION=24.21.0` in its config) | `deploy/web.Dockerfile`, `deploy/worker.Dockerfile`; pnpm 12.6.0 through corepack and the root `packageManager` |
-| PostgreSQL image | `postgres:16.15-bookworm@sha256:efedf3595f1d6f415c08568ba171029bf54052e754cc9f030e3f2412b21f3d67` | 2026-10-02 | Docker Hub tag `16.15-bookworm` (`PG_VERSION=16.15-1.pgdg12+2`, updated 2026-09-19) | `deploy/compose.yaml` `db`; the restore test on the Mac (`scripts/pull-backup.sh`) |
-| cloudflared image | `cloudflare/cloudflared:2026.9.3@sha256:072c067d25ccbe61d46e18f0d0723255f2bb5304f7317caa95b27031520ff92c` | 2026-10-02 | Docker Hub: the tags `2026.9.3` and `latest` share this digest (2026-09-24) | `deploy/compose.yaml` `cloudflared`; runs as 65532 (distroless) |
-| age | v1.3.2 | 2026-10-02 | https://github.com/FiloSottile/age/releases/tag/v1.3.2 (2026-08-29); SHA-256 from the release's asset digests: linux-amd64 `cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10`, darwin-arm64 `e2020b073c44f692685a24d6abc378817eb81ffaaf49fd0531ef8565f767f2f5` | On the server (encrypts the backups); `~/.config/sotto/bin/age` and `age-keygen` on the Mac (the key and the restore); never in the repository |
+| Node.js base image | `node:24.21.0-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6` | 2026-10-02 | Docker Hub (`docker buildx imagetools inspect`; `NODE_VERSION=24.21.0` in its config) | The hosted web and worker images; pnpm 12.6.0 through corepack and the root `packageManager` |
+| PostgreSQL image | `postgres:16.15-bookworm@sha256:efedf3595f1d6f415c08568ba171029bf54052e754cc9f030e3f2412b21f3d67` | 2026-10-02 | Docker Hub tag `16.15-bookworm` (`PG_VERSION=16.15-1.pgdg12+2`, updated 2026-09-19) | The hosted database; the backup's restore test |
+| cloudflared image | `cloudflare/cloudflared:2026.9.3@sha256:072c067d25ccbe61d46e18f0d0723255f2bb5304f7317caa95b27031520ff92c` | 2026-10-02 | Docker Hub: the tags `2026.9.3` and `latest` share this digest (2026-09-24) | The hosted tunnel client; runs as 65532 (distroless) |
+| age | v1.3.2 | 2026-10-02 | https://github.com/FiloSottile/age/releases/tag/v1.3.2 (2026-08-29); SHA-256 from the release's asset digests: linux-amd64 `cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10`, darwin-arm64 `e2020b073c44f692685a24d6abc378817eb81ffaaf49fd0531ef8565f767f2f5` | On the server (encrypts the backups) and on the founder's machine (the key and the restore); never in the repository |
 | Database migration | `0012_review_notification` | 2026-10-02 | `packages/db/migrations` (drizzle-kit generate) | `orgs.review_notified_at` for the `review-notify` job |
 
 Commands:
 
 ```sh
-pnpm deploy:hosted [--skip-ci-check] [--no-external] | --rollback   # 14 section 8
+pnpm deploy:hosted [--skip-ci-check] [--no-external] | --rollback   # an operator command (scripts/ops.sh)
 ```

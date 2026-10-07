@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Confidential transfer smoke test against a running localnet (scripts/localnet.sh).
-# Same flow as Gate G1 task 7 (docs/VERIFICATION-LOG.md): create a Token-2022 mint with confidential
+# Same flow as Gate G1 task 7: create a Token-2022 mint with confidential
 # transfers, create and configure two accounts, mint, deposit, apply, transfer confidentially, apply on
 # the receiver, withdraw. Uses throwaway keypairs in .localnet/smoke (ignored). Exits non zero on any
 # failure.

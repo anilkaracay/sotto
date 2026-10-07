@@ -1,5 +1,5 @@
-// The landing's developers section (F-17, step 3.1), on the design's layout (design/sotto-landing.html,
-// .dev8). The copy follows 13 L12, L17 to L20, L29 and L32 and the founder's rule of 2026-09-30: no
+// The landing's developers section (F-17, step 3.1), on the design's layout (the approved landing design,
+// .dev8). The copy follows the approved copy corrections and the founder's rule of 2026-09-30: no
 // open source claim while the repository is private, the SDK labelled Preview because it is not
 // published, no docs or GitHub link, no verifier crate, and code samples that call the real
 // @sotto/sdk functions and the real API with their real names.
@@ -35,7 +35,7 @@ export const SAMPLES: Sample[] = [
       ["  onSignature: save,  ", ["c", "// kept before each send"]],
       ["});"],
     ],
-    // 07 section 4 and VERIFICATION-LOG.md step 2.3: 10 lines per wallet approval with a version 1
+    // 07 section 4 and the measurement of step 2.3: 10 lines per wallet approval with a version 1
     // wallet, so a 24 line run takes 3.
     output: [
       "Up to 10 lines per wallet approval",
@@ -117,7 +117,7 @@ export const SAMPLES: Sample[] = [
       ["});"],
       [["c", "// sotto_proofs checks them onchain and writes a public record."]],
     ],
-    // VERIFICATION-LOG.md step 2.7: the verification costs 13142 compute units.
+    // Measured in step 2.7: the verification costs 13142 compute units.
     output: [
       "Range proof made in the browser",
       "Checked onchain by the Sotto program, about 13,000 compute units",
@@ -274,7 +274,7 @@ export function Developers({ v }: { v: LandingView }) {
               <rect x="3" y="6" width="18" height="13" rx="3" />
               <path d="M3 10h18M16 14.5h2" />
             </Icon>
-            {/* 13 L17 with Q-15 (founder, 2026-09-30): Backpack blocks the account setup, so the
+            {/* Founder, 2026-09-30: Backpack blocks the account setup, so the
                 landing names only the wallets tested and implies no other. */}
             <b>Wallet Standard</b>
             <span>Tested with Solflare and Phantom.</span>

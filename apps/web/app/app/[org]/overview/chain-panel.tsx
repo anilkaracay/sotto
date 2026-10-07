@@ -1,6 +1,6 @@
 "use client";
 
-// What the chain shows (AC-05.3, 09 section 3; step 2.5; no approved design, 13 A44): the org's recent
+// What the chain shows (AC-05.3, 09 section 3; step 2.5; no approved design): the org's recent
 // onchain activity from chain_activity only (GET /orgs/:id/chain-activity), which the worker indexes
 // from finalized transactions: when, what, which accounts, and an amount only where the chain shows
 // one. A confidential transfer's amount is sealed; the panel says so and never shows a number for it.
@@ -62,7 +62,7 @@ function accounts(row: ChainActivityView): string {
 }
 
 /**
- * A glyph per kind of event (design pass C, step 3.6, 13 A44): out and in as arrows, the confidential
+ * A glyph per kind of event (design pass C, step 3.6): out and in as arrows, the confidential
  * steps with the design's lock, wraps as the swap, a sealed transfer in blue, a public one in grey.
  */
 const KIND_ICON: Record<ChainActivityView["type"], { path: string; tone: "blue" | "grey" }> = {

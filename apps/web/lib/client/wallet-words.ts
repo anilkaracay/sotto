@@ -1,4 +1,4 @@
-// The wallet's own words (Q-15, founder 2026-09-29; step 2.1): whenever a wallet raises an error, the
+// The wallet's own words (founder 2026-09-29; step 2.1): whenever a wallet raises an error, the
 // page shows the wallet's name and the error's name and text next to Sotto's explanation, for every
 // wallet and every request (connect, sign in, message and transaction signatures). The text is the
 // wallet's, shown as plain text in this tab and never sent anywhere.
@@ -70,7 +70,7 @@ export function withWalletWords(explanation: string, words: WalletWords | null):
 }
 
 /**
- * Step 3.5 (13 A41): a message cut where the wallet's own words are, so a page can set them apart.
+ * Step 3.5: a message cut where the wallet's own words are, so a page can set them apart.
  * The parts joined are the message unchanged. The words are `<wallet> said: "<text>"` or
  * `<wallet> gave no error message.`, starting after the sentence before them.
  */

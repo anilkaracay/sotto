@@ -232,7 +232,7 @@ describe("recipient invites", () => {
     }
   });
 
-  it("Q-16 writes no invite link token to the request log while the link is read and accepted", async () => {
+  it("writes no invite link token to the request log while the link is read and accepted", async () => {
     const { owner, orgId, person, recipientId } = await setUp();
     const lines: string[] = [];
     vi.mocked(console.log).mockImplementation((line: string) => lines.push(line));

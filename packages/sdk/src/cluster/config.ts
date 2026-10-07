@@ -1,4 +1,4 @@
-// Per cluster configuration (docs/14-ENVIRONMENTS-DEPLOY.md section 1).
+// Per cluster configuration.
 // Values are the ones verified by Gate G1 (docs/02-VERIFIED-FACTS.md). Program IDs come from package
 // constants where the package exports one; the Token Wrap program and the wrapped mint are per cluster
 // values (D-01, facts C5, C8). The SAS program ID is the verified value from facts E3: this package must

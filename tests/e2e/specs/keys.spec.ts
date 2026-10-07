@@ -80,7 +80,7 @@ test("AC-03.2 unlocks only after the click, derives the CLI's key in the worker 
 
   // The Phase 1 happy path (M3 as amended, step 1.10): /app opens the overview of the active org with
   // the welcome, the confidential account card, the recent activity (none yet) and the keys, Locked,
-  // with the Q-09 explainer; the wallet connects on it.
+  // with the explainer; the wallet connects on it.
   await page.goto("/app");
   await expect(page).toHaveURL(/\/app\/[0-9a-f-]{36}\/overview$/);
   await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
@@ -109,7 +109,7 @@ test("AC-03.2 unlocks only after the click, derives the CLI's key in the worker 
   await expect(page.getByTestId("keys-card").getByRole("alert")).toContainText(
     "Your wallet refused to sign the key message",
   );
-  // Q-15: the wallet's own words follow Sotto's explanation.
+  // The wallet's own words follow Sotto's explanation.
   await expect(page.getByTestId("keys-card").getByTestId("wallet-said")).toHaveText(
     'Sotto Test Wallet said: "This wallet does not sign this message"',
   );

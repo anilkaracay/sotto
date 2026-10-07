@@ -49,7 +49,7 @@ function schemaTables(): PgTable[] {
 }
 
 describe("golden rule for data (08 section 1)", () => {
-  it("defines the tables of 12 step 1.2, rate_limits, payroll_runs (step 2.3), access_log (step 2.4), chain_activity and reconciliations (step 2.5), proof_records (step 2.8), waitlist (step 3.2), faucet_mints (step 4.3)", () => {
+  it("defines the tables of step 1.2, rate_limits, payroll_runs (step 2.3), access_log (step 2.4), chain_activity and reconciliations (step 2.5), proof_records (step 2.8), waitlist (step 3.2), faucet_mints (step 4.3)", () => {
     expect(
       schemaTables()
         .map((t) => getTableConfig(t).name)

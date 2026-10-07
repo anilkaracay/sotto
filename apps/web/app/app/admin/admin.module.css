@@ -1,4 +1,4 @@
-/* The admin console, built on the app tokens (no design exists for it, 13 A35); design pass C (step
+/* The admin console, built on the app tokens (no design exists for it); design pass C (step
    3.6): the card head (design .ch, .cnt8), the business marks and the empty state of the other pages. */
 .filters {
   display: flex;

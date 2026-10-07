@@ -1,6 +1,6 @@
 // The live runs of step 4.3's plan against the hosted devnet app (D-29; founder, 2026-10-03), from the
-// founder's Mac. Wallet A pays and never leaves the Mac; the hosting server is reached only as the
-// sotto user through `sotto-compose`, through the redacting loader (scripts/hosting-env.ts). Every
+// founder's Mac. Wallet A pays and never leaves the Mac; the hosting server is reached only through
+// the operator's commands (scripts/ops.sh), whose output never holds a secret. Every
 // transfer is simulated first, sent, finalized and written to the run's folder with its signature.
 //
 //   node scripts/live-demo.ts fund-authority    0.3 SOL from wallet A to the devUSD mint authority
@@ -8,9 +8,9 @@
 //   node scripts/live-demo.ts seed              Northwind Labs Demo Ltd, through the app's own paths
 //
 // faucet-check and seed create their keypairs outside the repository (mode 600, folders 700), add
-// the run's own admin with `sotto-compose admins seed` and always remove it again, confirming the
+// the run's own admin with the operator's `admins seed` command and always remove it again, confirming the
 // removal by removing it a second time (0 of 1). The seed's keypairs stay in
-// ~/.config/solana/sotto/demo/ for the video (DEMO-RUNBOOK.md); a second seed is refused.
+// ~/.config/solana/sotto/demo/ for the video; a second seed is refused.
 import { spawnSync } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -67,24 +67,18 @@ const balance = async (wallet: Address) =>
   (await rpc.getBalance(wallet, { commitment: "confirmed" }).send()).value;
 
 /**
- * One `sotto-compose` command on the server as the sotto user; its output, never a secret. The
+ * One operator command on the hosting server (scripts/ops.sh); its output, never a secret. The
  * connection is kept alive and given up after a minute without an answer: in the live seed of
  * 2026-10-03 a silent connection kept the admin's removal waiting for 26 minutes after the server had
  * done it.
  */
 function sottoCompose(args: string): { ok: boolean; out: string } {
-  if (!/^[A-Za-z0-9 -]+$/.test(args)) fail("unexpected sotto-compose arguments");
-  const result = spawnSync(
-    "node",
-    [
-      "scripts/hosting-env.ts",
-      "--",
-      "bash",
-      "-c",
-      `ssh "$OPERATOR_HOST" sotto-compose ${args}`,
-    ],
-    { cwd: ROOT, encoding: "utf8", timeout: 300_000 },
-  );
+  if (!/^[A-Za-z0-9 -]+$/.test(args)) fail("unexpected operator command arguments");
+  const result = spawnSync("scripts/ops.sh", ["remote-compose", ...args.split(" ")], {
+    cwd: ROOT,
+    encoding: "utf8",
+    timeout: 300_000,
+  });
   return { ok: result.status === 0, out: `${result.stdout}${result.stderr}`.trim() };
 }
 

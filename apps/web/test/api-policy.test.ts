@@ -1,4 +1,4 @@
-// PUT /api/orgs/:id/policy: the hackathon build keeps approval policies at 1 (Q-12, D-04).
+// PUT /api/orgs/:id/policy: the hackathon build keeps approval policies at 1 (D-04).
 import { memberships, orgPolicy } from "@sotto/db";
 import type { TestDatabase } from "@sotto/db/testing";
 import { eq } from "drizzle-orm";
@@ -65,8 +65,8 @@ async function storedPolicy() {
   return row;
 }
 
-describe("PUT /api/orgs/:id/policy (Q-12)", () => {
-  it("Q-12 lets the owner keep the policy at 1 approval", async () => {
+describe("PUT /api/orgs/:id/policy", () => {
+  it("lets the owner keep the policy at 1 approval", async () => {
     const response = await put(orgId, { paymentApprovalsRequired: 1, payrollApprovalsRequired: 1 });
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
@@ -76,7 +76,7 @@ describe("PUT /api/orgs/:id/policy (Q-12)", () => {
     expect(await storedPolicy()).toEqual({ p: 1, r: 1 });
   });
 
-  it("Q-12 refuses approval policies above 1 with a clear error and stores nothing", async () => {
+  it("refuses approval policies above 1 with a clear error and stores nothing", async () => {
     for (const body of [
       { paymentApprovalsRequired: 2, payrollApprovalsRequired: 1 },
       { paymentApprovalsRequired: 1, payrollApprovalsRequired: 3 },
@@ -88,7 +88,7 @@ describe("PUT /api/orgs/:id/policy (Q-12)", () => {
     expect(await storedPolicy()).toEqual({ p: 1, r: 1 });
   });
 
-  it("Q-12 refuses zero, fractions, missing and extra fields as invalid requests", async () => {
+  it("refuses zero, fractions, missing and extra fields as invalid requests", async () => {
     for (const body of [
       { paymentApprovalsRequired: 0, payrollApprovalsRequired: 1 },
       { paymentApprovalsRequired: 1.5, payrollApprovalsRequired: 1 },
@@ -99,7 +99,7 @@ describe("PUT /api/orgs/:id/policy (Q-12)", () => {
     }
   });
 
-  it("Q-12 is forbidden to anyone but the owner, whatever the body", async () => {
+  it("is forbidden to anyone but the owner, whatever the body", async () => {
     const body = { paymentApprovalsRequired: 2, payrollApprovalsRequired: 2 };
     expect(await errorOf(await put(orgId, body, { cookie: accountant.cookie }))).toMatch(
       /^403 forbidden:/,

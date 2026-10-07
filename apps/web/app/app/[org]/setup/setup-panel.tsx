@@ -1,8 +1,8 @@
 "use client";
 
 // The setup page's client part (F-03, F-04): the wallet, the keys, the wrapped mint, the confidential
-// account, the balances, funding and the viewing key, in one confidential session. Step 3.5 (13 A36,
-// A37): the balances first, then the three steps in the order they are done (unlock the keys, set up
+// account, the balances, funding and the viewing key, in one confidential session. Step 3.5: the
+// balances first, then the three steps in the order they are done (unlock the keys, set up
 // the account, fund it), numbered, the next one marked, and what the account is made of beside them.
 // Step 4.3: a devUSD organization on devnet also gets the devUSD faucet, where the faucet runs.
 import type { ReactNode } from "react";

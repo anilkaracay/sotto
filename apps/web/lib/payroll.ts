@@ -330,7 +330,7 @@ export function parseLinePrivate(value: unknown): PayrollLinePrivate | null {
 }
 
 /**
- * X-18, AC-08.4: the settlement gauge has as many ticks as lines, clamped to 12 at least and 48 at
+ * AC-08.4: the settlement gauge has as many ticks as lines, clamped to 12 at least and 48 at
  * most; above 48 lines each tick stands for ceil(lines / 48) lines.
  */
 export function gaugeTicks(lines: number): { ticks: number; perTick: number } {

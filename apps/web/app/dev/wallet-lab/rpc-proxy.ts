@@ -19,7 +19,7 @@ export const RPC_URL_ERROR = "RPC_URL is not set or invalid";
 
 /**
  * RPC_URL in apps/web/.env.local is the Helius devnet URL (ENGINEERING-RULES.md "Local configuration and
- * secrets", 14 section 2). Valid only if the value is an https URL on a helius-rpc.com host and
+ * secrets"). Valid only if the value is an https URL on a helius-rpc.com host and
  * contains "helius-rpc.com" exactly once (a doubled URL was seen in step 0.3). The value itself is
  * never returned in errors.
  */

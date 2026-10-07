@@ -1,5 +1,5 @@
 // Hosted environments (Vercel, Fly) have no .env.local: configuration comes only from the platform's
-// environment variables (14 section 2). This runs the real worker entry, src/index.ts, from a copy of
+// environment variables. This runs the real worker entry, src/index.ts, from a copy of
 // src/ in a temporary directory without .env.local, the way a container image runs it.
 import { spawnSync } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";

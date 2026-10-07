@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """The Next.js build output (apps/web/.next) holds no env file and none of the server only values of
-apps/web/.env.local (docs/14-ENVIRONMENTS-DEPLOY.md section 2). Only variable names are printed,
+apps/web/.env.local. Only variable names are printed,
 never values. Run after pnpm build.
 
 - Env files are searched in all of .next.

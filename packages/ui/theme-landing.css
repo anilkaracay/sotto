@@ -745,13 +745,9 @@ body:has(> main.theme-landing) {
 .theme-landing .built5 b svg {
   color: var(--blue);
 }
-/* Step 4.4: the founder's original logos. The Solana lockup carries its own word; the USDC token logo
-   stays at its 32 pixel minimum, inset like an avatar. */
-.theme-landing .built5 b.solana {
-  padding: 0 18px;
-}
+/* Step 4.4: Circle's USDC lockup carries its own word, at its 24 pixel minimum height. */
 .theme-landing .built5 b.usdc {
-  padding: 0 16px 0 5px;
+  padding: 0 18px;
 }
 
 .theme-landing .pho {

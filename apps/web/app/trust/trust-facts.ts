@@ -21,7 +21,7 @@ export const ONCHAIN = {
   tokenWrap: devnet.programs.tokenWrap,
   wrappedMint: devnet.wrappedUsdcMint,
   proofsProgram: devnet.sottoProofs.program,
-  // Measured in step 2.7: the build of commit 87fbc40, 44360 bytes; `solana program dump`
+  // Measured in step 2.7: the build of commit 1d95a07, 44360 bytes; `solana program dump`
   // of the deployed program hashes to it over those bytes (the rest of the account is zeros).
   proofsBuildSha256: "63c4002c3db312f82632ba7723725b906c30b9833593cb5de723d6cab92f32d8",
 } as const;

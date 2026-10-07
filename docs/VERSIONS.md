@@ -392,3 +392,33 @@ Commands:
 ```sh
 pnpm deploy:hosted [--skip-ci-check] [--no-external] | --rollback   # 14 section 8
 ```
+
+## Step 4.5 (2026-10-06): the demo video's tools
+
+The video's project lives in `video/`, outside the pnpm workspace, with its own lockfile (`video/pnpm-lock.yaml`). Its Python tools run in a virtual environment outside the repository (`~/.cache/sotto-video/tts/.venv`). Nothing here ships with the app.
+
+| Item | Version | Resolved on | Source | Notes |
+|---|---|---|---|---|
+| Motion Canvas (`@motion-canvas/core`, `2d`, `ffmpeg`, `ui`, `vite-plugin`) | 3.17.2 | 2026-10-06 | npm registry | The edit. MIT. Chosen over Remotion (founder, 2026-10-06: Remotion's free license depends on company size) |
+| Vite | 5.4.21 | 2026-10-06 | npm registry | The Motion Canvas editor's dev server, port 9100. MIT |
+| TypeScript (video) | 5.9.3 | 2026-10-06 | npm registry | `tsc --noEmit` in `video/`. Apache 2.0 |
+| `geist` | 1.7.2 | 2026-10-06 | npm registry | Geist and Geist Mono for the cards and captions. SIL Open Font License |
+| Kokoro (`kokoro`, `misaki`) | 0.9.4 | 2026-10-06 | PyPI | The voice. Apache 2.0. Model `hexgrad/Kokoro-82M` at revision `f3ff3571791e39611d31c381e3a41a3af07b4987` (`kokoro-v1_0.pth`, SHA-256 `496dba118d1a58f5f3db2efc88dbdc216e0483fc89fe6e47ee1f2c53f18ad1e4`), voice `af_heart`, speed 0.95 |
+| PyTorch, Transformers, spaCy (`en_core_web_sm`) | 2.14.1, 5.19.0, 3.8.16 (3.8.0) | 2026-10-06 | PyPI | Kokoro's dependencies |
+| NumPy, SciPy, SoundFile, pyloudnorm | 2.5.3, 1.18.1, 0.14.0, 0.2.0 | 2026-10-06 | PyPI | Music, effects, mix and loudness in `video/tools/build.py` |
+| `openai-whisper`, model `small.en` | 20250625 | 2026-10-06 | PyPI | Hears the finished file for `video/tools/qa.py`. MIT |
+| PyMuPDF | 1.28.2 | 2026-10-06 | PyPI | Turns the payslip PDF's page into an image. AGPL, used as a tool only |
+| Python, uv | 3.12.13, 0.11.23 | 2026-10-06 | uv | The virtual environment |
+| ffmpeg | 9.0.2 | 2026-10-06 | Homebrew | Screen capture (avfoundation), cutting, joining, the final encode |
+| Solflare extension | 2.39.1 | 2026-10-06 | A copy of the founder's installed extension files | The wallet in the recordings, in the temporary profile |
+| Playwright, Chromium for Testing | 1.63.0, 153 | 2026-10-06 | The repository's catalog | Drives the recordings and the headless render |
+
+Commands (in `video/`; steps in `video/README.md`):
+
+```sh
+node record/<clip>.mjs                                   # one recording
+VIRTUAL_ENV=$V PATH=$V/bin:$PATH python audio/tts.py     # the voice, V=~/.cache/sotto-video/tts/.venv
+python tools/build.py film && python tools/build.py clips && python tools/build.py audio
+bash render-parts.sh <seconds>                           # 30 second parts into output/parts; ffmpeg joins them with the mix
+python tools/qa.py <final mp4>
+```

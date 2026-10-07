@@ -1,0 +1,21 @@
+Sotto
+Copyright 2026 Cayvox Labs
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Third party material in this repository, each under its own terms:
+
+- Flags in apps/web/public/landing/flags: flag-icons 7.5.0, MIT License,
+  Copyright (c) 2013 Panayiotis Lipiridis. Source, hashes and license text:
+  apps/web/public/landing/flags/CREDITS.md
+- Portraits in apps/web/public/landing/people: the inter-faces pack 1.4,
+  Creative Commons Zero. Sources: apps/web/public/landing/people/CREDITS.md
+- The Solana mark (simple-icons 16.34.0, CC0 icon data) and the USDC lockup
+  (Circle's brand kit) in design/brand-kit/third-party and on the landing are
+  trademarks of their owners, used under their brand guidelines. Sources,
+  hashes and terms: design/brand-kit/THIRD-PARTY-LOGOS.md
+- The Geist and Geist Mono typefaces are loaded at build time and are not part
+  of this repository. They are licensed under the SIL Open Font License.
+
+The Sotto name and logo in design/brand-kit are marks of Cayvox Labs and are
+not licensed under the Apache License.

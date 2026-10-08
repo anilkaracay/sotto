@@ -1,5 +1,5 @@
 // The review notification (step 4.2, founder 2026-10-02): one message to
-// SOTTO_NOTIFY_URL when an organization enters review, so the founder approves judges' organizations
+// SOTTO_NOTIFY_URL when an organization enters review, so the founder reviews new organizations
 // in time. The URL decides the service: a Discord webhook (JSON "content") or a Telegram bot's
 // sendMessage with its chat_id (JSON "chat_id" and "text"). The URL holds a token, so it is never
 // logged; the message names the organization, its country and the time, nothing else.

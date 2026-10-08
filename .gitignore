@@ -54,8 +54,7 @@ test-ledger/
 # Next.js generated types (recreated by next typegen)
 next-env.d.ts
 
-# Local files, never committed.
-/CLAUDE.md
+# Written by next dev; kept local.
 apps/web/AGENTS.md
 apps/web/CLAUDE.md
 

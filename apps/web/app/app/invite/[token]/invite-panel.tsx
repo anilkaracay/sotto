@@ -11,7 +11,7 @@
 // sees only the organization, what the grant reads and until when, never the holder's name, an amount,
 // a payment or a recipient (founder, 2026-09-29; no wallet is known before the holder accepts);
 // accepting, which the owner's own wallet cannot, makes the user the org's accountant, and their
-// viewing key, created on the same page, activates the grant. Design pass C (step 3.6, A43):
+// viewing key, created on the same page, activates the grant. Design pass C (step 3.6):
 // the organization's initials beside the invite's title, what the invite offers before the button
 // that accepts it, and the three steps after joining numbered as on the setup page.
 import { Button, Card, initials } from "@sotto/ui";

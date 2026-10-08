@@ -1,4 +1,4 @@
-// The trust page's statements (step 3.3, built in step 3.4; L7, L36), each from the document
+// The trust page's statements (step 3.3, built in step 3.4), each from the document
 // that decides it, so the page and its tests say only what holds. No server only imports. Step 4.3
 // (D-29): once the devnet registry lists devUSD, the page adds what holds for it (Sotto issues it, its
 // mint authority can mint more, it has no freeze authority and no value) and its addresses.

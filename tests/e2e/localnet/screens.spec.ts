@@ -189,13 +189,13 @@ test("the account and money screens in every state, for the design pass", async 
   await approveOrg(admin, "Northwind Screens Ltd");
   await admin.context().close();
 
-  // A40: the overview before the account exists.
+  // The overview before the account exists.
   await page.goto("/app");
   await expect(page).toHaveURL(OVERVIEW_URL);
   await expect(page.getByTestId("account-address")).toHaveText("Not set up yet");
   await shoot(page, "01-overview-not-set-up");
 
-  // A36: the setup page before the unlock, with the explainer and its warning.
+  // The setup page before the unlock, with the explainer and its warning.
   await openSetup(page);
   await connect(page);
   await expect(page.getByTestId("unlock-explainer")).toContainText(
@@ -209,7 +209,7 @@ test("the account and money screens in every state, for the design pass", async 
   await expect(current()).toHaveAttribute("data-step", "1");
   await shoot(page, "02-setup-locked");
 
-  // A36: the viewing key signature refused, the confidential keys unlocked.
+  // The viewing key signature refused, the confidential keys unlocked.
   const viewText = new TextDecoder().decode(viewKeyMessage(OWNER.address));
   await testWallet(page, "refuse", [viewText]);
   await page.getByRole("button", { name: "Unlock with your wallet" }).click();
@@ -224,7 +224,7 @@ test("the account and money screens in every state, for the design pass", async 
   await page.getByRole("button", { name: "Create viewing key" }).click();
   await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
 
-  // A37: the determinism refusal, from a wallet whose second key signature differs.
+  // The determinism refusal, from a wallet whose second key signature differs.
   const randomized = await randomizedEd25519Signature(
     new Uint8Array(OWNER.keypair.slice(0, 32)),
     confidentialKeysMessage(),
@@ -237,7 +237,7 @@ test("the account and money screens in every state, for the design pass", async 
   await expect(current()).toHaveAttribute("data-step", "2");
   await shoot(page, "04-setup-determinism-refused");
 
-  // A41: a wallet that refuses the account setup, with its own words.
+  // A wallet that refuses the account setup, with its own words.
   await testWallet(page, "refuseTransactions", {
     name: "WalletSignTransactionError",
     message: "Unable to verify this transaction. It cannot be signed.",
@@ -249,7 +249,7 @@ test("the account and money screens in every state, for the design pass", async 
   await shoot(page, "05-setup-wallet-refused");
   await testWallet(page, "refuseTransactions", null);
 
-  // A37: the account set up, then funded in two signatures, seen at the second.
+  // The account set up, then funded in two signatures, seen at the second.
   await page.getByRole("button", { name: "Set up the account" }).click();
   await expect(page.getByTestId("account-status")).toHaveText("Set up");
   await expect(page.getByTestId("balance-available-value")).toHaveText("0 wUSDC");
@@ -268,7 +268,7 @@ test("the account and money screens in every state, for the design pass", async 
   await expect(page.getByTestId("balance-available-value")).toHaveText("60 wUSDC");
   await shoot(page, "08-setup-funded");
 
-  // A37 and A40: the overview unlocked, then locked.
+  // The overview unlocked, then locked.
   await page.getByRole("navigation").getByRole("link", { name: "Overview" }).click();
   await expect(page).toHaveURL(OVERVIEW_URL);
   await expect(page.getByTestId("balance-available-value")).toHaveText("60 wUSDC");
@@ -279,7 +279,7 @@ test("the account and money screens in every state, for the design pass", async 
   await shoot(page, "10-overview-locked");
   await unlock(page);
 
-  // A40: the withdraw drawer, its progress and its result.
+  // The withdraw drawer, its progress and its result.
   await page.getByTestId("open-withdraw").click();
   const drawer = page.getByRole("dialog", { name: "Withdraw" });
   await expect(drawer).toContainText("The withdrawn amount is public onchain");
@@ -332,8 +332,8 @@ test("the account and money screens in every state, for the design pass", async 
   await expect(recipient.getByTestId("viewing-key-status")).toHaveText("Registered");
   await recipient.context().close();
 
-  // A39: New payment, blocked by screening, in progress, settled, then refused by the wallet. First a
-  // payment of category payroll, so the recipient's pay page holds a payslip and a payment (A49).
+  // New payment, blocked by screening, in progress, settled, then refused by the wallet. First a
+  // payment of category payroll, so the recipient's pay page holds a payslip and a payment.
   await page.getByRole("link", { name: "Payments" }).click();
   await expect(page).toHaveURL(/\/payments\/new$/);
   const pay = page.getByTestId("pay-card");
@@ -392,7 +392,7 @@ test("the account and money screens in every state, for the design pass", async 
   await shoot(page, "18-payment-wallet-refused");
   await testWallet(page, "refuseTransactions", null);
 
-  // A40: the recipient's pay page, locked, with the pending balance, and after applying it.
+  // The recipient's pay page, locked, with the pending balance, and after applying it.
   const reader = await newPage(browser);
   await signIn(reader, RECIPIENT.keypair, PAY_URL);
   // Both transfers in "What your colleagues see" once the indexer read them (step 3.8: the shot
@@ -405,7 +405,7 @@ test("the account and money screens in every state, for the design pass", async 
   await shoot(reader, "19-pay-locked");
   await unlock(reader);
   await expect(reader.getByTestId("withdraw-card")).toContainText("is in your pending balance");
-  // A49: the supplier payment, the latest, reads as a payment; the payroll one as a payslip.
+  // The supplier payment, the latest, reads as a payment; the payroll one as a payslip.
   const group = reader.getByTestId("pay-group").first();
   await expect(
     group.getByTestId("payslip-card").getByRole("heading", { name: "September design work" }),
@@ -460,7 +460,7 @@ test("the account and money screens in every state, for the design pass", async 
   await reader.getByTestId("withdraw-card").getByLabel("Amount of wUSDC").fill("2");
   await shoot(reader, "21-pay-withdraw");
 
-  // A36: the recovery guide.
+  // The recovery guide.
   await reader.goto("/app/recovery");
   await shoot(reader, "22-recovery");
   await reader.context().close();

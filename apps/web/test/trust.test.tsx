@@ -1,4 +1,4 @@
-// The trust page (step 3.3, built in step 3.4; L7, L36): every statement the founder listed
+// The trust page (step 3.3, built in step 3.4): every statement the founder listed
 // on 2026-10-01, each true to the document that decides it: non-custodial (D-02), amounts sealed
 // onchain and decrypted only in authorized browsers, the issuer's freeze authority (D-01, facts C3),
 // the devnet test wrap (D-01), revocation (D-05), sotto_proofs never moves tokens and is not audited
@@ -44,7 +44,7 @@ describe("the trust page", () => {
     }
   });
 
-  it("states the freeze authority, the devnet test wrap and revocation (D-01, C3, D-05, L6, L7)", () => {
+  it("states the freeze authority, the devnet test wrap and revocation (D-01, C3, D-05)", () => {
     expect(text).toContain("The USDC issuer's freeze controls still apply to USDC.");
     expect(text).toContain("so the USDC issuer can freeze it as it can freeze USDC");
     expect(text).toContain("devnet test wrap");

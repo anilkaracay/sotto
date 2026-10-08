@@ -1,9 +1,9 @@
 "use client";
 
 // The viewing keys page's client part (F-10, F-14; step 2.4), on the design's Access screen where data
-// exists (A19 to A23, A27, A28):
+// exists:
 // - Who can read <org>: a bar per active key, its records out of the owner's own records of the last
-//   12 months, computed here from counts (09 section 3); none of the holders are at Sotto (A5);
+//   12 months, computed here from counts (09 section 3); none of the holders are at Sotto;
 // - Keys stay yours: the latest active key, its holder, what it reads, its public key and its end;
 // - Share past records: a key that became active gets the owner's records in its scope (AC-10.3): the
 //   owner's own records are verified against the owner's manifests (I-9), opened with the viewing key

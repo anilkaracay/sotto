@@ -109,7 +109,7 @@ const GROUPS = [
 
 /**
  * The proof illustration's certificate words for a sample balance and a threshold (Proven or
- * Not proven, never True or False; L2 and L19: no "one transaction").
+ * Not proven, never True or False; no "one transaction").
  */
 export function proofWords(proven: boolean) {
   return proven

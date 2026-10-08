@@ -1,7 +1,7 @@
 // The landing (F-17, AC-17.1; step 3.1): the approved landing design with every approved copy
 // correction, the devnet beta rule and the founder's rules of 2026-09-30 (no open source claim while
-// the repository is private, the Revenue use case removed, L31 on every board mention, L2 and L19 on
-// every "one transaction" caption, Privacy and Terms hidden until D-23, the event's name).
+// the repository is private, the Revenue use case removed, no board mention, no "one transaction"
+// caption, Privacy and Terms hidden until D-23, the event's name).
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { Landing } from "../app/_landing/landing.tsx";
@@ -23,7 +23,7 @@ const links = [...html.matchAll(/<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g)
 }));
 
 describe("the landing (AC-17.1)", () => {
-  it("AC-17.1 applies the hero rows: L1, L2, L15 and L27", () => {
+  it("AC-17.1 applies the hero's copy corrections", () => {
     expect(text).toContain("back on in June 2026");
     expect(text).not.toContain("August 2026");
     expect(text).toContain("Every line settles on Solana.");
@@ -57,7 +57,7 @@ describe("the landing (AC-17.1)", () => {
     expect(text).not.toContain("version 1 wallet");
   });
 
-  it("AC-17.1 says Proven and at least, never True, False or above (L3, L5, L26)", () => {
+  it("AC-17.1 says Proven and at least, never True, False or above", () => {
     expect(text).not.toMatch(/\b(True|False)\b/);
     expect(text).toContain("Proven");
     expect(text).toContain("Balance is at least 250,000 USDC");
@@ -147,7 +147,7 @@ describe("the landing (AC-17.1)", () => {
     expect(text).not.toMatch(/one transaction/i);
   });
 
-  it("AC-17.1 answers the FAQ with what the build does (L8, L9, L10, L21, L22, D-05)", () => {
+  it("AC-17.1 answers the FAQ with what the build does (D-05)", () => {
     expect(text).toContain(
       "During the beta, Sotto runs on Solana devnet with devnet USDC, wrapped one to one by Token Wrap, and devUSD, a test dollar with no value. On mainnet, USDG and PYUSD already carry the confidential extension, but each confidential account needs the issuer's approval, so Sotto uses Token Wrap until then.",
     );
@@ -166,7 +166,7 @@ describe("the landing (AC-17.1)", () => {
     expect(text).not.toContain("Every message is read by the team");
   });
 
-  it("AC-17.1 closes with the devnet request form and the footer rows (L24, L25, L28, D-23)", () => {
+  it("AC-17.1 closes with the devnet request form and the footer rows (D-23)", () => {
     expect(text).toContain("The beta runs on Solana devnet.");
     expect(html).toMatch(
       /<input[^>]*type="email"[^>]*autoComplete="email"|<input[^>]*autocomplete="email"/i,

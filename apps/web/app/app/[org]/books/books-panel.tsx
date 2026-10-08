@@ -1,7 +1,7 @@
 "use client";
 
 // The accountant's books (F-11, AC-11.1 to AC-11.4; step 2.5), on the design's Books screen where data
-// exists (A46):
+// exists:
 // - the header: the org, read only until the grant ends, the month tabs and Export; the scope banner
 //   says who shared the books, what they read and until when (AC-11.1);
 // - Money out: the dark hero of the design with money out instead of money in (M1), the total of the

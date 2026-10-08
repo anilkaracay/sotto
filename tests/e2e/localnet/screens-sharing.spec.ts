@@ -160,7 +160,7 @@ async function uploadCsv(page: Page, name: string, rows: string[]) {
 
 test.use({ extraHTTPHeaders: { "x-forwarded-for": "198.51.100.15" } });
 
-test("the sharing and records screens in every state, for the design pass (A38, A42 to A47, A52)", async ({
+test("the sharing and records screens in every state, for the design pass", async ({
   page,
   browser,
 }) => {
@@ -182,7 +182,7 @@ test("the sharing and records screens in every state, for the design pass (A38, 
   await page.getByRole("button", { name: "Send for review" }).click();
   await expect(page.getByTestId("org-status")).toHaveText("In review");
 
-  // A35: the admin console, in review, the approval's confirmation, then active.
+  // The admin console, in review, the approval's confirmation, then active.
   const admin = await newPage(browser);
   await signIn(admin, e2eKeypair(), ANY_APP_PAGE);
   await admin.goto("/app/admin");
@@ -216,7 +216,7 @@ test("the sharing and records screens in every state, for the design pass (A38, 
   });
   expect([200, 201]).toContain(recorded.status());
 
-  // A38: the recipients page empty, a refused wallet address, two recipients sealed and unlocked,
+  // The recipients page empty, a refused wallet address, two recipients sealed and unlocked,
   // and an invite link shown once.
   await go(page, "Recipients");
   await expect(page.getByTestId("recipients-card")).toContainText("No recipients yet");
@@ -267,7 +267,7 @@ test("the sharing and records screens in every state, for the design pass (A38, 
     .getByTestId("invite-link")
     .inputValue();
 
-  // A38: the recipient invite before sign in, for another wallet, for the invited one, then joined.
+  // The recipient invite before sign in, for another wallet, for the invited one, then joined.
   const maya = await newPage(browser);
   await addTestWallet(maya, MAYA.keypair);
   await maya.goto(new URL(mayaLink).pathname);
@@ -295,7 +295,7 @@ test("the sharing and records screens in every state, for the design pass (A38, 
   await daniel.getByRole("button", { name: "Accept invite" }).click();
   await expect(daniel.getByTestId("invite-joined")).toContainText(`You joined ${LEGAL}`);
 
-  // A42: the payroll page empty, with row errors, with a valid file, and its runs.
+  // The payroll page empty, with row errors, with a valid file, and its runs.
   await go(page, "Payroll");
   await expect(page.getByTestId("new-run-card")).toBeVisible();
   await shoot(page, "12-payroll-empty");
@@ -337,7 +337,7 @@ test("the sharing and records screens in every state, for the design pass (A38, 
     timeout: 180_000,
   });
 
-  // A43: the viewing keys page, the grant drawer, the link shown once, the key waiting.
+  // The viewing keys page, the grant drawer, the link shown once, the key waiting.
   await go(page, "Viewing keys");
   await expect(page.getByTestId("keys-card")).toBeVisible();
   await shoot(page, "16-keys-before-grant");
@@ -357,7 +357,7 @@ test("the sharing and records screens in every state, for the design pass (A38, 
   await expect(keyRow.getByTestId("key-status")).toHaveText("Invite sent");
   await shoot(page, "19-keys-invite-sent");
 
-  // A43: the accountant invite before sign in, signed in, joined, and with the viewing key.
+  // The accountant invite before sign in, signed in, joined, and with the viewing key.
   const guest = await newPage(browser);
   await addTestWallet(guest, DANIEL.keypair);
   await guest.goto(new URL(grantLink).pathname);
@@ -377,7 +377,7 @@ test("the sharing and records screens in every state, for the design pass (A38, 
   await expect(daniel.getByTestId("viewing-key-status")).toHaveText("Registered");
   await shoot(daniel, "23-accountant-key-registered");
 
-  // A43: the owner shares the past records.
+  // The owner shares the past records.
   await page.reload();
   await expect(keyRow.getByTestId("key-status")).toHaveText("Active");
   await unlock(page);
@@ -393,7 +393,7 @@ test("the sharing and records screens in every state, for the design pass (A38, 
   );
   await shoot(page, "25-keys-shared");
 
-  // A47: the accountant's places and the books' viewing key card; A46: the books.
+  // The accountant's places and the books' viewing key card; the books.
   await daniel.goto("/app");
   await expect(daniel.getByTestId("places")).toContainText(`Books of ${LEGAL}`);
   await expect(daniel.getByTestId("places")).toContainText(`Your pay from ${LEGAL}`);
@@ -428,7 +428,7 @@ test("the sharing and records screens in every state, for the design pass (A38, 
   await expect(daniel.getByTestId("export-result")).toContainText("Exported 2 rows to CSV");
   await shoot(daniel, "31-books-exported");
 
-  // A43: the revoke confirmation and the revoked key; the accountant's books say so.
+  // The revoke confirmation and the revoked key; the accountant's books say so.
   await go(page, "Viewing keys");
   await keyRow.getByTestId("key-toggle").click();
   await expect(keyRow.getByTestId("revoke-confirm")).toContainText(
@@ -445,7 +445,7 @@ test("the sharing and records screens in every state, for the design pass (A38, 
   await shoot(daniel, "34-books-no-key");
   await daniel.context().close();
 
-  // A44: what the chain shows on the overview, once the indexer read the transfers.
+  // What the chain shows on the overview, once the indexer read the transfers.
   await go(page, "Overview");
   await expect(page).toHaveURL(OVERVIEW_URL);
   await expect(async () => {
@@ -457,7 +457,7 @@ test("the sharing and records screens in every state, for the design pass (A38, 
   }).toPass({ timeout: 120_000 });
   await shoot(page, "35-overview-chain");
 
-  // A52: the paused proof program banner, from a failing verdict written for this state only and
+  // The paused proof program banner, from a failing verdict written for this state only and
   // put back at once (the worker writes the next one within 5 minutes anyway).
   const database = createDb((await readFile(DATABASE_URL_FILE, "utf8")).trim(), { max: 1 });
   const [saved] = await database.db.select().from(clusterHealth);

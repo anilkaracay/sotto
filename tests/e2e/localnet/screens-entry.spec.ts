@@ -65,10 +65,10 @@ async function decide(admin: Page, legalName: string, action: "Approve" | "Rejec
 
 test.use({ extraHTTPHeaders: { "x-forwarded-for": "198.51.100.16" } });
 
-test("the entry screens in every state, for the design pass (L36)", async ({ browser }) => {
+test("the entry screens in every state, for the design pass", async ({ browser }) => {
   test.setTimeout(600_000);
 
-  // L36: the trust page, public, at the desktop and the phone widths.
+  // The trust page, public, at the desktop and the phone widths.
   for (const [width, name] of [
     [1440, "01-trust-1440"],
     [390, "02-trust-390"],
@@ -90,7 +90,7 @@ test("the entry screens in every state, for the design pass (L36)", async ({ bro
     await visitor.context().close();
   }
 
-  // A35: onboarding empty, refused by its own checks, in review.
+  // Onboarding empty, refused by its own checks, in review.
   const owner = await newPage(browser);
   await signIn(owner, VERIFIED.keypair);
   await expect(owner.getByTestId("how-verification-works")).toBeVisible();
@@ -112,7 +112,7 @@ test("the entry screens in every state, for the design pass (L36)", async ({ bro
   await decide(admin, "Refused Entry Ltd", "Reject");
   await admin.context().close();
 
-  // A35: verified, once the worker issued the attestation onchain.
+  // Verified, once the worker issued the attestation onchain.
   await expect(async () => {
     await owner.goto("/app/onboarding");
     await expect(owner.getByTestId("attestation-address")).toBeVisible({ timeout: 3_000 });
@@ -122,7 +122,7 @@ test("the entry screens in every state, for the design pass (L36)", async ({ bro
   await shoot(owner, "07-onboarding-verified");
   await owner.context().close();
 
-  // A35: not verified.
+  // Not verified.
   await refused.goto("/app/onboarding");
   await expect(refused.getByTestId("org-status")).toHaveText("Not verified");
   await expect(refused.getByTestId("verification-tracker")).toContainText("Not verified");

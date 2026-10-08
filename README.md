@@ -116,11 +116,18 @@ pnpm install --frozen-lockfile
 
 **Configuration.** Every app reads its settings from its own git ignored file: `apps/web/.env.local`, `apps/worker/.env.local` and `packages/db/.env.local`. The names are in [`.env.example`](.env.example); no value belongs in the repository.
 
-| Used by        | Names                                                                                                                                                                                                                                 |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Web            | `NEXT_PUBLIC_CLUSTER`, `NEXT_PUBLIC_APP_URL`, `RPC_URL`, `LOCALNET_USDC_MINT`, `DATABASE_URL`, `SESSION_SECRET`, `SCREENING_PROVIDER`, `SCREENING_API_KEY`, `ADMIN_WALLETS`, `RESEND_API_KEY`, `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` |
-| Worker         | `RPC_URL`, `DATABASE_URL`, `LOCALNET_USDC_MINT`, `SENTRY_DSN`, `SAS_SIGNER_KEYPAIR`, `SAS_SIGNER_KMS_KEY_ID`, `SAS_CREDENTIAL_ADDRESS`, `SAS_SCHEMA_ADDRESS`, `SOTTO_NOTIFY_URL` (optional)                                           |
-| Database tools | `DATABASE_URL`, `ADMIN_WALLETS`                                                                                                                                                                                                       |
+| Used by        | Names                                                                                                                                                                                     |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web            | `NEXT_PUBLIC_CLUSTER`, `NEXT_PUBLIC_APP_URL`, `RPC_URL`, `DATABASE_URL`, `SESSION_SECRET` (at least 32 characters); optional: `SCREENING_PROVIDER`, `SCREENING_API_KEY`, `RESEND_API_KEY` |
+| Worker         | `RPC_URL`, `DATABASE_URL`, `SAS_SIGNER_KEYPAIR`, `SAS_CREDENTIAL_ADDRESS`, `SAS_SCHEMA_ADDRESS`; optional: `SOTTO_NOTIFY_URL`                                                             |
+| Database tools | `DATABASE_URL`; optional: `ADMIN_WALLETS`                                                                                                                                                 |
+
+For a local validator, `NEXT_PUBLIC_CLUSTER` is `localnet`, `RPC_URL` is the validator's address, and these names take the addresses and file paths that the bootstrap below writes to `.localnet/bootstrap.json`:
+
+| Used by | Names                                                                                                                                                                   |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web     | `LOCALNET_USDC_MINT`, `LOCALNET_DEVUSD_MINT`, `LOCALNET_SAS_CREDENTIAL`, `LOCALNET_SAS_SCHEMA`, `LOCALNET_SOTTO_PROOFS_PROGRAM`, `LOCALNET_DEVUSD_SOTTO_PROOFS_PROGRAM` |
+| Worker  | `LOCALNET_USDC_MINT`, `LOCALNET_DEVUSD_MINT`, `DEVUSD_MINT_AUTHORITY_KEYPAIR`, and the three `SAS_` names above from the bootstrap's `sas` entry                        |
 
 **Database.** PostgreSQL 16 in Docker, created once with the password of your `DATABASE_URL`:
 
@@ -156,10 +163,17 @@ pnpm --filter @sotto/worker start   # the worker
 pnpm lint && pnpm typecheck
 scripts/db-local.sh test-up && pnpm test               # unit and API tests, on a throwaway Postgres
 pnpm program:build && pnpm program:test                # the program
-pnpm build && pnpm --filter @sotto/e2e e2e             # browser tests on the production build
-pnpm build && pnpm --filter @sotto/e2e e2e:localnet    # browser flows on a fresh local validator
-pnpm ci:local                                          # every job, as the project's CI runs them
 ```
+
+The browser tests run against the production build and need the test Postgres (`scripts/db-local.sh test-up`) and Playwright's browsers, installed once:
+
+```sh
+pnpm --filter @sotto/e2e exec playwright install chromium firefox
+pnpm build && pnpm --filter @sotto/e2e e2e             # public pages and sign in; stop any local validator first
+pnpm build && pnpm --filter @sotto/e2e e2e:localnet    # the money flows; start a fresh validator and run the bootstrap first
+```
+
+`pnpm ci:local` runs every job the way the project's CI does. It starts its own validator, so stop yours first.
 
 ## Repository layout
 

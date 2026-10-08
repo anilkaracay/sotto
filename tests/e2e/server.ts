@@ -18,6 +18,7 @@ import {
   copyFileSync,
   createWriteStream,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -25,7 +26,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { admins, clusterHealth } from "@sotto/db";
@@ -51,7 +52,12 @@ type Bootstrap = {
 };
 
 const localnet = process.argv.includes("--localnet");
-const chain: Record<string, string> = { RPC_URL: "http://127.0.0.1:8899" };
+// Without --localnet the app is the devnet app, whatever apps/web/.env.local names: its RPC URL is a
+// local address where nothing should listen, so the specs see a network that cannot be reached.
+const chain: Record<string, string> = {
+  RPC_URL: "http://127.0.0.1:8899",
+  NEXT_PUBLIC_CLUSTER: "devnet",
+};
 let bootstrap: Bootstrap | null = null;
 if (localnet) {
   bootstrap = JSON.parse(
@@ -78,6 +84,8 @@ const DATABASE_URL_FILE = fileURLToPath(
   new URL("../../.localnet/e2e-database-url", import.meta.url),
 );
 // Since step 4.3 also without --localnet, for the faucet card's screenshots (shots/faucet-card.spec.ts).
+// A fresh clone has no .localnet folder yet.
+mkdirSync(dirname(DATABASE_URL_FILE), { recursive: true });
 writeFileSync(DATABASE_URL_FILE, `${database.url}\n`, { mode: 0o600 });
 // The fixed keypair wallet of the keys spec is a Sotto admin, so the spec approves its own org.
 await database.db.insert(admins).values({ wallet: E2E_ADMIN_WALLET });

@@ -1,12 +1,14 @@
 name: CI
 
-# A push to main runs the lightweight parts: lint, typecheck and the unit tests of the node job, and
-# the checks job. The build, the browser tests, the program job and the localnet job run by hand
-# (workflow_dispatch), and on the development machine with pnpm ci:local:full before every merge (D-25).
+# A push to main and a pull request run the lightweight parts: lint, typecheck and the unit tests of
+# the node job, and the checks job; main's branch protection requires both. The build, the browser
+# tests, the program job and the localnet job run by hand (workflow_dispatch), and on the development
+# machine with pnpm ci:local:full before every merge (D-25).
 on:
   workflow_dispatch:
   push:
     branches: [main]
+  pull_request:
 
 concurrency:
   group: ci-${{ github.ref }}-${{ github.event_name }}

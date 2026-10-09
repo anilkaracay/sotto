@@ -33,7 +33,7 @@ Read this file first, then `00-INDEX.md` and the documents in its reading order.
 
 ## Git workflow
 
-CI runs locally (D-25). On GitHub a push to `main` runs lint, typecheck, the unit tests and the checks job; the other jobs start by hand (11 section 7).
+CI runs locally (D-25). On GitHub a push to `main` and a pull request run lint, typecheck, the unit tests and the checks job, which `main`'s branch protection requires; the other jobs start by hand (11 section 7).
 
 1. Every step works on a branch named `step/<id>` (for example `step/1.1`), created from `main`.
 2. Before merging, `pnpm ci:local:full` (every job from scratch, Turborepo `--force`) must be green on the branch, and its summary table goes into the step's report. `pnpm ci:local` (cached) is for daily use and does not count for a merge.

@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { Database } from "@sotto/db";
 import { ConfigError, sessionSecret } from "./config.ts";
 import { getDb } from "./db.ts";
+import { DEMO_HEADER, demoErrors } from "./demo-guard.ts";
 import { ApiError, apiErrors, errorResponse } from "./errors.ts";
 import { log } from "./log.ts";
 import { assertSameOrigin } from "./origin.ts";
@@ -24,6 +25,13 @@ export type RouteOptions = {
   /** "session" refuses requests without a valid session (401). */
   auth: "none" | "optional" | "session";
   rateLimits?: readonly RateLimitPolicy[];
+  /**
+   * Step 4.6 (D-32): a route of the demo company. A request that carries the demo's header reaches
+   * only these; every other route refuses it (403 demo_read_only) before it reads a session, so a
+   * demo visitor writes nothing, whatever cookie the browser holds. A demo route reads only and
+   * knows no session.
+   */
+  demo?: boolean;
 };
 
 type NextRouteContext = { params?: Promise<Record<string, string | string[] | undefined>> };
@@ -38,6 +46,12 @@ export function apiRoute(
     const fields: Record<string, unknown> = {};
     let status = 500;
     try {
+      if (options.demo) {
+        if (options.auth !== "none") throw new Error("a demo route knows no session");
+        if (request.method !== "GET" && request.method !== "HEAD") throw demoErrors.readOnly();
+      } else if (request.headers.has(DEMO_HEADER)) {
+        throw demoErrors.readOnly();
+      }
       assertSameOrigin(request);
       const needsDb = options.auth !== "none" || (options.rateLimits?.length ?? 0) > 0;
       const db = needsDb ? getDb() : null;

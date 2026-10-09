@@ -69,8 +69,8 @@ export default function RecoveryPage() {
             </li>
             <li>
               Node.js 24 and pnpm, to run Sotto&apos;s recovery script. It is part of Sotto&apos;s
-              source code (github.com/anilkaracay/sotto), which Sotto publishes at its public
-              launch.
+              source code, which is public at{" "}
+              <a href="https://github.com/anilkaracay/sotto">github.com/anilkaracay/sotto</a>.
             </li>
             <li>
               Your wallet&apos;s recovery phrase, or its private key exported from the wallet.

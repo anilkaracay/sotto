@@ -209,12 +209,6 @@ export default function WalkthroughPage() {
               example {WALKTHROUGH_PAY}, a <B>{L.memo.label}</B> if you like, and choose{" "}
               <B>{L.pay.label}</B>. Your wallet asks for one transaction and then one message.
             </p>
-            <p>
-              If you removed the demo recipient, the field says <B>{L.noRecipients.label}</B> with
-              the link <B>{L.addRecipient.label}</B>, which opens <B>{L.recipients.label}</B>. Any
-              devnet wallet with a confidential account for this asset can be paid; the demo wallet
-              is <code className="mono">{DEMO_RECIPIENT.wallet}</code>.
-            </p>
             <Shot
               name="pay"
               width={560}

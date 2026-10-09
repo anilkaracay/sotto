@@ -5,7 +5,6 @@
 // imports.
 import { DEMO_RECIPIENT, ENTRY_DEMO, ENTRY_QUICK_START } from "./demo.ts";
 import { FIRST_RUN_TITLE } from "./first-run.ts";
-import { ADD_A_RECIPIENT, NO_RECIPIENTS } from "./recipient.ts";
 
 export const WALKTHROUGH_PATH = "/app/walkthrough";
 export const WALKTHROUGH_LINK = "Walkthrough";
@@ -77,7 +76,6 @@ export const WALKTHROUGH_LABELS = {
   },
   accountSetup: { label: "Account setup", file: "lib/org-nav.ts", find: '"Account setup"' },
   payments: { label: "Payments", file: "lib/org-nav.ts", find: '"Payments"' },
-  recipients: { label: "Recipients", file: "lib/org-nav.ts", find: '"Recipients"' },
   proofs: { label: "Proofs", file: "lib/org-nav.ts", find: '"Proofs"' },
   viewingKey: {
     label: "Viewing key",
@@ -118,16 +116,6 @@ export const WALKTHROUGH_LABELS = {
     label: DEMO_RECIPIENT.displayName,
     file: "lib/server/orgs.ts",
     find: "DEMO_RECIPIENT.displayName",
-  },
-  noRecipients: {
-    label: NO_RECIPIENTS,
-    file: "app/app/[org]/payments/new/payments-panel.tsx",
-    find: "{NO_RECIPIENTS}",
-  },
-  addRecipient: {
-    label: ADD_A_RECIPIENT,
-    file: "app/app/[org]/payments/new/payments-panel.tsx",
-    find: "{ADD_A_RECIPIENT}",
   },
   payAmount: {
     label: "Amount (devUSD)",

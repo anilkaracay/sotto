@@ -126,7 +126,7 @@ From sign in to a first confidential payment, its check on the explorer and a pr
 
 <img src="apps/web/public/walkthrough/fund.webp" alt="The card Fund your account with 100000 typed under Amount of devUSD and the button Fund account" width="620">
 
-**6. Pay Atlas Freight.** Open **Payments**. In the card **Pay a recipient**, under **Recipient**, choose **Atlas Freight (demo recipient)**: a company made by quick start has this demo recipient from the start, a demo wallet whose account can receive confidential payments. Type an amount under **Amount (devUSD)**, for example 1250.50, a **Memo** if you like, and choose **Pay**. Your wallet asks for one transaction and then one message. If you removed the demo recipient, the field says **No recipients yet** with the link **Add a recipient**, which opens **Recipients**; the demo wallet is `E6FbeoKRFNcCuSGkbn6QJgGzwoNYfDeHELJLS5BLLkDB`.
+**6. Pay Atlas Freight.** Open **Payments**. In the card **Pay a recipient**, under **Recipient**, choose **Atlas Freight (demo recipient)**: a company made by quick start has this demo recipient from the start, a demo wallet whose account can receive confidential payments. Type an amount under **Amount (devUSD)**, for example 1250.50, a **Memo** if you like, and choose **Pay**. Your wallet asks for one transaction and then one message.
 
 <img src="apps/web/public/walkthrough/pay.webp" alt="The card Pay a recipient: Atlas Freight (demo recipient) chosen, 1250.50 under Amount (devUSD), a memo, and the button Pay" width="420">
 

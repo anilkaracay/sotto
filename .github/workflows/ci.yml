@@ -1,7 +1,8 @@
 name: CI
 
-# Manual runs only (D-25): the project's CI runs locally with pnpm ci:local. The push and
-# pull_request triggers are turned on once a run here has passed.
+# Manual runs only until a run here has passed (D-25: the project's CI runs locally with
+# pnpm ci:local). After that, pushes to main run the lightweight parts: lint, typecheck, the unit
+# tests and the checks job. The browser tests, the program job and the localnet job stay manual.
 on:
   workflow_dispatch:
 

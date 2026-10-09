@@ -20,8 +20,8 @@ export const SOL_GRANT_LAMPORTS = 50_000_000n;
 /** A wallet gets a grant only while it holds less than 0.02 SOL. */
 export const SOL_BALANCE_CEILING_LAMPORTS = 20_000_000n;
 export const SOL_GRANT_WINDOW_MS = 24 * 60 * 60 * 1000;
-/** All wallets together: 2 SOL per 24 hours, 40 grants. */
-export const SOL_DAILY_TOTAL_LAMPORTS = 2_000_000_000n;
+/** All wallets together: 1 SOL per 24 hours, 20 grants. */
+export const SOL_DAILY_TOTAL_LAMPORTS = 1_000_000_000n;
 /** Where devnet SOL comes from when the faucet has none left to give. */
 export const PUBLIC_SOL_FAUCET = "https://faucet.solana.com";
 

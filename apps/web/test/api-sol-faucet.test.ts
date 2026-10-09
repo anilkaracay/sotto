@@ -1,6 +1,6 @@
 // The faucet's devnet SOL (step 4.6, D-31) against a test database: it refuses every cluster but
 // devnet and a devnet configuration whose RPC serves another ledger; it needs a session; a wallet gets
-// one grant in 24 hours, only while it holds less than 0.02 SOL; all wallets together get at most 2 SOL
+// one grant in 24 hours, only while it holds less than 0.02 SOL; all wallets together get at most 1 SOL
 // in 24 hours; failed grants count toward no limit; and requests at once never pass a limit together.
 import { solGrants } from "@sotto/db";
 import type { TestDatabase } from "@sotto/db/testing";
@@ -179,12 +179,12 @@ describe("the SOL faucet on devnet", () => {
     expect(await test.db.select().from(solGrants)).toHaveLength(1);
   });
 
-  it("gives all wallets together at most 2 SOL in 24 hours, also with requests at once", async () => {
+  it("gives all wallets together at most 1 SOL in 24 hours, also with requests at once", async () => {
     const cluster = await devnet();
     const now = new Date("2026-10-09T12:00:00.000Z");
     const grants = Number(SOL_DAILY_TOTAL_LAMPORTS / SOL_GRANT_LAMPORTS);
-    expect(grants).toBe(40);
-    // 38 grants of other wallets earlier in the day leave room for two more.
+    expect(grants).toBe(20);
+    // 18 grants of other wallets earlier in the day leave room for two more.
     const filler = await wallet();
     await test.db.insert(solGrants).values(
       Array.from({ length: grants - 2 }, (_, index) => ({

@@ -62,6 +62,19 @@ export async function main(
       return 1;
     }
   }
+  // Step 4.6 (D-31): the faucet's devnet SOL, where its own wallet's keypair is configured. The job
+  // itself refuses any ledger but devnet's.
+  let solFaucetPayer = null;
+  if (config.solFaucetKeypair) {
+    try {
+      solFaucetPayer = await loadKeypairSigner(config.solFaucetKeypair);
+    } catch (error) {
+      console.error(
+        `sotto worker: configuration error: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return 1;
+    }
+  }
   const once = argv.includes("--once");
   const { db, close } = createDb(config.databaseUrl, { max: 3 });
   const rpc = createRetryingRpc(config.rpcUrl, {
@@ -93,13 +106,9 @@ export async function main(
     proofProgramHealthJob({ db, rpc, feePayer: signer.address }),
     reviewNotifyJob({ db, target: notifyTarget(config.notifyUrl) }),
     ...(devusdAuthority && devusdMint
-      ? [
-          devusdFaucetJob({ db, rpc, authority: devusdAuthority, mint: devusdMint }),
-          // Step 4.6 (D-31): the faucet's devnet SOL comes from the same wallet, above a reserve
-          // for the mints' fees and rent. The job itself refuses any ledger but devnet's.
-          solFaucetJob({ db, rpc, payer: devusdAuthority }),
-        ]
+      ? [devusdFaucetJob({ db, rpc, authority: devusdAuthority, mint: devusdMint })]
       : []),
+    ...(solFaucetPayer ? [solFaucetJob({ db, rpc, payer: solFaucetPayer })] : []),
   ];
   // The notification URL holds a token: only whether it is set and which service it names is logged.
   const notify = notifyTarget(config.notifyUrl);

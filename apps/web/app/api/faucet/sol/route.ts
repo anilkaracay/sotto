@@ -2,7 +2,7 @@
 // and its last grants; POST queues one grant of 0.05 SOL to that wallet, which the worker sends.
 // Devnet only (403 sol_faucet_devnet_only on any other cluster); one grant per wallet per 24 hours
 // (429 sol_faucet_limit), only while the wallet holds less than 0.02 SOL (409 sol_faucet_not_needed),
-// 2 SOL for all wallets per 24 hours (429 sol_faucet_daily_total), and a few requests a day per
+// 1 SOL for all wallets per 24 hours (429 sol_faucet_daily_total), and a few requests a day per
 // address. The body is empty: the wallet is the session's and the amount is fixed.
 import { apiRoute } from "../../../../lib/server/api-route.ts";
 import { serverRpc } from "../../../../lib/server/chain.ts";

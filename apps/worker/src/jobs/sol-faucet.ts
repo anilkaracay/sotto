@@ -1,9 +1,10 @@
 // sol-faucet (step 4.6, D-31): sends the devnet SOL that signed in wallets asked the web's faucet for
-// (apps/web/lib/server/sol-faucet.ts), a plain System Program transfer from the faucet's own wallet.
-// Devnet only: before sending anything it checks that its RPC serves devnet's genesis hash; on any
-// other ledger it sends nothing and fails the requests. It never takes its wallet below the reserve
-// that the wallet's other work needs (the devUSD faucet's fees and account rent): a grant it cannot
-// afford fails, which counts toward no limit, and is logged for the operator. Each transfer is
+// (apps/web/lib/server/sol-faucet.ts), a plain System Program transfer from the faucet's own wallet
+// (SOL_FAUCET_KEYPAIR, a key that does nothing else; the devUSD mint authority is another). Devnet
+// only: before sending anything it checks that its RPC serves devnet's genesis hash; on any other
+// ledger it sends nothing and fails the requests. It never takes its wallet below a reserve of 0.1
+// SOL: a grant it cannot afford above that fails, which counts toward no limit, and is logged for the
+// operator, who funds the wallet. Each transfer is
 // signed, its signature and last valid block height stored, and only then sent, so a restart never
 // pays a request twice: a stored signature is followed until it finalizes or its blockhash expires
 // (then the request is sent again under a new one). Runs every 3 seconds.
@@ -30,7 +31,7 @@ export const SOL_FAUCET_RESERVE_LAMPORTS = 100_000_000n;
 export type SolFaucetDeps = {
   db: Database;
   rpc: SolanaRpc;
-  /** The wallet the grants come from, also the fee payer. */
+  /** The faucet's own wallet (SOL_FAUCET_KEYPAIR): the grants come from it and it pays the fees. */
   payer: KeyPairSigner;
   /**
    * The ledger it may send on, devnet's. Only the localnet tests pass their own ledger's, to exercise

@@ -119,7 +119,7 @@ pnpm install --frozen-lockfile
 | Used by        | Names                                                                                                                                                                                     |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Web            | `NEXT_PUBLIC_CLUSTER`, `NEXT_PUBLIC_APP_URL`, `RPC_URL`, `DATABASE_URL`, `SESSION_SECRET` (at least 32 characters); optional: `SCREENING_PROVIDER`, `SCREENING_API_KEY`, `RESEND_API_KEY` |
-| Worker         | `RPC_URL`, `DATABASE_URL`, `SAS_SIGNER_KEYPAIR`, `SAS_CREDENTIAL_ADDRESS`, `SAS_SCHEMA_ADDRESS`; optional: `SOTTO_NOTIFY_URL`                                                             |
+| Worker         | `RPC_URL`, `DATABASE_URL`, `SAS_SIGNER_KEYPAIR`, `SAS_CREDENTIAL_ADDRESS`, `SAS_SCHEMA_ADDRESS`; optional: `SOTTO_NOTIFY_URL`, `SOL_FAUCET_KEYPAIR`                                       |
 | Database tools | `DATABASE_URL`; optional: `ADMIN_WALLETS`                                                                                                                                                 |
 
 For a local validator, `NEXT_PUBLIC_CLUSTER` is `localnet`, `RPC_URL` is the validator's address, and these names take the addresses and file paths that the bootstrap below writes to `.localnet/bootstrap.json`:

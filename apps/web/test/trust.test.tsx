@@ -108,7 +108,7 @@ describe("the trust page's devUSD facts (step 4.3, D-29)", () => {
     expect(withDevusd).toContain("devUSD is a test token Sotto issues on devnet");
     expect(withDevusd).toContain("It has no value and is not a US dollar.");
     expect(withDevusd).toContain("It has no freeze authority.");
-    expect(withDevusd).toContain("at most 10,000 devUSD a day");
+    expect(withDevusd).toContain("at most 1,000,000 devUSD a day");
     expect(withDevusd).toContain("The USDC issuer's freeze controls still apply to USDC.");
     const without = words(trustCards(null));
     expect(without).not.toContain("devUSD");

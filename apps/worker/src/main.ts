@@ -9,6 +9,7 @@ import { ConfigError, loadWorkerConfig } from "./config.ts";
 import { confirmExecutionsJob } from "./jobs/confirm-executions.ts";
 import { devusdFaucetJob } from "./jobs/devusd-faucet.ts";
 import { solFaucetJob } from "./jobs/sol-faucet.ts";
+import { solFaucetHealthJob } from "./jobs/sol-faucet-health.ts";
 import { grantExpiryJob } from "./jobs/grant-expiry.ts";
 import { indexAccountsJob } from "./jobs/index-accounts.ts";
 import { payrollRunsJob } from "./jobs/payroll-runs.ts";
@@ -108,7 +109,17 @@ export async function main(
     ...(devusdAuthority && devusdMint
       ? [devusdFaucetJob({ db, rpc, authority: devusdAuthority, mint: devusdMint })]
       : []),
-    ...(solFaucetPayer ? [solFaucetJob({ db, rpc, payer: solFaucetPayer })] : []),
+    ...(solFaucetPayer
+      ? [
+          solFaucetJob({ db, rpc, payer: solFaucetPayer }),
+          // The operator hears when the faucet's wallet runs low (founder, 2026-10-09).
+          solFaucetHealthJob({
+            rpc,
+            payer: solFaucetPayer.address,
+            target: notifyTarget(config.notifyUrl),
+          }),
+        ]
+      : []),
   ];
   // The notification URL holds a token: only whether it is set and which service it names is logged.
   const notify = notifyTarget(config.notifyUrl);

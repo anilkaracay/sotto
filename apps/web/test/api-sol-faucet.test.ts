@@ -218,6 +218,54 @@ describe("the SOL faucet on devnet", () => {
     );
   });
 
+  it("says it is being refilled, politely, after the worker could not afford a grant, then lets wallets ask again", async () => {
+    const cluster = await devnet();
+    const now = new Date("2026-10-09T12:00:00.000Z");
+    const first = await wallet();
+    const grant = await requestSolGrant(test.db, first.session, cluster, devnetLedger(), now);
+    // The worker's wallet was at its reserve: the grant failed with faucet_low.
+    await test.db
+      .update(solGrants)
+      .set({ status: "failed", errorCode: "faucet_low", updatedAt: now })
+      .where(eq(solGrants.id, grant.id));
+
+    const soon = new Date(now.getTime() + 10 * 60 * 1000);
+    const view = await readSolFaucet(test.db, first.session, cluster, devnetLedger(), soon);
+    expect(view.state).toBe("refilling");
+    expect(view.grants[0]).toMatchObject({ status: "failed", refilling: true });
+    const other = await wallet();
+    expect(
+      await readSolFaucet(test.db, other.session, cluster, devnetLedger(), soon),
+    ).toMatchObject({ state: "refilling", grants: [] });
+    expect(
+      await refusal(requestSolGrant(test.db, other.session, cluster, devnetLedger(), soon)),
+    ).toBe("503 sol_faucet_refilling: Test SOL is being refilled, try again later");
+    expect(await test.db.select().from(solGrants)).toHaveLength(1);
+
+    // Half an hour later a wallet may ask again; a grant that is paid ends the refilling.
+    const later = new Date(now.getTime() + 31 * 60 * 1000);
+    expect(
+      await readSolFaucet(test.db, other.session, cluster, devnetLedger(), later),
+    ).toMatchObject({ state: "available" });
+    const second = await requestSolGrant(test.db, other.session, cluster, devnetLedger(), later);
+    await test.db
+      .update(solGrants)
+      .set({ status: "paid", updatedAt: later })
+      .where(eq(solGrants.id, second.id));
+    const third = await wallet();
+    expect(
+      await readSolFaucet(test.db, third.session, cluster, devnetLedger(), later),
+    ).toMatchObject({ state: "available" });
+    // A failure for another reason is not a refill.
+    await test.db
+      .update(solGrants)
+      .set({ status: "failed", errorCode: "simulation_failed", updatedAt: later })
+      .where(eq(solGrants.id, second.id));
+    expect(
+      await readSolFaucet(test.db, third.session, cluster, devnetLedger(), later),
+    ).toMatchObject({ state: "available" });
+  });
+
   it("lets one wallet's requests at once take one grant", async () => {
     const user = await wallet();
     const cluster = await devnet();

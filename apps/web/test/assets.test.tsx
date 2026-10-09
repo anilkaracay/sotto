@@ -211,7 +211,7 @@ describe("the devUSD faucet card", () => {
     const words = text(html);
     expect(words).toContain("Get devUSD Devnet test dollar");
     expect(words).toContain("devUSD is a test token for trying Sotto on devnet. It has no value.");
-    expect(words).toContain("up to 10,000 devUSD every 24 hours");
+    expect(words).toContain("up to 1,000,000 devUSD every 24 hours");
     expect(words).not.toContain("USDC");
     // Nothing to ask for before the faucet's state is read.
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Get devUSD<\/button>/);

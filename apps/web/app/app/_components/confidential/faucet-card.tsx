@@ -2,7 +2,7 @@
 
 // The devUSD faucet on the setup page (step 4.3, D-29; founder, 2026-10-02): shown only to a devUSD
 // organization on devnet, where the faucet runs. The owner asks for devUSD to their own wallet, at most
-// 10,000 devUSD in 24 hours; Sotto's worker mints it, and the card follows the request until it is
+// 1,000,000 devUSD in 24 hours; Sotto's worker mints it, and the card follows the request until it is
 // minted, then reads the balances again so the public devUSD can be funded into the account.
 import { formatTokenAmount, parseTokenAmount } from "@sotto/sdk/confidential/public";
 import { Button, Card } from "@sotto/ui";
@@ -103,7 +103,7 @@ export function FaucetCard() {
       </div>
       <p className={styles.lead}>
         {network.asset.symbol} is a test token for trying Sotto on devnet. It has no value. Your
-        wallet can get up to 10,000 {network.asset.symbol} every 24 hours, to its public balance;
+        wallet can get up to 1,000,000 {network.asset.symbol} every 24 hours, to its public balance;
         then fund your account with it.
       </p>
       {remaining !== null ? (
@@ -123,7 +123,7 @@ export function FaucetCard() {
             inputMode="decimal"
             data-amount=""
             autoComplete="off"
-            placeholder="10000"
+            placeholder="1000000"
             value={text}
             onChange={(event) => setText(event.target.value)}
           />
@@ -131,7 +131,7 @@ export function FaucetCard() {
       </label>
       {overLimit ? (
         <div className={extra.note} role="status" data-testid="faucet-limit">
-          A wallet can get at most 10,000 {network.asset.symbol} in 24 hours;{" "}
+          A wallet can get at most 1,000,000 {network.asset.symbol} in 24 hours;{" "}
           <Amount>
             {formatTokenAmount(remaining ?? 0n, DECIMALS)} {network.asset.symbol}
           </Amount>{" "}

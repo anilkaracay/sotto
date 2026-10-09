@@ -46,8 +46,8 @@ test("the SOL faucet card: a new wallet asks once, sees the grant paid and its l
         ? []
         : [
             step === "sent"
-              ? { ...grant, status: "sent", signature: SIGNATURE }
-              : { ...grant, status: "paid", signature: SIGNATURE },
+              ? { ...grant, status: "sent", signature: SIGNATURE, refilling: false }
+              : { ...grant, status: "paid", signature: SIGNATURE, refilling: false },
           ];
     await route.fulfill({
       json: {

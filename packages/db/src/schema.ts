@@ -796,7 +796,7 @@ export const waitlist = pgTable(
 );
 
 /**
- * devUSD faucet mints (step 4.3, D-29): devnet only, at most 10,000 devUSD per wallet per 24 hours.
+ * devUSD faucet mints (step 4.3, D-29): devnet only, at most 1,000,000 devUSD per wallet per 24 hours (10,000 before step 4.6).
  * The web takes a request and the worker, which alone holds the mint authority, mints it. The amount
  * is public onchain (a mint to a public account), so it may be stored (ENGINEERING-RULES.md rule 4).
  */

@@ -4,7 +4,7 @@
 // network fees and the rent of its accounts. The signed in wallet asks once; Sotto's worker sends
 // 0.05 SOL, and the card follows the request until it is paid, then reads the balances again. The
 // card says why when the wallet cannot ask: it got a grant in the last 24 hours, it already holds
-// enough, or the faucet gave out its total for the day.
+// enough, the faucet gave out its total for the day, or its wallet is being refilled.
 import { formatTokenAmount } from "@sotto/sdk/confidential/public";
 import { Button, Card } from "@sotto/ui";
 import { useCallback, useEffect, useState } from "react";
@@ -128,6 +128,11 @@ export function SolFaucetCard() {
           , or try again tomorrow.
         </div>
       ) : null}
+      {faucet?.state === "refilling" ? (
+        <div className={extra.note} role="status" data-testid="sol-faucet-state">
+          Test SOL is being refilled, try again later.
+        </div>
+      ) : null}
       {faucet?.state === "used" && !open && faucet.nextAt ? (
         <div className={extra.note} role="status" data-testid="sol-faucet-state">
           Your wallet got its SOL for these 24 hours. It can ask again after {when(faucet.nextAt)}.
@@ -156,6 +161,8 @@ export function SolFaucetCard() {
                 </>
               ) : null}
             </>
+          ) : latest.refilling ? (
+            "Test SOL is being refilled, try again later. Your request does not count toward your limit."
           ) : latest.status === "failed" ? (
             "The last request could not be sent, so it does not count toward your limit."
           ) : (

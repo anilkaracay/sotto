@@ -9,7 +9,7 @@ import { solGrants, type Database } from "@sotto/db";
 import { GENESIS_HASHES } from "@sotto/sdk/cluster";
 import type { SolanaRpc } from "@sotto/sdk/tx";
 import type { Address } from "@solana/kit";
-import { and, desc, eq, gt, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, ne, sql } from "drizzle-orm";
 import type { ServerCluster } from "./cluster.ts";
 import { ApiError, apiErrors } from "./errors.ts";
 import { log } from "./log.ts";
@@ -22,6 +22,12 @@ export const SOL_BALANCE_CEILING_LAMPORTS = 20_000_000n;
 export const SOL_GRANT_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** All wallets together: 1 SOL per 24 hours, 20 grants. */
 export const SOL_DAILY_TOTAL_LAMPORTS = 1_000_000_000n;
+/**
+ * After the worker could not afford a grant (its wallet is at the reserve), the faucet says it is
+ * being refilled for this long, then lets a wallet ask again (founder, 2026-10-09).
+ */
+export const SOL_REFILL_WAIT_MS = 30 * 60 * 1000;
+export const SOL_REFILLING_WORDS = "Test SOL is being refilled, try again later";
 /** Where devnet SOL comes from when the faucet has none left to give. */
 export const PUBLIC_SOL_FAUCET = "https://faucet.solana.com";
 
@@ -42,6 +48,7 @@ export const solFaucetErrors = {
       "sol_faucet_not_needed",
       "Your wallet already holds enough SOL for fees, so the faucet keeps its SOL for wallets that have none",
     ),
+  refilling: () => new ApiError(503, "sol_faucet_refilling", SOL_REFILLING_WORDS),
   dailyTotal: () =>
     new ApiError(
       429,
@@ -55,6 +62,8 @@ export type SolGrantView = {
   lamports: string;
   status: "pending" | "sent" | "paid" | "failed";
   signature: string | null;
+  /** A failed grant that the faucet's wallet could not afford: it is being refilled. */
+  refilling: boolean;
   createdAt: string;
 };
 
@@ -66,7 +75,7 @@ export type SolFaucetView = {
   /** The wallet's SOL balance, read from chain now. */
   balanceLamports: string;
   /** Whether the wallet may ask now, and if not, why. */
-  state: "available" | "used" | "not_needed" | "daily_total";
+  state: "available" | "used" | "not_needed" | "refilling" | "daily_total";
   /** When the wallet may ask again after a grant, or null. */
   nextAt: string | null;
   grants: SolGrantView[];
@@ -133,11 +142,34 @@ async function totalInWindow(db: Reader, now: Date): Promise<bigint> {
   return BigInt(row?.total ?? "0");
 }
 
+/**
+ * Whether the faucet is being refilled: the last grant the worker decided, for any wallet, failed
+ * because its wallet could not afford it, less than half an hour ago.
+ */
+async function refilling(db: Reader, now: Date): Promise<boolean> {
+  const [last] = await db
+    .select({
+      status: solGrants.status,
+      errorCode: solGrants.errorCode,
+      updatedAt: solGrants.updatedAt,
+    })
+    .from(solGrants)
+    .where(inArray(solGrants.status, ["paid", "failed"]))
+    .orderBy(desc(solGrants.updatedAt))
+    .limit(1);
+  return (
+    last?.status === "failed" &&
+    last.errorCode === "faucet_low" &&
+    last.updatedAt.getTime() > now.getTime() - SOL_REFILL_WAIT_MS
+  );
+}
+
 const view = (row: typeof solGrants.$inferSelect): SolGrantView => ({
   id: row.id,
   lamports: row.lamports.toString(),
   status: row.status,
   signature: row.signature,
+  refilling: row.status === "failed" && row.errorCode === "faucet_low",
   createdAt: row.createdAt.toISOString(),
 });
 
@@ -150,10 +182,11 @@ export async function readSolFaucet(
 ): Promise<SolFaucetView> {
   if (!session) throw apiErrors.unauthenticated();
   await requireSolFaucetCluster(cluster, rpc);
-  const [balance, recent, total, rows] = await Promise.all([
+  const [balance, recent, total, empty, rows] = await Promise.all([
     balanceOf(rpc, session.wallet),
     grantInWindow(db, session.wallet, now),
     totalInWindow(db, now),
+    refilling(db, now),
     db
       .select()
       .from(solGrants)
@@ -165,9 +198,11 @@ export async function readSolFaucet(
     ? "used"
     : balance >= SOL_BALANCE_CEILING_LAMPORTS
       ? "not_needed"
-      : total + SOL_GRANT_LAMPORTS > SOL_DAILY_TOTAL_LAMPORTS
-        ? "daily_total"
-        : "available";
+      : empty
+        ? "refilling"
+        : total + SOL_GRANT_LAMPORTS > SOL_DAILY_TOTAL_LAMPORTS
+          ? "daily_total"
+          : "available";
   return {
     wallet: session.wallet,
     grantLamports: SOL_GRANT_LAMPORTS.toString(),
@@ -202,6 +237,7 @@ export async function requestSolGrant(
     // One lock for the faucet: the day's total is shared by every wallet.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('sol-faucet'))`);
     if (await grantInWindow(tx, session.wallet, now)) throw solFaucetErrors.walletLimit();
+    if (await refilling(tx, now)) throw solFaucetErrors.refilling();
     if ((await totalInWindow(tx, now)) + SOL_GRANT_LAMPORTS > SOL_DAILY_TOTAL_LAMPORTS) {
       throw solFaucetErrors.dailyTotal();
     }

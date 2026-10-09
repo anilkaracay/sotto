@@ -1,7 +1,7 @@
 // The operator's devUSD mint (step 4.3, D-29), for the demo seed's treasury, through
 // The operator's `devusd-mint <wallet> <whole>` command on the hosting server: devnet only (the RPC must serve
 // devnet's genesis hash and the registry's devUSD mint must name this authority), at most 2,000,000
-// devUSD per call, into the wallet's associated devUSD account. The faucet's limit of 10,000 a day is
+// devUSD per call, into the wallet's associated devUSD account. The faucet's limit of 1,000,000 a day is
 // for everyone else; this command is the founder's, and each run is logged with its signature.
 //
 //   node apps/worker/src/bin/devusd-mint.ts <wallet> <whole devUSD>

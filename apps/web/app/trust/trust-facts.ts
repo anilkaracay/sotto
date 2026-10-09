@@ -50,7 +50,7 @@ export function trustCards(devusd: AssetConfig | null): TrustCard[] {
       title: "devUSD, the devnet test dollar",
       body: [
         "devUSD is a test token Sotto issues on devnet for trying Sotto with realistic amounts. It has no value and is not a US dollar.",
-        "Its mint authority is a key on Sotto's server, which can mint more: the faucet gives each wallet at most 10,000 devUSD a day. It has no freeze authority. It is wrapped one to one by the same Token Wrap test deployment as USDC.",
+        "Its mint authority is a key on Sotto's server, which can mint more: the faucet gives each wallet at most 1,000,000 devUSD a day. It has no freeze authority. It is wrapped one to one by the same Token Wrap test deployment as USDC.",
       ],
     },
   ];

@@ -1,7 +1,7 @@
 // The devUSD faucet (step 4.3, D-29): GET what the owner's wallet may still get in the current 24
 // hours and its last requests; POST { amount } (whole or decimal devUSD) queues a mint to the owner's
 // wallet, which the worker sends. Devnet only (403 faucet_devnet_only on any other cluster), the owner
-// of an active devUSD organization only, at most 10,000 devUSD per wallet per 24 hours (429
+// of an active devUSD organization only, at most 1,000,000 devUSD per wallet per 24 hours (429
 // faucet_limit), and rate limited per session.
 import { parseTokenAmount } from "@sotto/sdk/confidential/public";
 import { z } from "zod";

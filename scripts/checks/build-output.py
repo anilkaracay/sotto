@@ -8,7 +8,8 @@ never values. Run after pnpm build.
   .next/dev (next dev output) hold the local values by design and stay on this machine: .next is git
   ignored, outside the Docker build context, not uploaded by the Vercel CLI, and outside the
   Turborepo build outputs.
-- Not searched: NEXT_PUBLIC_ values (inlined by design) and PUBLIC_VALUES, which hold public data.
+- Not searched: NEXT_PUBLIC_ values (inlined by design), PUBLIC_VALUES, which hold public data, and
+  the whole of a URL on this machine (a local validator or database); its password still is.
 - The brand files (step 4.2.1: favicons, the web manifest, the link preview image) exist in
   apps/web/public, and the prerendered landing, trust page and recovery guide link them.
 - Dev only routes (apps/web/app/**/page.dev.tsx and route.dev.ts, page extensions only under next dev,
@@ -29,6 +30,7 @@ MIN_LENGTH = 12
 LOCAL_ONLY_DIRS = ("cache", "dev")
 # ADMIN_WALLETS lists public wallet addresses; SCREENING_PROVIDER names a provider.
 PUBLIC_VALUES = {"ADMIN_WALLETS", "SCREENING_PROVIDER"}
+LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
 
 def parse_env_file(path):
@@ -55,8 +57,12 @@ def needles(values):
     for name, value in values.items():
         if name.startswith("NEXT_PUBLIC_") or name in PUBLIC_VALUES or len(value) < MIN_LENGTH:
             continue
-        found.append((name, value))
         parts = urlsplit(value)
+        # A loopback address is no secret, and the validator's own (http://127.0.0.1:8899) is in the
+        # documentation comments of @solana/kit that the source maps carry. Its password and its
+        # query values are still searched.
+        if parts.hostname not in LOOPBACK_HOSTS:
+            found.append((name, value))
         if parts.scheme and parts.netloc:
             if parts.password and len(parts.password) >= 8:
                 found.append((name + " (password)", parts.password))

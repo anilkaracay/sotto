@@ -44,11 +44,15 @@ test.beforeAll(async () => {
   await writeFile(`${LOCALNET}e2e-demo-company.json`, JSON.stringify(demo.file), { mode: 0o600 });
 });
 
-/** Every request the page sends to the API, as (method, path, demo header, cookie). */
+/**
+ * Every request the page sends to the API, as (method, path, demo header, cookie). `stop` ends the
+ * watch: a request that starts after it is not followed, so none is left waiting for its headers
+ * when the test ends.
+ */
 function watchApi(page: Page) {
   const seen: { method: string; path: string; demo: boolean; cookie: boolean }[] = [];
   const pending: Promise<void>[] = [];
-  page.on("request", (request: Request) => {
+  const listener = (request: Request) => {
     const url = new URL(request.url());
     if (!url.pathname.startsWith("/api/")) return;
     pending.push(
@@ -61,11 +65,13 @@ function watchApi(page: Page) {
         });
       }),
     );
-  });
-  return async () => {
+  };
+  page.on("request", listener);
+  const read = async () => {
     await Promise.all(pending);
     return seen;
   };
+  return Object.assign(read, { stop: () => page.off("request", listener) });
 }
 
 const walletCalls = (page: Page) =>
@@ -285,6 +291,8 @@ test("the role picker, each role's own records, Compare views, and nothing asked
   expect(await walletCalls(page)).toEqual([]);
   // Every request was a read of the demo's own routes, marked as the demo's and without a cookie,
   // though this browser holds a signed in session.
+  // The watch ends here: what follows is the way out, into the app and its own requests.
+  api.stop();
   const requests = await api();
   expect(requests.length).toBeGreaterThan(6);
   for (const request of requests) {

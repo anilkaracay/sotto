@@ -39,3 +39,11 @@
   width: 5.5rem;
   white-space: nowrap;
 }
+
+/* Step 4.8: the recipient field of an organization with no recipient says so and links to where one
+   is added. */
+.noRecipients {
+  margin: 8px 0 0;
+  font-size: 13.5px;
+  color: var(--muted);
+}

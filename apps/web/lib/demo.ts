@@ -47,3 +47,14 @@ export const demoRoleTitle = (role: DemoRole): string =>
 export function isDemoRole(value: string): value is DemoRole {
   return (DEMO_ROLES as readonly string[]).includes(value);
 }
+
+/**
+ * The demo recipient a quick start company on devnet starts with (step 4.8, D-34): Atlas Freight's
+ * demo wallet, whose wdevUSD account is set up for confidential payments, so a first payment needs
+ * no second wallet. Its name says what it is; the owner renames or removes it like any recipient.
+ */
+export const DEMO_RECIPIENT = {
+  displayName: "Atlas Freight (demo recipient)",
+  roleTitle: "Demo wallet for test payments",
+  wallet: "E6FbeoKRFNcCuSGkbn6QJgGzwoNYfDeHELJLS5BLLkDB",
+} as const;

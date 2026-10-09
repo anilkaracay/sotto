@@ -22,6 +22,7 @@ import {
   Td,
   Th,
 } from "@sotto/ui";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { ApiCallError, callApi } from "../../../../../lib/client/api.ts";
@@ -39,7 +40,13 @@ import {
   type PaymentCategory,
   type PaymentPrivate,
 } from "../../../../../lib/payment.ts";
-import { payability, READINESS_LABEL, type Readiness } from "../../../../../lib/recipient.ts";
+import {
+  ADD_A_RECIPIENT,
+  NO_RECIPIENTS,
+  payability,
+  READINESS_LABEL,
+  type Readiness,
+} from "../../../../../lib/recipient.ts";
 import type { PaymentView } from "../../../../../lib/server/payments.ts";
 import cards from "../../../_components/confidential/cards.module.css";
 import notice from "../../../_components/confidential/confidential.module.css";
@@ -363,12 +370,16 @@ export function PayCard({
             <Select
               id={`${id}-recipient`}
               value={recipientId}
+              disabled={recipients.length === 0}
+              aria-describedby={recipients.length === 0 ? `${id}-no-recipients` : undefined}
               onChange={(event) => {
                 setRecipientId(event.target.value);
                 setAmount("");
               }}
             >
-              <option value="">Choose a recipient</option>
+              <option value="">
+                {recipients.length === 0 ? NO_RECIPIENTS : "Choose a recipient"}
+              </option>
               {recipients.map((recipient) => (
                 <option
                   key={recipient.id}
@@ -382,6 +393,18 @@ export function PayCard({
                 </option>
               ))}
             </Select>
+            {recipients.length === 0 ? (
+              <p
+                className={styles.noRecipients}
+                id={`${id}-no-recipients`}
+                data-testid="no-recipients"
+              >
+                {NO_RECIPIENTS}.{" "}
+                <Link className={cards.link} href={`/app/${orgId}/recipients`}>
+                  {ADD_A_RECIPIENT}
+                </Link>
+              </p>
+            ) : null}
           </Field>
           <Field label={`Amount (${asset.symbol})`} htmlFor={`${id}-amount`} error={errors.amount}>
             <Input

@@ -98,6 +98,10 @@ export function parseRecipientPrivate(value: unknown): RecipientPrivate | null {
   return { v: 1, default_amount: amount, notes };
 }
 
+/** The pay card's recipient field when the organization has no recipient (step 4.8). */
+export const NO_RECIPIENTS = "No recipients yet";
+export const ADD_A_RECIPIENT = "Add a recipient";
+
 export type Readiness = "no_account" | "not_configured" | "ready";
 
 export const READINESS_LABEL: Record<Readiness, string> = {

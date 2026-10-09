@@ -8,6 +8,7 @@ import { createRetryingRpc } from "@sotto/sdk/tx";
 import { ConfigError, loadWorkerConfig } from "./config.ts";
 import { confirmExecutionsJob } from "./jobs/confirm-executions.ts";
 import { devusdFaucetJob } from "./jobs/devusd-faucet.ts";
+import { solFaucetJob } from "./jobs/sol-faucet.ts";
 import { grantExpiryJob } from "./jobs/grant-expiry.ts";
 import { indexAccountsJob } from "./jobs/index-accounts.ts";
 import { payrollRunsJob } from "./jobs/payroll-runs.ts";
@@ -92,7 +93,12 @@ export async function main(
     proofProgramHealthJob({ db, rpc, feePayer: signer.address }),
     reviewNotifyJob({ db, target: notifyTarget(config.notifyUrl) }),
     ...(devusdAuthority && devusdMint
-      ? [devusdFaucetJob({ db, rpc, authority: devusdAuthority, mint: devusdMint })]
+      ? [
+          devusdFaucetJob({ db, rpc, authority: devusdAuthority, mint: devusdMint }),
+          // Step 4.6 (D-31): the faucet's devnet SOL comes from the same wallet, above a reserve
+          // for the mints' fees and rent. The job itself refuses any ledger but devnet's.
+          solFaucetJob({ db, rpc, payer: devusdAuthority }),
+        ]
       : []),
   ];
   // The notification URL holds a token: only whether it is set and which service it names is logged.

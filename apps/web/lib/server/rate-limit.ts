@@ -23,6 +23,8 @@ export const RATE_LIMITS = {
   waitlistIp: { name: "waitlist-ip", limit: 10, windowSeconds: 3600, by: "ip" },
   /** The devUSD faucet (step 4.3): a few requests an hour per session, besides its 24 hour limit. */
   faucetSession: { name: "faucet-session", limit: 6, windowSeconds: 3600, by: "session" },
+  /** The faucet's devnet SOL (step 4.6, D-31): a few requests a day per address, whatever the wallet. */
+  solFaucetIp: { name: "sol-faucet-ip", limit: 3, windowSeconds: 86400, by: "ip" },
 } as const satisfies Record<string, RateLimitPolicy>;
 
 export type RateLimitResult = { allowed: boolean; count: number; retryAfterSeconds: number };

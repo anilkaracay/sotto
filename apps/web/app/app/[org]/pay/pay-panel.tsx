@@ -45,6 +45,7 @@ import {
 } from "../../_components/confidential/context.tsx";
 import { KeysCard, WalletCard } from "../../_components/confidential/keys.tsx";
 import { NetworkBanner } from "../../_components/confidential/network-banner.tsx";
+import { SolFaucetCard } from "../../_components/confidential/sol-faucet-card.tsx";
 import { PausedNote } from "../../_components/confidential/paused-note.tsx";
 import { StepError, useSend } from "../../_components/confidential/use-send.ts";
 import { WithdrawForm } from "../../_components/confidential/withdraw.tsx";
@@ -86,6 +87,7 @@ export function PayPanel(props: {
           <WithdrawForm />
         </Card>
         <div className={styles.side}>
+          {props.network.cluster === "devnet" ? <SolFaucetCard /> : null}
           <WalletCard />
           <KeysCard />
         </div>

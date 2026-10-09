@@ -377,6 +377,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@solana-program/system':
+        specifier: 'catalog:'
+        version: 0.15.0(@solana/kit@8.3.0(typescript@6.0.3))
       '@solana-program/token':
         specifier: 'catalog:'
         version: 0.16.1(@solana/kit@8.3.0(typescript@6.0.3))

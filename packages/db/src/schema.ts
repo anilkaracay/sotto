@@ -50,6 +50,12 @@ export const faucetMintStatus = pgEnum("faucet_mint_status", [
   "minted",
   "failed",
 ]);
+/**
+ * A devnet SOL grant of the faucet (step 4.6): pending (asked for), sent (signed, its signature stored
+ * before it was sent, so a restart never pays twice), paid (finalized) or failed (counts toward no
+ * limit).
+ */
+export const solGrantStatus = pgEnum("sol_grant_status", ["pending", "sent", "paid", "failed"]);
 export const recipientReadiness = pgEnum("recipient_readiness", [
   "no_account",
   "not_configured",
@@ -817,5 +823,36 @@ export const faucetMints = pgTable(
     index("faucet_mints_status").on(t.status),
     check("faucet_mints_wallet_base58", sql`${t.wallet} ~ ${sql.raw(`'${BASE58_ADDRESS}'`)}`),
     check("faucet_mints_amount_positive", sql`${t.amountBaseUnits} > 0`),
+  ],
+);
+
+/**
+ * Step 4.6 (D-31): the devnet SOL the faucet gives a signed in wallet for fees and rent. The lamports
+ * are Sotto's own, sent in a plain transfer that is public onchain; no customer amount is here.
+ */
+export const solGrants = pgTable(
+  "sol_grants",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    wallet: text("wallet").notNull(),
+    lamports: bigint("lamports", { mode: "bigint" }).notNull(),
+    status: solGrantStatus("status").notNull().default("pending"),
+    /** The transfer's signature, stored before it is sent, and its last valid block height. */
+    signature: text("signature"),
+    lastValidBlockHeight: bigint("last_valid_block_height", { mode: "bigint" }),
+    /** Why a grant failed, as a code (never a key or an RPC URL). */
+    errorCode: text("error_code"),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("sol_grants_wallet_time").on(t.wallet, t.createdAt),
+    index("sol_grants_status").on(t.status),
+    index("sol_grants_time").on(t.createdAt),
+    check("sol_grants_wallet_base58", sql`${t.wallet} ~ ${sql.raw(`'${BASE58_ADDRESS}'`)}`),
+    check("sol_grants_lamports_positive", sql`${t.lamports} > 0`),
   ],
 );

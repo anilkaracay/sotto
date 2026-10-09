@@ -83,11 +83,11 @@ It states that Northwind Labs Demo Ltd holds at least 250,000 devUSD. Status: Pr
 
 Open your own account:
 
-1. Use Phantom or Solflare on Solana devnet, and get a little devnet SOL from https://faucet.solana.com for fees and account rent.
+1. Use Phantom or Solflare on Solana devnet. A new wallet needs no SOL to start: signing in costs nothing, and Account setup gives it devnet SOL for fees and account rent.
 2. Sign in at https://sottoapp.xyz/app by signing a message with your wallet.
 3. Create your organization with its legal name and country, and choose devUSD as the currency. On devnet Sotto verifies a new organization at once, without reviewing its details, so money features are on straight away. Sotto issues an attestation onchain to your wallet; its level says that no review took place.
-4. On Account setup, set up your confidential account, get devUSD from the faucet (at most 10,000 devUSD per wallet every 24 hours) and fund your account with it.
-5. On Recipients, add a recipient and send them the invite link. They sign in with their own wallet, register a viewing key and set up their account, which needs a little devnet SOL. Then pay them on Payments, or pay many people at once on Payroll.
+4. On Account setup, get devnet SOL from the faucet (0.05 SOL per wallet every 24 hours, while the wallet holds less than 0.02 SOL), set up your confidential account, get devUSD from the faucet (at most 10,000 devUSD per wallet every 24 hours) and fund your account with it.
+5. On Recipients, add a recipient and send them the invite link. They sign in with their own wallet, register a viewing key and set up their account; the same page gives their wallet the devnet SOL that needs. Then pay them on Payments, or pay many people at once on Payroll.
 6. On Viewing keys, invite a reader with a scope. They sign in and accept with their viewing key, and you share the past records their scope covers.
 7. On Proofs, choose a threshold and who the answer is for. Your browser makes the proof, your wallet signs, and you get a public link anyone can open.
 

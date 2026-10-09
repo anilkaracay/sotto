@@ -81,6 +81,7 @@ describe("consumeRateLimit", () => {
       publicReadIp: { name: "public-read-ip", limit: 60, windowSeconds: 60, by: "ip" },
       waitlistIp: { name: "waitlist-ip", limit: 10, windowSeconds: 3600, by: "ip" },
       faucetSession: { name: "faucet-session", limit: 6, windowSeconds: 3600, by: "session" },
+      solFaucetIp: { name: "sol-faucet-ip", limit: 3, windowSeconds: 86400, by: "ip" },
     });
   });
 });

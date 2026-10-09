@@ -99,6 +99,13 @@
       "when": 1790947865180,
       "tag": "0013_org_asset_and_faucet",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791539779824,
+      "tag": "0014_sol_grants",
+      "breakpoints": true
     }
   ]
 }

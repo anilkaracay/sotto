@@ -42,6 +42,19 @@
 .bannerWords span {
   color: #c6d2e6;
 }
+/* Step 4.8: the way to the walkthrough, beside the way out. */
+.guide {
+  flex: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+.guide:hover {
+  color: #c6d2e6;
+}
 .exit {
   flex: none;
   display: inline-flex;
@@ -87,6 +100,7 @@
   color: #0b1830;
   font-weight: 500;
 }
+.guide:focus-visible,
 .exit:focus-visible,
 .role:focus-visible,
 .logo:focus-visible {
@@ -347,7 +361,7 @@
     order: 3;
     flex-basis: 100%;
   }
-  .exit {
+  .guide {
     margin-left: auto;
   }
   .main {

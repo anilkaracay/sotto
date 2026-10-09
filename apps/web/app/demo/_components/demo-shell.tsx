@@ -11,6 +11,7 @@ import {
   demoRoleTitle,
   type DemoRole,
 } from "../../../lib/demo.ts";
+import { WALKTHROUGH_LINK, WALKTHROUGH_PATH } from "../../../lib/walkthrough.ts";
 import { Logo } from "../../app/_components/logo.tsx";
 import styles from "./demo.module.css";
 
@@ -35,6 +36,14 @@ export function DemoShell({
             <b>{DEMO_BANNER}</b>
             <span>{orgName}: test money, real records on Solana devnet</span>
           </p>
+          <Link
+            className={styles.guide}
+            href={WALKTHROUGH_PATH}
+            prefetch={false}
+            data-testid="demo-walkthrough"
+          >
+            {WALKTHROUGH_LINK}
+          </Link>
           <Link className={styles.exit} href="/app" prefetch={false} data-testid="demo-exit">
             {DEMO_EXIT}
           </Link>

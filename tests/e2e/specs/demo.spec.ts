@@ -90,6 +90,11 @@ async function banner(page: Page) {
     "href",
     "/app",
   );
+  // Step 4.8 (D-35): the walkthrough, beside the way out.
+  await expect(top.getByRole("link", { name: "Walkthrough" })).toHaveAttribute(
+    "href",
+    "/app/walkthrough",
+  );
 }
 
 async function shoot(page: Page, name: string) {

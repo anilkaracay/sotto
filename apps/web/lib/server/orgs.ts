@@ -1,7 +1,7 @@
 // Organizations (F-02, 08 sections 2 and 3): creation with the KYB fields, the members' view, the
 // owner's edits, the Sotto admin review and the money gate. One org per owner wallet, because the
 // owner wallet is the attestation nonce (08 section 5).
-import { admins, memberships, orgPolicy, orgs, users, type Database } from "@sotto/db";
+import { admins, memberships, orgPolicy, orgs, recipients, users, type Database } from "@sotto/db";
 import { and, asc, eq, isNull, or, sql, type SQL } from "drizzle-orm";
 import {
   ATTESTED_FIELDS,
@@ -13,6 +13,8 @@ import {
   type OrgVerification,
   type OrgUpdate,
 } from "../org.ts";
+import { DEMO_RECIPIENT } from "../demo.ts";
+import type { Readiness } from "../recipient.ts";
 import { ApiError, apiErrors } from "./errors.ts";
 import { requireMembership, type Role } from "./membership.ts";
 import type { Session } from "./session.ts";
@@ -162,6 +164,11 @@ export async function quickStartOrg(
   db: Database,
   userId: string,
   asset: AssetId,
+  /**
+   * Step 4.8 (D-34): reads the demo recipient's readiness from chain. Asked only when the company is
+   * about to be made, and only a company in the devnet test dollar gets the demo recipient.
+   */
+  demoRecipientReadiness?: () => Promise<Readiness | null>,
 ): Promise<OrgView> {
   const existing = await ownedOrg(db, userId);
   if (existing) return existing;
@@ -171,6 +178,8 @@ export async function quickStartOrg(
     .where(eq(memberships.userId, userId))
     .limit(1);
   if (member) throw orgErrors.quickStartNotNew();
+  const withDemoRecipient = asset === "devusd" && demoRecipientReadiness !== undefined;
+  const readiness = withDemoRecipient ? await demoRecipientReadiness() : null;
   try {
     return await db.transaction(async (tx) => {
       const [org] = await tx
@@ -187,6 +196,17 @@ export async function quickStartOrg(
       if (!org) throw new Error("org insert returned no row");
       await tx.insert(memberships).values({ orgId: org.id, userId, role: "owner" });
       await tx.insert(orgPolicy).values({ orgId: org.id });
+      if (withDemoRecipient) {
+        // Without a readable chain the worker's readiness job fills it in, as for any recipient.
+        await tx.insert(recipients).values({
+          orgId: org.id,
+          displayName: DEMO_RECIPIENT.displayName,
+          roleTitle: DEMO_RECIPIENT.roleTitle,
+          wallet: DEMO_RECIPIENT.wallet,
+          readiness: readiness ?? "no_account",
+          readinessCheckedAt: readiness ? new Date() : null,
+        });
+      }
       return org;
     });
   } catch (error) {

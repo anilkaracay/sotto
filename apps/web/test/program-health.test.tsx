@@ -255,6 +255,37 @@ describe("confidential actions while the proof program is unavailable (F-19)", (
     expect(text(html)).toContain(PROGRAM_BLOCKED);
   });
 
+  it("step 4.8: with no recipients the recipient field says so and links to the recipients page", () => {
+    const empty = paused(<PayCard recipients={[]} ownerKey={owner} />, null);
+    expect(empty).toContain('data-testid="no-recipients"');
+    expect(text(empty)).toContain("No recipients yet. Add a recipient");
+    expect(empty).toContain('href="/app/3f1b6a2e-5c4d-4e8f-9a0b-1c2d3e4f5a6b/recipients"');
+    // The list itself holds the same words, and cannot be opened onto nothing.
+    expect(empty).toMatch(
+      /<select[^>]*disabled=""[^>]*>\s*<option value="" selected="">No recipients yet<\/option>/,
+    );
+    expect(empty).not.toContain("Choose a recipient");
+    const one = paused(
+      <PayCard
+        recipients={[
+          {
+            id: "r1",
+            displayName: "Atlas Freight (demo recipient)",
+            wallet: "E6FbeoKRFNcCuSGkbn6QJgGzwoNYfDeHELJLS5BLLkDB",
+            readiness: "ready",
+            privateBlob: null,
+            viewerKey: null,
+          },
+        ]}
+        ownerKey={owner}
+      />,
+      null,
+    );
+    expect(one).not.toContain("no-recipients");
+    expect(text(one)).toContain("Choose a recipient");
+    expect(text(one)).toContain("Atlas Freight (demo recipient) · E6Fb…LkDB");
+  });
+
   it("AC-19.1 disables applying the pending balance on My pay", () => {
     const html = paused(<ApplyPending />);
     expect(buttonDisabled(html, "Apply pending balance")).toBe(true);

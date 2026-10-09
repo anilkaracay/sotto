@@ -354,3 +354,15 @@ N8. devUSD on devnet (step 4.3, D-29; created and read back 2026-10-03): the SPL
 N8. A SAS attestation account (the SAS program's `state/attestation.rs` on `master`, read 2026-09-30): the discriminator 2, then `nonce`, `credential` and `schema` (32 bytes each), `data` as a u32 little endian length and the bytes, `signer` (32), `expiry` (i64 little endian, 0 for never) and `token_account` (32). `decodeBusinessAttestation` of `@sotto/sdk/attestation` reads it and the `sotto.business.v1` data of E5 without sas-lib; on bytes sas-lib 1.0.10 encodes (`getAttestationEncoder`, `serializeAttestationData`) it gives every field, and its address derivation equals sas-lib's `deriveAttestationPda` (`apps/worker/test/sas-boundary.test.ts`); on localnet the public page read the legal name from the attestation the worker issued (`tests/e2e/localnet/proofs.spec.ts`).
 
 **VERIFIED** 2026-09-30 · source, unit test, localnet · step 2.8.
+
+## O. The demo recipient and the wallets' devnet setting (verified in step 4.8)
+
+O1. The demo recipient's wallet `E6FbeoKRFNcCuSGkbn6QJgGzwoNYfDeHELJLS5BLLkDB` (Atlas Freight of the demo seed, step 4.3) has a wdevUSD account on devnet that is set up for confidential payments: a new organization that added it on https://sottoapp.xyz read "Ready: the wdevUSD account at this wallet can receive confidential payments", and two confidential payments to it settled (`3SrEUkJGTcA9Mf34BUE1uNbEgAYbeygNyztinbHrKkU44W9BoHMdsbHyqWH51ibcY8m4HvQtHxU1gReAwHkdADSj`, `4TpT1ezQoF12TxEVrhMprYE4jvUGHjgFtANmFJN1yTDicsvNKGT58N4sNMAC3j6fFhHjufSu2PA48N3P1uAtBta6`). Paying a recipient needs only that readiness (`payability`), not an accepted invite.
+
+O2. Phantom 26.31.0 (the extension's own screens, a fresh profile): the account menu at the top left, the gear, "Developer Settings", the switch "Testnet Mode"; with it on, the list "Solana" under it has "Solana Devnet" ticked without another click, and the wallet shows "You are currently in Testnet Mode".
+
+O3. Solflare 2.39.1 (the extension's own screens, a fresh profile): the gear, "General", the list "Network" with "Mainnet", "Testnet" and "Devnet"; choosing "Devnet" opens the dialog "Switching to Devnet" with "Cancel" and "Continue". A new Solflare starts on Mainnet.
+
+O4. From sign in to a first confidential payment on https://sottoapp.xyz, with Solflare 2.39.1 and a new wallet (2026-10-09, twice): the wallet asked 11 times: the connection and the sign in message; three key messages and one transaction for the first-run card's account step; one message for the viewing key; two transactions for funding; one transaction and one message for the payment. A proof of funds asked for five transactions more. The second run took 180 seconds unattended, the proof included.
+
+**VERIFIED** 2026-10-09 · devnet, https://sottoapp.xyz, the two extensions · step 4.8.

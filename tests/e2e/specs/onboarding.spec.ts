@@ -6,6 +6,8 @@
 // and the flows after it), the admin's decisions in the API tests and the attestation in the
 // worker's localnet test. No ledger runs beside this server, so the card's steps cannot run here:
 // their logic is in apps/web/test/first-run.test.ts, the faucets in the API and worker tests.
+// Step 4.8 (D-34): the company starts with the demo recipient, and a company without recipients has
+// a recipient field that says so.
 import { copyFile, mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
@@ -47,6 +49,40 @@ test("AC-02.1 quick start on devnet: a new wallet gets its company with no form,
   );
   await expect(card.getByRole("link", { name: "Verify on Solana" })).toHaveCount(0);
   await expect(page.getByTestId("first-run-card")).toHaveCount(1);
+
+  // Step 4.8 (D-35): the card links to the walkthrough, which pictures each step.
+  await expect(card.getByTestId("first-run-walkthrough")).toHaveAttribute(
+    "href",
+    "/app/walkthrough",
+  );
+
+  // Step 4.8 (D-34): the company starts with the demo recipient, named as one. This server has no
+  // ledger, so its readiness is not read yet and the pay card lists it as not payable for now.
+  await page.goto(`/app/${orgId}/recipients`);
+  const demo = page.getByTestId("recipient-row");
+  await expect(demo).toHaveCount(1);
+  await expect(demo).toContainText("Atlas Freight (demo recipient)");
+  await expect(demo).toContainText("Demo wallet for test payments");
+  await expect(demo).toHaveAttribute("data-wallet", "E6FbeoKRFNcCuSGkbn6QJgGzwoNYfDeHELJLS5BLLkDB");
+  await page.goto(`/app/${orgId}/payments/new`);
+  const pay = page.getByTestId("pay-card");
+  await expect(pay.getByLabel("Recipient").locator("option")).toHaveText([
+    "Choose a recipient",
+    /^Atlas Freight \(demo recipient\) · E6Fb…LkDB/,
+  ]);
+  await expect(pay.getByTestId("no-recipients")).toHaveCount(0);
+
+  // It is removed like any recipient, and then the recipient field says so and leads back.
+  await page.goto(`/app/${orgId}/recipients`);
+  await demo.getByRole("button", { name: "Remove" }).click();
+  await demo.getByRole("button", { name: "Confirm remove" }).click();
+  await expect(page.getByTestId("recipients-empty")).toBeVisible();
+  await page.goto(`/app/${orgId}/payments/new`);
+  await expect(pay.getByLabel("Recipient")).toBeDisabled();
+  await expect(pay.getByLabel("Recipient").locator("option")).toHaveText(["No recipients yet"]);
+  await expect(pay.getByTestId("no-recipients")).toHaveText("No recipients yet. Add a recipient");
+  await pay.getByRole("link", { name: "Add a recipient" }).click();
+  await expect(page).toHaveURL(new RegExp(`/app/${orgId}/recipients$`));
 
   // The company's own page: verified automatically, details not set, and changed there later.
   await page.goto("/app/onboarding");

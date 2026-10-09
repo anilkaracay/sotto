@@ -21,6 +21,9 @@ import {
 const TOKEN_2022 = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 const devnet = getClusterConfig("devnet");
 const WUSDC = (devnet.available ? devnet.wrappedUsdcMint : null) as Address;
+const WDEVUSD = (
+  devnet.available ? devnet.assets.find((asset) => asset.id === "devusd")?.wrappedMint : null
+) as Address;
 const ELGAMAL = address("BxMVLbjVntF9DJtDjfpQLrgw4hopedMgNkZZKGcVkZp6");
 const BLOB = Buffer.alloc(80, 7).toString("base64");
 
@@ -52,6 +55,8 @@ vi.mock("../lib/server/chain.ts", () => ({
 }));
 
 const { GET, POST } = await import("../app/api/orgs/[id]/recipients/route.ts");
+const quickStart = await import("../app/api/orgs/quick-start/route.ts");
+const { DEMO_RECIPIENT } = await import("../lib/demo.ts");
 const one = await import("../app/api/orgs/[id]/recipients/[rid]/route.ts");
 const readiness = await import("../app/api/orgs/[id]/recipients/[rid]/readiness/route.ts");
 
@@ -298,5 +303,103 @@ describe("recipients", () => {
     for (const response of await Promise.all(endpoints(null, active.orgId))) {
       expect(response.status).toBe(401);
     }
+  });
+});
+
+describe("the demo recipient of a quick start company (step 4.8, D-34)", () => {
+  const start = (cookie: string) =>
+    quickStart.POST(jsonRequest("/api/orgs/quick-start", "POST", cookie, {}), {
+      params: Promise.resolve({}),
+    });
+  const started = async (cookie: string) =>
+    ((await (await start(cookie)).json()) as { org: { id: string; asset: string } }).org;
+  const listed = async (cookie: string, orgId: string) =>
+    ((await (await list(cookie, orgId)).json()) as { recipients: Record<string, unknown>[] })
+      .recipients;
+  /** Atlas Freight's wdevUSD account as devnet holds it: set up for confidential payments. */
+  async function demoAccountOnChain() {
+    const wallet = address(DEMO_RECIPIENT.wallet);
+    chain.set(
+      await associatedTokenAccount(wallet, WDEVUSD),
+      encodeToken2022Account(
+        confidentialTokenAccount({ owner: wallet, mint: WDEVUSD, elgamalPubkey: ELGAMAL }),
+      ),
+    );
+  }
+
+  it("a new company in the devnet test dollar starts with it, named as a demo recipient and ready from chain", async () => {
+    await demoAccountOnChain();
+    const user = await createKeyUser(test);
+    const org = await started(user.cookie);
+    expect(org.asset).toBe("devusd");
+    const recipients = await listed(user.cookie, org.id);
+    expect(recipients).toHaveLength(1);
+    expect(recipients[0]).toMatchObject({
+      displayName: "Atlas Freight (demo recipient)",
+      roleTitle: "Demo wallet for test payments",
+      wallet: "E6FbeoKRFNcCuSGkbn6QJgGzwoNYfDeHELJLS5BLLkDB",
+      readiness: "ready",
+      joined: false,
+      // Nothing is sealed for it: the server holds no key to seal with.
+      privateBlob: null,
+      invite: { status: "none", expiresAt: null },
+    });
+    expect(recipients[0]?.readinessCheckedAt).not.toBeNull();
+  });
+
+  it("is removed like any recipient, and a second quick start does not bring it back", async () => {
+    await demoAccountOnChain();
+    const user = await createKeyUser(test);
+    const org = await started(user.cookie);
+    const [demo] = await listed(user.cookie, org.id);
+    const id = demo?.id as string;
+    // Renamed like any recipient.
+    const renamed = await one.PATCH(
+      jsonRequest(`/api/orgs/${org.id}/recipients/${id}`, "PATCH", user.cookie, {
+        displayName: "Atlas Freight",
+      }),
+      params(org.id, id),
+    );
+    expect(renamed.status).toBe(200);
+    const removed = await one.DELETE(
+      jsonRequest(`/api/orgs/${org.id}/recipients/${id}`, "DELETE", user.cookie),
+      params(org.id, id),
+    );
+    expect(removed.status).toBe(204);
+    expect(await listed(user.cookie, org.id)).toEqual([]);
+    expect((await started(user.cookie)).id).toBe(org.id);
+    expect(await listed(user.cookie, org.id)).toEqual([]);
+    // The owner adds the same wallet again by hand, like any wallet.
+    const again = await add(user.cookie, org.id, {
+      displayName: "Atlas Freight",
+      wallet: DEMO_RECIPIENT.wallet,
+    });
+    expect(again.status).toBe(201);
+  });
+
+  it("is there without a readable chain, not checked yet, for the readiness job to fill in", async () => {
+    chainDown = true;
+    const user = await createKeyUser(test);
+    const org = await started(user.cookie);
+    const recipients = await listed(user.cookie, org.id);
+    expect(recipients).toHaveLength(1);
+    expect(recipients[0]).toMatchObject({
+      displayName: DEMO_RECIPIENT.displayName,
+      readiness: "no_account",
+      readinessCheckedAt: null,
+    });
+  });
+
+  it("belongs to quick start only: a company made by the form has none, and no other configuration starts one", async () => {
+    const formed = await owner();
+    expect(await listed(formed.cookie, formed.orgId)).toEqual([]);
+    vi.stubEnv("NEXT_PUBLIC_CLUSTER", "localnet");
+    const user = await createKeyUser(test);
+    const refused = await start(user.cookie);
+    expect(refused.status).toBe(403);
+    expect((await errorOf(refused)).code).toBe("quick_start_devnet_only");
+    expect(
+      await test.db.select().from(recipients).where(eq(recipients.wallet, DEMO_RECIPIENT.wallet)),
+    ).not.toContainEqual(expect.objectContaining({ orgId: formed.orgId }));
   });
 });

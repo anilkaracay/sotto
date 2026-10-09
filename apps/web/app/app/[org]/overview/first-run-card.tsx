@@ -5,7 +5,8 @@
 // its transaction: test SOL from the faucet when the wallet has too little, the confidential account,
 // and 1,000,000 devUSD from the faucet. The faucets are asked without a wallet prompt. The account's
 // setup asks the wallet for the key signatures, so it waits for a click of its own, with the words
-// that say what the signature does (10 section 2: never asked for automatically). The card is gone
+// that say what the signature does (10 section 2: never asked for automatically). The card links to
+// the walkthrough, which pictures each step (step 4.8, D-35). The card is gone
 // once all three are done.
 import { formatTokenAmount } from "@sotto/sdk/confidential/public";
 import { Button, Card, Chip } from "@sotto/ui";
@@ -22,6 +23,7 @@ import {
   type FirstRunStep,
 } from "../../../../lib/first-run.ts";
 import type { FaucetView } from "../../../../lib/server/faucet.ts";
+import { WALKTHROUGH_LINK, WALKTHROUGH_PATH } from "../../../../lib/walkthrough.ts";
 import type { SolFaucetView } from "../../../../lib/server/sol-faucet.ts";
 import {
   useAccountSetup,
@@ -205,7 +207,11 @@ function FirstRun({ recorded }: { recorded: RecordedAccount | null }) {
       </div>
       <p className={cards.lead}>
         Three steps on devnet, in order: test SOL for fees, your confidential account, and {symbol}{" "}
-        to try payments with. Test money has no value.
+        to try payments with. Test money has no value. Each step is pictured in the{" "}
+        <Link className={cards.link} href={WALKTHROUGH_PATH} data-testid="first-run-walkthrough">
+          {WALKTHROUGH_LINK.toLowerCase()}
+        </Link>
+        .
       </p>
       <ol className={styles.steps}>
         {steps.map((step, index) => {

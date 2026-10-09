@@ -91,6 +91,12 @@ export function createVault(load: () => Promise<VaultModules>, options: VaultOpt
    */
   let unlockDigest: Uint8Array | null = null;
   let viewing: ViewingKeyMaterial | null = null;
+  /**
+   * Step 4.6 (D-32): set once a published demo viewing key is loaded, and never unset. A demo vault
+   * opens sealed records and answers its status; it takes no wallet signature, derives no key, seals
+   * nothing and builds nothing, so no real key and no demo key ever share a worker.
+   */
+  let demo = false;
   /** Step 1.9: the signers of each open transfer plan, by plan id. */
   const plans = new Map<string, KeyPairSigner[]>();
 
@@ -221,6 +227,29 @@ export function createVault(load: () => Promise<VaultModules>, options: VaultOpt
       return { publicKey: getBase64Decoder().decode(derived.publicKey) };
     } finally {
       signature.fill(0);
+    }
+  }
+
+  /**
+   * Step 4.6 (D-32): loads a published viewing secret key of the demo company. Refused once this
+   * vault has held a wallet's keys: a tab's real keys and demo keys never meet.
+   */
+  async function demoViewing(secretKey: Uint8Array): Promise<ViewingResult> {
+    try {
+      if (wallet !== null || confidential !== null || (viewing !== null && !demo)) {
+        throw new VaultError(
+          "demo_read_only",
+          "The demo keys are not loaded beside a wallet's keys",
+        );
+      }
+      const loaded = await sdk();
+      const pair = await loaded.viewingKeyFromSecret(secretKey);
+      if (viewing) loaded.zeroViewingKey(viewing);
+      viewing = pair;
+      demo = true;
+      return { publicKey: getBase64Decoder().decode(pair.publicKey) };
+    } finally {
+      secretKey.fill(0);
     }
   }
 
@@ -410,11 +439,29 @@ export function createVault(load: () => Promise<VaultModules>, options: VaultOpt
   }
 
   function status(): StatusResult {
-    return { wallet, unlocked: confidential !== null, viewing: viewing !== null };
+    return {
+      wallet,
+      unlocked: confidential !== null,
+      viewing: viewing !== null,
+      ...(demo ? { demo: true } : {}),
+    };
   }
 
+  /** What a demo vault still answers (D-32): opening, its status, another demo key, and the end. */
+  const DEMO_REQUESTS: ReadonlySet<WorkerRequest["type"]> = new Set([
+    "demoViewing",
+    "openSealed",
+    "status",
+    "clear",
+  ]);
+
   async function run(request: WorkerRequest): Promise<WorkerResult> {
+    if (demo && !DEMO_REQUESTS.has(request.type)) {
+      throw new VaultError("demo_read_only", "The demo company is read only");
+    }
     switch (request.type) {
+      case "demoViewing":
+        return demoViewing(new Uint8Array(request.secretKey));
       case "unlock":
         return unlock(request.wallet, new Uint8Array(request.signature));
       case "checkAccount":

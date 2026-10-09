@@ -290,7 +290,7 @@ export function Faq({ v }: { v: LandingView }) {
                 <div className="fab">
                   <p>
                     {
-                      "Businesses are verified before an account opens, every recipient is screened before a payment, and auditors or regulators can be given read access. During the beta, screening uses a deny list. Sotto never takes custody of funds."
+                      "Businesses are verified before an account opens, every recipient is screened before a payment, and auditors or regulators can be given read access. During the beta, screening uses a deny list, and verification on devnet is automatic so anyone can try Sotto with test money; the attestation records that no review took place. Sotto never takes custody of funds."
                     }
                   </p>
                   <div className="fx">

@@ -1,0 +1,360 @@
+/* The demo company's screens (step 4.6, D-32), on the app tokens: a banner that stays in view with
+   the role switcher, and each role's records as rows that stack on a phone. */
+.page {
+  min-height: 100vh;
+  background: var(--bg, #eef0f5);
+  color: var(--ink);
+}
+
+.banner {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: 12px 20px 10px;
+  background: #0b1830;
+  color: #ffffff;
+}
+.bannerTop {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+.logo {
+  display: inline-flex;
+  flex: none;
+}
+.bannerWords {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+.bannerWords b {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.bannerWords span {
+  color: #c6d2e6;
+}
+.exit {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0b1830;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.exit:hover {
+  background: #e6edf9;
+}
+.roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 1120px;
+  margin: 10px auto 0;
+}
+.role {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  font-size: 12.5px;
+  color: #ffffff;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.role:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.role[aria-current="page"] {
+  background: #ffffff;
+  box-shadow: none;
+  color: #0b1830;
+  font-weight: 500;
+}
+.exit:focus-visible,
+.role:focus-visible,
+.logo:focus-visible {
+  outline: 2px solid #9ec0ff;
+  outline-offset: 2px;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 28px 20px 72px;
+}
+.title {
+  margin: 0;
+  font-size: clamp(24px, 3.4vw, 32px);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+.overline {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.lead {
+  max-width: 720px;
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--ink2);
+}
+
+/* The role picker. */
+.picker {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.pick {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border-radius: 20px;
+  background: var(--surface, #ffffff);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+.pick:hover {
+  box-shadow:
+    inset 0 0 0 1px var(--blue),
+    0 18px 36px -28px rgba(11, 24, 48, 0.5);
+  transform: translateY(-1px);
+}
+.pick:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+.pick small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.pick b {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.pick p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink2);
+}
+.pick span {
+  margin-top: auto;
+  padding-top: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--blue);
+}
+.wide {
+  grid-column: 1 / -1;
+}
+
+/* A section of records. */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+.sectionTitle {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.note {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.figure {
+  display: block;
+  margin: 2px 0 4px;
+  font-size: clamp(28px, 4.4vw, 40px);
+  font-weight: 450;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.row:first-child {
+  border-top: 0;
+}
+.rowName {
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.rowAmount {
+  font-size: 14px;
+  font-weight: 500;
+  text-align: right;
+  white-space: nowrap;
+}
+.rowMeta {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.sealed {
+  color: var(--muted);
+  font-weight: 400;
+}
+.verify {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+.verify:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+.status {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.problem {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #fdecec;
+  font-size: 13.5px;
+  color: #8f1d1d;
+}
+.details {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 13.5px;
+}
+.details dt {
+  color: var(--muted);
+}
+.details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Compare views: the same payment in four columns. */
+.compare {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+}
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.side h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+.side small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.sideAmount {
+  font-size: 22px;
+  font-weight: 450;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .picker,
+  .compare {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 560px) {
+  .banner {
+    padding: 10px 16px 8px;
+  }
+  .bannerTop {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+  .bannerWords {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .exit {
+    margin-left: auto;
+  }
+  .main {
+    padding: 20px 16px 56px;
+  }
+  .picker,
+  .compare {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

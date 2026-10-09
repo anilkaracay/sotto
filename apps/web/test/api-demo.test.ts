@@ -252,6 +252,9 @@ describe("the demo company's published keys (constraint 1)", () => {
       "1500000000000",
     );
     expect(outsider.proofs.map((proof) => proof.recordAddress)).toEqual([demo.proofRecord]);
+    // Who a proof was made for is not onchain, so it is not in the outsider's view.
+    expect(outsider.proofs[0]?.counterpartyLabel).toBeNull();
+    expect(text).not.toContain("Atlas Freight");
     for (const amount of ["48200000000", "12750000000", "9400000000", demo.snapshot.available]) {
       expect(text).not.toContain(amount);
     }

@@ -16,7 +16,9 @@
 // (window.__sottoTestWallet.signTransactionCalls, one entry per call, as one prompt), and it awaits
 // window.__sottoOnSignTransaction(call, count) before answering a call when a spec exposed one. It
 // registers through the Wallet Standard events (wallet-standard:register-wallet and
-// wallet-standard:app-ready).
+// wallet-standard:app-ready). Since step 4.6 it records every call of connect, signIn, signMessage and
+// signTransaction (window.__sottoTestWallet.calls), for the spec that proves the demo company never
+// asks a wallet for anything.
 (() => {
   const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
   const CHAINS = ["solana:devnet", "solana:localnet"];
@@ -77,6 +79,7 @@
   let account;
   const listeners = new Set();
   const signedMessages = [];
+  const calls = [];
   let refused = new Set();
   // When set, every transaction signature is refused with this error, as a wallet whose own check
   // blocks a transaction does (step 2.1): { name, message }.
@@ -203,6 +206,7 @@
       "standard:connect": {
         version: "1.0.0",
         connect: async () => {
+          calls.push("standard:connect");
           const connected = await ensureAccount();
           emit({ accounts: [connected] });
           return { accounts: [connected] };
@@ -226,6 +230,7 @@
       "solana:signIn": {
         version: "1.0.0",
         signIn: async (...inputs) => {
+          calls.push("solana:signIn");
           const signer = await ensureAccount();
           return Promise.all(
             inputs.map(async (input) => {
@@ -250,6 +255,7 @@
         signMessage: async (...inputs) =>
           Promise.all(
             inputs.map(async ({ message }) => {
+              calls.push("solana:signMessage");
               const text = new TextDecoder().decode(message);
               if (refused.has(text)) throw new Error("This wallet does not sign this message");
               signedMessages.push(text);
@@ -265,6 +271,7 @@
         version: "1.0.0",
         supportedTransactionVersions: versions,
         signTransaction: async (...inputs) => {
+          calls.push("solana:signTransaction");
           await ensureAccount();
           if (transactionRefusal) {
             throw Object.assign(new Error(transactionRefusal.message), {
@@ -295,6 +302,9 @@
     },
     get signedMessages() {
       return [...signedMessages];
+    },
+    get calls() {
+      return [...calls];
     },
     get signedTransactions() {
       return signedTransactions;

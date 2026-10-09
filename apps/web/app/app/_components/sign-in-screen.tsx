@@ -25,6 +25,7 @@ import {
 } from "../../../lib/wallet-groups.ts";
 import { SkyArt } from "./sky-art.tsx";
 import { Logo } from "./logo.tsx";
+import { DEMO_ENTRY, DEMO_ROLES, demoRoleTitle } from "../../../lib/demo.ts";
 import styles from "./sign-in.module.css";
 
 type Status = { busy: boolean; error: string | null };
@@ -108,6 +109,22 @@ export function SignInScreen({ network }: { network: string }) {
               </section>
             );
           })}
+          {/* Step 4.6 (D-32): the demo company, for a visitor who wants to look before connecting. */}
+          <nav className={styles.demo} aria-label={DEMO_ENTRY} data-testid="demo-entry">
+            <h2 className={styles.groupTitle}>{DEMO_ENTRY}</h2>
+            <p className={styles.groupDetail}>
+              The demo company on devnet, read only. No wallet needed.
+            </p>
+            <ul className={styles.demoRoles}>
+              {DEMO_ROLES.map((role) => (
+                <li key={role}>
+                  <Link href={`/demo/${role}`} prefetch={false}>
+                    {demoRoleTitle(role)}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
           <p className={styles.note}>
             Sotto never asks for your recovery phrase and cannot move your funds.{" "}
             <Link href="/trust" prefetch={false}>

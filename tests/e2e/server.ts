@@ -83,6 +83,13 @@ const database = await createTestDatabase();
 const DATABASE_URL_FILE = fileURLToPath(
   new URL("../../.localnet/e2e-database-url", import.meta.url),
 );
+// Step 4.6 (D-32): where the demo company's spec writes the demo file once it has seeded the
+// company into this database. The web reads it per request; it is absent until then, and the demo
+// exists on the devnet configuration only.
+const DEMO_COMPANY_FILE = fileURLToPath(
+  new URL("../../.localnet/e2e-demo-company.json", import.meta.url),
+);
+rmSync(DEMO_COMPANY_FILE, { force: true });
 // Since step 4.3 also without --localnet, for the faucet card's screenshots (shots/faucet-card.spec.ts).
 // A fresh clone has no .localnet folder yet.
 mkdirSync(dirname(DATABASE_URL_FILE), { recursive: true });
@@ -160,6 +167,7 @@ const web = tee(
         DATABASE_URL: database.url,
         SESSION_SECRET: randomBytes(32).toString("hex"),
         NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,
+        DEMO_COMPANY_FILE,
         ...chain,
       },
     },

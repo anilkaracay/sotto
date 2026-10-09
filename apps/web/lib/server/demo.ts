@@ -21,20 +21,22 @@ import { readBooks, type BooksView } from "./books.ts";
 import { listChainActivity, type ChainActivityView } from "./chain-activity.ts";
 import type { ServerCluster } from "./cluster.ts";
 import { listDisclosures, type DisclosureItemView, type ManifestView } from "./disclosures.ts";
+import {
+  DEMO_BANNER,
+  DEMO_KEY_ROLES,
+  DEMO_ROLES,
+  type DemoKeyRole,
+  type DemoRole,
+} from "../demo.ts";
 import { DEMO_HEADER, demoErrors } from "./demo-guard.ts";
 import { listGrants, type GrantView } from "./grants.ts";
 import { readPay, type PayView } from "./pay.ts";
 import type { Session } from "./session.ts";
 
-/** The words every demo screen shows (the founder's, 2026-10-09). */
-export const DEMO_BANNER = "Demo company on devnet · read only";
 export const DEMO_KEYS_LABEL =
   "Devnet demo keys of the demo company. They are derived viewing keys: they open the records sealed to these three demo wallets and cannot sign, spend, seal or revoke anything. The wallets are used for nothing else.";
 
-export const DEMO_KEY_ROLES = ["owner", "accountant", "employee"] as const;
-export type DemoKeyRole = (typeof DEMO_KEY_ROLES)[number];
-export const DEMO_ROLES = [...DEMO_KEY_ROLES, "outsider"] as const;
-export type DemoRole = (typeof DEMO_ROLES)[number];
+export { DEMO_BANNER, DEMO_KEY_ROLES, DEMO_ROLES, type DemoKeyRole, type DemoRole };
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 /** A 32 byte key in base64. */
@@ -208,7 +210,8 @@ type Common = {
 export type DemoProofView = {
   recordAddress: string;
   threshold: string;
-  counterpartyLabel: string;
+  /** Who the proof was made for. It is not onchain, so the outsider's view leaves it out. */
+  counterpartyLabel: string | null;
   expiry: string;
   createdAt: string;
 };
@@ -265,7 +268,7 @@ export async function demoRoleView(
         org: demo.org,
         ownerWallet: demo.ownerWallet,
         chain: await listChainActivity(tx, as(demo, "owner"), orgId, 50),
-        proofs: await proofsOf(tx, orgId),
+        proofs: (await proofsOf(tx, orgId)).map((proof) => ({ ...proof, counterpartyLabel: null })),
       };
     }
     const session = as(demo, role);

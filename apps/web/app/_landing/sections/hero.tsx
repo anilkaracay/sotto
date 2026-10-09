@@ -1,4 +1,5 @@
 // The landing's hero section (F-17, step 3.1), from the approved landing design.
+import { DEMO_ENTRY, DEMO_ROLES, demoRoleTitle } from "../../../lib/demo.ts";
 import Link from "next/link";
 import { SottoLockupWhite } from "@sotto/ui";
 import { SolanaMark, UsdcLockup } from "../brand-logos.tsx";
@@ -194,6 +195,15 @@ export function Hero({ v }: { v: LandingView }) {
             {"See who sees what"}
           </a>
         </div>
+        {/* Step 4.6 (D-32): the demo company on devnet, read only, as each of its four readers. */}
+        <nav className="hdemo" aria-label={DEMO_ENTRY} data-testid="demo-entry">
+          <span className="hdemo-l">{DEMO_ENTRY}</span>
+          {DEMO_ROLES.map((role) => (
+            <a key={role} className="hdemo-r" href={`/demo/${role}`}>
+              {demoRoleTitle(role)}
+            </a>
+          ))}
+        </nav>
       </div>
       <div className="stage5" onMouseMove={v.onTilt} onMouseLeave={v.onTiltEnd}>
         <div className="tiltw" style={{ transform: `${v.tiltT}` }}>

@@ -57,7 +57,17 @@ async function read<T>(path: string): Promise<T | string> {
   }
 }
 
+/**
+ * The card belongs to devnet and its test dollar. Anywhere else nothing of it runs: the faucets
+ * answer only on devnet, and a question they refuse would be an error in the page for nothing.
+ */
 export function FirstRunCard({ recorded }: { recorded: RecordedAccount | null }) {
+  const { network } = useConfidential();
+  if (network.cluster !== "devnet" || !network.asset.devnetTestAsset) return null;
+  return <FirstRun recorded={recorded} />;
+}
+
+function FirstRun({ recorded }: { recorded: RecordedAccount | null }) {
   const { wallet, orgId, network, vault, connected, data, refresh } = useConfidential();
   const { session } = useKeySession();
   const account = useAccountSetup(recorded);
@@ -178,7 +188,6 @@ export function FirstRunCard({ recorded }: { recorded: RecordedAccount | null })
     }
   }
 
-  if (network.cluster !== "devnet" || !network.asset.devnetTestAsset) return null;
   // Nothing to set up: the card belongs to a first run.
   if (done && !started) return null;
   // Before the faucets answered there is nothing true to show yet.

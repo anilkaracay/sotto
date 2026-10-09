@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { chromium, expect, test } from "@playwright/test";
 import lighthouse from "lighthouse";
 import desktopConfig from "lighthouse/core/config/desktop-config.js";
-import { signIn } from "../helpers.ts";
+import { OVERVIEW_URL, signIn } from "../helpers.ts";
 
 const PORT = 9333;
 
@@ -75,9 +75,10 @@ test("Lighthouse: performance 90 on the landing, accessibility 95 on every page"
       }
     };
     for (const target of TARGETS) await run(target);
-    // A signed in wallet's page: onboarding, with the session cookie in this browser.
+    // A signed in wallet's page: its organization's page, with the session cookie in this browser
+    // (on this devnet configuration quick start made the company, step 4.6).
     const page = context.pages()[0] ?? (await context.newPage());
-    await signIn(page);
+    await signIn(page, undefined, OVERVIEW_URL);
     await run({ name: "onboarding", path: "/app/onboarding" });
   } finally {
     console.log(`lighthouse scores: ${scores.join("; ")}`);

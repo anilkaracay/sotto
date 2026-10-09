@@ -370,35 +370,42 @@ body:has(> main.theme-landing) {
   margin-top: 36px;
   animation: landing-up 1s 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
-/* Step 4.6 (D-32): "Explore Northwind as" and the demo company's four roles, under the hero's buttons. */
+/* Step 4.6 (D-32, D-33): the two ways in, side by side under the hero's buttons: the demo company
+   and quick start, each with what it needs. */
 .theme-landing .hdemo {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   margin-top: 18px;
   padding: 0 20px;
   animation: landing-up 1s 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
-.theme-landing .hdemo-l {
-  margin-right: 4px;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.92);
-}
 .theme-landing .hdemo-r {
   display: inline-flex;
-  align-items: center;
-  min-height: 40px;
-  padding: 0 14px;
-  border-radius: 999px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1px;
+  min-height: 56px;
+  min-width: 232px;
+  padding: 8px 20px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.12);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
-  font-size: 13.5px;
-  font-weight: 500;
   color: #ffffff;
   text-decoration: none;
-  white-space: nowrap;
+  text-align: left;
+}
+.theme-landing .hdemo-r b {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.theme-landing .hdemo-r span {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.9);
 }
 .theme-landing .hdemo-r:hover {
   background: rgba(255, 255, 255, 0.22);

@@ -6,6 +6,7 @@ import type { TestDatabase } from "@sotto/db/testing";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET, PATCH } from "../app/api/orgs/[id]/route.ts";
+import { POST as quickStart } from "../app/api/orgs/quick-start/route.ts";
 import { POST } from "../app/api/orgs/route.ts";
 import { GET as getMe } from "../app/api/me/route.ts";
 import { decideOrg, requireMoneyAccess } from "../lib/server/orgs.ts";
@@ -279,7 +280,11 @@ describe("PATCH /api/orgs/:id", () => {
       /^400 invalid_request: Invalid request: body: Unrecognized key: "status"/,
     );
 
-    await test.db.update(orgs).set({ status: "active" }).where(eq(orgs.id, orgId));
+    // Approved by an admin: the decision carries the admin's wallet (decideOrg).
+    await test.db
+      .update(orgs)
+      .set({ status: "active", reviewedBy: accountant.wallet, reviewedAt: new Date() })
+      .where(eq(orgs.id, orgId));
     for (const field of [
       { legalName: "Other Ltd" },
       { country: "DE" },
@@ -349,13 +354,12 @@ describe("POST /api/orgs on devnet (step 4.6, D-30)", () => {
     },
   );
 
-  it("locks the details that go into the attestation at once, and still lets an admin suspend it", async () => {
+  it("leaves its details to its owner, whom nobody reviewed, and still lets an admin suspend it", async () => {
     vi.stubEnv("NEXT_PUBLIC_CLUSTER", "devnet");
     const owner = await createUserWithSession(test);
     const orgId = await createdOrg(owner);
-    expect(await errorOf(await patch(owner.cookie, orgId, { legalName: "Another Name Ltd" }))).toBe(
-      "409 org_details_locked: The legal name, country, registration number and website can change only while the organization is in review",
-    );
+    // D-33: no admin vouched for these details, so they are not locked.
+    expect((await patch(owner.cookie, orgId, { legalName: "Another Name Ltd" })).status).toBe(200);
     expect((await patch(owner.cookie, orgId, { displayName: "Northwind" })).status).toBe(200);
 
     // AC-02.4 holds for it as for a reviewed org: the decision now carries the admin's wallet.
@@ -382,5 +386,166 @@ describe("POST /api/orgs on devnet (step 4.6, D-30)", () => {
     await expect(requireMoneyAccess(test.db, session, org.id, ["owner"])).rejects.toMatchObject({
       code: "org_not_active",
     });
+  });
+});
+
+describe("POST /api/orgs/quick-start (step 4.6, D-33)", () => {
+  const start = (cookie: string | null) =>
+    quickStart(
+      apiRequest("/api/orgs/quick-start", {
+        method: "POST",
+        body: "{}",
+        headers: writeHeaders(cookie),
+      }),
+    );
+
+  it('AC-02.1 on devnet makes "My company" for a wallet with no organization, verified at once, with no form', async () => {
+    vi.stubEnv("NEXT_PUBLIC_CLUSTER", "devnet");
+    const user = await createUserWithSession(test);
+    const response = await start(user.cookie);
+    expect(response.status).toBe(200);
+    const { org } = (await response.json()) as { org: Record<string, unknown> & { id: string } };
+    expect(org).toMatchObject({
+      displayName: "My company",
+      legalName: "My company",
+      country: null,
+      registrationNo: null,
+      website: null,
+      contactEmail: null,
+      status: "active",
+      // The devnet test dollar, which the faucet gives.
+      asset: "devusd",
+      attestationAddress: null,
+      verification: "automatic",
+    });
+    const [row] = await test.db.select().from(orgs).where(eq(orgs.id, org.id));
+    expect(row).toMatchObject({ ownerUserId: user.userId, status: "active", reviewedBy: null });
+    expect(row?.reviewedAt).toBeInstanceOf(Date);
+    expect(
+      await test.db
+        .select({ userId: memberships.userId, role: memberships.role })
+        .from(memberships)
+        .where(eq(memberships.orgId, org.id)),
+    ).toEqual([{ userId: user.userId, role: "owner" }]);
+    expect(await test.db.select().from(orgPolicy).where(eq(orgPolicy.orgId, org.id))).toHaveLength(
+      1,
+    );
+    const session = { id: "s", userId: user.userId, wallet: user.wallet };
+    await expect(requireMoneyAccess(test.db, session, org.id, ["owner"])).resolves.toBeDefined();
+
+    // Asked again, also twice at once, the wallet gets the same company back.
+    const again = await Promise.all([start(user.cookie), start(user.cookie)]);
+    for (const next of again) {
+      expect(next.status).toBe(200);
+      expect(((await next.json()) as { org: { id: string } }).org.id).toBe(org.id);
+    }
+    expect(await test.db.select().from(orgs).where(eq(orgs.ownerUserId, user.userId))).toHaveLength(
+      1,
+    );
+  });
+
+  it("is refused for a member of another organization and without a session", async () => {
+    vi.stubEnv("NEXT_PUBLIC_CLUSTER", "devnet");
+    const owner = await createUserWithSession(test);
+    const orgId = await createdOrg(owner);
+    const invited = await createUserWithSession(test);
+    await test.db.insert(memberships).values({ orgId, userId: invited.userId, role: "recipient" });
+    expect(await errorOf(await start(invited.cookie))).toBe(
+      "409 quick_start_not_new: Quick start is for a wallet that belongs to no organization yet",
+    );
+    expect(await test.db.select().from(orgs).where(eq(orgs.ownerUserId, invited.userId))).toEqual(
+      [],
+    );
+    expect((await start(null)).status).toBe(401);
+  });
+
+  it("AC-02.2 does not exist on a configuration that is not devnet's: the form and the review stay", async () => {
+    const user = await createUserWithSession(test);
+    for (const cluster of ["localnet", "mainnet"]) {
+      vi.stubEnv("NEXT_PUBLIC_CLUSTER", cluster);
+      expect(await errorOf(await start(user.cookie))).toBe(
+        "403 quick_start_devnet_only: Quick start runs on devnet only",
+      );
+    }
+    expect(await test.db.select().from(orgs).where(eq(orgs.ownerUserId, user.userId))).toEqual([]);
+    // The form's path is as it was.
+    vi.stubEnv("NEXT_PUBLIC_CLUSTER", "localnet");
+    const created = await create(user.cookie, FIELDS);
+    expect(((await created.json()) as { org: { status: string } }).org.status).toBe(
+      "pending_review",
+    );
+  });
+});
+
+describe("PATCH /api/orgs/:id for a company verified automatically (step 4.6, D-33)", () => {
+  it("lets its owner change the details at any time, and a new name or country means a new attestation", async () => {
+    vi.stubEnv("NEXT_PUBLIC_CLUSTER", "devnet");
+    const owner = await createUserWithSession(test);
+    const made = await quickStart(
+      apiRequest("/api/orgs/quick-start", {
+        method: "POST",
+        body: "{}",
+        headers: writeHeaders(owner.cookie),
+      }),
+    );
+    const orgId = ((await made.json()) as { org: { id: string } }).org.id;
+    const ATTESTATION = "4KX4P7he62x5x8X35vubNNhJRhV4vJXPGNsc8skPyKFT";
+    const attest = () =>
+      test.db.update(orgs).set({ attestationAddress: ATTESTATION }).where(eq(orgs.id, orgId));
+    const stored = async () =>
+      (await test.db.select().from(orgs).where(eq(orgs.id, orgId)))[0]?.attestationAddress;
+
+    // The worker issued its attestation; a detail that is not in it changes nothing onchain.
+    await attest();
+    const details = await patch(owner.cookie, orgId, {
+      registrationNo: "HRB 7",
+      website: "https://acme.example",
+      contactEmail: "ops@acme.example",
+      displayName: "Acme",
+    });
+    expect(details.status).toBe(200);
+    expect(await stored()).toBe(ATTESTATION);
+
+    // The legal name and the country are in the attestation: it is to be issued again.
+    const renamed = await patch(owner.cookie, orgId, { legalName: "Acme GmbH", country: "DE" });
+    expect(((await renamed.json()) as { org: unknown }).org).toMatchObject({
+      legalName: "Acme GmbH",
+      country: "DE",
+      status: "active",
+      verification: "automatic",
+      attestationAddress: null,
+    });
+    expect(await stored()).toBeNull();
+    // The same values again leave the new attestation alone.
+    await attest();
+    await patch(owner.cookie, orgId, { legalName: "Acme GmbH", country: "DE" });
+    expect(await stored()).toBe(ATTESTATION);
+    // A detail is cleared with null; the legal name cannot be.
+    const cleared = await patch(owner.cookie, orgId, { country: null, website: null });
+    expect(((await cleared.json()) as { org: unknown }).org).toMatchObject({
+      country: null,
+      website: null,
+      attestationAddress: null,
+    });
+    expect((await patch(owner.cookie, orgId, { legalName: null })).status).toBe(400);
+    expect((await patch(owner.cookie, orgId, { legalName: "  " })).status).toBe(400);
+  });
+
+  it("keeps the details an admin reviewed locked, on devnet too", async () => {
+    vi.stubEnv("NEXT_PUBLIC_CLUSTER", "devnet");
+    const owner = await createUserWithSession(test);
+    const orgId = await createdOrg(owner);
+    const admin = await createUserWithSession(test);
+    // Reviewed by an admin (as Northwind was): the decision carries the admin's wallet.
+    await test.db
+      .update(orgs)
+      .set({ reviewedBy: admin.wallet, reviewedAt: new Date() })
+      .where(eq(orgs.id, orgId));
+    expect(await errorOf(await patch(owner.cookie, orgId, { legalName: "Another Name Ltd" }))).toBe(
+      "409 org_details_locked: The legal name, country, registration number and website can change only while the organization is in review",
+    );
+    expect(
+      (await patch(owner.cookie, orgId, { contactEmail: "new@northwind.example" })).status,
+    ).toBe(200);
   });
 });

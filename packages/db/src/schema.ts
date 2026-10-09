@@ -176,10 +176,12 @@ export const orgs = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     displayName: text("display_name").notNull(),
     legalName: text("legal_name").notNull(),
-    country: char("country", { length: 2 }).notNull(),
-    registrationNo: text("registration_no").notNull(),
-    website: text("website").notNull(),
-    contactEmail: text("contact_email").notNull(),
+    // Step 4.6 (D-33): null while not given. A company made by devnet's quick start has only its
+    // name until its owner fills in the rest; the full form of every other path gives all four.
+    country: char("country", { length: 2 }),
+    registrationNo: text("registration_no"),
+    website: text("website"),
+    contactEmail: text("contact_email"),
     status: orgStatus("status").notNull().default("pending_review"),
     /** Chosen at account setup, USDC by default; not changed once the account exists (D-29). */
     asset: assetId("asset").notNull().default("usdc"),

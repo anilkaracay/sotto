@@ -2,9 +2,11 @@
 // owner's edits, the Sotto admin review and the money gate. One org per owner wallet, because the
 // owner wallet is the attestation nonce (08 section 5).
 import { admins, memberships, orgPolicy, orgs, users, type Database } from "@sotto/db";
-import { and, asc, eq, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, isNull, or, sql, type SQL } from "drizzle-orm";
 import {
+  ATTESTED_FIELDS,
   moneyEnabled,
+  QUICK_START_NAME,
   REVIEWED_FIELDS,
   type OrgCreate,
   type OrgStatus,
@@ -39,10 +41,11 @@ export type OrgView = {
   id: string;
   displayName: string;
   legalName: string;
-  country: string;
-  registrationNo: string;
-  website: string;
-  contactEmail: string;
+  /** Null while not given (step 4.6, D-33: a quick start company has only its name at first). */
+  country: string | null;
+  registrationNo: string | null;
+  website: string | null;
+  contactEmail: string | null;
   status: OrgStatus;
   /** The organization's asset (step 4.3, D-29), fixed at creation. */
   asset: AssetId;
@@ -76,6 +79,14 @@ const TRANSITIONS: Record<
 
 export const orgErrors = {
   exists: () => new ApiError(409, "org_exists", "This wallet already has an organization"),
+  quickStartDevnetOnly: () =>
+    new ApiError(403, "quick_start_devnet_only", "Quick start runs on devnet only"),
+  quickStartNotNew: () =>
+    new ApiError(
+      409,
+      "quick_start_not_new",
+      "Quick start is for a wallet that belongs to no organization yet",
+    ),
   reviewedFieldsLocked: () =>
     new ApiError(
       409,
@@ -141,6 +152,53 @@ export async function createOrg(
   }
 }
 
+/**
+ * D-33, devnet's quick start: a wallet that belongs to no organization gets one, "My company", with
+ * no other detail, in the asset given (the devnet test dollar where the network has it), verified at
+ * once like any new organization on devnet (D-30). A wallet that owns an organization gets that one
+ * back; a wallet that is another organization's member is refused, as it came for that organization.
+ */
+export async function quickStartOrg(
+  db: Database,
+  userId: string,
+  asset: AssetId,
+): Promise<OrgView> {
+  const existing = await ownedOrg(db, userId);
+  if (existing) return existing;
+  const [member] = await db
+    .select({ orgId: memberships.orgId })
+    .from(memberships)
+    .where(eq(memberships.userId, userId))
+    .limit(1);
+  if (member) throw orgErrors.quickStartNotNew();
+  try {
+    return await db.transaction(async (tx) => {
+      const [org] = await tx
+        .insert(orgs)
+        .values({
+          displayName: QUICK_START_NAME,
+          legalName: QUICK_START_NAME,
+          asset,
+          ownerUserId: userId,
+          status: "active",
+          reviewedAt: sql`now()`,
+        })
+        .returning(orgColumns);
+      if (!org) throw new Error("org insert returned no row");
+      await tx.insert(memberships).values({ orgId: org.id, userId, role: "owner" });
+      await tx.insert(orgPolicy).values({ orgId: org.id });
+      return org;
+    });
+  } catch (error) {
+    // Two requests at once: the other one made it.
+    if (isUniqueViolation(error, "orgs_owner_user_id_key")) {
+      const made = await ownedOrg(db, userId);
+      if (made) return made;
+    }
+    throw error;
+  }
+}
+
 /** The org the user owns, if any (at most one). */
 export async function ownedOrg(db: Database, userId: string): Promise<OrgView | null> {
   const [org] = await db.select(orgColumns).from(orgs).where(eq(orgs.ownerUserId, userId)).limit(1);
@@ -165,7 +223,13 @@ export async function readOrg(
   return { org, roles };
 }
 
-/** PATCH /orgs/:id (owner): the reviewed fields change only while the org is in review. */
+/**
+ * PATCH /orgs/:id (owner). The fields an admin reviewed change only while the org is in review. An
+ * org nobody reviewed, verified automatically on devnet (D-30), has nothing an admin vouched for, so
+ * its owner changes them at any time while it is active (step 4.6, D-33); when the legal name or the
+ * country changes, the attestation's address is cleared and the worker's sas-issue job closes the
+ * old attestation and issues one with the new details.
+ */
 export async function updateOrg(
   db: Database,
   session: Session | null,
@@ -175,14 +239,32 @@ export async function updateOrg(
   await requireMembership(db, session, orgId, ["owner"]);
   const touchesReviewed = REVIEWED_FIELDS.some((field) => changes[field] !== undefined);
   const where: SQL[] = [eq(orgs.id, orgId)];
-  if (touchesReviewed) where.push(eq(orgs.status, "pending_review"));
-  const [org] = await db
-    .update(orgs)
-    .set(changes)
-    .where(and(...where))
-    .returning(orgColumns);
-  if (!org) throw touchesReviewed ? orgErrors.reviewedFieldsLocked() : apiErrors.forbidden();
-  return org;
+  if (touchesReviewed) {
+    where.push(
+      or(
+        eq(orgs.status, "pending_review"),
+        and(eq(orgs.status, "active"), isNull(orgs.reviewedBy)),
+      ) as SQL,
+    );
+  }
+  const attested = ATTESTED_FIELDS.filter((field) => changes[field] !== undefined);
+  return db.transaction(async (tx) => {
+    const [before] = attested.length
+      ? await tx
+          .select({ legalName: orgs.legalName, country: orgs.country })
+          .from(orgs)
+          .where(eq(orgs.id, orgId))
+          .for("update")
+      : [];
+    const reissue = attested.some((field) => before && changes[field] !== before[field]);
+    const [org] = await tx
+      .update(orgs)
+      .set({ ...changes, ...(reissue ? { attestationAddress: null } : {}) })
+      .where(and(...where))
+      .returning(orgColumns);
+    if (!org) throw touchesReviewed ? orgErrors.reviewedFieldsLocked() : apiErrors.forbidden();
+    return org;
+  });
 }
 
 /** Sotto admins are the rows of the admins table (08 section 2). */

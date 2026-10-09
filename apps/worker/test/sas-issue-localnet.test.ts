@@ -21,7 +21,7 @@ const context = { signal: new AbortController().signal, log: () => {} };
 
 describe.skipIf(!RPC_URL)("sas-issue job on localnet", () => {
   it(
-    "AC-02.3 issues the approved org's attestation to the owner wallet and stores its address, at the automatic level for an org no admin decided on; AC-02.4 closes it on suspension",
+    "AC-02.3 issues the approved org's attestation to the owner wallet and stores its address, at the automatic level for an org no admin decided on, and again when its owner changes its name; AC-02.4 closes it on suspension",
     { timeout: 180_000 },
     async () => {
       const database = await createTestDatabase();
@@ -125,6 +125,31 @@ describe.skipIf(!RPC_URL)("sas-issue job on localnet", () => {
         expect(expiry > yearFromNow - 300n && expiry <= yearFromNow + 5n).toBe(true);
 
         // Idempotent: nothing left to do.
+        expect(await job.run(context)).toEqual({ issued: 0, closed: 0 });
+
+        // Step 4.6 (D-33): the owner of the automatic org changed its name and cleared its country,
+        // which cleared the stored address: the old attestation is closed and one with the new
+        // details issued at the same address, still at the automatic level.
+        const autoAddress = await deriveAttestationAddress(
+          credential.address,
+          schema.address,
+          autoOrg.owner,
+        );
+        await database.db
+          .update(orgs)
+          .set({ legalName: "Renamed Ltd", country: null, attestationAddress: null })
+          .where(eq(orgs.id, autoOrg.id));
+        expect(await job.run(context)).toEqual({ issued: 1, closed: 0 });
+        const replaced = await readBusinessAttestation(rpc, autoAddress, schema.account);
+        expect(replaced?.data).toEqual({
+          org_id: autoOrg.id,
+          legal_name: "Renamed Ltd",
+          country: "",
+          verified_at: BigInt(reviewedAt.getTime() / 1000),
+          level: 0,
+        });
+        const [renamed] = await database.db.select().from(orgs).where(eq(orgs.id, autoOrg.id));
+        expect(renamed?.attestationAddress).toBe(autoAddress);
         expect(await job.run(context)).toEqual({ issued: 0, closed: 0 });
 
         await database.db.update(orgs).set({ status: "suspended" }).where(eq(orgs.id, org.id));

@@ -4,7 +4,7 @@
 // The pages of an organization are covered by the axe scans of the localnet specs and the privacy
 // screen's keyboard test (step 2.9).
 import { expect, test, type Page } from "@playwright/test";
-import { addTestWallet, signIn } from "../helpers.ts";
+import { addTestWallet, OVERVIEW_URL, signIn } from "../helpers.ts";
 
 const TABBABLE =
   'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -70,9 +70,12 @@ test("a signed in page can be used with the keyboard, its focus always visible",
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await signIn(page);
+  // On this devnet configuration a new wallet lands on its dashboard (quick start, step 4.6).
+  await signIn(page, undefined, OVERVIEW_URL);
+  await page.goto("/app/onboarding");
+  await expect(page.getByTestId("org-status")).toHaveText("Verified");
   const { reached, missed, unseen } = await tabThrough(page);
-  expect(reached, "focus stops on onboarding").toBeGreaterThan(0);
-  expect(missed, "elements Tab never reached on onboarding").toEqual([]);
-  expect(unseen, "elements without a visible focus on onboarding").toEqual([]);
+  expect(reached, "focus stops on the organization page").toBeGreaterThan(0);
+  expect(missed, "elements Tab never reached on the organization page").toEqual([]);
+  expect(unseen, "elements without a visible focus on the organization page").toEqual([]);
 });

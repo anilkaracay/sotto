@@ -1,12 +1,12 @@
 // The faucet's devnet SOL card in the browser (step 4.6, D-31), on this server's devnet
-// configuration: a new organization is active at once (D-30), so its owner reaches Account setup and
-// the card. No ledger runs beside this server, so the faucet's answers are stood in by the spec: the
+// configuration: quick start makes a new wallet's company at once (D-30, D-33), so its owner reaches
+// Account setup and the card. No ledger runs beside this server, so the faucet's answers are stood in by the spec: the
 // wallet may ask, asks once, the grant is on its way, then paid with its link to the explorer, and
 // the wallet's next time. The limits themselves are in the API tests (apps/web/test/api-sol-faucet.test.ts)
 // and the transfer in the worker's localnet test.
 import { expect, test } from "@playwright/test";
 import { expectAccessible } from "../a11y.ts";
-import { signIn } from "../helpers.ts";
+import { openSetup, OVERVIEW_URL, signIn } from "../helpers.ts";
 
 const SIGNATURE =
   "5B1L6sgtbhLdQ1Zr8mVh3XkYc2uJ7pNfW4aTqE9oGdRs6yHnKb3vCx8MzPjUeA2iFwQt7LgD4hSnV9rYkB1mXcZ";
@@ -14,14 +14,7 @@ const SIGNATURE =
 test("the SOL faucet card: a new wallet asks once, sees the grant paid and its link to the chain", async ({
   page,
 }) => {
-  const wallet = await signIn(page);
-  await page.getByLabel("Legal name").fill("Faucet Card Ltd");
-  await page.getByLabel("Country").selectOption("GB");
-  await page.getByLabel("Registration number").fill("FC 1");
-  await page.getByLabel("Website").fill("faucet-card.example");
-  await page.getByLabel("Contact email").fill("ops@faucet-card.example");
-  await page.getByRole("button", { name: "Create organization" }).click();
-  await expect(page.getByTestId("org-status")).toHaveText("Verified");
+  const wallet = await signIn(page, undefined, OVERVIEW_URL);
 
   const grant = {
     id: "a0000000-0000-4000-8000-000000000002",
@@ -64,7 +57,7 @@ test("the SOL faucet card: a new wallet asks once, sees the grant paid and its l
     });
   });
 
-  await page.getByRole("link", { name: "Set up the confidential account" }).click();
+  await openSetup(page);
   const card = page.getByTestId("sol-faucet-card");
   await expect(card).toContainText("Get devnet SOL");
   await expect(card).toContainText("On devnet it has no value.");

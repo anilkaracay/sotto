@@ -3,7 +3,7 @@
 // people with real keypairs, payments, a grant, a snapshot, a proof record; every record sealed and
 // under manifests the owner's wallet signed) and writes the demo file the server reads. Then, as a
 // visitor without a wallet session:
-// - "Explore Northwind as" is on the landing and on the sign in screen, with the four roles.
+// - The landing and the sign in screen offer the two ways in, the demo company and quick start.
 // - Each role reads exactly its own records, opened in the browser with that role's published key.
 // - Every screen carries the banner "Demo company on devnet · read only" with the roles, Compare
 //   views and "Create your own company".
@@ -18,7 +18,7 @@ import { expect, test, type Page, type Request } from "@playwright/test";
 import { createDb } from "@sotto/db";
 import { seedDemoCompany, type DemoFixture } from "../../../apps/web/test/helpers/demo-company.ts";
 import { expectAccessible } from "../a11y.ts";
-import { signIn } from "../helpers.ts";
+import { OVERVIEW_URL, signIn } from "../helpers.ts";
 
 const LOCALNET = fileURLToPath(new URL("../../../.localnet/", import.meta.url));
 const SHOTS = fileURLToPath(new URL("../../../.demo-shots/demo/", import.meta.url));
@@ -105,30 +105,40 @@ async function shoot(page: Page, name: string) {
   await page.setViewportSize({ width: 1440, height: 900 });
 }
 
-test("the landing and the sign in screen offer the demo company's four roles", async ({ page }) => {
+test("the landing and the sign in screen offer the two ways in, side by side", async ({ page }) => {
   await page.goto("/");
-  const landing = page.getByTestId("demo-entry");
-  await expect(landing).toContainText("Explore Northwind as");
-  for (const [index, role] of ROLES.entries()) {
-    await expect(landing.getByRole("link", { name: role })).toHaveAttribute(
-      "href",
-      `/demo/${["owner", "accountant", "employee", "outsider"][index]}`,
-    );
-  }
-  await page.goto("/app/sign-in");
-  const entry = page.getByTestId("demo-entry");
-  await expect(entry).toContainText("Explore Northwind as");
-  await expect(entry).toContainText("The demo company on devnet, read only. No wallet needed.");
-  await entry.getByRole("link", { name: "Accountant (Daniel)" }).click();
-  await expect(page).toHaveURL(/\/demo\/accountant$/);
+  const landing = page.getByTestId("entries");
+  await expect(landing.getByTestId("entry-demo")).toContainText("Explore the demo company");
+  await expect(landing.getByTestId("entry-demo")).toContainText("No wallet needed");
+  await expect(landing.getByTestId("entry-demo")).toHaveAttribute("href", "/demo");
+  await expect(landing.getByTestId("entry-quick-start")).toContainText("Quick start");
+  await expect(landing.getByTestId("entry-quick-start")).toContainText("Connect a wallet");
+  await expect(landing.getByTestId("entry-quick-start")).toHaveAttribute("href", "/app");
+  // Side by side on a desktop: the same row.
+  const [demoBox, quickBox] = [
+    await landing.getByTestId("entry-demo").boundingBox(),
+    await landing.getByTestId("entry-quick-start").boundingBox(),
+  ];
+  expect(Math.abs((demoBox?.y ?? 0) - (quickBox?.y ?? 1000))).toBeLessThan(2);
+  // Quick start leads to the sign in screen for a visitor without a session.
+  await landing.getByTestId("entry-quick-start").click();
+  await expect(page).toHaveURL(/\/app\/sign-in$/);
+  const entries = page.getByTestId("entries");
+  await expect(entries.getByTestId("entry-quick-start")).toContainText(
+    "Connect a wallet below. Your company is ready at once, with test money.",
+  );
+  await expect(entries.getByTestId("entry-demo")).toContainText("No wallet needed");
+  await entries.getByTestId("entry-demo").click();
+  await expect(page).toHaveURL(/\/demo$/);
   await banner(page);
+  await expect(page.getByTestId("demo-picker-title")).toHaveText("Explore Northwind as");
 });
 
 test("the role picker, each role's own records, Compare views, and nothing asked of a wallet", async ({
   page,
 }) => {
   // The same browser holds a real signed in session and a wallet: the demo uses neither.
-  await signIn(page);
+  await signIn(page, undefined, OVERVIEW_URL);
   const api = watchApi(page);
 
   await page.goto("/demo");
@@ -285,7 +295,7 @@ test("the role picker, each role's own records, Compare views, and nothing asked
 
   // The way out leads to the normal app, where this browser's own session still stands.
   await page.getByTestId("demo-exit").click();
-  await expect(page).toHaveURL(/\/app\/onboarding$/);
+  await expect(page).toHaveURL(OVERVIEW_URL);
 });
 
 test("a visitor with no wallet in the browser reads the demo, and an unknown role is not found", async ({

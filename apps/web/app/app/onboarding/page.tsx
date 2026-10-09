@@ -20,6 +20,16 @@ export default async function OnboardingPage() {
   const db = getDb();
   const [me, org] = await Promise.all([loadMe(db, session), ownedOrg(db, session.userId)]);
   const network = await loadNetworkView(org ? { orgId: org.id } : {});
+  // Step 4.6 (D-33): on devnet a wallet that belongs to no organization has no form to fill in:
+  // /app makes its company. A member of another organization keeps the form for one of its own.
+  if (
+    !org &&
+    me.memberships.length === 0 &&
+    network.available &&
+    verificationOnCreate(network.cluster) === "automatic"
+  ) {
+    redirect("/app");
+  }
   return (
     <AppShell me={me} network={network}>
       <OrgOnboarding

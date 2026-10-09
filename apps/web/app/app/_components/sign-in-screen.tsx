@@ -25,7 +25,7 @@ import {
 } from "../../../lib/wallet-groups.ts";
 import { SkyArt } from "./sky-art.tsx";
 import { Logo } from "./logo.tsx";
-import { DEMO_ENTRY, DEMO_ROLES, demoRoleTitle } from "../../../lib/demo.ts";
+import { ENTRY_DEMO, ENTRY_QUICK_START } from "../../../lib/demo.ts";
 import styles from "./sign-in.module.css";
 
 type Status = { busy: boolean; error: string | null };
@@ -79,6 +79,21 @@ export function SignInScreen({ network }: { network: string }) {
             Connect a Solana wallet and sign a message. Signing in never sends a transaction or
             costs a fee.
           </p>
+          {/* Step 4.6 (D-32, D-33): the two ways in, side by side. Quick start is this screen's own
+              wallets, where a new organization needs no form (devnet); the demo needs no wallet. */}
+          <nav className={styles.entries} aria-label="Try Sotto" data-testid="entries">
+            <Link className={styles.entry} href="/demo" prefetch={false} data-testid="entry-demo">
+              <b>{ENTRY_DEMO.label}</b>
+              <span>{ENTRY_DEMO.detail}. Read only, on devnet.</span>
+            </Link>
+            {network === "Devnet" ? (
+              <a className={styles.entry} href="#wallets" data-testid="entry-quick-start">
+                <b>{ENTRY_QUICK_START.label}</b>
+                <span>Connect a wallet below. Your company is ready at once, with test money.</span>
+              </a>
+            ) : null}
+          </nav>
+          <span id="wallets" />
           {offered === 0 ? (
             <p className={styles.empty} role="status" data-testid="no-wallets">
               No Solana wallet that can sign in was found in this browser. Install a wallet that
@@ -109,22 +124,6 @@ export function SignInScreen({ network }: { network: string }) {
               </section>
             );
           })}
-          {/* Step 4.6 (D-32): the demo company, for a visitor who wants to look before connecting. */}
-          <nav className={styles.demo} aria-label={DEMO_ENTRY} data-testid="demo-entry">
-            <h2 className={styles.groupTitle}>{DEMO_ENTRY}</h2>
-            <p className={styles.groupDetail}>
-              The demo company on devnet, read only. No wallet needed.
-            </p>
-            <ul className={styles.demoRoles}>
-              {DEMO_ROLES.map((role) => (
-                <li key={role}>
-                  <Link href={`/demo/${role}`} prefetch={false}>
-                    {demoRoleTitle(role)}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
           <p className={styles.note}>
             Sotto never asks for your recovery phrase and cannot move your funds.{" "}
             <Link href="/trust" prefetch={false}>

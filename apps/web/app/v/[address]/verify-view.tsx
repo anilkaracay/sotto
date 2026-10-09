@@ -41,6 +41,12 @@ const STATE_ICON: Record<keyof typeof STATE_WORDS, string> = {
   not_a_record: "M6 6l12 12 M18 6L6 18",
 };
 
+/** The legal name and the country; a company without a country (D-33) is its name alone. */
+const named = (organization: { legalName: string; country: string }) =>
+  organization.country
+    ? `${organization.legalName}, ${organization.country}`
+    : organization.legalName;
+
 function dateTime(iso: string): string {
   const date = new Date(iso);
   return `${formatDate(date)}, ${date.toISOString().slice(11, 16)} UTC`;
@@ -132,8 +138,8 @@ function Found({ view }: { view: Extract<PublicProofView, { state: "found" }> })
     organization.status === "not_verified"
       ? "Not verified by Sotto"
       : organization.status === "attestation_expired"
-        ? `${organization.legalName}, ${organization.country} (verification expired)`
-        : `${organization.legalName}, ${organization.country}`;
+        ? `${named(organization)} (verification expired)`
+        : named(organization);
   const tone =
     view.status === "valid"
       ? styles.valid

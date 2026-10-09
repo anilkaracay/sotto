@@ -240,37 +240,38 @@
   line-height: 1.55;
   color: var(--muted);
 }
-/* Step 4.6 (D-32): "Explore Northwind as", under the wallets. */
-.demo {
-  margin-top: 28px;
-  padding-top: 24px;
-  border-top: 1px solid var(--line);
+/* Step 4.6 (D-32, D-33): the two ways in, side by side above the wallets. */
+.entries {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin: 22px 0 6px;
 }
-.demoRoles {
+.entry {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 12px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.demoRoles a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 40px;
-  padding: 0 14px;
-  border-radius: 999px;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 64px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: var(--surface);
   box-shadow: inset 0 0 0 1px var(--line);
-  font-size: 13.5px;
-  font-weight: 500;
   color: var(--ink);
   text-decoration: none;
-  white-space: nowrap;
 }
-.demoRoles a:hover {
+.entry b {
+  font-size: 14.5px;
+  font-weight: 500;
+}
+.entry span {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.entry:hover {
   box-shadow: inset 0 0 0 1px var(--blue);
 }
-.demoRoles a:focus-visible {
+.entry:focus-visible {
   outline: 2px solid var(--blue);
   outline-offset: 2px;
 }

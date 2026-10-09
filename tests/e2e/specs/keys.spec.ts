@@ -21,7 +21,7 @@ import {
   E2E_KEYPAIR_SEED,
   e2eKeypair,
 } from "../fixtures.ts";
-import { openSetup, signIn } from "../helpers.ts";
+import { openSetup, OVERVIEW_URL, signIn } from "../helpers.ts";
 
 const privateKey = createPrivateKey({
   key: Buffer.concat([Buffer.from("302e020100300506032b657004220420", "hex"), E2E_KEYPAIR_SEED]),
@@ -62,18 +62,11 @@ test("AC-03.2 unlocks only after the click, derives the CLI's key in the worker 
   page,
   browser,
 }) => {
-  const wallet = await signIn(page, e2eKeypair());
+  // An active org: this server's configuration is devnet's, where quick start makes a new wallet's
+  // company at once, verified with no review (step 4.6, D-30 and D-33). The admin console, open to
+  // this wallet as an E2E admin, has nothing to review.
+  const wallet = await signIn(page, e2eKeypair(), OVERVIEW_URL);
   expect(wallet).toBe(E2E_ADMIN_WALLET);
-
-  // An active org: this server's configuration is devnet's, where a new org is verified at once
-  // (step 4.6, D-30). The admin console, open to this wallet as an E2E admin, has nothing to review.
-  await page.getByLabel("Legal name").fill("Keys Test Ltd");
-  await page.getByLabel("Country").selectOption("DE");
-  await page.getByLabel("Registration number").fill("HRB 1");
-  await page.getByLabel("Website").fill("keys.example");
-  await page.getByLabel("Contact email").fill("ops@keys.example");
-  await page.getByRole("button", { name: "Create organization" }).click();
-  await expect(page.getByTestId("org-status")).toHaveText("Verified");
   await page.goto("/app/admin");
   await expect(page.getByText("No organization is waiting for review.")).toBeVisible();
 

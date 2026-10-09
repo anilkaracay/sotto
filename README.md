@@ -76,20 +76,23 @@ The details are in [`docs/04-ARCHITECTURE.md`](docs/04-ARCHITECTURE.md), [`docs/
 
 ## Try it
 
-Sotto runs on Solana devnet with test money.
+Sotto runs on Solana devnet with test money. There are two ways in.
 
-See a live proof of funds: https://sottoapp.xyz/v/7ssfLgVmvaC4zAFm9aVBw4jrJdb9mSisCKQXvFHjUbEX
-It states that Northwind Labs Demo Ltd holds at least 250,000 devUSD. Status: Proven, valid until 4 April 2027. Balance disclosed: none.
-
-Explore the demo company without a wallet: https://sottoapp.xyz/demo
+**1. Explore the demo company, with no wallet:** https://sottoapp.xyz/demo
 Pick a role, Owner (Elif), Accountant (Daniel), Employee (Maya) or Outsider, and see what that person reads of the same payments, or compare one payment across all four. It is read only: the records are opened in your browser with that role's demo viewing key, and nothing there can sign, pay or change anything.
 
-Open your own account:
+**2. Quick start, with a wallet:** https://sottoapp.xyz/app
+Connect Phantom or Solflare on Solana devnet and sign in. A new wallet gets a company at once, "My company", with no form, and lands on its dashboard. The card "Set up and get test money" there runs three steps in order: test SOL for fees from the faucet if the wallet needs it, the confidential account, and 1,000,000 devUSD from the faucet, each with its link to the transaction on Solana.
 
-1. Use Phantom or Solflare on Solana devnet. A new wallet needs no SOL to start: signing in costs nothing, and Account setup gives it devnet SOL for fees and account rent.
+A live proof of funds, for anyone: https://sottoapp.xyz/v/7ssfLgVmvaC4zAFm9aVBw4jrJdb9mSisCKQXvFHjUbEX
+It states that Northwind Labs Demo Ltd holds at least 250,000 devUSD. Status: Proven, valid until 4 April 2027. Balance disclosed: none.
+
+The same in detail, with your own account:
+
+1. Use Phantom or Solflare on Solana devnet. A new wallet needs no SOL to start: signing in costs nothing, and the faucet gives it devnet SOL for fees and account rent.
 2. Sign in at https://sottoapp.xyz/app by signing a message with your wallet.
-3. Create your organization with its legal name and country, and choose devUSD as the currency. On devnet Sotto verifies a new organization at once, without reviewing its details, so money features are on straight away. Sotto issues an attestation onchain to your wallet; its level says that no review took place.
-4. On Account setup, get devnet SOL from the faucet (0.05 SOL per wallet every 24 hours, while the wallet holds less than 0.02 SOL), set up your confidential account, get devUSD from the faucet (at most 1,000,000 devUSD per wallet every 24 hours) and fund your account with it.
+3. Your company exists at once, named "My company". On devnet Sotto verifies a new organization without reviewing it, so money features are on straight away, and issues an attestation onchain to your wallet whose level says that no review took place. Change its name, country and other details on its page whenever you like; the attestation is issued again when the name or the country changes.
+4. On the dashboard, or on Account setup, get devnet SOL from the faucet (0.05 SOL per wallet every 24 hours, while the wallet holds less than 0.02 SOL), set up your confidential account, get devUSD from the faucet (at most 1,000,000 devUSD per wallet every 24 hours) and fund your account with it.
 5. On Recipients, add a recipient and send them the invite link. They sign in with their own wallet, register a viewing key and set up their account; the same page gives their wallet the devnet SOL that needs. Then pay them on Payments, or pay many people at once on Payroll.
 6. On Viewing keys, invite a reader with a scope. They sign in and accept with their viewing key, and you share the past records their scope covers.
 7. On Proofs, choose a threshold and who the answer is for. Your browser makes the proof, your wallet signs, and you get a public link anyone can open.

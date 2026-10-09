@@ -7,15 +7,19 @@
 import { copyFile, mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
-import { signIn } from "../helpers.ts";
+import { OVERVIEW_URL, signIn } from "../helpers.ts";
 import { expectAccessible } from "../a11y.ts";
 import { expectVisual } from "../visual.ts";
 
 const DEMO_SHOTS = fileURLToPath(new URL("../../../.demo-shots/screens/", import.meta.url));
 
 test("the network banner on an app page when the network cannot be reached", async ({ page }) => {
-  // A wallet of its own, with no organization: sign in lands on onboarding.
-  await signIn(page);
+  // A wallet of its own: on this devnet configuration sign in makes its company and lands on the
+  // dashboard (quick start, step 4.6); the banner is shown on the organization's page, which no
+  // other spec's data changes.
+  await signIn(page, undefined, OVERVIEW_URL);
+  await page.goto("/app/onboarding");
+  await expect(page.getByTestId("org-status")).toHaveText("Verified");
   const banner = page.getByTestId("network-unreachable");
   await expect(banner).toContainText("Network unreachable, retrying");
   await expect(banner).toContainText("This page tries again every 15 seconds.");

@@ -1,0 +1,72 @@
+/* The dashboard's first-run card (step 4.6, D-33): three numbered steps, each with its state. */
+.card {
+  grid-column: 1 / -1;
+}
+.steps {
+  display: flex;
+  flex-direction: column;
+  margin: 14px 0 6px;
+  padding: 0;
+  list-style: none;
+}
+.step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 4px 14px;
+  align-items: start;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.step:first-child {
+  border-top: 0;
+}
+.no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--soft);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink2);
+}
+.step[data-state="done"] .no {
+  background: #e3f6ee;
+  color: #0b6b47;
+}
+.step[data-state="ready"] .no,
+.step[data-state="running"] .no {
+  background: var(--blue);
+  color: #ffffff;
+}
+.words {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.words b {
+  font-size: 14.5px;
+  font-weight: 500;
+}
+.words small {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.unlock {
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 560px) {
+  .step {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .step > :last-child {
+    grid-column: 2;
+    justify-self: start;
+  }
+}

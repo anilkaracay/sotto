@@ -30,6 +30,7 @@ import {
   normalizeWebsite,
   orgCreateSchema,
   orgStatusLabel,
+  orgUpdateSchema,
   type OrgStatus,
   type OrgVerification,
 } from "../../../lib/org.ts";
@@ -43,10 +44,11 @@ export type OnboardingOrg = {
   id: string;
   displayName: string;
   legalName: string;
-  country: string;
-  registrationNo: string;
-  website: string;
-  contactEmail: string;
+  /** Null while not given (D-33). */
+  country: string | null;
+  registrationNo: string | null;
+  website: string | null;
+  contactEmail: string | null;
   status: OrgStatus;
   asset: AssetId;
   attestationAddress: string | null;
@@ -102,18 +104,14 @@ export function OrgOnboarding({
       </>
     );
   }
-  if (editing && org.status === "pending_review") {
+  if (editing && canEdit(org)) {
+    const how = org.verification === "automatic" ? "automatic" : "review";
     return (
       <>
         <PageHeader overline="Change details" title={org.displayName} />
         <div className={styles.grid}>
-          <OrgForm
-            org={org}
-            assets={assets}
-            verification="review"
-            onDone={() => setEditing(false)}
-          />
-          <HowItWorks verification="review" />
+          <OrgForm org={org} assets={assets} verification={how} onDone={() => setEditing(false)} />
+          <HowItWorks verification={how} />
         </div>
       </>
     );
@@ -126,15 +124,25 @@ export function OrgOnboarding({
   );
 }
 
+/**
+ * The details change while an admin has not decided (in review), and at any time for a company
+ * nobody reviewed, verified automatically on devnet (step 4.6, D-33).
+ */
+export function canEdit(org: Pick<OnboardingOrg, "status" | "verification">): boolean {
+  return (
+    org.status === "pending_review" || (org.status === "active" && org.verification === "automatic")
+  );
+}
+
 function valuesOf(org: OnboardingOrg | undefined): Values {
   if (!org) return EMPTY;
   return {
     legalName: org.legalName,
     displayName: org.displayName === org.legalName ? "" : org.displayName,
-    country: org.country,
-    registrationNo: org.registrationNo,
-    website: org.website,
-    contactEmail: org.contactEmail,
+    country: org.country ?? "",
+    registrationNo: org.registrationNo ?? "",
+    website: org.website ?? "",
+    contactEmail: org.contactEmail ?? "",
     asset: org.asset,
   };
 }
@@ -167,15 +175,27 @@ function OrgForm({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
-    const parsed = orgCreateSchema.safeParse({
-      legalName: values.legalName,
-      ...(values.displayName.trim() ? { displayName: values.displayName } : {}),
-      country: values.country,
-      registrationNo: values.registrationNo,
-      website: normalizeWebsite(values.website),
-      contactEmail: values.contactEmail.trim(),
-      ...(org ? {} : { asset: values.asset }),
-    });
+    // A company verified automatically needs only its name: an empty detail is cleared (D-33).
+    const settings = org !== undefined && verification === "automatic";
+    const optional = (value: string) => (value.trim() === "" ? null : value);
+    const parsed = settings
+      ? orgUpdateSchema.safeParse({
+          legalName: values.legalName,
+          ...(values.displayName.trim() ? { displayName: values.displayName } : {}),
+          country: optional(values.country),
+          registrationNo: optional(values.registrationNo),
+          website: optional(normalizeWebsite(values.website)),
+          contactEmail: optional(values.contactEmail.trim()),
+        })
+      : orgCreateSchema.safeParse({
+          legalName: values.legalName,
+          ...(values.displayName.trim() ? { displayName: values.displayName } : {}),
+          country: values.country,
+          registrationNo: values.registrationNo,
+          website: normalizeWebsite(values.website),
+          contactEmail: values.contactEmail.trim(),
+          ...(org ? {} : { asset: values.asset }),
+        });
     if (!parsed.success) {
       const next: Partial<Record<FieldName, string>> = {};
       for (const issue of parsed.error.issues) {
@@ -194,7 +214,10 @@ function OrgForm({
         // An emptied display name goes back to the legal name, as at creation.
         await callApi(`/api/orgs/${org.id}`, {
           method: "PATCH",
-          body: { ...parsed.data, displayName: parsed.data.displayName ?? parsed.data.legalName },
+          body: {
+            ...parsed.data,
+            displayName: parsed.data.displayName ?? parsed.data.legalName ?? values.legalName,
+          },
         });
         onDone?.();
       } else {
@@ -223,9 +246,11 @@ function OrgForm({
     <Card className={styles.formCard}>
       <h2 className={styles.cardTitle}>Business details</h2>
       <p className={styles.lead} data-testid="form-lead">
-        {verification === "automatic"
-          ? "On devnet Sotto verifies a new organization at once, without reviewing these details, so you can try it with test money. The legal name, country, registration number and website cannot be changed afterwards."
-          : "A Sotto admin reviews these details before money features open."}
+        {verification !== "automatic"
+          ? "A Sotto admin reviews these details before money features open."
+          : org
+            ? "Only the name is needed. When the legal name or the country changes, Sotto issues the attestation onchain again with the new details; nobody reviews them on devnet."
+            : "On devnet Sotto verifies a new organization at once, without reviewing these details, so you can try it with test money. You can change them later."}
       </p>
       <form onSubmit={submit} noValidate aria-busy={busy}>
         <FieldGrid>
@@ -263,8 +288,8 @@ function OrgForm({
                 value={values.country}
                 onChange={change("country")}
               >
-                <option value="" disabled>
-                  Choose a country
+                <option value="" disabled={!(org && verification === "automatic")}>
+                  {org && verification === "automatic" ? "No country" : "Choose a country"}
                 </option>
                 {COUNTRIES.map(([code, name]) => (
                   <option key={code} value={code}>
@@ -533,6 +558,13 @@ function OrgStatusView({ org, onEdit }: { org: OnboardingOrg; onEdit: () => void
             </div>
           </>
         ) : null}
+        {org.status === "active" && org.verification === "automatic" ? (
+          <div className={styles.actions}>
+            <Button variant="line" size="sm" onClick={onEdit} data-testid="edit-details">
+              Change details
+            </Button>
+          </div>
+        ) : null}
         {org.status === "active" && org.attestationAddress ? (
           <>
             <p className={styles.lead}>
@@ -579,17 +611,21 @@ function OrgStatusView({ org, onEdit }: { org: OnboardingOrg; onEdit: () => void
           <dt>Legal name</dt>
           <dd>{org.legalName}</dd>
           <dt>Country</dt>
-          <dd>{countryName(org.country)}</dd>
+          <dd>{org.country ? countryName(org.country) : "Not set"}</dd>
           <dt>Registration number</dt>
-          <dd>{org.registrationNo}</dd>
+          <dd>{org.registrationNo ?? "Not set"}</dd>
           <dt>Website</dt>
           <dd>
-            <a href={org.website} target="_blank" rel="noopener noreferrer">
-              {org.website}
-            </a>
+            {org.website ? (
+              <a href={org.website} target="_blank" rel="noopener noreferrer">
+                {org.website}
+              </a>
+            ) : (
+              "Not set"
+            )}
           </dd>
           <dt>Contact email</dt>
-          <dd>{org.contactEmail}</dd>
+          <dd>{org.contactEmail ?? "Not set"}</dd>
           <dt>Currency</dt>
           <dd data-testid="org-asset">
             {assetWords(org.asset).symbol} <DevnetTestBadge asset={assetWords(org.asset)} />

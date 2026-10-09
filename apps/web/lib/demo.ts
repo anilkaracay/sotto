@@ -6,6 +6,9 @@ export const DEMO_HEADER = "x-sotto-demo";
 export const DEMO_BANNER = "Demo company on devnet · read only";
 export const DEMO_EXIT = "Create your own company";
 export const DEMO_ENTRY = "Explore Northwind as";
+/** The two ways in, side by side on the landing and the sign in screen (step 4.6, D-33). */
+export const ENTRY_DEMO = { label: "Explore the demo company", detail: "No wallet needed" };
+export const ENTRY_QUICK_START = { label: "Quick start", detail: "Connect a wallet" };
 
 export const DEMO_KEY_ROLES = ["owner", "accountant", "employee"] as const;
 export type DemoKeyRole = (typeof DEMO_KEY_ROLES)[number];

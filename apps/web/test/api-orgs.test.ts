@@ -1,4 +1,6 @@
-// POST /api/orgs, GET and PATCH /api/orgs/:id (F-02, 08 section 3).
+// POST /api/orgs, GET and PATCH /api/orgs/:id (F-02, 08 section 3). The configuration here is a
+// local ledger's, where a Sotto admin reviews a new organization (D-09), as on every configuration
+// but devnet's; the last block is devnet's, where it is verified at once (step 4.6, D-30).
 import { memberships, orgPolicy, orgs } from "@sotto/db";
 import type { TestDatabase } from "@sotto/db/testing";
 import { eq } from "drizzle-orm";
@@ -6,6 +8,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { GET, PATCH } from "../app/api/orgs/[id]/route.ts";
 import { POST } from "../app/api/orgs/route.ts";
 import { GET as getMe } from "../app/api/me/route.ts";
+import { decideOrg, requireMoneyAccess } from "../lib/server/orgs.ts";
 import {
   APP_ORIGIN,
   apiRequest,
@@ -37,6 +40,7 @@ afterAll(async () => {
 
 beforeEach(() => {
   vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.stubEnv("NEXT_PUBLIC_CLUSTER", "localnet");
 });
 
 // Each request gets its own client IP, so the per IP write limit never interferes.
@@ -101,6 +105,7 @@ describe("POST /api/orgs", () => {
       status: "pending_review",
       attestationAddress: null,
       reviewedAt: null,
+      verification: null,
     });
 
     const [row] = await test.db.select().from(orgs).where(eq(orgs.id, org.id));
@@ -148,7 +153,6 @@ describe("POST /api/orgs", () => {
       const [row] = await test.db.select().from(orgs).where(eq(orgs.id, created.id));
       expect(row?.asset).toBe("devusd");
     } finally {
-      vi.stubEnv("NEXT_PUBLIC_CLUSTER", "");
       vi.stubEnv("LOCALNET_DEVUSD_MINT", "");
     }
   });
@@ -298,6 +302,85 @@ describe("PATCH /api/orgs/:id", () => {
       displayName: "Northwind",
       contactEmail: "finance@northwind.example",
       status: "active",
+    });
+  });
+});
+
+describe("POST /api/orgs on devnet (step 4.6, D-30)", () => {
+  it.each([
+    ["named", "devnet"],
+    ["not named, which means devnet", ""],
+  ])(
+    "AC-02.3 verifies a new org at once, with no review, where the cluster is %s",
+    async (_case, cluster) => {
+      vi.stubEnv("NEXT_PUBLIC_CLUSTER", cluster);
+      const user = await createUserWithSession(test);
+      const response = await create(user.cookie, FIELDS);
+      expect(response.status).toBe(201);
+      const { org } = (await response.json()) as {
+        org: { id: string; reviewedAt: string | null } & Record<string, unknown>;
+      };
+      expect(org).toMatchObject({
+        ...FIELDS,
+        status: "active",
+        attestationAddress: null,
+        verification: "automatic",
+      });
+      expect(org.reviewedAt).not.toBeNull();
+
+      // No admin decided: the worker's sas-issue job reads this as the automatic level.
+      const [row] = await test.db.select().from(orgs).where(eq(orgs.id, org.id));
+      expect(row).toMatchObject({ status: "active", reviewedBy: null, attestationAddress: null });
+      expect(row?.reviewedAt).toBeInstanceOf(Date);
+      expect(
+        await test.db
+          .select({ userId: memberships.userId, role: memberships.role })
+          .from(memberships)
+          .where(eq(memberships.orgId, org.id)),
+      ).toEqual([{ userId: user.userId, role: "owner" }]);
+
+      // Money features are on at once.
+      const session = { id: "s", userId: user.userId, wallet: user.wallet };
+      await expect(requireMoneyAccess(test.db, session, org.id, ["owner"])).resolves.toBeDefined();
+      const me = await getMe(apiRequest("/api/me", { headers: { cookie: user.cookie } }));
+      expect(((await me.json()) as { memberships: unknown[] }).memberships).toEqual([
+        { orgId: org.id, orgName: "Northwind Labs Ltd", orgStatus: "active", role: "owner" },
+      ]);
+    },
+  );
+
+  it("locks the details that go into the attestation at once, and still lets an admin suspend it", async () => {
+    vi.stubEnv("NEXT_PUBLIC_CLUSTER", "devnet");
+    const owner = await createUserWithSession(test);
+    const orgId = await createdOrg(owner);
+    expect(await errorOf(await patch(owner.cookie, orgId, { legalName: "Another Name Ltd" }))).toBe(
+      "409 org_details_locked: The legal name, country, registration number and website can change only while the organization is in review",
+    );
+    expect((await patch(owner.cookie, orgId, { displayName: "Northwind" })).status).toBe(200);
+
+    // AC-02.4 holds for it as for a reviewed org: the decision now carries the admin's wallet.
+    const admin = await createUserWithSession(test);
+    const suspended = await decideOrg(test.db, orgId, "suspend", admin.wallet);
+    expect(suspended).toMatchObject({
+      status: "suspended",
+      reviewedBy: admin.wallet,
+      verification: "review",
+    });
+    const session = { id: "s", userId: owner.userId, wallet: owner.wallet };
+    await expect(requireMoneyAccess(test.db, session, orgId, ["owner"])).rejects.toMatchObject({
+      code: "org_not_active",
+    });
+  });
+
+  it("AC-02.2 keeps the review on a configuration that is not devnet's", async () => {
+    vi.stubEnv("NEXT_PUBLIC_CLUSTER", "localnet");
+    const user = await createUserWithSession(test);
+    const response = await create(user.cookie, FIELDS);
+    const { org } = (await response.json()) as { org: { id: string } & Record<string, unknown> };
+    expect(org).toMatchObject({ status: "pending_review", reviewedAt: null, verification: null });
+    const session = { id: "s", userId: user.userId, wallet: user.wallet };
+    await expect(requireMoneyAccess(test.db, session, org.id, ["owner"])).rejects.toMatchObject({
+      code: "org_not_active",
     });
   });
 });

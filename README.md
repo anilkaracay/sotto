@@ -85,7 +85,7 @@ Open your own account:
 
 1. Use Phantom or Solflare on Solana devnet, and get a little devnet SOL from https://faucet.solana.com for fees and account rent.
 2. Sign in at https://sottoapp.xyz/app by signing a message with your wallet.
-3. Create your organization with its legal name and country, choose devUSD as the currency, and send it for review. A Sotto admin reviews every organization by hand, usually within one business day, and money features stay off until it is verified. Once verified, Sotto issues an attestation onchain to your wallet.
+3. Create your organization with its legal name and country, and choose devUSD as the currency. On devnet Sotto verifies a new organization at once, without reviewing its details, so money features are on straight away. Sotto issues an attestation onchain to your wallet; its level says that no review took place.
 4. On Account setup, set up your confidential account, get devUSD from the faucet (at most 10,000 devUSD per wallet every 24 hours) and fund your account with it.
 5. On Recipients, add a recipient and send them the invite link. They sign in with their own wallet, register a viewing key and set up their account, which needs a little devnet SOL. Then pay them on Payments, or pay many people at once on Payroll.
 6. On Viewing keys, invite a reader with a scope. They sign in and accept with their viewing key, and you share the past records their scope covers.

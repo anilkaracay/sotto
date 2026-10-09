@@ -163,6 +163,11 @@ function Found({ view }: { view: Extract<PublicProofView, { state: "found" }> })
         >
           {organizationWords}
         </p>
+        {organization.status !== "not_verified" && !organization.reviewed ? (
+          <p className={styles.shared} data-testid="verify-organization-note">
+            Entered by the organization on devnet. Sotto did not review it.
+          </p>
+        ) : null}
         <span className={styles.label}>Statement</span>
         <p className={styles.statement} data-testid="verify-statement">
           {statementWords(BigInt(record.threshold), assetWords(record.asset))}

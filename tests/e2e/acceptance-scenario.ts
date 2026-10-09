@@ -42,6 +42,7 @@ import {
   addTestWallet,
   ANY_APP_PAGE,
   approveOrg,
+  sendOrganization,
   clientAddress,
   expectAmountsWrapped,
   openSetup,
@@ -333,7 +334,7 @@ export function acceptanceScenario(target: AcceptanceTarget): void {
     let attestationAddress = "";
 
     await step(
-      "1. The organization is created, approved and attested",
+      "1. The organization is created, verified and attested",
       "01-org-verified.png",
       async () => {
         await signIn(page, OWNER);
@@ -347,15 +348,15 @@ export function acceptanceScenario(target: AcceptanceTarget): void {
           await page.getByLabel("Currency").selectOption(target.asset.id);
           await expect(page.getByTestId("asset-note")).toContainText(`${S} has no value`);
         }
-        await page.getByRole("button", { name: "Send for review" }).click();
-        await expect(page.getByTestId("org-status")).toHaveText("In review");
+        // On a local ledger a Sotto admin approves it; on devnet it is verified at once (D-30).
+        await sendOrganization(page, async () => {
+          const admin = await newPage(browser, "admin");
+          // The E2E admin's wallet may own an organization of another spec: any app page after sign in.
+          await signIn(admin, target.admin, ANY_APP_PAGE);
+          await approveOrg(admin, LEGAL_NAME);
+          await admin.context().close();
+        });
         await expect(page.getByTestId("org-asset")).toContainText(S);
-        const admin = await newPage(browser, "admin");
-        // The admin wallet (the E2E admin on localnet, the run's own admin on devnet) may own an
-        // organization of another spec: any app page after sign in.
-        await signIn(admin, target.admin, ANY_APP_PAGE);
-        await approveOrg(admin, LEGAL_NAME);
-        await admin.context().close();
         // The worker issues the attestation; the status page shows its address once it is onchain.
         await expect(async () => {
           await page.goto("/app/onboarding");

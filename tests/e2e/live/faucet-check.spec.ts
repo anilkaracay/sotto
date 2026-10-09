@@ -7,7 +7,14 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { connectWallet } from "../flows.ts";
-import { ANY_APP_PAGE, approveOrg, OVERVIEW_URL, openSetup, signIn } from "../helpers.ts";
+import {
+  ANY_APP_PAGE,
+  approveOrg,
+  OVERVIEW_URL,
+  openSetup,
+  sendOrganization,
+  signIn,
+} from "../helpers.ts";
 import { shoot } from "../shots/shoot.ts";
 
 const DIR = process.env.SOTTO_LIVE_DIR;
@@ -31,13 +38,13 @@ test("the faucet gives 10,000 devUSD once and then says the 24 hour limit", asyn
   await page.getByLabel("Website").fill("faucet-check.example");
   await page.getByLabel("Contact email").fill("ops@faucet-check.example");
   await page.getByLabel("Currency").selectOption("devusd");
-  await page.getByRole("button", { name: "Send for review" }).click();
-  await expect(page.getByTestId("org-status")).toHaveText("In review");
-  const context = await browser.newContext({ baseURL: test.info().project.use.baseURL ?? "" });
-  const admin = await context.newPage();
-  await signIn(admin, await keypair("admin"), ANY_APP_PAGE);
-  await approveOrg(admin, legalName);
-  await context.close();
+  await sendOrganization(page, async () => {
+    const context = await browser.newContext({ baseURL: test.info().project.use.baseURL ?? "" });
+    const admin = await context.newPage();
+    await signIn(admin, await keypair("admin"), ANY_APP_PAGE);
+    await approveOrg(admin, legalName);
+    await context.close();
+  });
   await expect(async () => {
     await page.goto("/app/onboarding");
     await expect(page.getByTestId("attestation-address")).toBeVisible({ timeout: 2_000 });

@@ -1,6 +1,8 @@
 // The Sotto credential and the sotto.business.v1 schema (08 section 5). Layout codes are the SAS
 // schema data types (SAS program state/schema.rs; sas-lib 1.0.10 utils.js maps the same codes for
 // the three used here): 0 u8, 8 i64, 12 String.
+import { BUSINESS_LEVEL_AUTOMATIC, BUSINESS_LEVEL_REVIEW } from "@sotto/sdk/attestation";
+
 export const SOTTO_CREDENTIAL_NAME = "sotto";
 export const BUSINESS_SCHEMA_NAME = "sotto.business.v1";
 /** The SAS program creates every schema at version 1 (create_schema.rs). */
@@ -19,8 +21,12 @@ export const BUSINESS_SCHEMA_FIELDS = [
 export const BUSINESS_SCHEMA_FIELD_NAMES: string[] = BUSINESS_SCHEMA_FIELDS.map((f) => f.name);
 export const BUSINESS_SCHEMA_LAYOUT: number[] = BUSINESS_SCHEMA_FIELDS.map((f) => f.layout);
 
-/** Verification levels: 1 is manual review by a Sotto admin (D-09). */
-export const LEVEL_MANUAL_REVIEW = 1;
+/**
+ * Verification levels: 1 is manual review by a Sotto admin (D-09); 0 is the automatic verification
+ * of a new organization on devnet, with no review (D-30). The values are `@sotto/sdk/attestation`'s.
+ */
+export const LEVEL_MANUAL_REVIEW = BUSINESS_LEVEL_REVIEW;
+export const LEVEL_AUTOMATIC = BUSINESS_LEVEL_AUTOMATIC;
 
 /** Attestations expire after 365 days (08 section 5). */
 export const ATTESTATION_VALIDITY_SECONDS = 365 * 24 * 60 * 60;

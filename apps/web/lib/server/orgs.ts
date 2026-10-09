@@ -8,6 +8,7 @@ import {
   REVIEWED_FIELDS,
   type OrgCreate,
   type OrgStatus,
+  type OrgVerification,
   type OrgUpdate,
 } from "../org.ts";
 import { ApiError, apiErrors } from "./errors.ts";
@@ -29,6 +30,8 @@ const orgColumns = {
   asset: orgs.asset,
   attestationAddress: orgs.attestationAddress,
   reviewedAt: orgs.reviewedAt,
+  // D-30: a decision carries the admin's wallet; a verification without one was automatic.
+  verification: sql<OrgVerification | null>`case when ${orgs.reviewedAt} is null then null when ${orgs.reviewedBy} is null then 'automatic' else 'review' end`,
   createdAt: orgs.createdAt,
 };
 
@@ -45,6 +48,8 @@ export type OrgView = {
   asset: AssetId;
   attestationAddress: string | null;
   reviewedAt: Date | null;
+  /** How it was verified or refused; null while no decision exists (D-30). */
+  verification: OrgVerification | null;
   createdAt: Date;
 };
 
@@ -101,8 +106,17 @@ function isUniqueViolation(error: unknown, constraint: string): boolean {
   return cause?.code === "23505" && cause.constraint_name === constraint;
 }
 
-/** AC-02.1: the org starts in review, its creator becomes Owner, its policy gets the defaults. */
-export async function createOrg(db: Database, userId: string, fields: OrgCreate): Promise<OrgView> {
+/**
+ * AC-02.1: the creator becomes Owner and the policy gets the defaults. With `review` the org starts
+ * in review (AC-02.2); with `automatic` (D-30, devnet) it is active at once, verified now by no
+ * admin, and the worker's sas-issue job issues its attestation as it does after an approval.
+ */
+export async function createOrg(
+  db: Database,
+  userId: string,
+  fields: OrgCreate,
+  verification: OrgVerification,
+): Promise<OrgView> {
   try {
     return await db.transaction(async (tx) => {
       const [org] = await tx
@@ -111,6 +125,9 @@ export async function createOrg(db: Database, userId: string, fields: OrgCreate)
           ...fields,
           displayName: fields.displayName ?? fields.legalName,
           ownerUserId: userId,
+          ...(verification === "automatic"
+            ? { status: "active" as const, reviewedAt: sql`now()` }
+            : {}),
         })
         .returning(orgColumns);
       if (!org) throw new Error("org insert returned no row");

@@ -20,6 +20,7 @@ import {
   addTestWallet,
   ANY_APP_PAGE,
   approveOrg,
+  sendOrganization,
   clientAddress,
   OVERVIEW_URL,
   openSetup,
@@ -91,7 +92,7 @@ test(`seeds Northwind Labs Demo Ltd on ${target.name}`, async ({ page, browser }
   let recordAddress = "";
   let danielBooks = 0;
 
-  await test.step("1. Elif creates the organization in devUSD; it is approved and attested", async () => {
+  await test.step("1. Elif creates the organization in devUSD; it is verified and attested", async () => {
     await signIn(page, elifKeypair);
     await page.getByLabel("Legal name").fill(NORTHWIND.legalName);
     await page.getByLabel("Display name").fill(NORTHWIND.displayName);
@@ -101,13 +102,13 @@ test(`seeds Northwind Labs Demo Ltd on ${target.name}`, async ({ page, browser }
     await page.getByLabel("Contact email").fill(NORTHWIND.contactEmail);
     await page.getByLabel("Currency").selectOption("devusd");
     await shot?.(page, "seed-01-onboarding-currency-field");
-    await page.getByRole("button", { name: "Send for review" }).click();
-    await expect(page.getByTestId("org-status")).toHaveText("In review");
+    await sendOrganization(page, async () => {
+      const admin = await newPage(browser);
+      await signIn(admin, await target.admin(), ANY_APP_PAGE);
+      await approveOrg(admin, NORTHWIND.legalName);
+      await admin.context().close();
+    });
     await expect(page.getByTestId("org-asset")).toContainText("devUSD");
-    const admin = await newPage(browser);
-    await signIn(admin, await target.admin(), ANY_APP_PAGE);
-    await approveOrg(admin, NORTHWIND.legalName);
-    await admin.context().close();
     await expect(async () => {
       await page.goto("/app/onboarding");
       await expect(page.getByTestId("attestation-address")).toBeVisible({ timeout: 2_000 });

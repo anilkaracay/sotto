@@ -16,6 +16,14 @@ import {
 
 export const ATTESTATION_DISCRIMINATOR = 2;
 
+/**
+ * The `level` of a `sotto.business.v1` attestation (08 section 5): 1 after a Sotto admin reviewed the
+ * business details (D-09); 0 when the organization was verified automatically on devnet, with no
+ * review (D-30). A reader treats only 1 and above as reviewed.
+ */
+export const BUSINESS_LEVEL_AUTOMATIC = 0;
+export const BUSINESS_LEVEL_REVIEW = 1;
+
 export type BusinessAttestationAccount = {
   nonce: Address;
   credential: Address;

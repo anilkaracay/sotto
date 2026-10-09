@@ -8,7 +8,7 @@ import { orgs, users, type Database } from "@sotto/db";
 import { address, type Address } from "@solana/kit";
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import type { Job } from "./runner.ts";
-import { attestationExpiry, LEVEL_MANUAL_REVIEW } from "../sas/business-schema.ts";
+import { attestationExpiry, LEVEL_AUTOMATIC, LEVEL_MANUAL_REVIEW } from "../sas/business-schema.ts";
 import {
   closeAttestation,
   issueBusinessAttestation,
@@ -33,6 +33,14 @@ export type SasIssueDeps = {
 
 const seconds = (date: Date) => BigInt(Math.floor(date.getTime() / 1000));
 
+/**
+ * The attestation's level: manual review when a Sotto admin decided (D-09, the decision carries the
+ * admin's wallet), automatic when the org was verified with no admin, as on devnet (D-30).
+ */
+export function attestationLevel(org: { reviewedBy: string | null }): number {
+  return org.reviewedBy ? LEVEL_MANUAL_REVIEW : LEVEL_AUTOMATIC;
+}
+
 export function sasIssueJob(deps: SasIssueDeps): Job {
   let schema: Ensured<SchemaAccount> | null = null;
   return {
@@ -45,6 +53,7 @@ export function sasIssueJob(deps: SasIssueDeps): Job {
           legalName: orgs.legalName,
           country: orgs.country,
           reviewedAt: orgs.reviewedAt,
+          reviewedBy: orgs.reviewedBy,
           owner: users.wallet,
         })
         .from(orgs)
@@ -80,7 +89,7 @@ export function sasIssueJob(deps: SasIssueDeps): Job {
               legal_name: org.legalName,
               country: org.country,
               verified_at: seconds(org.reviewedAt ?? now),
-              level: LEVEL_MANUAL_REVIEW,
+              level: attestationLevel(org),
             },
             expiry: attestationExpiry(seconds(now)),
           });

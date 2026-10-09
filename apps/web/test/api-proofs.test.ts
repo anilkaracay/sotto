@@ -135,13 +135,13 @@ async function writeRecord(input: {
 }
 
 /** The org's SAS attestation (facts E4, E5) at the PDA of the owner's wallet, as the worker issues it. */
-async function attest(owner: string, legalName: string, expiry: bigint): Promise<void> {
+async function attest(owner: string, legalName: string, expiry: bigint, level = 1): Promise<void> {
   const text = (value: string) => {
     const bytes = new TextEncoder().encode(value);
     return [...new Uint8Array(new Uint32Array([bytes.length]).buffer), ...bytes];
   };
   const i64 = (value: bigint) => [...new Uint8Array(new BigInt64Array([value]).buffer)];
-  const data = [...text("org"), ...text(legalName), ...text("TR"), ...i64(1_790_000_000n), 1];
+  const data = [...text("org"), ...text(legalName), ...text("TR"), ...i64(1_790_000_000n), level];
   const key = (value: string) => [...getAddressEncoder().encode(address(value))];
   const bytes = [
     2,
@@ -339,7 +339,12 @@ describe("proofs of funds (F-13)", () => {
     expect(view).toMatchObject({
       state: "found",
       status: "valid",
-      organization: { status: "verified", legalName: "Northwind Labs Ltd", country: "TR" },
+      organization: {
+        status: "verified",
+        legalName: "Northwind Labs Ltd",
+        country: "TR",
+        reviewed: true,
+      },
       counterpartyLabel: "Hollis Supply Co.",
       balanceDisclosed: "none",
       record: {
@@ -349,6 +354,22 @@ describe("proofs of funds (F-13)", () => {
         slot: "505000000",
       },
     });
+
+    // Step 4.6 (D-30): level 0 is devnet's automatic verification, which nobody reviewed.
+    await attest(
+      owner.wallet,
+      "Northwind Labs Ltd",
+      BigInt(Math.floor(Date.now() / 1000) + 300 * DAY),
+      0,
+    );
+    expect(await publicView(record)).toMatchObject({
+      organization: { status: "verified", legalName: "Northwind Labs Ltd", reviewed: false },
+    });
+    await attest(
+      owner.wallet,
+      "Northwind Labs Ltd",
+      BigInt(Math.floor(Date.now() / 1000) + 300 * DAY),
+    );
 
     // The legal name comes from chain: renaming the org in Sotto changes nothing on the page.
     await test.db.update(orgs).set({ legalName: "Renamed In Sotto" }).where(eq(orgs.id, orgId));

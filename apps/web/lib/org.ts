@@ -57,6 +57,18 @@ export const orgUpdateSchema = orgFieldsSchema
 export type OrgCreate = z.infer<typeof orgCreateSchema>;
 export type OrgUpdate = z.infer<typeof orgUpdateSchema>;
 
+/** How an organization was verified: a Sotto admin's review (D-09), or automatically on devnet (D-30). */
+export type OrgVerification = "review" | "automatic";
+
+/**
+ * D-30: on the devnet configuration a new organization is verified the moment it is created, with
+ * no review, so anyone can try Sotto with test money. Every other configuration keeps the admin's
+ * review of D-09.
+ */
+export function verificationOnCreate(cluster: string | null): OrgVerification {
+  return cluster === "devnet" ? "automatic" : "review";
+}
+
 /** Reviewed by the admin, so fixed once the review is done (08 section 3). */
 export const REVIEWED_FIELDS = ["legalName", "country", "registrationNo", "website"] as const;
 

@@ -65,17 +65,16 @@ test("AC-03.2 unlocks only after the click, derives the CLI's key in the worker 
   const wallet = await signIn(page, e2eKeypair());
   expect(wallet).toBe(E2E_ADMIN_WALLET);
 
-  // An active org: create it, then approve it in the admin console (this wallet is an E2E admin).
+  // An active org: this server's configuration is devnet's, where a new org is verified at once
+  // (step 4.6, D-30). The admin console, open to this wallet as an E2E admin, has nothing to review.
   await page.getByLabel("Legal name").fill("Keys Test Ltd");
   await page.getByLabel("Country").selectOption("DE");
   await page.getByLabel("Registration number").fill("HRB 1");
   await page.getByLabel("Website").fill("keys.example");
   await page.getByLabel("Contact email").fill("ops@keys.example");
-  await page.getByRole("button", { name: "Send for review" }).click();
-  await expect(page.getByTestId("org-status")).toHaveText("In review");
+  await page.getByRole("button", { name: "Create organization" }).click();
+  await expect(page.getByTestId("org-status")).toHaveText("Verified");
   await page.goto("/app/admin");
-  await page.getByRole("button", { name: "Approve" }).click();
-  await page.getByRole("button", { name: "Confirm approve" }).click();
   await expect(page.getByText("No organization is waiting for review.")).toBeVisible();
 
   // The Phase 1 happy path (M3 as amended, step 1.10): /app opens the overview of the active org with

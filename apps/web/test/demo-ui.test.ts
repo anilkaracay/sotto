@@ -101,7 +101,7 @@ describe("the demo company's pages (step 4.6, D-32)", () => {
 
   it("import none of the app's wallet, key session or cookie carrying modules", () => {
     for (const file of graph.files) {
-      for (const module of APP_MODULES) expect(file, file).not.toMatch(module);
+      for (const forbidden of APP_MODULES) expect(file, file).not.toMatch(forbidden);
     }
     // The reader they do use is the demo's own, with the worker client and nothing of a session.
     const names = [...graph.files].map((file) => file.slice(WEB.length));

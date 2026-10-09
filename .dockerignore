@@ -31,3 +31,5 @@ target
 # Repository metadata
 .git
 **/.DS_Store
+# Screenshots of local test runs (step 4.6).
+.demo-shots

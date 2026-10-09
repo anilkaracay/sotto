@@ -81,6 +81,9 @@ Sotto runs on Solana devnet with test money.
 See a live proof of funds: https://sottoapp.xyz/v/7ssfLgVmvaC4zAFm9aVBw4jrJdb9mSisCKQXvFHjUbEX
 It states that Northwind Labs Demo Ltd holds at least 250,000 devUSD. Status: Proven, valid until 4 April 2027. Balance disclosed: none.
 
+Explore the demo company without a wallet: https://sottoapp.xyz/demo
+Pick a role, Owner (Elif), Accountant (Daniel), Employee (Maya) or Outsider, and see what that person reads of the same payments, or compare one payment across all four. It is read only: the records are opened in your browser with that role's demo viewing key, and nothing there can sign, pay or change anything.
+
 Open your own account:
 
 1. Use Phantom or Solflare on Solana devnet. A new wallet needs no SOL to start: signing in costs nothing, and Account setup gives it devnet SOL for fees and account rent.
@@ -116,11 +119,11 @@ pnpm install --frozen-lockfile
 
 **Configuration.** Every app reads its settings from its own git ignored file: `apps/web/.env.local`, `apps/worker/.env.local` and `packages/db/.env.local`. The names are in [`.env.example`](.env.example); no value belongs in the repository.
 
-| Used by        | Names                                                                                                                                                                                     |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Web            | `NEXT_PUBLIC_CLUSTER`, `NEXT_PUBLIC_APP_URL`, `RPC_URL`, `DATABASE_URL`, `SESSION_SECRET` (at least 32 characters); optional: `SCREENING_PROVIDER`, `SCREENING_API_KEY`, `RESEND_API_KEY` |
-| Worker         | `RPC_URL`, `DATABASE_URL`, `SAS_SIGNER_KEYPAIR`, `SAS_CREDENTIAL_ADDRESS`, `SAS_SCHEMA_ADDRESS`; optional: `SOTTO_NOTIFY_URL`, `SOL_FAUCET_KEYPAIR`                                       |
-| Database tools | `DATABASE_URL`; optional: `ADMIN_WALLETS`                                                                                                                                                 |
+| Used by        | Names                                                                                                                                                                                                          |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web            | `NEXT_PUBLIC_CLUSTER`, `NEXT_PUBLIC_APP_URL`, `RPC_URL`, `DATABASE_URL`, `SESSION_SECRET` (at least 32 characters); optional: `SCREENING_PROVIDER`, `SCREENING_API_KEY`, `RESEND_API_KEY`, `DEMO_COMPANY_FILE` |
+| Worker         | `RPC_URL`, `DATABASE_URL`, `SAS_SIGNER_KEYPAIR`, `SAS_CREDENTIAL_ADDRESS`, `SAS_SCHEMA_ADDRESS`; optional: `SOTTO_NOTIFY_URL`, `SOL_FAUCET_KEYPAIR`                                                            |
+| Database tools | `DATABASE_URL`; optional: `ADMIN_WALLETS`                                                                                                                                                                      |
 
 For a local validator, `NEXT_PUBLIC_CLUSTER` is `localnet`, `RPC_URL` is the validator's address, and these names take the addresses and file paths that the bootstrap below writes to `.localnet/bootstrap.json`:
 

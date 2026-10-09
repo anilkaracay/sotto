@@ -154,6 +154,7 @@ Terms of service, privacy policy and a regulatory review (Turkey and target mark
 - Reason: on the private repository GitHub Actions jobs do not start ("recent account payments have failed or your spending limit needs to be increased") and branch protection requires GitHub Pro or a public repository (HTTP 403). See the verification log, step 0.5.
 - Until then CI runs locally with `pnpm ci:local` (`scripts/ci-local.sh`), the same four jobs as `.github/workflows/ci.yml`; the workflow runs on `workflow_dispatch` only. Merge rules are in ENGINEERING-RULES.md (Git workflow).
 - At the public launch: restore the `push` and `pull_request` triggers, apply branch protection, and record the first green GitHub Actions run.
+- 2026-10-09 (founder): the repository is public. The first run of the workflow on GitHub, started by hand, passed all four jobs (run 37894128813, commit `5d3876d`). A push to `main` now runs lint, typecheck, the unit tests and the checks job; the build, the browser tests, the program job and the localnet job stay manual. A merge still needs `pnpm ci:local:full`. The `pull_request` trigger and branch protection are not set.
 
 ### D-26 · Wallets: capability requirements per role, wallet agnostic · DECIDED (founder, 2026-09-27)
 Sotto is wallet agnostic. Any wallet that implements the Wallet Standard for Solana must appear and work. There is no whitelist: the app detects capabilities at runtime from the wallet's declared features.

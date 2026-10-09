@@ -1,13 +1,15 @@
 name: CI
 
-# Manual runs only until a run here has passed (D-25: the project's CI runs locally with
-# pnpm ci:local). After that, pushes to main run the lightweight parts: lint, typecheck, the unit
-# tests and the checks job. The browser tests, the program job and the localnet job stay manual.
+# A push to main runs the lightweight parts: lint, typecheck and the unit tests of the node job, and
+# the checks job. The build, the browser tests, the program job and the localnet job run by hand
+# (workflow_dispatch), and on the development machine with pnpm ci:local:full before every merge (D-25).
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 permissions:
@@ -54,18 +56,24 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      # From here on: manual runs only.
       - run: pnpm build
+        if: github.event_name == 'workflow_dispatch'
       - name: The build output holds no env file or server only value
+        if: github.event_name == 'workflow_dispatch'
         run: python3 scripts/checks/build-output.py
       - name: Install the Playwright browser
+        if: github.event_name == 'workflow_dispatch'
         run: pnpm --filter @sotto/e2e exec playwright install --with-deps chromium firefox
       # The visual baselines (step 3.8, tests/e2e/visual.ts) are compared in the local CI only
       # (D-25): they are taken on its macOS machine, and this runner's fonts would differ. Here
       # SOTTO_VISUAL is not set, so the specs skip the comparison.
       - name: End to end tests (Playwright)
+        if: github.event_name == 'workflow_dispatch'
         run: pnpm --filter @sotto/e2e e2e
 
   program:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -100,6 +108,7 @@ jobs:
           retention-days: 1
 
   localnet:
+    if: github.event_name == 'workflow_dispatch'
     needs: program
     runs-on: ubuntu-24.04
     timeout-minutes: 30

@@ -161,7 +161,10 @@ describe("the landing (AC-17.1)", () => {
     );
     expect(text).not.toContain("revoke it at any time");
     expect(text).toContain("It gets an external audit before public mainnet.");
-    expect(text).toContain("During the beta, screening uses a deny list.");
+    // Step 4.6 (D-30): the FAQ says that devnet's verification is automatic, with no review.
+    expect(text).toContain(
+      "During the beta, screening uses a deny list, and verification on devnet is automatic so anyone can try Sotto with test money; the attestation records that no review took place.",
+    );
     expect(text).not.toContain("sanctions lists");
     expect(text).not.toContain("Every message is read by the team");
   });

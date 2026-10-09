@@ -155,6 +155,17 @@ export class CryptoWorkerClient {
     ])) as ViewingResult;
   }
 
+  /**
+   * Step 4.6 (D-32): makes this worker a demo worker with a published viewing secret key. The buffer
+   * is transferred like a signature; the caller's copy is zeroed.
+   */
+  async demoViewing(secretKey: Uint8Array): Promise<ViewingResult> {
+    const buffer = CryptoWorkerClient.handOver(secretKey);
+    return (await this.request({ type: "demoViewing", secretKey: buffer }, [
+      buffer,
+    ])) as ViewingResult;
+  }
+
   /** I-5: whether the unlocked keys match a token account's onchain ElGamal key. */
   async checkAccount(elgamalPubkey: string): Promise<CheckAccountResult> {
     return (await this.request({ type: "checkAccount", elgamalPubkey })) as CheckAccountResult;

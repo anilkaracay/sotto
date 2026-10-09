@@ -14,6 +14,11 @@ export type WorkerRequest =
   | { id: number; type: "unlock"; wallet: string; signature: ArrayBuffer }
   | { id: number; type: "checkAccount"; elgamalPubkey: string }
   | { id: number; type: "unlockViewing"; wallet: string; signature: ArrayBuffer }
+  /**
+   * Step 4.6 (D-32): the demo company's read only mode. A published viewing secret key of one of its
+   * roles; from then on this worker opens sealed records and does nothing else, for good.
+   */
+  | { id: number; type: "demoViewing"; secretKey: ArrayBuffer }
   | { id: number; type: "status" }
   /** The determinism check before account setup: a second signature of the key message. */
   | { id: number; type: "confirmSignature"; wallet: string; signature: ArrayBuffer }
@@ -91,7 +96,13 @@ export type RentReply = { type: "rentReply"; callId: number; lamports?: string; 
 export type UnlockResult = { elgamalPubkey: string };
 export type CheckAccountResult = { matches: boolean };
 export type ViewingResult = { publicKey: string };
-export type StatusResult = { wallet: string | null; unlocked: boolean; viewing: boolean };
+export type StatusResult = {
+  wallet: string | null;
+  unlocked: boolean;
+  viewing: boolean;
+  /** Step 4.6 (D-32): present on a demo worker, which is read only for good. */
+  demo?: true;
+};
 /** Whether the second signature equals the one the keys came from. */
 export type ConfirmSignatureResult = { same: boolean };
 export type SetupInstructionsResult = { token: string; instructions: PortableInstruction[] };
@@ -161,6 +172,8 @@ export type WorkerErrorCode =
   | "recipient_not_ready"
   | "insufficient_balance"
   | "no_plan"
+  /** Step 4.6 (D-32): a worker holding a demo viewing key refuses everything but opening. */
+  | "demo_read_only"
   | "failed";
 
 export type WorkerResponse =

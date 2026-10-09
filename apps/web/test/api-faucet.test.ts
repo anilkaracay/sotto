@@ -1,7 +1,7 @@
 // The devUSD faucet's web side (step 4.3, D-29; founder, 2026-10-02) against a test database: it
 // refuses every cluster but devnet, and a devnet configuration whose RPC serves another ledger (the CI
 // proof of the cluster guard); it serves only the owner of an active devUSD organization; and a wallet
-// gets at most 10,000 devUSD in 24 hours, failed mints left out, even with two requests at once.
+// gets at most 1,000,000 devUSD in 24 hours, failed mints left out, even with two requests at once.
 import { faucetMints, orgs } from "@sotto/db";
 import type { TestDatabase } from "@sotto/db/testing";
 import { GENESIS_HASHES } from "@sotto/sdk/cluster";
@@ -117,25 +117,25 @@ describe("the devUSD faucet's cluster guard (CI proof)", () => {
 describe("the devUSD faucet on devnet", () => {
   const devnet = ledger(GENESIS_HASHES.devnet);
 
-  it("gives at most 10,000 devUSD per wallet in 24 hours, failed mints left out", async () => {
+  it("gives at most 1,000,000 devUSD per wallet in 24 hours, failed mints left out", async () => {
     const owner = await devusdOwner();
     const cluster = await devnetWithDevusd();
     const now = new Date("2026-10-02T10:00:00Z");
     const ask = (amount: bigint, at = now) =>
       requestFaucet(test.db, owner.session, cluster, devnet, owner.orgId, amount, at);
-    const first = await ask(6_000n * DEVUSD);
-    expect(first).toMatchObject({ amount: "6000000000", status: "pending", signature: null });
-    await ask(4_000n * DEVUSD);
+    const first = await ask(600_000n * DEVUSD);
+    expect(first).toMatchObject({ amount: "600000000000", status: "pending", signature: null });
+    await ask(400_000n * DEVUSD);
     expect(await refusal(ask(1n))).toBe(
-      "429 faucet_limit: A wallet can get at most 10000 devUSD in 24 hours; 0 devUSD is left",
+      "429 faucet_limit: A wallet can get at most 1,000,000 devUSD in 24 hours; 0 devUSD is left",
     );
     await test.db.update(faucetMints).set({ status: "failed" }).where(eq(faucetMints.id, first.id));
-    expect(await refusal(ask(6_000n * DEVUSD + 1n))).toMatch(/; 6000 devUSD is left$/);
-    await ask(6_000n * DEVUSD);
+    expect(await refusal(ask(600_000n * DEVUSD + 1n))).toMatch(/; 600000 devUSD is left$/);
+    await ask(600_000n * DEVUSD);
     // A day later the window has moved on.
     await ask(FAUCET_LIMIT, new Date(now.getTime() + 24 * 60 * 60 * 1000 + 1));
     const view = await readFaucet(test.db, owner.session, cluster, devnet, owner.orgId, now);
-    expect(view).toMatchObject({ wallet: owner.wallet, limit: "10000000000", remaining: "0" });
+    expect(view).toMatchObject({ wallet: owner.wallet, limit: "1000000000000", remaining: "0" });
     // Three of them share a time, so their order is not fixed.
     expect(view.mints.map((mint) => mint.status).sort()).toEqual([
       "failed",
@@ -150,7 +150,7 @@ describe("the devUSD faucet on devnet", () => {
     const cluster = await devnetWithDevusd();
     const results = await Promise.allSettled(
       [1, 2].map(() =>
-        requestFaucet(test.db, owner.session, cluster, devnet, owner.orgId, 6_000n * DEVUSD),
+        requestFaucet(test.db, owner.session, cluster, devnet, owner.orgId, 600_000n * DEVUSD),
       ),
     );
     expect(results.map((result) => result.status).sort()).toEqual(["fulfilled", "rejected"]);

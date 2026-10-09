@@ -8,7 +8,7 @@ import { orgs, users, type Database } from "@sotto/db";
 import { address, type Address } from "@solana/kit";
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import type { Job } from "./runner.ts";
-import { attestationExpiry, LEVEL_MANUAL_REVIEW } from "../sas/business-schema.ts";
+import { attestationExpiry, LEVEL_AUTOMATIC, LEVEL_MANUAL_REVIEW } from "../sas/business-schema.ts";
 import {
   closeAttestation,
   issueBusinessAttestation,
@@ -33,6 +33,14 @@ export type SasIssueDeps = {
 
 const seconds = (date: Date) => BigInt(Math.floor(date.getTime() / 1000));
 
+/**
+ * The attestation's level: manual review when a Sotto admin decided (D-09, the decision carries the
+ * admin's wallet), automatic when the org was verified with no admin, as on devnet (D-30).
+ */
+export function attestationLevel(org: { reviewedBy: string | null }): number {
+  return org.reviewedBy ? LEVEL_MANUAL_REVIEW : LEVEL_AUTOMATIC;
+}
+
 export function sasIssueJob(deps: SasIssueDeps): Job {
   let schema: Ensured<SchemaAccount> | null = null;
   return {
@@ -45,6 +53,7 @@ export function sasIssueJob(deps: SasIssueDeps): Job {
           legalName: orgs.legalName,
           country: orgs.country,
           reviewedAt: orgs.reviewedAt,
+          reviewedBy: orgs.reviewedBy,
           owner: users.wallet,
         })
         .from(orgs)
@@ -64,24 +73,38 @@ export function sasIssueJob(deps: SasIssueDeps): Job {
       for (const org of toIssue) {
         const owner = address(org.owner);
         const attestation = await deriveAttestationAddress(deps.credential, schema.address, owner);
-        const existing = await readBusinessAttestation(deps.sas.rpc, attestation, schema.account);
+        let existing = await readBusinessAttestation(deps.sas.rpc, attestation, schema.account);
         if (existing && existing.data.org_id !== org.id) {
           log("sas_issue_conflict", { orgId: org.id, attestation }, "error");
           continue;
         }
+        const now = deps.now?.() ?? new Date();
+        const data = {
+          org_id: org.id,
+          legal_name: org.legalName,
+          // Empty while the company has no country (D-33).
+          country: org.country ?? "",
+          verified_at: seconds(org.reviewedAt ?? now),
+          level: attestationLevel(org),
+        };
+        // Step 4.6 (D-33): the owner of a company verified automatically changed its name or its
+        // country, so its attestation says something else. It is closed and issued again.
+        if (
+          existing &&
+          (existing.data.legal_name !== data.legal_name ||
+            existing.data.country !== data.country ||
+            existing.data.level !== data.level)
+        ) {
+          await closeAttestation(deps.sas, { credential: deps.credential, attestation });
+          log("sas_attestation_replaced", { orgId: org.id, attestation });
+          existing = null;
+        }
         if (!existing) {
-          const now = deps.now?.() ?? new Date();
           await issueBusinessAttestation(deps.sas, {
             credential: deps.credential,
             schema,
             owner,
-            data: {
-              org_id: org.id,
-              legal_name: org.legalName,
-              country: org.country,
-              verified_at: seconds(org.reviewedAt ?? now),
-              level: LEVEL_MANUAL_REVIEW,
-            },
+            data,
             expiry: attestationExpiry(seconds(now)),
           });
         }

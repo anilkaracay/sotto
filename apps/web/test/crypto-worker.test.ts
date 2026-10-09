@@ -922,3 +922,163 @@ describe("confidential transfers in the vault (step 1.9)", () => {
     });
   });
 });
+
+describe("the demo company's read only vault (step 4.6, D-32)", () => {
+  const value = { v: 1, default_amount: "9400000000", notes: "Monthly" };
+
+  async function published() {
+    const wallet = await testWallet(CLI_SEED);
+    const viewing = await deriveViewingKey(
+      wallet.address,
+      await wallet.sign(viewKeyMessage(wallet.address)),
+    );
+    // A record sealed to the role's registered viewing public key, as the owner's browser seals it.
+    const sealer = createVault(loadVaultModules);
+    const sealed = await sealer.handle({
+      id: 1,
+      type: "seal",
+      publicKey: viewing.publicKey.slice().buffer,
+      value,
+    });
+    if (!("ok" in sealed) || !sealed.ok || !("ciphertext" in sealed.result)) {
+      throw new Error("not sealed");
+    }
+    return { wallet, viewing, ciphertext: sealed.result.ciphertext };
+  }
+
+  it("opens a role's records with its published viewing key alone, and answers only the public key", async () => {
+    const { viewing, ciphertext } = await published();
+    const vault = createVault(loadVaultModules);
+    const loaded = await vault.handle({
+      id: 1,
+      type: "demoViewing",
+      secretKey: viewing.secretKey.slice().buffer,
+    });
+    // The public key follows from the secret key: it is the one the role registered.
+    expect(loaded).toEqual({ id: 1, ok: true, result: { publicKey: b64(viewing.publicKey) } });
+    expect(JSON.stringify(loaded)).not.toContain(b64(viewing.secretKey));
+    expect(await vault.handle({ id: 2, type: "status" })).toEqual({
+      id: 2,
+      ok: true,
+      result: { wallet: null, unlocked: false, viewing: true, demo: true },
+    });
+    expect(
+      await vault.handle({ id: 3, type: "openSealed", ciphertext: ciphertext.slice().buffer }),
+    ).toEqual({ id: 3, ok: true, result: { value } });
+    // A key of the wrong length is refused.
+    const short = createVault(loadVaultModules);
+    expect(
+      await short.handle({ id: 1, type: "demoViewing", secretKey: new Uint8Array(31).buffer }),
+    ).toMatchObject({ ok: false });
+  });
+
+  it("does nothing but open: no seal, no wallet signature, no key derivation, no plan, no cosigning", async () => {
+    const { wallet, viewing } = await published();
+    const vault = createVault(loadVaultModules);
+    await vault.handle({ id: 1, type: "demoViewing", secretKey: viewing.secretKey.slice().buffer });
+    const account = new Uint8Array(8).buffer;
+    const refused: WorkerRequest[] = [
+      { id: 2, type: "seal", publicKey: viewing.publicKey.slice().buffer, value },
+      {
+        id: 3,
+        type: "unlock",
+        wallet: wallet.address,
+        signature: (await wallet.sign(confidentialKeysMessage())).buffer as ArrayBuffer,
+      },
+      {
+        id: 4,
+        type: "unlockViewing",
+        wallet: wallet.address,
+        signature: (await wallet.sign(viewKeyMessage(wallet.address))).buffer as ArrayBuffer,
+      },
+      { id: 5, type: "confirmSignature", wallet: wallet.address, signature: new ArrayBuffer(64) },
+      { id: 6, type: "checkAccount", elgamalPubkey: CLI_ELGAMAL_KEY },
+      { id: 7, type: "setupInstructions", mint: wallet.address },
+      { id: 8, type: "decrypt", account },
+      { id: 9, type: "applyInstruction", token: wallet.address, account },
+      {
+        id: 10,
+        type: "transferPlan",
+        sourceToken: wallet.address,
+        sourceAccount: account,
+        destinationToken: wallet.address,
+        destinationAccount: account,
+        mint: wallet.address,
+        mintAccount: account,
+        amount: "1",
+        version: 0,
+      },
+      {
+        id: 11,
+        type: "withdrawPlan",
+        token: wallet.address,
+        account,
+        mint: wallet.address,
+        decimals: 6,
+        amount: "1",
+        version: 0,
+      },
+      {
+        id: 12,
+        type: "transferChunk",
+        sourceToken: wallet.address,
+        sourceAccount: account,
+        mint: wallet.address,
+        mintAccount: account,
+        lines: [],
+        version: 0,
+      },
+      {
+        id: 13,
+        type: "balanceProofs",
+        token: wallet.address,
+        account,
+        mint: wallet.address,
+        decimals: 6,
+        threshold: "1",
+      },
+      { id: 14, type: "cosign", planId: "p", transaction: account },
+      { id: 15, type: "endPlan", planId: "p" },
+    ];
+    for (const request of refused) {
+      expect(await vault.handle(request), request.type).toEqual({
+        id: request.id,
+        ok: false,
+        error: { code: "demo_read_only", message: "The demo company is read only" },
+      });
+    }
+    // It stays a demo vault after its key is cleared: no wallet's keys ever enter it.
+    await vault.handle({ id: 20, type: "clear" });
+    expect(
+      await vault.handle({
+        id: 21,
+        type: "unlockViewing",
+        wallet: wallet.address,
+        signature: (await wallet.sign(viewKeyMessage(wallet.address))).buffer as ArrayBuffer,
+      }),
+    ).toMatchObject({ ok: false, error: { code: "demo_read_only" } });
+  });
+
+  it("is refused in a vault that holds a wallet's keys", async () => {
+    const { wallet, viewing } = await published();
+    const vault = createVault(loadVaultModules);
+    await vault.handle({
+      id: 1,
+      type: "unlockViewing",
+      wallet: wallet.address,
+      signature: (await wallet.sign(viewKeyMessage(wallet.address))).buffer as ArrayBuffer,
+    });
+    expect(
+      await vault.handle({
+        id: 2,
+        type: "demoViewing",
+        secretKey: viewing.secretKey.slice().buffer,
+      }),
+    ).toMatchObject({ ok: false, error: { code: "demo_read_only" } });
+    expect(await vault.handle({ id: 3, type: "status" })).toEqual({
+      id: 3,
+      ok: true,
+      result: { wallet: wallet.address, unlocked: false, viewing: true },
+    });
+  });
+});

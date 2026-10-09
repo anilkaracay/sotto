@@ -13,6 +13,7 @@ import { ApiError } from "../../../../lib/server/errors.ts";
 import { loadMe } from "../../../../lib/server/me.ts";
 import { loadNetworkView } from "../../../../lib/server/network-view.ts";
 import { readViewerKey } from "../../../../lib/server/viewer-keys.ts";
+import { readOrgTokenAccount } from "../../../../lib/server/token-accounts.ts";
 import { AppShell } from "../../_components/app-shell.tsx";
 import { OverviewPanel } from "./overview-panel.tsx";
 
@@ -35,6 +36,9 @@ export default async function OverviewPage({ params }: { params: Promise<{ org: 
       throw error;
     }),
   ]);
+  const recorded = network.available
+    ? await readOrgTokenAccount(db, session.userId, orgId, network.cluster)
+    : null;
   return (
     <AppShell me={me} network={network} nav={ownerNav(orgId, "overview")}>
       {network.available ? (
@@ -45,6 +49,9 @@ export default async function OverviewPage({ params }: { params: Promise<{ org: 
           orgName={owned.orgName}
           displayName={me.user.displayName}
           network={network}
+          recorded={
+            recorded ? { address: recorded.address, applyFlagged: recorded.applyFlagged } : null
+          }
           ownerKey={
             ownerKey
               ? {

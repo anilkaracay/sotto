@@ -40,6 +40,12 @@ export type WorkerConfig = {
    * on the hosting server only. Optional: without it the faucet's requests wait unminted.
    */
   devusdMintAuthorityKeypair: string | null;
+  /**
+   * SOL_FAUCET_KEYPAIR (step 4.6, D-31): the path of the keypair file of the wallet the faucet's
+   * devnet SOL comes from, on the hosting server only. A key of its own: not the devUSD mint
+   * authority's. Optional: without it the faucet's SOL requests wait unsent.
+   */
+  solFaucetKeypair: string | null;
 };
 
 const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
@@ -115,5 +121,6 @@ export function loadWorkerConfig(env: Env = process.env): WorkerConfig {
     localnetUsdcMint: optionalAddress(env, "LOCALNET_USDC_MINT"),
     localnetDevusdMint: optionalAddress(env, "LOCALNET_DEVUSD_MINT"),
     devusdMintAuthorityKeypair: optional(env, "DEVUSD_MINT_AUTHORITY_KEYPAIR"),
+    solFaucetKeypair: optional(env, "SOL_FAUCET_KEYPAIR"),
   };
 }

@@ -179,9 +179,13 @@ export function WrappedMintCard() {
   );
 }
 
-export function AccountCard({ recorded }: { recorded: RecordedAccount | null }) {
-  const { wallet, orgId, network, ready, vault, connected, data, blocked } = useConfidential();
-  const { wrappedSymbol } = network.asset;
+/**
+ * The setup of the wallet's confidential account (06 section 3), for the account card and for the
+ * dashboard's first-run card (step 4.6, D-33): the account's state against this wallet's unlocked
+ * keys, the determinism check, the setup transaction with its read back, and the record in Sotto.
+ */
+export function useAccountSetup(recorded: RecordedAccount | null) {
+  const { wallet, orgId, network, ready, vault, connected, data } = useConfidential();
   const router = useRouter();
   const sending = useSend();
   const [problem, setProblem] = useState<string | null>(null);
@@ -286,6 +290,15 @@ export function AccountCard({ recorded }: { recorded: RecordedAccount | null }) 
       },
     });
   }
+
+  return { status, configuredPublicly, setUp, record, problem, checking, recording, sending };
+}
+
+export function AccountCard({ recorded }: { recorded: RecordedAccount | null }) {
+  const { network, ready, vault, data, blocked } = useConfidential();
+  const { wrappedSymbol } = network.asset;
+  const { status, configuredPublicly, setUp, record, problem, checking, recording, sending } =
+    useAccountSetup(recorded);
 
   const chip = !ready
     ? { tone: "neutral" as const, text: "Unavailable" }

@@ -1,4 +1,5 @@
 // The landing's hero section (F-17, step 3.1), from the approved landing design.
+import { ENTRY_DEMO, ENTRY_QUICK_START } from "../../../lib/demo.ts";
 import Link from "next/link";
 import { SottoLockupWhite } from "@sotto/ui";
 import { SolanaMark, UsdcLockup } from "../brand-logos.tsx";
@@ -194,6 +195,18 @@ export function Hero({ v }: { v: LandingView }) {
             {"See who sees what"}
           </a>
         </div>
+        {/* Step 4.6 (D-32, D-33): the two ways in. The demo company needs no wallet; quick start
+            connects one, and on devnet its company and test money are ready at once. */}
+        <nav className="hdemo" aria-label="Try Sotto" data-testid="entries">
+          <Link className="hdemo-r" href="/demo" prefetch={false} data-testid="entry-demo">
+            <b>{ENTRY_DEMO.label}</b>
+            <span>{ENTRY_DEMO.detail}</span>
+          </Link>
+          <Link className="hdemo-r" href="/app" prefetch={false} data-testid="entry-quick-start">
+            <b>{ENTRY_QUICK_START.label}</b>
+            <span>{ENTRY_QUICK_START.detail}</span>
+          </Link>
+        </nav>
       </div>
       <div className="stage5" onMouseMove={v.onTilt} onMouseLeave={v.onTiltEnd}>
         <div className="tiltw" style={{ transform: `${v.tiltT}` }}>

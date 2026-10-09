@@ -1,13 +1,20 @@
 // The devUSD faucet tried once in a browser on the hosted devnet app (step 4.3's live plan; founder,
 // 2026-10-03), with a fresh demo wallet: it creates a devUSD organization, the run's admin approves it,
-// and on the setup page the faucet card gives 10,000 devUSD (the worker on the server mints it, read
+// and on the setup page the faucet card gives 1,000,000 devUSD (the worker on the server mints it, read
 // back on the page and from the faucet's own record), then says the 24 hour limit on a second request,
 // which the server refuses too (429 faucet_limit).
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { connectWallet } from "../flows.ts";
-import { ANY_APP_PAGE, approveOrg, OVERVIEW_URL, openSetup, signIn } from "../helpers.ts";
+import {
+  ANY_APP_PAGE,
+  approveOrg,
+  OVERVIEW_URL,
+  openSetup,
+  sendOrganization,
+  signIn,
+} from "../helpers.ts";
 import { shoot } from "../shots/shoot.ts";
 
 const DIR = process.env.SOTTO_LIVE_DIR;
@@ -17,7 +24,7 @@ const keypair = async (name: string) =>
 
 test.use({ actionTimeout: 60_000 });
 
-test("the faucet gives 10,000 devUSD once and then says the 24 hour limit", async ({
+test("the faucet gives 1,000,000 devUSD once and then says the 24 hour limit", async ({
   page,
   browser,
 }) => {
@@ -31,13 +38,13 @@ test("the faucet gives 10,000 devUSD once and then says the 24 hour limit", asyn
   await page.getByLabel("Website").fill("faucet-check.example");
   await page.getByLabel("Contact email").fill("ops@faucet-check.example");
   await page.getByLabel("Currency").selectOption("devusd");
-  await page.getByRole("button", { name: "Send for review" }).click();
-  await expect(page.getByTestId("org-status")).toHaveText("In review");
-  const context = await browser.newContext({ baseURL: test.info().project.use.baseURL ?? "" });
-  const admin = await context.newPage();
-  await signIn(admin, await keypair("admin"), ANY_APP_PAGE);
-  await approveOrg(admin, legalName);
-  await context.close();
+  await sendOrganization(page, async () => {
+    const context = await browser.newContext({ baseURL: test.info().project.use.baseURL ?? "" });
+    const admin = await context.newPage();
+    await signIn(admin, await keypair("admin"), ANY_APP_PAGE);
+    await approveOrg(admin, legalName);
+    await context.close();
+  });
   await expect(async () => {
     await page.goto("/app/onboarding");
     await expect(page.getByTestId("attestation-address")).toBeVisible({ timeout: 2_000 });
@@ -49,15 +56,15 @@ test("the faucet gives 10,000 devUSD once and then says the 24 hour limit", asyn
   await connectWallet(page);
 
   const card = page.getByTestId("faucet-card");
-  await expect(card.getByTestId("faucet-remaining")).toContainText("10000 devUSD");
+  await expect(card.getByTestId("faucet-remaining")).toContainText("1000000 devUSD");
   await shoot(page, "live-faucet-01-before", card);
-  await card.getByLabel("Amount of devUSD").fill("10000");
+  await card.getByLabel("Amount of devUSD").fill("1000000");
   await card.getByRole("button", { name: "Get devUSD" }).click();
   await expect(card.getByTestId("faucet-latest")).toContainText(
-    "Minted 10000 devUSD to your wallet",
+    "Minted 1000000 devUSD to your wallet",
     { timeout: 300_000 },
   );
-  await expect(page.getByTestId("balance-public-usdc-value")).toHaveText("10000 devUSD", {
+  await expect(page.getByTestId("balance-public-usdc-value")).toHaveText("1000000 devUSD", {
     timeout: 120_000,
   });
   await shoot(page, "live-faucet-02-minted", card);
@@ -67,7 +74,7 @@ test("the faucet gives 10,000 devUSD once and then says the 24 hour limit", asyn
   await expect(card.getByTestId("faucet-remaining")).toContainText("0 devUSD");
   await card.getByLabel("Amount of devUSD").fill("1");
   await expect(card.getByTestId("faucet-limit")).toContainText(
-    "A wallet can get at most 10,000 devUSD in 24 hours",
+    "A wallet can get at most 1,000,000 devUSD in 24 hours",
   );
   await expect(card.getByRole("button", { name: "Get devUSD" })).toBeDisabled();
   await shoot(page, "live-faucet-03-limit", card);

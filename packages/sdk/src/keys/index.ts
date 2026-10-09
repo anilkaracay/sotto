@@ -21,4 +21,9 @@ export {
   verifyWalletSignature,
   type SignedMessageCheck,
 } from "./signatures.ts";
-export { deriveViewingKey, zeroViewingKey, type ViewingKeyMaterial } from "./viewing.ts";
+export {
+  deriveViewingKey,
+  viewingKeyFromSecret,
+  zeroViewingKey,
+  type ViewingKeyMaterial,
+} from "./viewing.ts";

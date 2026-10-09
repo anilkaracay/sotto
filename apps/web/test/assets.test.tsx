@@ -18,6 +18,7 @@ import { AssetWordsProvider } from "../app/app/_components/asset.tsx";
 import { BalanceCards } from "../app/app/_components/confidential/balances.tsx";
 import { ConfidentialContext } from "../app/app/_components/confidential/context.tsx";
 import { FaucetCard } from "../app/app/_components/confidential/faucet-card.tsx";
+import { SolFaucetCard } from "../app/app/_components/confidential/sol-faucet-card.tsx";
 import { DevnetTestBadge } from "../app/app/_components/devnet-badge.tsx";
 import { ReadinessCell } from "../app/app/[org]/recipients/readiness-cell.tsx";
 import { splitAmounts } from "../lib/amount-text.ts";
@@ -210,9 +211,33 @@ describe("the devUSD faucet card", () => {
     const words = text(html);
     expect(words).toContain("Get devUSD Devnet test dollar");
     expect(words).toContain("devUSD is a test token for trying Sotto on devnet. It has no value.");
-    expect(words).toContain("up to 10,000 devUSD every 24 hours");
+    expect(words).toContain("up to 1,000,000 devUSD every 24 hours");
     expect(words).not.toContain("USDC");
     // Nothing to ask for before the faucet's state is read.
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Get devUSD<\/button>/);
+  });
+});
+
+describe("the faucet's devnet SOL card (step 4.6, D-31)", () => {
+  it("says what SOL is for, that it has no value on devnet, and the grant and its condition", () => {
+    const value = {
+      orgId: "3f1b6a2e-5c4d-4e8f-9a0b-1c2d3e4f5a6b",
+      network: { cluster: "devnet", asset: assetView("devusd") },
+      refresh: async () => {},
+    };
+    const html = renderToStaticMarkup(
+      <ConfidentialContext.Provider value={value as never}>
+        <SolFaucetCard />
+      </ConfidentialContext.Provider>,
+    );
+    const words = text(html);
+    expect(words).toContain("Get devnet SOL");
+    expect(words).toContain("SOL pays the network fees and the rent of your wallet");
+    expect(words).toContain("On devnet it has no value.");
+    expect(words).toContain(
+      "Sotto gives a wallet 0.05 SOL once every 24 hours, while it holds less than 0.02 SOL.",
+    );
+    // Nothing to ask for before the faucet's state is read.
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Get 0.05 SOL<\/button>/);
   });
 });

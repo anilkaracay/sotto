@@ -21,7 +21,7 @@ const context = { signal: new AbortController().signal, log: () => {} };
 
 describe.skipIf(!RPC_URL)("sas-issue job on localnet", () => {
   it(
-    "AC-02.3 issues the approved org's attestation to the owner wallet and stores its address; AC-02.4 closes it on suspension",
+    "AC-02.3 issues the approved org's attestation to the owner wallet and stores its address, at the automatic level for an org no admin decided on, and again when its owner changes its name; AC-02.4 closes it on suspension",
     { timeout: 180_000 },
     async () => {
       const database = await createTestDatabase();
@@ -37,7 +37,7 @@ describe.skipIf(!RPC_URL)("sas-issue job on localnet", () => {
         const schema = await ensureBusinessSchema(sas, credential.address);
 
         const reviewedAt = new Date("2026-09-25T10:00:00.000Z");
-        const addOrg = async (legalName: string) => {
+        const addOrg = async (legalName: string, reviewedBy: string | null = signer.address) => {
           const owner = (await generateKeyPairSigner()).address;
           const [user] = await database.db
             .insert(users)
@@ -55,7 +55,7 @@ describe.skipIf(!RPC_URL)("sas-issue job on localnet", () => {
               contactEmail: "ops@northwind.example",
               ownerUserId: user.id,
               status: "active",
-              reviewedBy: signer.address,
+              reviewedBy,
               reviewedAt,
             })
             .returning({ id: orgs.id });
@@ -69,6 +69,8 @@ describe.skipIf(!RPC_URL)("sas-issue job on localnet", () => {
         const longName = "ş".repeat(200);
         expect(new TextEncoder().encode(longName).length).toBe(400);
         const longOrg = await addOrg(longName);
+        // Step 4.6 (D-30): verified automatically, as a new org on devnet: no admin's wallet.
+        const autoOrg = await addOrg("Automatic Ltd", null);
 
         const job = sasIssueJob({
           db: database.db,
@@ -76,7 +78,7 @@ describe.skipIf(!RPC_URL)("sas-issue job on localnet", () => {
           credential: credential.address,
           schemaAddress: schema.address,
         });
-        expect(await job.run(context)).toEqual({ issued: 2, closed: 0 });
+        expect(await job.run(context)).toEqual({ issued: 3, closed: 0 });
 
         const expected = await deriveAttestationAddress(credential.address, schema.address, owner);
         const stored = async () =>
@@ -106,11 +108,48 @@ describe.skipIf(!RPC_URL)("sas-issue job on localnet", () => {
           schema.account,
         );
         expect(longRead?.data.legal_name).toBe(longName);
+        const autoRead = await readBusinessAttestation(
+          rpc,
+          await deriveAttestationAddress(credential.address, schema.address, autoOrg.owner),
+          schema.account,
+        );
+        expect(autoRead?.data).toEqual({
+          org_id: autoOrg.id,
+          legal_name: "Automatic Ltd",
+          country: "TR",
+          verified_at: BigInt(reviewedAt.getTime() / 1000),
+          level: 0,
+        });
         const yearFromNow = BigInt(Math.floor(Date.now() / 1000)) + 365n * 24n * 3600n;
         const expiry = read?.account.expiry ?? 0n;
         expect(expiry > yearFromNow - 300n && expiry <= yearFromNow + 5n).toBe(true);
 
         // Idempotent: nothing left to do.
+        expect(await job.run(context)).toEqual({ issued: 0, closed: 0 });
+
+        // Step 4.6 (D-33): the owner of the automatic org changed its name and cleared its country,
+        // which cleared the stored address: the old attestation is closed and one with the new
+        // details issued at the same address, still at the automatic level.
+        const autoAddress = await deriveAttestationAddress(
+          credential.address,
+          schema.address,
+          autoOrg.owner,
+        );
+        await database.db
+          .update(orgs)
+          .set({ legalName: "Renamed Ltd", country: null, attestationAddress: null })
+          .where(eq(orgs.id, autoOrg.id));
+        expect(await job.run(context)).toEqual({ issued: 1, closed: 0 });
+        const replaced = await readBusinessAttestation(rpc, autoAddress, schema.account);
+        expect(replaced?.data).toEqual({
+          org_id: autoOrg.id,
+          legal_name: "Renamed Ltd",
+          country: "",
+          verified_at: BigInt(reviewedAt.getTime() / 1000),
+          level: 0,
+        });
+        const [renamed] = await database.db.select().from(orgs).where(eq(orgs.id, autoOrg.id));
+        expect(renamed?.attestationAddress).toBe(autoAddress);
         expect(await job.run(context)).toEqual({ issued: 0, closed: 0 });
 
         await database.db.update(orgs).set({ status: "suspended" }).where(eq(orgs.id, org.id));

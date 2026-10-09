@@ -194,7 +194,7 @@ function ConnectWallet({
   );
 }
 
-function Explainer() {
+export function Explainer() {
   return (
     <>
       <p className={styles.lead} data-testid="unlock-explainer">

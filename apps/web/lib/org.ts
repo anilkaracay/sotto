@@ -49,13 +49,40 @@ export const orgCreateSchema = orgFieldsSchema
   .extend({ asset: z.enum(ASSET_IDS as [AssetId, ...AssetId[]], "Choose a currency").optional() })
   .partial({ displayName: true });
 
-/** PATCH /api/orgs/:id: any subset, at least one field. */
+/**
+ * PATCH /api/orgs/:id: any subset, at least one field. Step 4.6 (D-33): a detail that may be absent
+ * (the country, the registration number, the website, the contact email) is cleared with null.
+ */
 export const orgUpdateSchema = orgFieldsSchema
+  .extend({
+    country: orgFieldsSchema.shape.country.nullable(),
+    registrationNo: orgFieldsSchema.shape.registrationNo.nullable(),
+    website: orgFieldsSchema.shape.website.nullable(),
+    contactEmail: orgFieldsSchema.shape.contactEmail.nullable(),
+  })
   .partial()
   .refine((value) => Object.keys(value).length > 0, "Send at least one field to change");
 
 export type OrgCreate = z.infer<typeof orgCreateSchema>;
 export type OrgUpdate = z.infer<typeof orgUpdateSchema>;
+
+/** How an organization was verified: a Sotto admin's review (D-09), or automatically on devnet (D-30). */
+export type OrgVerification = "review" | "automatic";
+
+/**
+ * D-30: on the devnet configuration a new organization is verified the moment it is created, with
+ * no review, so anyone can try Sotto with test money. Every other configuration keeps the admin's
+ * review of D-09.
+ */
+export function verificationOnCreate(cluster: string | null): OrgVerification {
+  return cluster === "devnet" ? "automatic" : "review";
+}
+
+/**
+ * D-33: the company devnet's quick start makes for a wallet that signs in for the first time. It has
+ * a name and nothing else until its owner fills in the rest.
+ */
+export const QUICK_START_NAME = "My company";
 
 /** Reviewed by the admin, so fixed once the review is done (08 section 3). */
 export const REVIEWED_FIELDS = ["legalName", "country", "registrationNo", "website"] as const;
@@ -78,3 +105,6 @@ export function normalizeWebsite(input: string): string {
   if (value === "" || /^[a-z][a-z0-9+.-]*:\/\//i.test(value)) return value;
   return `https://${value}`;
 }
+
+/** What the attestation onchain carries of an organization (08 section 5): a change means a new one. */
+export const ATTESTED_FIELDS = ["legalName", "country"] as const;

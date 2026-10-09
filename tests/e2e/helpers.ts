@@ -107,6 +107,20 @@ export async function expectAmountsWrapped(page: Page, where: string): Promise<v
 }
 
 /**
+ * Sends the onboarding form the page has filled in and gets the organization verified. On devnet it
+ * is verified at once, with no review (step 4.6, D-30), and `approve` is not called; anywhere else it
+ * waits in review until `approve` has a Sotto admin approve it (D-09). For the runs that target both
+ * a local ledger and devnet.
+ */
+export async function sendOrganization(page: Page, approve: () => Promise<void>): Promise<void> {
+  const send = page.getByRole("button", { name: /^(Create organization|Send for review)$/ });
+  const automatic = (await send.innerText()) === "Create organization";
+  await send.click();
+  await expect(page.getByTestId("org-status")).toHaveText(automatic ? "Verified" : "In review");
+  if (!automatic) await approve();
+}
+
+/**
  * The E2E admin approves one organization by its legal name, on a page signed in as the admin. The
  * localnet specs run in parallel, so other organizations may be waiting for review at the same time;
  * each spec approves only its own (step 2.12).

@@ -14,6 +14,7 @@ import { unlock } from "../flows.ts";
 import {
   ANY_APP_PAGE,
   approveOrg,
+  sendOrganization,
   clientAddress,
   OVERVIEW_URL,
   openSetup,
@@ -42,16 +43,16 @@ test("the devUSD elements at 1440 and 390", async ({ page, browser }) => {
   await expect(page.getByTestId("asset-note")).toBeVisible();
   await shoot(page, "ui-01-onboarding-currency-field");
 
-  await page.getByRole("button", { name: "Send for review" }).click();
-  await expect(page.getByTestId("org-status")).toHaveText("In review");
-  const context = await browser.newContext({
-    baseURL: test.info().project.use.baseURL ?? "",
-    extraHTTPHeaders: clientAddress(),
+  await sendOrganization(page, async () => {
+    const context = await browser.newContext({
+      baseURL: test.info().project.use.baseURL ?? "",
+      extraHTTPHeaders: clientAddress(),
+    });
+    const admin = await context.newPage();
+    await signIn(admin, e2eKeypair(), ANY_APP_PAGE);
+    await approveOrg(admin, LEGAL_NAME);
+    await context.close();
   });
-  const admin = await context.newPage();
-  await signIn(admin, e2eKeypair(), ANY_APP_PAGE);
-  await approveOrg(admin, LEGAL_NAME);
-  await context.close();
   await expect(async () => {
     await page.goto("/app/onboarding");
     await expect(page.getByTestId("attestation-address")).toBeVisible({ timeout: 2_000 });

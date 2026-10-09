@@ -50,6 +50,12 @@ export const faucetMintStatus = pgEnum("faucet_mint_status", [
   "minted",
   "failed",
 ]);
+/**
+ * A devnet SOL grant of the faucet (step 4.6): pending (asked for), sent (signed, its signature stored
+ * before it was sent, so a restart never pays twice), paid (finalized) or failed (counts toward no
+ * limit).
+ */
+export const solGrantStatus = pgEnum("sol_grant_status", ["pending", "sent", "paid", "failed"]);
 export const recipientReadiness = pgEnum("recipient_readiness", [
   "no_account",
   "not_configured",
@@ -170,10 +176,12 @@ export const orgs = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     displayName: text("display_name").notNull(),
     legalName: text("legal_name").notNull(),
-    country: char("country", { length: 2 }).notNull(),
-    registrationNo: text("registration_no").notNull(),
-    website: text("website").notNull(),
-    contactEmail: text("contact_email").notNull(),
+    // Step 4.6 (D-33): null while not given. A company made by devnet's quick start has only its
+    // name until its owner fills in the rest; the full form of every other path gives all four.
+    country: char("country", { length: 2 }),
+    registrationNo: text("registration_no"),
+    website: text("website"),
+    contactEmail: text("contact_email"),
     status: orgStatus("status").notNull().default("pending_review"),
     /** Chosen at account setup, USDC by default; not changed once the account exists (D-29). */
     asset: assetId("asset").notNull().default("usdc"),
@@ -790,7 +798,7 @@ export const waitlist = pgTable(
 );
 
 /**
- * devUSD faucet mints (step 4.3, D-29): devnet only, at most 10,000 devUSD per wallet per 24 hours.
+ * devUSD faucet mints (step 4.3, D-29): devnet only, at most 1,000,000 devUSD per wallet per 24 hours (10,000 before step 4.6).
  * The web takes a request and the worker, which alone holds the mint authority, mints it. The amount
  * is public onchain (a mint to a public account), so it may be stored (ENGINEERING-RULES.md rule 4).
  */
@@ -817,5 +825,36 @@ export const faucetMints = pgTable(
     index("faucet_mints_status").on(t.status),
     check("faucet_mints_wallet_base58", sql`${t.wallet} ~ ${sql.raw(`'${BASE58_ADDRESS}'`)}`),
     check("faucet_mints_amount_positive", sql`${t.amountBaseUnits} > 0`),
+  ],
+);
+
+/**
+ * Step 4.6 (D-31): the devnet SOL the faucet gives a signed in wallet for fees and rent. The lamports
+ * are Sotto's own, sent in a plain transfer that is public onchain; no customer amount is here.
+ */
+export const solGrants = pgTable(
+  "sol_grants",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    wallet: text("wallet").notNull(),
+    lamports: bigint("lamports", { mode: "bigint" }).notNull(),
+    status: solGrantStatus("status").notNull().default("pending"),
+    /** The transfer's signature, stored before it is sent, and its last valid block height. */
+    signature: text("signature"),
+    lastValidBlockHeight: bigint("last_valid_block_height", { mode: "bigint" }),
+    /** Why a grant failed, as a code (never a key or an RPC URL). */
+    errorCode: text("error_code"),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("sol_grants_wallet_time").on(t.wallet, t.createdAt),
+    index("sol_grants_status").on(t.status),
+    index("sol_grants_time").on(t.createdAt),
+    check("sol_grants_wallet_base58", sql`${t.wallet} ~ ${sql.raw(`'${BASE58_ADDRESS}'`)}`),
+    check("sol_grants_lamports_positive", sql`${t.lamports} > 0`),
   ],
 );

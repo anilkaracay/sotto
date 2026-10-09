@@ -438,6 +438,8 @@ export async function listDisclosures(
   orgId: string,
   query: z.infer<typeof disclosureQuerySchema>,
   now = new Date(),
+  /** Step 4.6 (D-32): the demo company's reads touch nothing; `touch: false` leaves the last use as it is. */
+  options: { touch?: boolean } = {},
 ): Promise<{ items: DisclosureItemView[]; manifests: ManifestView[] }> {
   await requireMoneyAccess(db, session, orgId, [...membershipRole.enumValues]);
   if (!session) throw apiErrors.unauthenticated();
@@ -463,16 +465,18 @@ export async function listDisclosures(
     .limit(query.limit ?? 1000);
   const rows = found.map((row) => row.disclosure);
   // A viewer's successful fetch is the last use of their active grants in this org.
-  await db
-    .update(grants)
-    .set({ lastUsedAt: now })
-    .where(
-      and(
-        eq(grants.orgId, orgId),
-        eq(grants.viewerUserId, session.userId),
-        eq(grants.status, "active"),
-      ),
-    );
+  if (options.touch !== false) {
+    await db
+      .update(grants)
+      .set({ lastUsedAt: now })
+      .where(
+        and(
+          eq(grants.orgId, orgId),
+          eq(grants.viewerUserId, session.userId),
+          eq(grants.status, "active"),
+        ),
+      );
+  }
   const manifestIds = [...new Set(rows.map((row) => row.manifestId))];
   const manifestRows = manifestIds.length
     ? await db.select().from(manifests).where(inArray(manifests.id, manifestIds))

@@ -143,8 +143,14 @@ describe("public verification page (AC-13.3)", () => {
 
   it("AC-13.3 shows the legal name, the statement, slot, time, expiry and Balance disclosed: none", () => {
     const html = render(
-      found("valid", { status: "verified", legalName: "Northwind Labs Ltd", country: "TR" }),
+      found("valid", {
+        status: "verified",
+        legalName: "Northwind Labs Ltd",
+        country: "TR",
+        reviewed: true,
+      }),
     );
+    expect(html).not.toContain("verify-organization-note");
     expect(text(html)).toContain(
       "Organization Northwind Labs Ltd, TR Statement Balance is at least $0.50 Shared with Hollis Supply Co. Proven The statement held when the record was written, and the record is still valid. Verified at Slot 505624879 29 Sep 2026, 19:13 UTC Valid until 6 Oct 2026 19:13 UTC Balance disclosed none The balance stays encrypted",
     );
@@ -158,17 +164,40 @@ describe("public verification page (AC-13.3)", () => {
       "Organization Not verified by Sotto Statement Balance is at least $0.50 Shared with Hollis Supply Co. Expired The statement was proven, but the record expired on 6 Oct 2026.",
     );
     expect(
-      text(render(found("paused", { status: "verified", legalName: "N", country: "TR" }))),
+      text(
+        render(
+          found("paused", { status: "verified", legalName: "N", country: "TR", reviewed: true }),
+        ),
+      ),
     ).toContain(
       "Verification paused The Sotto proof program is paused while an issue is looked into",
     );
     expect(
       text(
         render(
-          found("valid", { status: "attestation_expired", legalName: "Old Ltd", country: "DE" }),
+          found("valid", {
+            status: "attestation_expired",
+            legalName: "Old Ltd",
+            country: "DE",
+            reviewed: true,
+          }),
         ),
       ),
     ).toContain("Organization Old Ltd, DE (verification expired)");
+  });
+
+  it("step 4.6 (D-30): says under the name when nobody reviewed it, as devnet's automatic verification", () => {
+    const html = render(
+      found("valid", {
+        status: "verified",
+        legalName: "Any Name Ltd",
+        country: "TR",
+        reviewed: false,
+      }),
+    );
+    expect(text(html)).toContain(
+      "Organization Any Name Ltd, TR Entered by the organization on devnet. Sotto did not review it. Statement",
+    );
   });
 
   it("says when a record was closed, never written, or is not a record", () => {

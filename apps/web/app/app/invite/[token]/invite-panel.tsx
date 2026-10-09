@@ -39,6 +39,7 @@ import {
   type ViewerKey,
 } from "../../_components/confidential/keys.tsx";
 import { NetworkBanner } from "../../_components/confidential/network-banner.tsx";
+import { SolFaucetCard } from "../../_components/confidential/sol-faucet-card.tsx";
 import styles from "./invite.module.css";
 import { useAssetWords } from "../../_components/asset.tsx";
 
@@ -136,6 +137,8 @@ export function InvitePanel({
               , where you can also withdraw them to {asset.symbol}.
             </p>
           </Card>
+          {/* Step 4.6 (D-31): the account's setup needs a little SOL, which a new wallet has not. */}
+          {network.cluster === "devnet" ? <SolFaucetCard /> : null}
           <WalletCard />
           <KeysCard className={cards.keysCard} />
           <ViewingKeyCard viewerKey={viewerKey} />

@@ -6,7 +6,8 @@
 // founder 2026-10-01): the shared fields of packages/ui beside the three steps of verification, and the
 // status as a tracker of those steps with the attestation as the last. Step 4.3 (D-29): where the
 // network has more than one asset, the form asks which one the account holds (USDC by default); the
-// choice is fixed once the organization exists.
+// choice is fixed once the organization exists. Step 4.6 (D-30): on devnet a new organization is
+// verified at once, with no review, and the form, the steps and the status say so.
 import {
   Button,
   Card,
@@ -29,7 +30,9 @@ import {
   normalizeWebsite,
   orgCreateSchema,
   orgStatusLabel,
+  orgUpdateSchema,
   type OrgStatus,
+  type OrgVerification,
 } from "../../../lib/org.ts";
 import { assetWords } from "../../../lib/asset-words.ts";
 import type { AssetView } from "../../../lib/server/network-view.ts";
@@ -41,14 +44,17 @@ export type OnboardingOrg = {
   id: string;
   displayName: string;
   legalName: string;
-  country: string;
-  registrationNo: string;
-  website: string;
-  contactEmail: string;
+  /** Null while not given (D-33). */
+  country: string | null;
+  registrationNo: string | null;
+  website: string | null;
+  contactEmail: string | null;
   status: OrgStatus;
   asset: AssetId;
   attestationAddress: string | null;
   reviewedAt: string | null;
+  /** How it was verified or refused; null while in review (D-30). */
+  verification: OrgVerification | null;
   createdAt: string;
 };
 
@@ -78,10 +84,13 @@ const STATUS_TONE: Record<OrgStatus, ChipTone> = {
 export function OrgOnboarding({
   org,
   assets,
+  verification,
 }: {
   org: OnboardingOrg | null;
   /** The network's registry (step 4.3): the assets an account may hold, USDC first. */
   assets: AssetView[];
+  /** How this network verifies a new organization (D-30): automatically on devnet. */
+  verification: OrgVerification;
 }) {
   const [editing, setEditing] = useState(false);
   if (!org) {
@@ -89,19 +98,20 @@ export function OrgOnboarding({
       <>
         <PageHeader overline="Get started" title="Your organization" />
         <div className={styles.grid}>
-          <OrgForm assets={assets} />
-          <HowItWorks />
+          <OrgForm assets={assets} verification={verification} />
+          <HowItWorks verification={verification} />
         </div>
       </>
     );
   }
-  if (editing && org.status === "pending_review") {
+  if (editing && canEdit(org)) {
+    const how = org.verification === "automatic" ? "automatic" : "review";
     return (
       <>
         <PageHeader overline="Change details" title={org.displayName} />
         <div className={styles.grid}>
-          <OrgForm org={org} assets={assets} onDone={() => setEditing(false)} />
-          <HowItWorks />
+          <OrgForm org={org} assets={assets} verification={how} onDone={() => setEditing(false)} />
+          <HowItWorks verification={how} />
         </div>
       </>
     );
@@ -114,15 +124,25 @@ export function OrgOnboarding({
   );
 }
 
+/**
+ * The details change while an admin has not decided (in review), and at any time for a company
+ * nobody reviewed, verified automatically on devnet (step 4.6, D-33).
+ */
+export function canEdit(org: Pick<OnboardingOrg, "status" | "verification">): boolean {
+  return (
+    org.status === "pending_review" || (org.status === "active" && org.verification === "automatic")
+  );
+}
+
 function valuesOf(org: OnboardingOrg | undefined): Values {
   if (!org) return EMPTY;
   return {
     legalName: org.legalName,
     displayName: org.displayName === org.legalName ? "" : org.displayName,
-    country: org.country,
-    registrationNo: org.registrationNo,
-    website: org.website,
-    contactEmail: org.contactEmail,
+    country: org.country ?? "",
+    registrationNo: org.registrationNo ?? "",
+    website: org.website ?? "",
+    contactEmail: org.contactEmail ?? "",
     asset: org.asset,
   };
 }
@@ -130,10 +150,12 @@ function valuesOf(org: OnboardingOrg | undefined): Values {
 function OrgForm({
   org,
   assets,
+  verification,
   onDone,
 }: {
   org?: OnboardingOrg;
   assets: AssetView[];
+  verification: OrgVerification;
   onDone?: () => void;
 }) {
   const router = useRouter();
@@ -153,15 +175,27 @@ function OrgForm({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
-    const parsed = orgCreateSchema.safeParse({
-      legalName: values.legalName,
-      ...(values.displayName.trim() ? { displayName: values.displayName } : {}),
-      country: values.country,
-      registrationNo: values.registrationNo,
-      website: normalizeWebsite(values.website),
-      contactEmail: values.contactEmail.trim(),
-      ...(org ? {} : { asset: values.asset }),
-    });
+    // A company verified automatically needs only its name: an empty detail is cleared (D-33).
+    const settings = org !== undefined && verification === "automatic";
+    const optional = (value: string) => (value.trim() === "" ? null : value);
+    const parsed = settings
+      ? orgUpdateSchema.safeParse({
+          legalName: values.legalName,
+          ...(values.displayName.trim() ? { displayName: values.displayName } : {}),
+          country: optional(values.country),
+          registrationNo: optional(values.registrationNo),
+          website: optional(normalizeWebsite(values.website)),
+          contactEmail: optional(values.contactEmail.trim()),
+        })
+      : orgCreateSchema.safeParse({
+          legalName: values.legalName,
+          ...(values.displayName.trim() ? { displayName: values.displayName } : {}),
+          country: values.country,
+          registrationNo: values.registrationNo,
+          website: normalizeWebsite(values.website),
+          contactEmail: values.contactEmail.trim(),
+          ...(org ? {} : { asset: values.asset }),
+        });
     if (!parsed.success) {
       const next: Partial<Record<FieldName, string>> = {};
       for (const issue of parsed.error.issues) {
@@ -180,7 +214,10 @@ function OrgForm({
         // An emptied display name goes back to the legal name, as at creation.
         await callApi(`/api/orgs/${org.id}`, {
           method: "PATCH",
-          body: { ...parsed.data, displayName: parsed.data.displayName ?? parsed.data.legalName },
+          body: {
+            ...parsed.data,
+            displayName: parsed.data.displayName ?? parsed.data.legalName ?? values.legalName,
+          },
         });
         onDone?.();
       } else {
@@ -208,7 +245,13 @@ function OrgForm({
   return (
     <Card className={styles.formCard}>
       <h2 className={styles.cardTitle}>Business details</h2>
-      <p className={styles.lead}>A Sotto admin reviews these details before money features open.</p>
+      <p className={styles.lead} data-testid="form-lead">
+        {verification !== "automatic"
+          ? "A Sotto admin reviews these details before money features open."
+          : org
+            ? "Only the name is needed. When the legal name or the country changes, Sotto issues the attestation onchain again with the new details; nobody reviews them on devnet."
+            : "On devnet Sotto verifies a new organization at once, without reviewing these details, so you can try it with test money. You can change them later."}
+      </p>
       <form onSubmit={submit} noValidate aria-busy={busy}>
         <FieldGrid>
           <Field label="Legal name" error={errors.legalName} wide>
@@ -245,8 +288,8 @@ function OrgForm({
                 value={values.country}
                 onChange={change("country")}
               >
-                <option value="" disabled>
-                  Choose a country
+                <option value="" disabled={!(org && verification === "automatic")}>
+                  {org && verification === "automatic" ? "No country" : "Choose a country"}
                 </option>
                 {COUNTRIES.map(([code, name]) => (
                   <option key={code} value={code}>
@@ -325,7 +368,13 @@ function OrgForm({
           ) : null}
           <FieldActions>
             <Button type="submit" variant="blue" disabled={busy}>
-              {busy ? "Sending…" : org ? "Save changes" : "Send for review"}
+              {busy
+                ? "Sending…"
+                : org
+                  ? "Save changes"
+                  : verification === "automatic"
+                    ? "Create organization"
+                    : "Send for review"}
             </Button>
             {org && onDone ? (
               <Button variant="line" onClick={onDone} disabled={busy}>
@@ -375,7 +424,8 @@ function Field({
 }
 
 /** The three steps of verification, beside the form. */
-function HowItWorks() {
+function HowItWorks({ verification }: { verification: OrgVerification }) {
+  const automatic = verification === "automatic";
   return (
     <Card className={styles.how} data-testid="how-verification-works">
       <h2 className={styles.cardTitle}>How verification works</h2>
@@ -385,7 +435,7 @@ function HowItWorks() {
             01
           </span>
           <div>
-            <b>Send your business details</b>
+            <b>{automatic ? "Enter your business details" : "Send your business details"}</b>
             <small>Legal name, country, registration number, website and a contact email.</small>
           </div>
         </li>
@@ -394,8 +444,12 @@ function HowItWorks() {
             02
           </span>
           <div>
-            <b>A Sotto admin reviews them</b>
-            <small>Money features stay off until the review verifies the organization.</small>
+            <b>{automatic ? "Verified at once on devnet" : "A Sotto admin reviews them"}</b>
+            <small>
+              {automatic
+                ? "Nobody reviews the details on devnet. Money features open as soon as the organization exists."
+                : "Money features stay off until the review verifies the organization."}
+            </small>
           </div>
         </li>
         <li>
@@ -405,9 +459,9 @@ function HowItWorks() {
           <div>
             <b>An attestation onchain</b>
             <small>
-              Once verified, Sotto issues an attestation onchain to your wallet with the
-              organization ID, legal name, country, verification date and review level. Anyone can
-              read it.
+              {automatic
+                ? "Sotto issues an attestation onchain to your wallet with the organization ID, legal name, country, verification date and a review level that says no review took place. Anyone can read it."
+                : "Once verified, Sotto issues an attestation onchain to your wallet with the organization ID, legal name, country, verification date and review level. Anyone can read it."}
             </small>
           </div>
         </li>
@@ -420,6 +474,16 @@ type Stage = { title: string; detail: string; state: "done" | "current" | "next"
 
 /** The status as the three steps of verification. */
 export function stagesOf(org: OnboardingOrg): Stage[] {
+  // D-30: verified automatically on devnet, so no review is named.
+  if (org.status === "active" && org.verification === "automatic") {
+    return [
+      { title: "Created", detail: formatDate(org.createdAt), state: "done" },
+      { title: "Verified automatically", detail: "On devnet, without a review", state: "done" },
+      org.attestationAddress
+        ? { title: "Attestation onchain", detail: "Issued to your wallet", state: "done" }
+        : { title: "Attestation onchain", detail: "Being issued", state: "current" },
+    ];
+  }
   const sent: Stage = {
     title: "Sent for review",
     detail: formatDate(org.createdAt),
@@ -494,10 +558,19 @@ function OrgStatusView({ org, onEdit }: { org: OnboardingOrg; onEdit: () => void
             </div>
           </>
         ) : null}
+        {org.status === "active" && org.verification === "automatic" ? (
+          <div className={styles.actions}>
+            <Button variant="line" size="sm" onClick={onEdit} data-testid="edit-details">
+              Change details
+            </Button>
+          </div>
+        ) : null}
         {org.status === "active" && org.attestationAddress ? (
           <>
             <p className={styles.lead}>
-              Verified by Sotto. The verification is an attestation onchain, issued to your wallet.
+              {org.verification === "automatic"
+                ? "Verified automatically on devnet, without a review. The attestation onchain, issued to your wallet, says so."
+                : "Verified by Sotto. The verification is an attestation onchain, issued to your wallet."}
             </p>
             <dl className={styles.details}>
               <dt>Attestation</dt>
@@ -515,8 +588,9 @@ function OrgStatusView({ org, onEdit }: { org: OnboardingOrg; onEdit: () => void
         {org.status === "active" && !org.attestationAddress ? (
           <>
             <p className={styles.lead}>
-              Verified by Sotto. The attestation is being issued to your wallet onchain; reload in a
-              moment to see its address.
+              {org.verification === "automatic"
+                ? "Verified automatically on devnet, without a review. Money features are open. The attestation is being issued to your wallet onchain; reload in a moment to see its address."
+                : "Verified by Sotto. The attestation is being issued to your wallet onchain; reload in a moment to see its address."}
             </p>
             <div className={styles.actions}>
               <Link className={styles.primaryLink} href={`/app/${org.id}/setup`}>
@@ -537,24 +611,28 @@ function OrgStatusView({ org, onEdit }: { org: OnboardingOrg; onEdit: () => void
           <dt>Legal name</dt>
           <dd>{org.legalName}</dd>
           <dt>Country</dt>
-          <dd>{countryName(org.country)}</dd>
+          <dd>{org.country ? countryName(org.country) : "Not set"}</dd>
           <dt>Registration number</dt>
-          <dd>{org.registrationNo}</dd>
+          <dd>{org.registrationNo ?? "Not set"}</dd>
           <dt>Website</dt>
           <dd>
-            <a href={org.website} target="_blank" rel="noopener noreferrer">
-              {org.website}
-            </a>
+            {org.website ? (
+              <a href={org.website} target="_blank" rel="noopener noreferrer">
+                {org.website}
+              </a>
+            ) : (
+              "Not set"
+            )}
           </dd>
           <dt>Contact email</dt>
-          <dd>{org.contactEmail}</dd>
+          <dd>{org.contactEmail ?? "Not set"}</dd>
           <dt>Currency</dt>
           <dd data-testid="org-asset">
             {assetWords(org.asset).symbol} <DevnetTestBadge asset={assetWords(org.asset)} />
           </dd>
-          <dt>Sent for review</dt>
+          <dt>{org.verification === "automatic" ? "Created" : "Sent for review"}</dt>
           <dd>{formatDate(org.createdAt)}</dd>
-          {org.reviewedAt ? (
+          {org.reviewedAt && org.verification !== "automatic" ? (
             <>
               <dt>Reviewed</dt>
               <dd>{formatDate(org.reviewedAt)}</dd>

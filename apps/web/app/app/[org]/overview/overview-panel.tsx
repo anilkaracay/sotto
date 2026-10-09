@@ -19,7 +19,9 @@ import { KeysCard, WalletCard } from "../../_components/confidential/keys.tsx";
 import { NetworkBanner } from "../../_components/confidential/network-banner.tsx";
 import { WithdrawForm } from "../../_components/confidential/withdraw.tsx";
 import type { OwnerViewerKey } from "../../../../lib/client/balance-snapshot.ts";
+import type { RecordedAccount } from "../../_components/confidential/account-cards.tsx";
 import { AccountSky } from "./account-sky.tsx";
+import { FirstRunCard } from "./first-run-card.tsx";
 import { BalanceGrowth } from "./balance-growth.tsx";
 import { RecentActivity } from "./activity.tsx";
 import { ChainPanel } from "./chain-panel.tsx";
@@ -33,6 +35,7 @@ export function OverviewPanel({
   displayName,
   network,
   ownerKey,
+  recorded,
 }: {
   wallet: string;
   userId: string;
@@ -43,10 +46,18 @@ export function OverviewPanel({
   network: AvailableNetwork;
   /** The owner's registered viewing key, which the daily balance snapshot is sealed to (step 2.12). */
   ownerKey: OwnerViewerKey | null;
+  /** The account Sotto has on record for this wallet, for the first-run card (step 4.6). */
+  recorded: RecordedAccount | null;
 }) {
   return (
     <ConfidentialProvider wallet={wallet} orgId={orgId} network={network}>
-      <Overview userId={userId} orgName={orgName} displayName={displayName} ownerKey={ownerKey} />
+      <Overview
+        userId={userId}
+        orgName={orgName}
+        displayName={displayName}
+        ownerKey={ownerKey}
+        recorded={recorded}
+      />
     </ConfidentialProvider>
   );
 }
@@ -56,11 +67,13 @@ function Overview({
   orgName,
   displayName,
   ownerKey,
+  recorded,
 }: {
   userId: string;
   orgName: string;
   displayName: string | null;
   ownerKey: OwnerViewerKey | null;
+  recorded: RecordedAccount | null;
 }) {
   const { orgId, network, data } = useConfidential();
   const [withdrawing, setWithdrawing] = useState(false);
@@ -90,6 +103,8 @@ function Overview({
       />
       <div className={styles.grid}>
         <NetworkBanner check={network.check} label={network.label} />
+        {/* Step 4.6 (D-33): devnet's first run, until the account and the test money are there. */}
+        <FirstRunCard recorded={recorded} />
         <BalancesSection />
         {/* Step 3.7 (M2): the design's first row, the dark balance growth beside a card of a third,
             here the account's sky card. */}

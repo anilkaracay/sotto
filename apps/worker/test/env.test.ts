@@ -74,12 +74,21 @@ describe("worker config", () => {
       localnetUsdcMint: null,
       localnetDevusdMint: null,
       devusdMintAuthorityKeypair: null,
+      solFaucetKeypair: null,
     });
     // Step 4.3: the devUSD mint authority's keypair file, read as a path like the SAS signer's.
     expect(
       loadWorkerConfig({ ...FULL, DEVUSD_MINT_AUTHORITY_KEYPAIR: "/run/secrets/devusd.json" })
         .devusdMintAuthorityKeypair,
     ).toBe("/run/secrets/devusd.json");
+    // Step 4.6 (D-31): the SOL faucet's own keypair file, another key than the mint authority's.
+    const both = loadWorkerConfig({
+      ...FULL,
+      DEVUSD_MINT_AUTHORITY_KEYPAIR: "/run/secrets/devusd.json",
+      SOL_FAUCET_KEYPAIR: "/run/secrets/sol-faucet.json",
+    });
+    expect(both.solFaucetKeypair).toBe("/run/secrets/sol-faucet.json");
+    expect(both.devusdMintAuthorityKeypair).toBe("/run/secrets/devusd.json");
     expect(loadWorkerConfig({ ...FULL, LOCALNET_USDC_MINT: CREDENTIAL }).localnetUsdcMint).toBe(
       CREDENTIAL,
     );

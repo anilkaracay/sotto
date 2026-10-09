@@ -11,7 +11,11 @@
 // - listProofs: the issued list with each record's state now (valid, expired, closed).
 import { createHash } from "node:crypto";
 import { insertAccessEvent, orgs, proofRecords, users, type Database } from "@sotto/db";
-import { attestationAddress, decodeBusinessAttestation } from "@sotto/sdk/attestation";
+import {
+  attestationAddress,
+  BUSINESS_LEVEL_REVIEW,
+  decodeBusinessAttestation,
+} from "@sotto/sdk/attestation";
 import { getConfigDecoder, getProofRecordDecoder } from "@sotto/sdk/proofs";
 import type { AssetId } from "@sotto/sdk/cluster/assets";
 import type { SolanaRpc } from "@sotto/sdk/tx";
@@ -48,9 +52,9 @@ export type PublicProofView =
       /** valid, expired, or paused (the program is paused). */
       status: "valid" | "expired" | "paused";
       organization:
-        | { status: "verified"; legalName: string; country: string }
+        | { status: "verified"; legalName: string; country: string; reviewed: boolean }
         | { status: "not_verified" }
-        | { status: "attestation_expired"; legalName: string; country: string };
+        | { status: "attestation_expired"; legalName: string; country: string; reviewed: boolean };
       counterpartyLabel: string | null;
       balanceDisclosed: "none";
     };
@@ -145,7 +149,12 @@ async function readOrganization(
     return { status: "not_verified" };
   }
   const expired = decoded.expiry !== 0n && decoded.expiry * 1000n <= BigInt(now.getTime());
-  const named = { legalName: decoded.data.legalName, country: decoded.data.country };
+  const named = {
+    legalName: decoded.data.legalName,
+    country: decoded.data.country,
+    // D-30: level 0 is devnet's automatic verification, where nobody reviewed the details.
+    reviewed: decoded.data.level >= BUSINESS_LEVEL_REVIEW,
+  };
   return expired ? { status: "attestation_expired", ...named } : { status: "verified", ...named };
 }
 

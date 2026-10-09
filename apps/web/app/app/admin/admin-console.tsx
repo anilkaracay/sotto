@@ -40,10 +40,11 @@ export type AdminOrg = {
   id: string;
   displayName: string;
   legalName: string;
-  country: string;
-  registrationNo: string;
-  website: string;
-  contactEmail: string;
+  /** Null while not given (D-33: a quick start company has only its name at first). */
+  country: string | null;
+  registrationNo: string | null;
+  website: string | null;
+  contactEmail: string | null;
   status: OrgStatus;
   ownerWallet: string;
   attestationAddress: string | null;
@@ -162,18 +163,22 @@ function OrgRow({ org }: { org: AdminOrg }) {
           business
           size={38}
           detail={
-            <>
-              {org.legalName} ·{" "}
-              <a href={org.website} target="_blank" rel="noopener noreferrer">
-                {org.website.replace(/^https?:\/\//, "")}
-              </a>
-            </>
+            org.website ? (
+              <>
+                {org.legalName} ·{" "}
+                <a href={org.website} target="_blank" rel="noopener noreferrer">
+                  {org.website.replace(/^https?:\/\//, "")}
+                </a>
+              </>
+            ) : (
+              org.legalName
+            )
           }
         />
       </Td>
-      <Td>{countryName(org.country)}</Td>
-      <Td>{org.registrationNo}</Td>
-      <Td>{org.contactEmail}</Td>
+      <Td>{org.country ? countryName(org.country) : "Not set"}</Td>
+      <Td>{org.registrationNo ?? "Not set"}</Td>
+      <Td>{org.contactEmail ?? "Not set"}</Td>
       <Td>
         <span className="mono" title={org.ownerWallet}>
           {shortWallet(org.ownerWallet)}

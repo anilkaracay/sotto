@@ -43,11 +43,12 @@ export function notifyTarget(value: string | null | undefined): NotifyTarget | n
 /** The words of the message: the organization's legal name, its country and when it was sent. */
 export function reviewMessage(org: {
   legalName: string;
-  country: string;
+  /** Null only for a company without a country (D-33), which is never in review. */
+  country: string | null;
   createdAt: Date;
 }): string {
   const at = org.createdAt.toISOString().slice(0, 16).replace("T", " ");
-  return `Sotto: ${org.legalName} (${org.country}) is waiting for review since ${at} UTC.`;
+  return `Sotto: ${org.legalName} (${org.country ?? "no country"}) is waiting for review since ${at} UTC.`;
 }
 
 export type SendResult = "sent" | "refused" | "failed";

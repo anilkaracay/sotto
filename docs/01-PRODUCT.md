@@ -35,8 +35,8 @@ Each acceptance criterion (AC) becomes at least one automated test. IDs are refe
 
 ### F-02 Organization onboarding and verification
 - AC-02.1 A signed in user creates an org with legal name, country, registration number, website, contact email. The creator becomes Owner.
-- AC-02.2 The org is `pending_review` until a Sotto admin approves it. Money features are disabled while pending.
-- AC-02.3 On approval, the worker issues a SAS attestation (schema `sotto.business.v1`, see `08-BACKEND.md`) to the owner wallet and stores the attestation address. The org becomes `active`.
+- AC-02.2 The org is `pending_review` until a Sotto admin approves it. Money features are disabled while pending. On the devnet configuration there is no review (D-30): a new org is `active` at once.
+- AC-02.3 On approval, the worker issues a SAS attestation (schema `sotto.business.v1`, see `08-BACKEND.md`) to the owner wallet and stores the attestation address. The org becomes `active`. On the devnet configuration (D-30) the org is `active` from its creation and the worker issues its attestation the same way, with the level that says no review took place.
 - AC-02.4 Revoking verification closes the attestation and sets the org to `suspended`; money features are disabled.
 
 ### F-03 Confidential account setup

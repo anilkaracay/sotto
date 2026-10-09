@@ -1,4 +1,4 @@
-// The devUSD faucet's web side (step 4.3, D-29; founder, 2026-10-02): devnet only, at most 10,000
+// The devUSD faucet's web side (step 4.3, D-29; founder, 2026-10-02): devnet only, at most 1,000,000
 // devUSD per wallet per 24 hours, rate limited and logged. The owner of an active devUSD organization
 // asks for devUSD to their own wallet; the web checks the cluster (the configured cluster must be
 // devnet and the RPC must serve devnet's genesis hash) and the wallet's 24 hour total, and queues the
@@ -14,8 +14,11 @@ import { log } from "./log.ts";
 import { requireMoneyAccess } from "./orgs.ts";
 import type { Session } from "./session.ts";
 
-/** 10,000 devUSD in base units (6 decimals) per wallet per 24 hours. */
-export const FAUCET_LIMIT = 10_000_000_000n;
+/**
+ * 1,000,000 devUSD in base units (6 decimals) per wallet per 24 hours (step 4.6; founder, 2026-10-09:
+ * it has no value and Sotto mints it; 10,000 before).
+ */
+export const FAUCET_LIMIT = 1_000_000_000_000n;
 export const FAUCET_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export const faucetErrors = {
@@ -34,7 +37,7 @@ export const faucetErrors = {
     new ApiError(
       429,
       "faucet_limit",
-      `A wallet can get at most 10000 devUSD in 24 hours; ${(remaining / 1_000_000n).toString()} devUSD is left`,
+      `A wallet can get at most 1,000,000 devUSD in 24 hours; ${(remaining / 1_000_000n).toString()} devUSD is left`,
     ),
 };
 

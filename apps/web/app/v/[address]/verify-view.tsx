@@ -41,6 +41,12 @@ const STATE_ICON: Record<keyof typeof STATE_WORDS, string> = {
   not_a_record: "M6 6l12 12 M18 6L6 18",
 };
 
+/** The legal name and the country; a company without a country (D-33) is its name alone. */
+const named = (organization: { legalName: string; country: string }) =>
+  organization.country
+    ? `${organization.legalName}, ${organization.country}`
+    : organization.legalName;
+
 function dateTime(iso: string): string {
   const date = new Date(iso);
   return `${formatDate(date)}, ${date.toISOString().slice(11, 16)} UTC`;
@@ -132,8 +138,8 @@ function Found({ view }: { view: Extract<PublicProofView, { state: "found" }> })
     organization.status === "not_verified"
       ? "Not verified by Sotto"
       : organization.status === "attestation_expired"
-        ? `${organization.legalName}, ${organization.country} (verification expired)`
-        : `${organization.legalName}, ${organization.country}`;
+        ? `${named(organization)} (verification expired)`
+        : named(organization);
   const tone =
     view.status === "valid"
       ? styles.valid
@@ -163,6 +169,11 @@ function Found({ view }: { view: Extract<PublicProofView, { state: "found" }> })
         >
           {organizationWords}
         </p>
+        {organization.status !== "not_verified" && !organization.reviewed ? (
+          <p className={styles.shared} data-testid="verify-organization-note">
+            Entered by the organization on devnet. Sotto did not review it.
+          </p>
+        ) : null}
         <span className={styles.label}>Statement</span>
         <p className={styles.statement} data-testid="verify-statement">
           {statementWords(BigInt(record.threshold), assetWords(record.asset))}

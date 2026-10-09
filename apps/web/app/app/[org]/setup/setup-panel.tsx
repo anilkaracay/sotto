@@ -27,6 +27,7 @@ import {
   type RecordedAccount,
 } from "../../_components/confidential/account-cards.tsx";
 import { FaucetCard } from "../../_components/confidential/faucet-card.tsx";
+import { SolFaucetCard } from "../../_components/confidential/sol-faucet-card.tsx";
 
 /** Which of the three steps comes next: the keys, the account, or funding once both are done. */
 export function nextStep(unlocked: boolean, accountKind: string): 1 | 2 | 3 {
@@ -87,6 +88,7 @@ export function SetupPanel({
         <BalancesSection />
         <Steps recorded={recorded} />
         <div className={styles.column}>
+          {network.cluster === "devnet" ? <SolFaucetCard /> : null}
           {network.cluster === "devnet" && network.asset.devnetTestAsset ? <FaucetCard /> : null}
           <WalletCard />
           <ViewingKeyCard viewerKey={viewerKey} className={styles.viewingCard} />

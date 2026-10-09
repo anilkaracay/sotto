@@ -4,8 +4,8 @@
 // organization where they hold a viewing key (step 2.5, AC-11.1) and the pay page of each active
 // organization that pays them (step 1.10): one place opens directly, several are listed to choose
 // from, each a tile of the app theme (design pass C, step 3.6). A user with no organization goes
-// to onboarding. Members with other roles see the shell until
-// their pages exist.
+// to onboarding, or on devnet gets a company made at once and goes to its dashboard (step 4.6,
+// D-33). Members with other roles see the shell until their pages exist.
 import { Card, PageHeader } from "@sotto/ui";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -15,7 +15,9 @@ import { getDb } from "../../lib/server/db.ts";
 import { loadMe } from "../../lib/server/me.ts";
 import { loadNetworkView } from "../../lib/server/network-view.ts";
 import { shortWallet } from "../../lib/format.ts";
+import { verificationOnCreate } from "../../lib/org.ts";
 import { AppShell } from "./_components/app-shell.tsx";
+import { QuickStart } from "./_components/quick-start.tsx";
 import styles from "./places.module.css";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +47,19 @@ export default async function AppPage() {
   ];
   const [only] = places;
   if (only && places.length === 1) redirect(only.href);
-  if (me.memberships.length === 0) redirect("/app/onboarding");
+  if (me.memberships.length === 0) {
+    // Step 4.6 (D-33): on devnet a wallet that belongs to no organization gets one made for it and
+    // lands on its dashboard, with no form. Every other configuration keeps the onboarding form.
+    const network = await loadNetworkView();
+    if (!network.available || verificationOnCreate(network.cluster) !== "automatic") {
+      redirect("/app/onboarding");
+    }
+    return (
+      <AppShell me={me} network={network}>
+        <QuickStart />
+      </AppShell>
+    );
+  }
   return (
     <AppShell me={me} network={await loadNetworkView()}>
       <PageHeader

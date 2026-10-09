@@ -46,6 +46,21 @@ export async function deriveViewingKey(
   return { publicKey: pair.publicKey, secretKey: pair.privateKey };
 }
 
+/**
+ * Step 4.6 (D-32): the viewing keypair of a published secret key, for the demo company's read only
+ * roles. The public key follows from the secret key (X25519 base point multiplication), so a caller
+ * cannot pair a secret key with another public key. A viewing key opens sealed records and nothing
+ * else: it is no Ed25519 key, so it signs no message and no transaction.
+ */
+export async function viewingKeyFromSecret(secretKey: Uint8Array): Promise<ViewingKeyMaterial> {
+  if (secretKey.length !== 32) {
+    throw new KeyDerivationError("bad_signature", "A viewing secret key is 32 bytes");
+  }
+  await sodium.ready;
+  const copy = new Uint8Array(secretKey);
+  return { publicKey: sodium.crypto_scalarmult_base(copy), secretKey: copy };
+}
+
 export function zeroViewingKey(keys: ViewingKeyMaterial): void {
   keys.secretKey.fill(0);
 }

@@ -8,6 +8,8 @@ import { createRetryingRpc } from "@sotto/sdk/tx";
 import { ConfigError, loadWorkerConfig } from "./config.ts";
 import { confirmExecutionsJob } from "./jobs/confirm-executions.ts";
 import { devusdFaucetJob } from "./jobs/devusd-faucet.ts";
+import { solFaucetJob } from "./jobs/sol-faucet.ts";
+import { solFaucetHealthJob } from "./jobs/sol-faucet-health.ts";
 import { grantExpiryJob } from "./jobs/grant-expiry.ts";
 import { indexAccountsJob } from "./jobs/index-accounts.ts";
 import { payrollRunsJob } from "./jobs/payroll-runs.ts";
@@ -61,6 +63,19 @@ export async function main(
       return 1;
     }
   }
+  // Step 4.6 (D-31): the faucet's devnet SOL, where its own wallet's keypair is configured. The job
+  // itself refuses any ledger but devnet's.
+  let solFaucetPayer = null;
+  if (config.solFaucetKeypair) {
+    try {
+      solFaucetPayer = await loadKeypairSigner(config.solFaucetKeypair);
+    } catch (error) {
+      console.error(
+        `sotto worker: configuration error: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return 1;
+    }
+  }
   const once = argv.includes("--once");
   const { db, close } = createDb(config.databaseUrl, { max: 3 });
   const rpc = createRetryingRpc(config.rpcUrl, {
@@ -93,6 +108,17 @@ export async function main(
     reviewNotifyJob({ db, target: notifyTarget(config.notifyUrl) }),
     ...(devusdAuthority && devusdMint
       ? [devusdFaucetJob({ db, rpc, authority: devusdAuthority, mint: devusdMint })]
+      : []),
+    ...(solFaucetPayer
+      ? [
+          solFaucetJob({ db, rpc, payer: solFaucetPayer }),
+          // The operator hears when the faucet's wallet runs low (founder, 2026-10-09).
+          solFaucetHealthJob({
+            rpc,
+            payer: solFaucetPayer.address,
+            target: notifyTarget(config.notifyUrl),
+          }),
+        ]
       : []),
   ];
   // The notification URL holds a token: only whether it is set and which service it names is logged.

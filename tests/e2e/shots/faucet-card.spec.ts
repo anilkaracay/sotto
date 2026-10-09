@@ -48,7 +48,7 @@ test("the faucet card at 1440 and 390", async ({ page }) => {
   let minted = false;
   const mint = {
     id: "a0000000-0000-4000-8000-000000000001",
-    amount: "10000000000",
+    amount: "1000000000000",
     status: "minted",
     signature:
       "5B1L6sgtbhLdQ1Zr8mVh3XkYc2uJ7pNfW4aTqE9oGdRs6yHnKb3vCx8MzPjUeA2iFwQt7LgD4hSnV9rYkB1mXcZ",
@@ -67,8 +67,8 @@ test("the faucet card at 1440 and 390", async ({ page }) => {
       json: {
         faucet: {
           wallet: owner.address,
-          limit: "10000000000",
-          remaining: minted ? "0" : "10000000000",
+          limit: "1000000000000",
+          remaining: minted ? "0" : "1000000000000",
           mints: minted ? [mint] : [],
         },
       },
@@ -77,17 +77,17 @@ test("the faucet card at 1440 and 390", async ({ page }) => {
 
   await page.goto(`/app/${orgId}/setup`);
   const card = page.getByTestId("faucet-card");
-  await expect(card.getByTestId("faucet-remaining")).toContainText("10000 devUSD");
+  await expect(card.getByTestId("faucet-remaining")).toContainText("1000000 devUSD");
   await expect(card.getByTestId("devnet-test-badge")).toBeVisible();
   await shoot(page, "ui-04-faucet-card", card);
-  await card.getByLabel("Amount of devUSD").fill("10000");
+  await card.getByLabel("Amount of devUSD").fill("1000000");
   await card.getByRole("button", { name: "Get devUSD" }).click();
   await expect(card.getByTestId("faucet-latest")).toContainText(
-    "Minted 10000 devUSD to your wallet",
+    "Minted 1000000 devUSD to your wallet",
   );
   await expect(card.getByTestId("faucet-remaining")).toContainText("0 devUSD");
   await expect(card.getByTestId("faucet-limit")).toContainText(
-    "A wallet can get at most 10,000 devUSD in 24 hours",
+    "A wallet can get at most 1,000,000 devUSD in 24 hours",
   );
   await shoot(page, "ui-05-faucet-card-minted", card);
 });

@@ -147,7 +147,7 @@ export function ChainView({
         <Table>
           <thead>
             <tr>
-              <Th>Date</Th>
+              <Th className={styles.dateCol}>Date</Th>
               <Th>What happened</Th>
               <Th>Accounts</Th>
               <Th>Transaction</Th>
@@ -159,7 +159,7 @@ export function ChainView({
               const amount = chainAmountWords(row, asset);
               return (
                 <tr key={row.id} data-testid="chain-row" data-type={row.type}>
-                  <Td>
+                  <Td className={styles.dateCol}>
                     <span className={`num ${styles.date}`}>
                       {row.blockTime ? formatDate(row.blockTime) : `Slot ${row.slot}`}
                     </span>

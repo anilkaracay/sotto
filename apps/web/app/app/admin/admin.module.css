@@ -77,7 +77,9 @@
 
 /* The date a request was sent, in a column of its own width: the dates' digits and month names have
    different widths, and an automatic column moved every column after it from one day to the next. */
+/* Step 4.10: wide enough for a two digit day too. At 5.5rem "10 Oct 2026" was a few pixels wider
+   than the column, so from the tenth of a month on the columns moved again. */
 .sent {
-  width: 5.5rem;
+  width: 6.5rem;
   white-space: nowrap;
 }

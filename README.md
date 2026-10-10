@@ -103,7 +103,7 @@ From sign in to a first confidential payment, its check on the explorer and a pr
 
 **1. Switch your wallet to devnet.** A new, empty account is enough.
 
-- Phantom (checked with 26.31.0): open the account menu at the top left, then the gear, then **Developer Settings**. Turn on **Testnet Mode**; **Solana Devnet** is ticked in the list under it.
+- Phantom (checked with 26.31.0): open the account menu at the top left, then the gear, then **Developer Settings**, and turn on **Testnet Mode**. Phantom goes back to its home screen and shows **You are currently in Testnet Mode**. **Solana Devnet** is selected already: it is ticked under Developer Settings, as in the picture.
 - Solflare (checked with 2.39.1): open the gear, then **General**. Under **Network** choose **Devnet**, and in the dialog **Switching to Devnet** choose **Continue**.
 
 <img src="apps/web/public/walkthrough/phantom-devnet.webp" alt="Phantom's Developer Settings with Testnet Mode on and Solana Devnet ticked" width="240"> <img src="apps/web/public/walkthrough/solflare-devnet.webp" alt="Solflare's settings, General: the Network list open with Mainnet, Testnet and Devnet" width="520">
@@ -126,7 +126,7 @@ From sign in to a first confidential payment, its check on the explorer and a pr
 
 <img src="apps/web/public/walkthrough/fund.webp" alt="The card Fund your account with 100000 typed under Amount of devUSD and the button Fund account" width="620">
 
-**6. Pay Atlas Freight.** Open **Payments**. In the card **Pay a recipient**, under **Recipient**, choose **Atlas Freight (demo recipient)**: a company made by quick start has this demo recipient from the start, a demo wallet whose account can receive confidential payments. Type an amount under **Amount (devUSD)**, for example 1250.50, a **Memo** if you like, and choose **Pay**. Your wallet asks for one transaction and then one message.
+**6. Pay Atlas Freight.** Open **Payments**. In the card **Pay a recipient**, under **Recipient**, choose **Atlas Freight (demo recipient)**: a company made by quick start has this demo recipient from the start, a demo wallet whose account can receive confidential payments. Type an amount under **Amount (devUSD)**, for example 1250.50, a **Memo** if you like, and choose **Pay**. Solflare then asks for one transaction and then one message; Phantom asks for five transactions and then one message, as it signs the payment as five smaller transactions.
 
 <img src="apps/web/public/walkthrough/pay.webp" alt="The card Pay a recipient: Atlas Freight (demo recipient) chosen, 1250.50 under Amount (devUSD), a memo, and the button Pay" width="420">
 

@@ -21,7 +21,11 @@ export const WALKTHROUGH_WALLETS = {
     version: "26.31.0",
     settings: "Developer Settings",
     toggle: "Testnet Mode",
+    /** What Phantom shows on its home screen, where it returns once the switch is on. */
+    banner: "You are currently in Testnet Mode",
     network: "Solana Devnet",
+    /** What a payment asks the wallet for (measured on the live site, step 4.9). */
+    payment: "five transactions and then one message",
   },
   solflare: {
     version: "2.39.1",
@@ -30,6 +34,7 @@ export const WALKTHROUGH_WALLETS = {
     network: "Devnet",
     dialog: "Switching to Devnet",
     confirm: "Continue",
+    payment: "one transaction and then one message",
   },
 } as const;
 

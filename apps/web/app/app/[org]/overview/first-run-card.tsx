@@ -20,6 +20,11 @@ import {
   firstRunDevusdAmount,
   firstRunDone,
   firstRunSteps,
+  SOL_ELSEWHERE_AFTER,
+  SOL_ELSEWHERE_BEFORE,
+  SOLANA_FAUCET_NAME,
+  SOLANA_FAUCET_URL,
+  solElsewhere,
   type FirstRunStep,
 } from "../../../../lib/first-run.ts";
 import type { FaucetView } from "../../../../lib/server/faucet.ts";
@@ -76,6 +81,8 @@ function FirstRun({ recorded }: { recorded: RecordedAccount | null }) {
   const [sol, setSol] = useState<SolFaucetView | null>(null);
   const [devusd, setDevusd] = useState<FaucetView | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  /** The SOL faucet refused this wallet's request for a limit. */
+  const [solLimited, setSolLimited] = useState(false);
   const [running, setRunning] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   /** The owner clicked to set the account up: the key signatures may be asked for. */
@@ -137,7 +144,12 @@ function FirstRun({ recorded }: { recorded: RecordedAccount | null }) {
       try {
         await callApi("/api/faucet/sol", { method: "POST", body: {} });
       } catch (error) {
-        setProblem(error instanceof ApiCallError ? error.message : "The faucet did not answer.");
+        // Step 4.10: a request refused for a limit (per wallet, per network address, per day) is
+        // not an error of the owner's: the card says where else devnet SOL comes from.
+        if (error instanceof ApiCallError && error.status === 429) setSolLimited(true);
+        else {
+          setProblem(error instanceof ApiCallError ? error.message : "The faucet did not answer.");
+        }
       }
       await load();
     })();
@@ -270,6 +282,15 @@ function FirstRun({ recorded }: { recorded: RecordedAccount | null }) {
             </Button>
           </div>
         </>
+      ) : null}
+      {solElsewhere(solStep, solLimited) ? (
+        <p className={notices.note} role="status" data-testid="first-run-sol-elsewhere">
+          {SOL_ELSEWHERE_BEFORE}{" "}
+          <a className={cards.link} href={SOLANA_FAUCET_URL} target="_blank" rel="noreferrer">
+            {SOLANA_FAUCET_NAME}
+          </a>
+          {SOL_ELSEWHERE_AFTER}
+        </p>
       ) : null}
       {(problem ?? unread) ? (
         <p className={cards.problem} role="alert" data-testid="first-run-problem">

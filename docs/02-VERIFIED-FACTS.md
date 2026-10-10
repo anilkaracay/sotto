@@ -366,3 +366,9 @@ O3. Solflare 2.39.1 (the extension's own screens, a fresh profile): the gear, "G
 O4. From sign in to a first confidential payment on https://sottoapp.xyz, with Solflare 2.39.1 and a new wallet (2026-10-09, twice): the wallet asked 11 times: the connection and the sign in message; three key messages and one transaction for the first-run card's account step; one message for the viewing key; two transactions for funding; one transaction and one message for the payment. A proof of funds asked for five transactions more. The second run took 180 seconds unattended, the proof included.
 
 **VERIFIED** 2026-10-09 · devnet, https://sottoapp.xyz, the two extensions · step 4.8.
+
+O5. The same path with Phantom 26.31.0 and a new wallet on https://sottoapp.xyz (2026-10-10, `a3bf90c66a67`): the wallet asked 20 times from the switch to devnet to a proof's public page: the connection and the sign in message; three key messages and one transaction for the account step; one message for the viewing key; two transactions for funding; five transactions and then one message for the payment; five transactions for the proof. It took 140 seconds unattended. Phantom signs version 0 transactions, so the payment's proofs are transactions of their own; Solflare signs the payment as one version 1 transaction.
+
+O6. With the SOL faucet's limit of 3 requests per IP per 24 hours used up, a fourth new wallet from the same network got "Too many requests, retry later" (HTTP 429) on the first-run card and no SOL (2026-10-09). With 0.05 SOL sent to the wallet from elsewhere, the card showed "Your wallet holds 0.05 SOL, enough for fees." and went on with the account step.
+
+**VERIFIED** 2026-10-10 · devnet, https://sottoapp.xyz, Phantom 26.31.0 · steps 4.8 and 4.9.

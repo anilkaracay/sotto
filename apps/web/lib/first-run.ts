@@ -11,6 +11,14 @@ export const FIRST_RUN_DEVUSD = 1_000_000_000_000n;
 /** With less SOL than this the account's setup cannot pay its fee and rent (0.005 SOL). */
 export const FIRST_RUN_MIN_SOL = 5_000_000n;
 
+/** Solana's own devnet faucet, for a wallet Sotto's faucet cannot serve right now (step 4.10). */
+export const SOLANA_FAUCET_URL = "https://faucet.solana.com";
+export const SOLANA_FAUCET_NAME = "faucet.solana.com";
+/** The note's words around the link: "<before> faucet.solana.com<after>". */
+export const SOL_ELSEWHERE_BEFORE =
+  "Sotto's faucet cannot send this wallet test SOL right now. Get devnet SOL for it at";
+export const SOL_ELSEWHERE_AFTER = ", then reload this page.";
+
 export type FirstRunFacts = {
   /** The SOL faucet's view of the wallet; null until it is read. */
   sol: SolFaucetView | null;
@@ -90,7 +98,7 @@ function solStep(sol: SolFaucetView | null): FirstRunStep {
       sol.state === "refilling"
         ? "Test SOL is being refilled, try again later."
         : sol.state === "daily_total"
-          ? "The faucet has given out its SOL for today. Get devnet SOL at faucet.solana.com, or try again tomorrow."
+          ? "The faucet has given out its SOL for today."
           : `${holds}. It can ask the faucet again later.`,
   };
 }
@@ -162,4 +170,13 @@ export const firstRunDone = (steps: readonly FirstRunStep[]): boolean =>
 export function firstRunDevusdAmount(devusd: FaucetView): bigint {
   const remaining = BigInt(devusd.remaining);
   return remaining < FIRST_RUN_DEVUSD ? remaining : FIRST_RUN_DEVUSD;
+}
+
+/**
+ * Step 4.10: whether the card points to Solana's own faucet. It does when Sotto's faucet cannot give
+ * this wallet SOL now: the request was refused for a limit, or the SOL step cannot run.
+ */
+export function solElsewhere(step: FirstRunStep, refusedForLimit: boolean): boolean {
+  if (step.id !== "sol" || step.state === "done" || step.state === "running") return false;
+  return refusedForLimit || step.state === "stuck";
 }

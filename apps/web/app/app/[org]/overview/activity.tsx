@@ -241,7 +241,7 @@ export function ActivityView({
           <Table>
             <thead>
               <tr>
-                <Th>Date</Th>
+                <Th className={styles.dateCol}>Date</Th>
                 <Th>Counterparty</Th>
                 <Th>Type</Th>
                 <Th>Status</Th>
@@ -261,7 +261,7 @@ export function ActivityView({
                     data-status={payment.status}
                     data-kind={payment.kind}
                   >
-                    <Td>
+                    <Td className={styles.dateCol}>
                       <span className={`num ${styles.date}`}>{formatDate(payment.createdAt)}</span>
                     </Td>
                     <Td>

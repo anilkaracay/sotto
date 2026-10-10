@@ -27,6 +27,7 @@ import { formatDate } from "../../../../lib/format.ts";
 import type { ChainActivityView } from "../../../../lib/server/chain-activity.ts";
 import type { DisclosureItemView, ManifestView } from "../../../../lib/server/disclosures.ts";
 import { useConfidential } from "../../_components/confidential/context.tsx";
+import { useReadyToPay } from "../../_components/confidential/ready-checklist.tsx";
 import { useKeySession } from "../../_components/key-session.tsx";
 import { MonthBars } from "../../_components/month-bars.tsx";
 import styles from "./overview.module.css";
@@ -66,6 +67,7 @@ export function BalanceGrowth({
   const [state, setState] = useState<GrowthState>({ kind: "locked" });
   const [note, setNote] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const setupReady = useReadyToPay(ownerKey?.publicKey ?? null);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,24 +90,29 @@ export function BalanceGrowth({
       }
       setState({ kind: "loading" });
       // Today's snapshot first, so the history holds it (at most once per unlock of this tab).
-      if (!attempted.has(viewing) && ownerKey && connected) {
+      // Step 4.11 (D-38): an unlock during which "Get ready to pay" is still open records no
+      // snapshot, so the checklist's steps open no wallet window they did not announce. The next
+      // unlock records it. While the account is being read again, the answer waits.
+      if (!attempted.has(viewing) && ownerKey && connected && setupReady !== null) {
         attempted.add(viewing);
-        let saved: SnapshotResult | "failed";
-        try {
-          saved = await saveDailySnapshot({
-            orgId,
-            currency,
-            owner: ownerKey,
-            available: balance.available,
-            pending: balance.pending,
-            now: new Date(),
-            sign: (message) => connected.sign(message),
-            worker,
-          });
-        } catch {
-          saved = "failed";
+        let saved: SnapshotResult | "failed" | null = null;
+        if (setupReady) {
+          try {
+            saved = await saveDailySnapshot({
+              orgId,
+              currency,
+              owner: ownerKey,
+              available: balance.available,
+              pending: balance.pending,
+              now: new Date(),
+              sign: (message) => connected.sign(message),
+              worker,
+            });
+          } catch {
+            saved = "failed";
+          }
         }
-        if (!cancelled) setNote(SNAPSHOT_NOTES[saved] ?? null);
+        if (!cancelled) setNote(saved ? (SNAPSHOT_NOTES[saved] ?? null) : null);
       }
       try {
         const now = new Date();
@@ -168,6 +175,7 @@ export function BalanceGrowth({
     unlocked,
     viewing,
     balance,
+    setupReady,
     ownerKey,
     connected,
     orgId,

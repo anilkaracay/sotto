@@ -188,6 +188,13 @@
 .date {
   color: var(--faint);
 }
+/* Step 4.10: the date column of the overview's two tables has one width, wide enough for any date,
+   so a date's digits never move the columns after it (its text is masked in the visual baselines,
+   and a two digit day changed their layout). */
+.dateCol {
+  width: 6.5rem;
+  white-space: nowrap;
+}
 .wide .empty {
   padding: 18px 0 6px;
   font-size: 14px;

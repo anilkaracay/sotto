@@ -103,6 +103,10 @@ describe("the walkthrough (step 4.8)", () => {
     )) {
       expect(existsSync(`${ROOT}${src}`), src).toBe(true);
     }
+    // What each wallet shows and asks for, in the same words as the page.
+    for (const wallet of Object.values(WALKTHROUGH_WALLETS)) {
+      for (const word of Object.values(wallet)) expect(section, word).toContain(word);
+    }
     expect(section.match(/<img /g)?.length ?? 0).toBeGreaterThanOrEqual(WALKTHROUGH_STEPS.length);
   });
 

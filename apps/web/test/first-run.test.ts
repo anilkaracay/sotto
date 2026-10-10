@@ -8,6 +8,12 @@ import {
   firstRunSteps,
   solWords,
   type FirstRunFacts,
+  SOL_ELSEWHERE_AFTER,
+  SOL_ELSEWHERE_BEFORE,
+  SOLANA_FAUCET_NAME,
+  SOLANA_FAUCET_URL,
+  solElsewhere,
+  type FirstRunStep,
 } from "../lib/first-run.ts";
 import type { FaucetView } from "../lib/server/faucet.ts";
 import type { SolFaucetView } from "../lib/server/sol-faucet.ts";
@@ -131,7 +137,20 @@ describe("the first-run card's steps", () => {
     });
     expect(refilling[1]?.state).toBe("waiting");
     const day = firstRunSteps(facts({ sol: sol({ state: "daily_total" }) }));
-    expect(day[0]?.detail).toContain("Get devnet SOL at faucet.solana.com");
+    expect(day[0]?.detail).toBe("The faucet has given out its SOL for today.");
+    // Step 4.10: the card then points to Solana's own faucet, as it does when a request is refused
+    // for a limit, and never once the wallet has SOL or a grant is on its way.
+    expect(solElsewhere(day[0] as FirstRunStep, false)).toBe(true);
+    const ready = firstRunSteps(facts({ sol: sol({ state: "available" }) }));
+    expect(solElsewhere(ready[0] as FirstRunStep, false)).toBe(false);
+    expect(solElsewhere(ready[0] as FirstRunStep, true)).toBe(true);
+    const enough = firstRunSteps(facts({ sol: sol({ state: "not_needed" }) }));
+    expect(solElsewhere(enough[0] as FirstRunStep, true)).toBe(false);
+    expect(solElsewhere(ready[1] as FirstRunStep, true)).toBe(false);
+    expect(SOLANA_FAUCET_URL).toBe("https://faucet.solana.com");
+    expect(`${SOL_ELSEWHERE_BEFORE} ${SOLANA_FAUCET_NAME}${SOL_ELSEWHERE_AFTER}`).toBe(
+      "Sotto's faucet cannot send this wallet test SOL right now. Get devnet SOL for it at faucet.solana.com, then reload this page.",
+    );
     // 0.01 SOL is under the faucet's line but enough for the account's setup.
     const some = firstRunSteps(
       facts({ sol: sol({ state: "refilling", balanceLamports: "10000000" }) }),

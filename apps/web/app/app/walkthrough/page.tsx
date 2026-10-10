@@ -95,8 +95,10 @@ export default function WalkthroughPage() {
             <ul className={styles.list}>
               <li>
                 Phantom (checked with {W.phantom.version}): open the account menu at the top left,
-                then the gear, then <B>{W.phantom.settings}</B>. Turn on <B>{W.phantom.toggle}</B>;{" "}
-                <B>{W.phantom.network}</B> is ticked in the list under it.
+                then the gear, then <B>{W.phantom.settings}</B>, and turn on{" "}
+                <B>{W.phantom.toggle}</B>. Phantom goes back to its home screen and shows{" "}
+                <B>{W.phantom.banner}</B>. <B>{W.phantom.network}</B> is selected already: it is
+                ticked under {W.phantom.settings}, as in the picture.
               </li>
               <li>
                 Solflare (checked with {W.solflare.version}): open the gear, then{" "}
@@ -207,7 +209,8 @@ export default function WalkthroughPage() {
               by quick start has this demo recipient from the start, a demo wallet whose account can
               receive confidential payments. Type an amount under <B>{L.payAmount.label}</B>, for
               example {WALKTHROUGH_PAY}, a <B>{L.memo.label}</B> if you like, and choose{" "}
-              <B>{L.pay.label}</B>. Your wallet asks for one transaction and then one message.
+              <B>{L.pay.label}</B>. Solflare then asks for {W.solflare.payment}; Phantom asks for{" "}
+              {W.phantom.payment}, as it signs the payment as five smaller transactions.
             </p>
             <Shot
               name="pay"

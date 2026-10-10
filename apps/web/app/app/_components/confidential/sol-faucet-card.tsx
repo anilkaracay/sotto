@@ -10,6 +10,12 @@ import { Button, Card } from "@sotto/ui";
 import { useCallback, useEffect, useState } from "react";
 import { ApiCallError, callApi } from "../../../../lib/client/api.ts";
 import { explorerUrl } from "../../../../lib/explorer.ts";
+import {
+  SOL_ELSEWHERE_AFTER,
+  SOL_ELSEWHERE_BEFORE,
+  SOLANA_FAUCET_NAME,
+  SOLANA_FAUCET_URL,
+} from "../../../../lib/first-run.ts";
 import type { SolFaucetView, SolGrantView } from "../../../../lib/server/sol-faucet.ts";
 import styles from "./cards.module.css";
 import extra from "./confidential.module.css";
@@ -39,6 +45,8 @@ export function SolFaucetCard() {
   const [faucet, setFaucet] = useState<SolFaucetView | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  /** The faucet refused this wallet's request for a limit. */
+  const [limited, setLimited] = useState(false);
 
   const load = useCallback(async () => {
     const next = await fetchSolFaucet();
@@ -82,7 +90,9 @@ export function SolFaucetCard() {
       await callApi("/api/faucet/sol", { method: "POST", body: {} });
       await load();
     } catch (error) {
-      setProblem(error instanceof ApiCallError ? error.message : "The faucet did not answer.");
+      // Step 4.10: refused for a limit, the card says where else devnet SOL comes from.
+      if (error instanceof ApiCallError && error.status === 429) setLimited(true);
+      else setProblem(error instanceof ApiCallError ? error.message : "The faucet did not answer.");
       await load();
     } finally {
       setBusy(false);
@@ -117,12 +127,7 @@ export function SolFaucetCard() {
       {faucet?.state === "daily_total" ? (
         <div className={extra.note} role="status" data-testid="sol-faucet-state">
           The faucet has given out its SOL for today. Get devnet SOL at{" "}
-          <a
-            className={styles.link}
-            href="https://faucet.solana.com"
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a className={styles.link} href={SOLANA_FAUCET_URL} target="_blank" rel="noreferrer">
             faucet.solana.com
           </a>
           , or try again tomorrow.
@@ -168,6 +173,15 @@ export function SolFaucetCard() {
           ) : (
             "Sotto is sending your SOL. This takes about half a minute."
           )}
+        </p>
+      ) : null}
+      {limited ? (
+        <p className={extra.note} role="status" data-testid="sol-faucet-elsewhere">
+          {SOL_ELSEWHERE_BEFORE}{" "}
+          <a className={styles.link} href={SOLANA_FAUCET_URL} target="_blank" rel="noreferrer">
+            {SOLANA_FAUCET_NAME}
+          </a>
+          {SOL_ELSEWHERE_AFTER}
         </p>
       ) : null}
       {problem ? (

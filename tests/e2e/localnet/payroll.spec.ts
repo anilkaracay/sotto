@@ -104,7 +104,7 @@ async function newPage(browser: Browser): Promise<Page> {
 }
 
 async function unlock(page: Page) {
-  const connect = page.getByRole("button", { name: "Connect" });
+  const connect = page.getByRole("button", { name: "Connect" }).first();
   const signing = page.getByTestId("keys-wallet");
   await expect(connect.or(signing)).toBeVisible();
   if (await connect.isVisible()) await connect.click();
@@ -185,7 +185,7 @@ test.describe.serial("payroll runs on localnet", () => {
     orgId = OVERVIEW_URL.exec(new URL(page.url()).pathname)?.[1] ?? "";
     await openSetup(page);
     await unlock(page);
-    await page.getByRole("button", { name: "Create viewing key" }).click();
+    await page.getByRole("button", { name: "Register public viewing key" }).click();
     await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
 
     // The recipients, through the API the recipients page uses.
@@ -230,7 +230,7 @@ test.describe.serial("payroll runs on localnet", () => {
     await option.getByRole("button", { name: "Sign in" }).click();
     await maya.getByRole("button", { name: "Accept invite" }).click();
     await unlock(maya);
-    await maya.getByRole("button", { name: "Create viewing key" }).click();
+    await maya.getByRole("button", { name: "Register public viewing key" }).click();
     await expect(maya.getByTestId("viewing-key-status")).toHaveText("Registered");
     await maya.context().close();
 

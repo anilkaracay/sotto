@@ -107,7 +107,7 @@ async function newPage(browser: Browser): Promise<Page> {
 
 /** Connects the wallet on a page with the wallet card, if this tab has not yet. */
 async function connectWallet(page: Page) {
-  const connect = page.getByRole("button", { name: "Connect" });
+  const connect = page.getByRole("button", { name: "Connect" }).first();
   const signing = page.getByTestId("keys-wallet");
   await expect(connect.or(signing)).toBeVisible();
   if (await connect.isVisible()) await connect.click();
@@ -213,7 +213,7 @@ test.describe.serial("viewing grants on localnet", () => {
     const orgId = OVERVIEW_URL.exec(new URL(page.url()).pathname)?.[1] ?? "";
     await openSetup(page);
     await unlock(page);
-    await page.getByRole("button", { name: "Create viewing key" }).click();
+    await page.getByRole("button", { name: "Register public viewing key" }).click();
     await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
     const origin = new URL(page.url()).origin;
     const added = await page.request.post(`/api/orgs/${orgId}/recipients`, {
@@ -302,7 +302,7 @@ test.describe.serial("viewing grants on localnet", () => {
     await daniel.getByRole("button", { name: "Accept invite" }).click();
     await expect(daniel.getByTestId("invite-joined")).toContainText("as its accountant");
     await connectWallet(daniel);
-    await daniel.getByRole("button", { name: "Create viewing key" }).click();
+    await daniel.getByRole("button", { name: "Register public viewing key" }).click();
     await expect(daniel.getByTestId("viewing-key-status")).toHaveText("Registered");
     const danielMe = (await (await daniel.request.get("/api/me")).json()) as {
       user: { id: string };

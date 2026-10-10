@@ -95,7 +95,7 @@ async function newPage(browser: Browser): Promise<Page> {
 
 /** Connects the wallet if needed and unlocks the keys with one click. */
 async function unlock(page: Page) {
-  const connect = page.getByRole("button", { name: "Connect" });
+  const connect = page.getByRole("button", { name: "Connect" }).first();
   const signing = page.getByTestId("keys-wallet");
   await expect(connect.or(signing)).toBeVisible();
   if (await connect.isVisible()) await connect.click();

@@ -29,6 +29,12 @@ export type ConfidentialState = {
   allowNonConfidentialCredits: boolean;
   pendingBalanceCreditCounter: bigint;
   maximumPendingBalanceCreditCounter: bigint;
+  /**
+   * Step 4.11: the pending credit counter as it stood at the last apply, 0 while nothing was ever
+   * applied. Public, like the counters above: with the pending counter it tells whether the account
+   * ever took a deposit or a transfer and whether one still waits, without any key (facts O7).
+   */
+  appliedPendingBalanceCreditCounter: bigint;
 };
 
 export type TokenAccountState =
@@ -114,6 +120,7 @@ export function tokenAccountState(account: MaybeEncodedAccount): TokenAccountSta
           allowNonConfidentialCredits: extension.allowNonConfidentialCredits,
           pendingBalanceCreditCounter: extension.pendingBalanceCreditCounter,
           maximumPendingBalanceCreditCounter: extension.maximumPendingBalanceCreditCounter,
+          appliedPendingBalanceCreditCounter: extension.actualPendingBalanceCreditCounter,
         }
       : null,
   };

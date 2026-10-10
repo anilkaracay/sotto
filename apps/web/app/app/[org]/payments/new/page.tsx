@@ -12,13 +12,20 @@ import { loadMe } from "../../../../../lib/server/me.ts";
 import { loadNetworkView } from "../../../../../lib/server/network-view.ts";
 import { listPayments, recipientViewerKeys } from "../../../../../lib/server/payments.ts";
 import { listRecipients } from "../../../../../lib/server/recipients.ts";
+import { readOrgTokenAccount } from "../../../../../lib/server/token-accounts.ts";
 import { readViewerKey } from "../../../../../lib/server/viewer-keys.ts";
 import { AppShell } from "../../../_components/app-shell.tsx";
 import { PaymentsPanel } from "./payments-panel.tsx";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewPaymentPage({ params }: { params: Promise<{ org: string }> }) {
+export default async function NewPaymentPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ org: string }>;
+  searchParams: Promise<{ to?: string | string[] }>;
+}) {
   const session = await currentSession();
   if (!session) redirect("/app/sign-in");
   const { org: orgId } = await params;
@@ -38,6 +45,13 @@ export default async function NewPaymentPage({ params }: { params: Promise<{ org
     }),
     loadNetworkView({ orgId }),
   ]);
+  // Step 4.11: the checklist's account step records the account, and its "Pay Atlas Freight"
+  // button opens this page with the recipient's wallet.
+  const recorded = network.available
+    ? await readOrgTokenAccount(db, session.userId, orgId, network.cluster)
+    : null;
+  const { to } = await searchParams;
+  const payTo = typeof to === "string" && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(to) ? to : null;
   return (
     <AppShell me={me} network={network} nav={ownerNav(orgId, "payments")}>
       <PageHeader overline={owned.orgName} title="Payments" />
@@ -55,6 +69,10 @@ export default async function NewPaymentPage({ params }: { params: Promise<{ org
             viewerKey: keys[recipient.id] ?? null,
           }))}
           payments={payments}
+          recorded={
+            recorded ? { address: recorded.address, applyFlagged: recorded.applyFlagged } : null
+          }
+          payTo={payTo}
           ownerKey={
             ownerKey
               ? {

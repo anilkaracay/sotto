@@ -52,7 +52,7 @@ const value = (page: Page, card: string) => page.getByTestId(`${card}-value`);
  * click, the confidential key signature and then the viewing key signature (step 1.8.1).
  */
 async function unlock(page: Page) {
-  const connect = page.getByRole("button", { name: "Connect" });
+  const connect = page.getByRole("button", { name: "Connect" }).first();
   const signing = page.getByTestId("keys-wallet");
   await expect(connect.or(signing)).toBeVisible();
   if (await connect.isVisible()) await connect.click();

@@ -10,9 +10,12 @@ import { serverRpc } from "../../../../lib/server/chain.ts";
 import { serverCluster } from "../../../../lib/server/cluster.ts";
 import { currentSession } from "../../../../lib/server/current-session.ts";
 import { getDb } from "../../../../lib/server/db.ts";
+import { ApiError } from "../../../../lib/server/errors.ts";
 import { loadMe } from "../../../../lib/server/me.ts";
 import { loadNetworkView } from "../../../../lib/server/network-view.ts";
 import { listProofs, proofsPaused } from "../../../../lib/server/proofs.ts";
+import { readOrgTokenAccount } from "../../../../lib/server/token-accounts.ts";
+import { readViewerKey } from "../../../../lib/server/viewer-keys.ts";
 import { AppShell } from "../../_components/app-shell.tsx";
 import { ProofsPanel } from "./proofs-panel.tsx";
 
@@ -38,6 +41,14 @@ export default async function ProofsPage({ params }: { params: Promise<{ org: st
         proofsPaused(serverRpc(), getDb(), cluster, orgId),
       ])
     : [{ proofs: [] }, false];
+  // Step 4.11: for the checklist: the owner's registered public viewing key and recorded account.
+  const [ownerKey, recorded] = await Promise.all([
+    readViewerKey(db, session, session.userId).catch((error: unknown) => {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
+    }),
+    network.available ? readOrgTokenAccount(db, session.userId, orgId, network.cluster) : null,
+  ]);
   return (
     <AppShell me={me} network={network} nav={ownerNav(orgId, "proofs")}>
       <PageHeader overline="Proofs" title="Prove it, without showing it" />
@@ -50,6 +61,10 @@ export default async function ProofsPage({ params }: { params: Promise<{ org: st
           program={program}
           proofs={proofs}
           paused={paused}
+          publicViewingKey={ownerKey?.publicKey ?? null}
+          recorded={
+            recorded ? { address: recorded.address, applyFlagged: recorded.applyFlagged } : null
+          }
         />
       ) : (
         <p role="status">

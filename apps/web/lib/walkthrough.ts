@@ -1,17 +1,24 @@
-// The walkthrough (step 4.8, D-35): from a wallet on devnet to a first confidential payment, its
-// check on the explorer and a proof of funds, in the words the live screens show. The page
+// The walkthrough (step 4.8, D-35; the flow of step 4.11, D-38): from a wallet on devnet to a first
+// confidential payment, its check on the explorer and a proof of funds, in the words the live
+// screens show. The page
 // /app/walkthrough and the README's section "Walkthrough" are written from these labels, and
 // apps/web/test/walkthrough.test.tsx fails when a screen stops saying one of them. No server only
 // imports.
 import { DEMO_RECIPIENT, ENTRY_DEMO, ENTRY_QUICK_START } from "./demo.ts";
-import { FIRST_RUN_TITLE } from "./first-run.ts";
+import { REGISTER_PUBLIC_VIEWING_KEY } from "./key-names.ts";
+import {
+  groupedWhole,
+  READY_DEFAULT_MOVE,
+  READY_DONE_BUTTON,
+  READY_DONE_TITLE,
+  READY_TITLE,
+} from "./ready.ts";
 
 export const WALKTHROUGH_PATH = "/app/walkthrough";
 export const WALKTHROUGH_LINK = "Walkthrough";
 export const WALKTHROUGH_TITLE = "Walkthrough: from sign in to a first confidential payment";
 
 /** What the walkthrough suggests typing; the run of 2026-10-09 used these. */
-export const WALKTHROUGH_FUND = "100000";
 export const WALKTHROUGH_PAY = "1250.50";
 export const WALKTHROUGH_PROOF = "50000";
 
@@ -59,54 +66,54 @@ export const WALKTHROUGH_LABELS = {
     find: '"Connect"',
   },
   signIn: { label: "Sign in", file: "app/app/_components/sign-in-screen.tsx", find: '"Sign in"' },
-  firstRun: {
-    label: FIRST_RUN_TITLE,
-    file: "app/app/[org]/overview/first-run-card.tsx",
-    find: "{FIRST_RUN_TITLE}",
+  ready: {
+    label: READY_TITLE,
+    file: "app/app/_components/confidential/ready-checklist.tsx",
+    find: "{READY_TITLE}",
   },
-  unlockAndSetUp: {
+  getSol: { label: "Get test SOL", file: "lib/ready.ts", find: '"Get test SOL"' },
+  setUp: {
     label: "Unlock my keys and set up the account",
-    file: "app/app/[org]/overview/first-run-card.tsx",
+    file: "lib/ready.ts",
     find: '"Unlock my keys and set up the account"',
+  },
+  registerKey: {
+    label: REGISTER_PUBLIC_VIEWING_KEY,
+    file: "lib/ready.ts",
+    find: '"Register public viewing key"',
+  },
+  getDevusd: {
+    label: "Get 1,000,000 devUSD",
+    file: "lib/ready.ts",
+    find: '"Get 1,000,000 devUSD"',
+  },
+  move: {
+    label: `Move ${groupedWhole(READY_DEFAULT_MOVE)} devUSD`,
+    file: "lib/ready.ts",
+    find: "`Move ${amount} devUSD`",
+  },
+  apply: {
+    label: "Apply pending balance",
+    file: "lib/ready.ts",
+    find: '"Apply pending balance"',
   },
   verify: {
     label: "Verify on Solana",
-    file: "app/app/[org]/overview/first-run-card.tsx",
+    file: "app/app/_components/confidential/ready-checklist.tsx",
     find: "Verify on Solana",
   },
-  fundLink: {
-    label: "Fund your confidential account with it",
-    file: "app/app/[org]/overview/first-run-card.tsx",
-    find: "Fund your confidential account with it",
+  readyDone: {
+    label: READY_DONE_TITLE,
+    file: "app/app/_components/confidential/ready-checklist.tsx",
+    find: "{READY_DONE_TITLE}",
   },
-  accountSetup: { label: "Account setup", file: "lib/org-nav.ts", find: '"Account setup"' },
+  payAtlas: {
+    label: READY_DONE_BUTTON,
+    file: "app/app/_components/confidential/ready-checklist.tsx",
+    find: "{READY_DONE_BUTTON}",
+  },
   payments: { label: "Payments", file: "lib/org-nav.ts", find: '"Payments"' },
   proofs: { label: "Proofs", file: "lib/org-nav.ts", find: '"Proofs"' },
-  viewingKey: {
-    label: "Viewing key",
-    file: "app/app/_components/confidential/keys.tsx",
-    find: ">Viewing key<",
-  },
-  createViewingKey: {
-    label: "Create viewing key",
-    file: "app/app/_components/confidential/keys.tsx",
-    find: '"Create viewing key"',
-  },
-  fundCard: {
-    label: "Fund your account",
-    file: "app/app/_components/confidential/account-cards.tsx",
-    find: "Fund your account",
-  },
-  fundAmount: {
-    label: "Amount of devUSD",
-    file: "app/app/_components/confidential/account-cards.tsx",
-    find: "Amount of {symbol}",
-  },
-  fundAccount: {
-    label: "Fund account",
-    file: "app/app/_components/confidential/account-cards.tsx",
-    find: "Fund account",
-  },
   payCard: {
     label: "Pay a recipient",
     file: "app/app/[org]/payments/new/payments-panel.tsx",
@@ -181,9 +188,7 @@ export type WalkthroughLabel = keyof typeof WALKTHROUGH_LABELS;
 export const WALKTHROUGH_STEPS = [
   "Switch your wallet to devnet",
   "Quick start: sign in",
-  "Set up and get test money",
-  "Create your viewing key",
-  "Move devUSD into your confidential balance",
+  "Get ready to pay",
   "Pay Atlas Freight",
   "Check on the explorer that the amount is hidden",
   "Prove a balance without showing it",

@@ -147,7 +147,7 @@ async function newPage(browser: Browser): Promise<Page> {
 }
 
 async function connect(page: Page) {
-  const connectButton = page.getByRole("button", { name: "Connect" });
+  const connectButton = page.getByRole("button", { name: "Connect" }).first();
   const signing = page.getByTestId("keys-wallet");
   await expect(connectButton.or(signing)).toBeVisible();
   if (await connectButton.isVisible()) await connectButton.click();
@@ -221,7 +221,7 @@ test("the account and money screens in every state, for the design pass", async 
   await testWallet(page, "refuse", []);
   await page.getByRole("button", { name: "Sign the viewing key message" }).click();
   await expect(page.getByTestId("viewing-unlocked")).toHaveText("Unlocked");
-  await page.getByRole("button", { name: "Create viewing key" }).click();
+  await page.getByRole("button", { name: "Register public viewing key" }).click();
   await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
 
   // The determinism refusal, from a wallet whose second key signature differs.
@@ -328,7 +328,7 @@ test("the account and money screens in every state, for the design pass", async 
   await option.getByRole("button", { name: "Sign in" }).click();
   await recipient.getByRole("button", { name: "Accept invite" }).click();
   await unlock(recipient);
-  await recipient.getByRole("button", { name: "Create viewing key" }).click();
+  await recipient.getByRole("button", { name: "Register public viewing key" }).click();
   await expect(recipient.getByTestId("viewing-key-status")).toHaveText("Registered");
   await recipient.context().close();
 
@@ -388,7 +388,8 @@ test("the account and money screens in every state, for the design pass", async 
   await pay.getByLabel("Recipient").selectOption({ label: label("Maya Chen", RECIPIENT.address) });
   await pay.getByLabel("Amount (USDC)").fill("1");
   await pay.getByRole("button", { name: "Pay" }).click();
-  await expect(page.getByTestId("payment-problem")).toContainText("Sotto Test Wallet said");
+  // Step 4.11: a request the wallet did not sign is a block of its own, with the wallet's words.
+  await expect(page.getByTestId("guidance-wallet")).toContainText("Sotto Test Wallet said");
   await shoot(page, "18-payment-wallet-refused");
   await testWallet(page, "refuseTransactions", null);
 

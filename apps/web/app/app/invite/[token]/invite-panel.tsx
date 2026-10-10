@@ -88,8 +88,8 @@ export function InvitePanel({
             ) : null}
             <p className={cards.lead}>
               {viewerKey
-                ? "Your viewing key is registered, so your access is active."
-                : "Create your viewing key below: your access starts once it is registered."}
+                ? "Your public viewing key is registered, so your access is active."
+                : "Register your public viewing key below: your access starts once it is registered."}
             </p>
           </Card>
           <WalletCard />
@@ -120,7 +120,7 @@ export function InvitePanel({
                 <span className={styles.stepNo} aria-hidden="true">
                   02
                 </span>
-                Create your viewing key, so {org} can share your payment details with you.
+                Register your public viewing key, so {org} can share your payment details with you.
               </li>
               <li>
                 <span className={styles.stepNo} aria-hidden="true">

@@ -161,6 +161,16 @@ export type PaymentView = {
   approvals: { required: number; messages: number };
 };
 
+/** Step 4.11: whether the organization has made any payment, for the dashboard's "first payment" card. */
+export async function orgHasPayments(db: Database, orgId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: payments.id })
+    .from(payments)
+    .where(eq(payments.orgId, orgId))
+    .limit(1);
+  return row !== undefined;
+}
+
 type PaymentRow = typeof payments.$inferSelect;
 
 async function paymentRow(db: Database, orgId: string, paymentId: string) {

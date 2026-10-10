@@ -83,7 +83,7 @@ Sotto runs on Solana devnet with test money. There are two ways in.
 Pick a role, Owner (Elif), Accountant (Daniel), Employee (Maya) or Outsider, and see what that person reads of the same payments, or compare one payment across all four. It is read only: the records are opened in your browser with that role's demo viewing key, and nothing there can sign, pay or change anything.
 
 **2. Quick start, with a wallet:** https://sottoapp.xyz/app
-Connect Phantom or Solflare on Solana devnet and sign in. A new wallet gets a company at once, "My company", with no form, and lands on its dashboard. The card "Set up and get test money" there runs three steps in order: test SOL for fees from the faucet if the wallet needs it, the confidential account, and 1,000,000 devUSD from the faucet, each with its link to the transaction on Solana.
+Connect Phantom or Solflare on Solana devnet and sign in. A new wallet gets a company at once, "My company", with no form, and lands on its dashboard. The checklist "Get ready to pay" there takes the wallet to its first payment in six steps, one button each: test SOL for fees, the confidential account, the public viewing key, 1,000,000 devUSD, moving 100,000 of it into the confidential balance, and applying it. Then "Pay Atlas Freight" opens the pay form with a demo recipient chosen.
 
 A live proof of funds, for anyone: https://sottoapp.xyz/v/7ssfLgVmvaC4zAFm9aVBw4jrJdb9mSisCKQXvFHjUbEX
 It states that Northwind Labs Demo Ltd holds at least 250,000 devUSD. Status: Proven, valid until 4 April 2027. Balance disclosed: none.
@@ -95,14 +95,14 @@ Every step with a picture is in the [Walkthrough](#walkthrough) below. The same 
 1. Use Phantom or Solflare on Solana devnet. A new wallet needs no SOL to start: signing in costs nothing, and the faucet gives it devnet SOL for fees and account rent.
 2. Sign in at https://sottoapp.xyz/app by signing a message with your wallet.
 3. Your company exists at once, named "My company". On devnet Sotto verifies a new organization without reviewing it, so money features are on straight away, and issues an attestation onchain to your wallet whose level says that no review took place. Change its name, country and other details on its page whenever you like; the attestation is issued again when the name or the country changes.
-4. On the dashboard, or on Account setup, get devnet SOL from the faucet (0.05 SOL per wallet every 24 hours, while the wallet holds less than 0.02 SOL), set up your confidential account, get devUSD from the faucet (at most 1,000,000 devUSD per wallet every 24 hours) and fund your account with it.
+4. On the dashboard, follow "Get ready to pay": devnet SOL from the faucet (0.05 SOL per wallet every 24 hours, while the wallet holds less than 0.02 SOL), your confidential account, your public viewing key, devUSD from the faucet (at most 1,000,000 devUSD per wallet every 24 hours), then move an amount into your confidential balance and apply it. Each of these is also on Account setup.
 5. A company made by quick start already has one recipient, "Atlas Freight (demo recipient)", a demo wallet that can receive confidential payments, so you can pay at once on Payments. For your own recipients: on Recipients, add a recipient and send them the invite link. They sign in with their own wallet, register a viewing key and set up their account; the same page gives their wallet the devnet SOL that needs. Then pay them on Payments, or pay many people at once on Payroll.
 6. On Viewing keys, invite a reader with a scope. They sign in and accept with their viewing key, and you share the past records their scope covers.
 7. On Proofs, choose a threshold and who the answer is for. Your browser makes the proof, your wallet signs, and you get a public link anyone can open.
 
 ## Walkthrough
 
-From sign in to a first confidential payment, its check on the explorer and a proof of funds: eight steps on Solana devnet, with the labels the live screens show and a picture of each. The same page is in the app: https://sottoapp.xyz/app/walkthrough. You need Phantom or Solflare and nothing else; Sotto sends the test SOL and the test dollars, which have no value.
+From sign in to a first confidential payment, its check on the explorer and a proof of funds: six steps on Solana devnet, with the labels the live screens show and a picture of each. The same page is in the app: https://sottoapp.xyz/app/walkthrough. You need Phantom or Solflare and nothing else; Sotto sends the test SOL and the test dollars, which have no value.
 
 **1. Switch your wallet to devnet.** A new, empty account is enough.
 
@@ -115,29 +115,30 @@ From sign in to a first confidential payment, its check on the explorer and a pr
 
 <img src="apps/web/public/walkthrough/sign-in.webp" alt="The sign in screen: the two entries, Explore the demo company and Quick start, above the wallet list with its Connect button" width="820">
 
-**3. Set up and get test money.** On the dashboard, the card **Set up and get test money** runs three steps in order. Choose **Set up and get test money**: Sotto sends your wallet 0.05 SOL for fees, with no wallet window. Then choose **Unlock my keys and set up the account**. Your wallet opens four windows, one after the other: three messages to sign, which make your keys in this browser tab, and one transaction, which sets your confidential account up. After it, Sotto mints 1,000,000 devUSD to your wallet, again with no wallet window. Each step has its **Verify on Solana** link.
+**3. Get ready to pay.** The dashboard opens with the checklist **Get ready to pay**. It has six steps, one in turn at a time, each with one button and a line that says what your wallet will ask before it opens. Nothing is signed until you choose a step's button.
 
-<img src="apps/web/public/walkthrough/first-run-card.webp" alt="The card Set up and get test money: test SOL done, the confidential account next, with the button Unlock my keys and set up the account" width="820">
+1. **Get test SOL**: Sotto sends your wallet 0.05 SOL for fees. No wallet window.
+2. **Unlock my keys and set up the account**: your wallet opens four windows, three messages that make and check your keys in this browser tab and one transaction that sets your confidential account up.
+3. **Register public viewing key**: one message. Payment records are sealed to this key, so you can read your own records and nobody else can.
+4. **Get 1,000,000 devUSD**: Sotto mints test dollars to your wallet. No wallet window.
+5. **Move 100,000 devUSD**: one transaction that wraps the devUSD and deposits it into your confidential balance. You can change the amount first; it is public onchain, the balance it joins is not.
+6. **Apply pending balance**: one transaction that makes the deposit available to spend.
 
-<img src="apps/web/public/walkthrough/first-run-done.webp" alt="The same card with its three steps done, each with a Verify on Solana link" width="820">
+Each finished step has its **Verify on Solana** link. The same checklist is pinned at the top of Payments, Payroll and Proofs until it is complete. Then the dashboard says **Ready. Make your first confidential payment**, with the button **Pay Atlas Freight**.
 
-**4. Create your viewing key.** The finished card ends with the link **Fund your confidential account with it**: it opens **Account setup**. On that page, in the card **Viewing key**, choose **Create viewing key** and approve one message. A payment's details are sealed to this key, so it comes before the first payment.
+<img src="apps/web/public/walkthrough/ready-start.webp" alt="The checklist Get ready to pay on the dashboard: six steps, the first in turn with the button Get test SOL" width="820">
 
-<img src="apps/web/public/walkthrough/viewing-key.webp" alt="The Viewing key card, not registered yet, with the button Create viewing key" width="420">
+<img src="apps/web/public/walkthrough/ready-account.webp" alt="The checklist with test SOL done and the account step in turn: what the wallet will ask, and the button Unlock my keys and set up the account" width="820">
 
-**5. Move devUSD into your confidential balance.** On the same page, in the card **Fund your account**, type an amount under **Amount of devUSD**, for example 100000, and choose **Fund account**. Your wallet asks for two transactions: the first wraps the devUSD and deposits it, the second applies it to your available balance. The amount you fund is public onchain; the balance it joins is not.
-
-<img src="apps/web/public/walkthrough/fund.webp" alt="The card Fund your account with 100000 typed under Amount of devUSD and the button Fund account" width="620">
-
-**6. Pay Atlas Freight.** Open **Payments**. In the card **Pay a recipient**, under **Recipient**, choose **Atlas Freight (demo recipient)**: a company made by quick start has this demo recipient from the start, a demo wallet whose account can receive confidential payments. Type an amount under **Amount (devUSD)**, for example 1250.50, a **Memo** if you like, and choose **Pay**. Solflare then asks for one transaction and then one message; Phantom asks for five transactions and then one message, as it signs the payment as five smaller transactions.
+**4. Pay Atlas Freight.** **Pay Atlas Freight** opens **Payments** with the card **Pay a recipient** and, under **Recipient**, **Atlas Freight (demo recipient)** chosen already: a company made by quick start has this demo recipient from the start, a demo wallet whose account can receive confidential payments. Type an amount under **Amount (devUSD)**, for example 1250.50, a **Memo** if you like, and choose **Pay**. Solflare then asks for one transaction and then one message; Phantom asks for five transactions and then one message, as it signs the payment as five smaller transactions. If something stops the payment, the card says what happened and why, with a button that fixes it in place: too little in the confidential balance, too little SOL, a signature your wallet refused. Your form keeps what you typed.
 
 <img src="apps/web/public/walkthrough/pay.webp" alt="The card Pay a recipient: Atlas Freight (demo recipient) chosen, 1250.50 under Amount (devUSD), a memo, and the button Pay" width="420">
 
-**7. Check on the explorer that the amount is hidden.** Under **Recent payments**, the column **Transaction** holds the payment's link to the Solana explorer. Open it. The explorer shows the instruction Token-2022 Program: Confidential Transfer with its source, destination and mint, and no amount: the number you typed is on Sotto's page and nowhere on the explorer.
+**5. Check on the explorer that the amount is hidden.** Under **Recent payments**, the column **Transaction** holds the payment's link to the Solana explorer. Open it. The explorer shows the instruction Token-2022 Program: Confidential Transfer with its source, destination and mint, and no amount: the number you typed is on Sotto's page and nowhere on the explorer.
 
 <img src="apps/web/public/walkthrough/explorer.webp" alt="The Solana explorer's view of the payment: the instruction Token-2022 Program: Confidential Transfer with accounts and proof accounts, and no amount" width="720">
 
-**8. Prove a balance without showing it.** Open **Proofs**. In the card **New proof**, under **Balance is at least** choose **Custom** and type an amount your balance covers, for example 50000. Under **Share the answer with** type who the answer is for, then choose **Generate proof**. Your wallet asks for five transactions. The result says Proven, and **Open the public page** opens a page anyone can read without a wallet: it states that the balance is at least the amount, and discloses no balance.
+**6. Prove a balance without showing it.** Open **Proofs**. In the card **New proof**, under **Balance is at least** choose **Custom** and type an amount your balance covers, for example 50000. Under **Share the answer with** type who the answer is for, then choose **Generate proof**. Your wallet asks for five transactions. The result says Proven, and **Open the public page** opens a page anyone can read without a wallet: it states that the balance is at least the amount, and discloses no balance.
 
 <img src="apps/web/public/walkthrough/proof.webp" alt="The proof's certificate: Proven, balance is at least 50,000 devUSD, with the link Open the public page" width="620">
 

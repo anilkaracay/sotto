@@ -134,7 +134,8 @@ export type ContextValue = {
   vault: Vault;
   connected: Connected | null;
   data: AccountData;
-  refresh: () => Promise<void>;
+  /** Reads chain state again; resolves with what was read, or null where the page reads none. */
+  refresh: () => Promise<AccountData | null>;
   /**
    * F-19 (step 2.9): why confidential actions are paused (the ZK ElGamal Proof program is unavailable),
    * or null. Every confidential action is disabled with these words; public ones keep working.
@@ -316,12 +317,13 @@ export function ConfidentialProvider({
   }, [ready, readAccount, read]);
 
   /** Reads chain state again after a step (AC-04.4); the last values stay while it reads. */
-  const refresh = useCallback(async () => {
-    if (!ready || !readAccount) return;
+  const refresh = useCallback(async (): Promise<AccountData | null> => {
+    if (!ready || !readAccount) return null;
     const id = ++request.current;
     setData((current) => ({ ...current, loading: true, error: null }));
     const next = await read();
     if (id === request.current) setData(next);
+    return next;
   }, [ready, readAccount, read]);
 
   const blocked = network.proofProgram.status === "unavailable" ? PROGRAM_BLOCKED : null;

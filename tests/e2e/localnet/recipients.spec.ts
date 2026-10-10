@@ -75,8 +75,8 @@ test.describe.serial("recipients on localnet", () => {
     await page.goto("/app");
     await expect(page).toHaveURL(OVERVIEW_URL);
     await openSetup(page);
-    await page.getByRole("button", { name: "Connect" }).click();
-    await page.getByRole("button", { name: "Create viewing key" }).click();
+    await page.getByRole("button", { name: "Connect" }).first().click();
+    await page.getByRole("button", { name: "Register public viewing key" }).click();
     await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
 
     await page.getByRole("link", { name: "Recipients" }).click();
@@ -173,7 +173,7 @@ test.describe.serial("recipients on localnet", () => {
     await recipient.getByRole("button", { name: "Unlock with your wallet" }).click();
     await expect(recipient.getByTestId("keys-status")).toHaveText("Unlocked");
     await expect(recipient.getByTestId("viewing-unlocked")).toHaveText("Unlocked");
-    await recipient.getByRole("button", { name: "Create viewing key" }).click();
+    await recipient.getByRole("button", { name: "Register public viewing key" }).click();
     await expect(recipient.getByTestId("viewing-key-status")).toHaveText("Registered");
     const keyMessages = (
       await recipient.evaluate(

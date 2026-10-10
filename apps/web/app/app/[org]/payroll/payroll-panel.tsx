@@ -31,6 +31,15 @@ import {
   useConfidential,
   type AvailableNetwork,
 } from "../../_components/confidential/context.tsx";
+import type { RecordedAccount } from "../../_components/confidential/account-cards.tsx";
+import { Guidance } from "../../_components/confidential/guidance.tsx";
+import { useRegisterViewingKey } from "../../_components/confidential/keys.tsx";
+import { ReadyChecklist, useReadyToPay } from "../../_components/confidential/ready-checklist.tsx";
+import {
+  PUBLIC_VIEWING_KEY_MISSING,
+  REGISTER_PUBLIC_VIEWING_KEY,
+} from "../../../../lib/key-names.ts";
+import { READY_FIRST } from "../../../../lib/ready.ts";
 import styles from "./payroll.module.css";
 import { Amount } from "../../_components/privacy.tsx";
 import { formatAmount } from "../../../../lib/asset-words.ts";
@@ -77,15 +86,25 @@ export function PayrollPanel(props: {
   recipients: CsvRecipient[];
   runs: PayrollRunSummary[];
   ownerKey: ViewerKeyRecord | null;
+  /** Step 4.11: the wallet's recorded token account, for the checklist's account step. */
+  recorded?: RecordedAccount | null;
 }) {
+  // Step 4.11: where the checklist belongs (devnet's test dollar) the page reads the account.
+  const checklist =
+    props.network.cluster === "devnet" && Boolean(props.network.asset.devnetTestAsset);
   return (
     <ConfidentialProvider
       wallet={props.wallet}
       orgId={props.orgId}
       network={props.network}
-      readAccount={false}
+      readAccount={checklist}
     >
       <div className={styles.page}>
+        <ReadyChecklist
+          recorded={props.recorded ?? null}
+          publicViewingKey={props.ownerKey?.publicKey ?? null}
+          variant="pinned"
+        />
         <NewRunCard recipients={props.recipients} ownerKey={props.ownerKey} />
         <RunsCard runs={props.runs} />
       </div>
@@ -104,6 +123,8 @@ function NewRunCard({
 }) {
   const { wallet, orgId, vault } = useConfidential();
   const asset = useAssetWords();
+  const setupReady = useReadyToPay(ownerKey?.publicKey ?? null);
+  const registration = useRegisterViewingKey(ownerKey?.publicKey ?? null);
   const formatUsdc = (base: bigint) => formatAmount(base, asset);
   const router = useRouter();
   const id = useId();
@@ -118,6 +139,7 @@ function NewRunCard({
   const total = rows.reduce((sum, row) => sum + (row.base ?? 0n), 0n);
   const fileErrors = draft?.parsed.fileErrors ?? [];
   const ready =
+    setupReady !== false &&
     ownerKey !== null &&
     draft !== null &&
     rows.length > 0 &&
@@ -156,7 +178,7 @@ function NewRunCard({
       });
       if (!verified) {
         setProblem(
-          "Your viewing key's registration does not verify for your wallet, so Sotto does not encrypt to it.",
+          "Your public viewing key's registration does not verify for your wallet, so Sotto does not encrypt to it.",
         );
         return;
       }
@@ -192,13 +214,29 @@ function NewRunCard({
         Amounts are in {asset.symbol} with at most 6 decimals. Each row must be a recipient you
         already added. Save the file as CSV UTF-8; a value with a comma, a double quote or a line
         break goes in double quotes, with each double quote in it written as two. The file is read
-        in this tab; the amounts and memos are encrypted in this tab to your viewing key, and Sotto
-        stores them sealed. <AssetBadge />
+        in this tab; the amounts and memos are encrypted in this tab to your public viewing key, and
+        Sotto stores them sealed. <AssetBadge />
       </p>
-      {!ownerKey ? (
-        <p className={styles.warning} role="status">
-          Create your viewing key on the Account setup page first: each line is sealed to it.
+      {setupReady === false ? (
+        <p className={styles.warning} role="status" data-testid="ready-first">
+          {READY_FIRST}
         </p>
+      ) : !ownerKey ? (
+        <Guidance
+          id="viewing-key"
+          what={PUBLIC_VIEWING_KEY_MISSING}
+          why="Each line of a payroll run is sealed to it, so you can read your own records and nobody else can. Registering it asks your wallet for a signature and sends no transaction."
+        >
+          <Button
+            variant="blue"
+            size="sm"
+            disabled={!registration.canSign || registration.busy}
+            onClick={() => void registration.register()}
+          >
+            {registration.busy ? "Waiting for your wallet…" : REGISTER_PUBLIC_VIEWING_KEY}
+          </Button>
+          {registration.problemNode ? <span>{registration.problemNode}</span> : null}
+        </Guidance>
       ) : null}
       <FieldGrid>
         <Field label="Pay period" htmlFor={`${id}-period`}>

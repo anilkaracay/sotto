@@ -117,7 +117,7 @@ function AddRecipientCard({ viewerKey }: { viewerKey: OwnerViewerKey | null }) {
   async function privateBlob(): Promise<string | null> {
     if (!fields.amount.trim() && !fields.notes.trim()) return null;
     if (!viewerKey) {
-      throw new Error("Create your viewing key on the Account setup page first.");
+      throw new Error("Register your public viewing key on the Account setup page first.");
     }
     const amount = fields.amount.trim() ? parseTokenAmount(fields.amount, DECIMALS) : null;
     if (fields.amount.trim() && amount === null) {
@@ -239,14 +239,14 @@ function AddRecipientCard({ viewerKey }: { viewerKey: OwnerViewerKey | null }) {
             </Select>
           </Field>
           {input("amount", `Default amount (${asset.symbol})`, {
-            hint: viewerKey ? "Optional, encrypted to you" : "Needs your viewing key",
+            hint: viewerKey ? "Optional, encrypted to you" : "Needs your public viewing key",
           })}
           {input("wallet", "Solana wallet address", { wide: true, mono: true })}
           {input("notes", "Notes", {
             wide: true,
             hint: viewerKey
               ? "Optional, encrypted to you"
-              : "Create your viewing key on the Account setup page to keep a default amount and notes, encrypted to you.",
+              : "Register your public viewing key on the Account setup page to keep a default amount and notes, encrypted to you.",
           })}
           {problem ? (
             <p className={`${cards.problem} ${styles.wide}`} role="alert">

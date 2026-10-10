@@ -260,11 +260,11 @@ test("the public proof page in every state, for the design pass", async ({ page,
   await expect(page).toHaveURL(OVERVIEW_URL);
   const orgId = OVERVIEW_URL.exec(new URL(page.url()).pathname)?.[1] ?? "";
   await openSetup(page);
-  const connect = page.getByRole("button", { name: "Connect" });
+  const connect = page.getByRole("button", { name: "Connect" }).first();
   if (await connect.isVisible()) await connect.click();
   await page.getByRole("button", { name: "Unlock with your wallet" }).click();
   await expect(page.getByTestId("viewing-unlocked")).toHaveText("Unlocked");
-  await page.getByRole("button", { name: "Create viewing key" }).click();
+  await page.getByRole("button", { name: "Register public viewing key" }).click();
   await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
   const recorded = await page.request.post("/api/token-accounts", {
     headers: { origin: new URL(page.url()).origin },

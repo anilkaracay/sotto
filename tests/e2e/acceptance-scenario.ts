@@ -392,7 +392,7 @@ export function acceptanceScenario(target: AcceptanceTarget): void {
         await expect(page).toHaveURL(OVERVIEW_URL);
         await openSetup(page);
         await unlock(page);
-        await page.getByRole("button", { name: "Create viewing key" }).click();
+        await page.getByRole("button", { name: "Register public viewing key" }).click();
         await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
         await page.getByRole("button", { name: "Set up the account" }).click();
         await expect(page.getByTestId("account-status")).toHaveText("Set up");
@@ -445,7 +445,7 @@ export function acceptanceScenario(target: AcceptanceTarget): void {
             `You joined ${LEGAL_NAME}`,
           );
           await unlock(recipient);
-          await recipient.getByRole("button", { name: "Create viewing key" }).click();
+          await recipient.getByRole("button", { name: "Register public viewing key" }).click();
           await expect(recipient.getByTestId("viewing-key-status")).toHaveText("Registered");
           await recipient.getByRole("button", { name: "Set up the account" }).click();
           await expect(recipient.getByTestId("account-status")).toHaveText("Set up");
@@ -547,7 +547,7 @@ export function acceptanceScenario(target: AcceptanceTarget): void {
         await daniel.getByRole("button", { name: "Accept invite" }).click();
         await expect(daniel.getByTestId("invite-joined")).toContainText("as its accountant");
         await connectWallet(daniel);
-        await daniel.getByRole("button", { name: "Create viewing key" }).click();
+        await daniel.getByRole("button", { name: "Register public viewing key" }).click();
         await expect(daniel.getByTestId("viewing-key-status")).toHaveText("Registered");
 
         // The owner shares the past records: the three lines.

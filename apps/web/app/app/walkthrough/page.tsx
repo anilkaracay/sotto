@@ -176,9 +176,11 @@ export default function WalkthroughPage() {
               </li>
             </ol>
             <p>
-              Each finished step has its <B>{L.verify.label}</B> link. The same checklist is pinned
-              at the top of Payments, Payroll and Proofs until it is complete. Then the dashboard
-              says <B>{L.readyDone.label}</B>, with the button <B>{L.payAtlas.label}</B>.
+              Each finished step that happened onchain has its <B>{L.verify.label}</B> link
+              (registering the viewing key is a signed message, not a transaction). The same
+              checklist is pinned at the top of Payments, Payroll and Proofs until it is complete.
+              Then the dashboard says <B>{L.readyDone.label}</B>, with the button{" "}
+              <B>{L.payAtlas.label}</B>.
             </p>
             <Shot
               name="ready-start"
@@ -189,8 +191,14 @@ export default function WalkthroughPage() {
             <Shot
               name="ready-account"
               width={1360}
-              height={951}
+              height={947}
               alt="The checklist with test SOL done and the account step in turn: what the wallet will ask, and the button Unlock my keys and set up the account"
+            />
+            <Shot
+              name="ready-done"
+              width={1360}
+              height={147}
+              alt="The dashboard once the checklist is complete: Ready. Make your first confidential payment, with the button Pay Atlas Freight"
             />
           </Step>
 

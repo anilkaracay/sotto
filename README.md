@@ -121,11 +121,13 @@ From sign in to a first confidential payment, its check on the explorer and a pr
 5. **Move 100,000 devUSD**: one transaction that wraps the devUSD and deposits it into your confidential balance. You can change the amount first; it is public onchain, the balance it joins is not.
 6. **Apply pending balance**: one transaction that makes the deposit available to spend.
 
-Each finished step has its **Verify on Solana** link. The same checklist is pinned at the top of Payments, Payroll and Proofs until it is complete. Then the dashboard says **Ready. Make your first confidential payment**, with the button **Pay Atlas Freight**.
+Each finished step that happened onchain has its **Verify on Solana** link (registering the viewing key is a signed message, not a transaction). The same checklist is pinned at the top of Payments, Payroll and Proofs until it is complete. Then the dashboard says **Ready. Make your first confidential payment**, with the button **Pay Atlas Freight**.
 
 <img src="apps/web/public/walkthrough/ready-start.webp" alt="The checklist Get ready to pay on the dashboard: six steps, the first in turn with the button Get test SOL" width="820">
 
 <img src="apps/web/public/walkthrough/ready-account.webp" alt="The checklist with test SOL done and the account step in turn: what the wallet will ask, and the button Unlock my keys and set up the account" width="820">
+
+<img src="apps/web/public/walkthrough/ready-done.webp" alt="The dashboard once the checklist is complete: Ready. Make your first confidential payment, with the button Pay Atlas Freight" width="820">
 
 **4. Pay Atlas Freight.** **Pay Atlas Freight** opens **Payments** with the card **Pay a recipient** and, under **Recipient**, **Atlas Freight (demo recipient)** chosen already: a company made by quick start has this demo recipient from the start, a demo wallet whose account can receive confidential payments. Type an amount under **Amount (devUSD)**, for example 1250.50, a **Memo** if you like, and choose **Pay**. Solflare then asks for one transaction and then one message; Phantom asks for five transactions and then one message, as it signs the payment as five smaller transactions. If something stops the payment, the card says what happened and why, with a button that fixes it in place: too little in the confidential balance, too little SOL, a signature your wallet refused. Your form keeps what you typed.
 

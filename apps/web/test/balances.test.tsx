@@ -33,6 +33,7 @@ const wusdc = (amount: bigint): TokenAccountState => ({
     allowNonConfidentialCredits: true,
     pendingBalanceCreditCounter: 1n,
     maximumPendingBalanceCreditCounter: 65_536n,
+    appliedPendingBalanceCreditCounter: 0n,
   },
 });
 const usdc = (amount: bigint): PublicTokenBalance => ({

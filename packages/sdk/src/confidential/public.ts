@@ -52,6 +52,7 @@ export {
 } from "./state.ts";
 export {
   closeProofAccounts,
+  isUndecidedTransfer,
   sendTransferTransactions,
   TransferStepError,
   type SendableTransaction,

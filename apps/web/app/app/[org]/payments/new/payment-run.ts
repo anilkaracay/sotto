@@ -17,6 +17,7 @@
 import {
   associatedTokenAccount,
   closeProofAccounts,
+  isUndecidedTransfer,
   sendTransferTransactions,
   TransferStepError,
   type TransferTransactionRole,
@@ -161,6 +162,21 @@ export async function runPayment(options: {
       body,
     });
 
+  /** After the transfer landed: 06 section 5 step 5, then the payment's records. */
+  const finish = async (transferSignature: string): Promise<PaymentRunOutcome> => {
+    // The new available balance is the previous one minus the amount.
+    onProgress("Checking your new balance…");
+    const after = await readAccount(sourceToken);
+    const integrityOk =
+      after !== null &&
+      (await options.worker().decrypt(after)).available === plan.availableBefore - input.amount;
+    await record({ status: "integrity", ok: integrityOk });
+
+    onProgress("Saving the payment record, encrypted for you and the recipient…");
+    const disclosed = await disclose(input, connected, options.worker, transferSignature);
+    return { kind: "settled", transferSignature, integrityOk, disclosed };
+  };
+
   try {
     const sent = await sendTransferTransactions({
       rpc,
@@ -182,20 +198,21 @@ export async function runPayment(options: {
       },
     });
 
-    // 06 section 5 step 5: the new available balance is the previous one minus the amount.
-    onProgress("Checking your new balance…");
-    const after = await readAccount(sourceToken);
-    const integrityOk =
-      after !== null &&
-      (await options.worker().decrypt(after)).available === plan.availableBefore - input.amount;
-    await record({ status: "integrity", ok: integrityOk });
-
-    onProgress("Saving the payment record, encrypted for you and the recipient…");
-    const disclosed = await disclose(input, connected, options.worker, sent.transferSignature);
-    return { kind: "settled", transferSignature: sent.transferSignature, integrityOk, disclosed };
+    return await finish(sent.transferSignature);
   } catch (error) {
     if (!(error instanceof TransferStepError)) {
       return { kind: "failed", message: describeTransactionError(error, connected.info.name) };
+    }
+    // Step 4.9: the transfer was sent and the network did not say what became of it. It is not a
+    // failure yet: nothing is closed and nothing is recorded as failed. Sotto's worker follows every
+    // recorded signature, so the page follows the payment's status, and goes on when it settled.
+    if (isUndecidedTransfer(error)) {
+      const transferSignature = error.signatures[error.signatures.length - 1] ?? "";
+      onProgress(
+        "The network is slow to confirm the transfer. Waiting for Sotto to see it settle…",
+      );
+      if (await settledOnServer(input, UNDECIDED_WAIT_MS)) return await finish(transferSignature);
+      return { kind: "failed", message: undecidedTransferMessage(transferSignature) };
     }
     const where = `Step ${error.index + 1} of ${total} (${ROLE_WORDS[error.role]}) failed: ${describeTransactionError(error.cause, connected.info.name)}`;
     onProgress("Closing the proof accounts this attempt created…");
@@ -241,6 +258,32 @@ export async function runPayment(options: {
       .endPlan(plan.planId)
       .catch(() => undefined);
   }
+}
+
+/** How long the page follows a payment whose transfer was sent but not confirmed to it (step 4.9). */
+export const UNDECIDED_WAIT_MS = 120_000;
+
+/** What the owner reads when the transfer was sent and neither the network nor Sotto saw it settle in time. */
+export function undecidedTransferMessage(transferSignature: string): string {
+  return `The transfer was sent (transaction ${transferSignature.slice(0, 12)}…), but the network did not confirm it in time. Sotto keeps checking it: this payment shows Settled under Recent payments once it lands. Do not pay again before then.`;
+}
+
+/** Follows the payment's status on the server, where the worker settles it from its signatures. */
+async function settledOnServer(input: PaymentRunInput, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const { payment } = await callApi<{ payment: { status: string } }>(
+        `/api/orgs/${input.orgId}/payments/${input.paymentId}`,
+      );
+      if (payment.status === "settled") return true;
+      if (payment.status === "failed") return false;
+    } catch {
+      // Asked again below.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+  }
+  return false;
 }
 
 /** What the payment's records reached; `grantCopiesMissing` when a covering grant may lack its copy. */

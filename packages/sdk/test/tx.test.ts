@@ -13,6 +13,7 @@ import {
   MAX_RPC_RETRIES,
   priorityFeeFromRecentFees,
   retryingTransport,
+  RpcTimeoutError,
   writableAccounts,
 } from "../src/tx/index.ts";
 
@@ -111,5 +112,58 @@ describe("retryingTransport (D-14)", () => {
       "boom",
     );
     expect(other).toBe(1);
+  });
+
+  it("step 4.9: gives a request up when no answer comes in time, aborts it and asks again", async () => {
+    const signals: AbortSignal[] = [];
+    let calls = 0;
+    const stalls = ((request: { signal?: AbortSignal }) => {
+      calls++;
+      if (request.signal) signals.push(request.signal);
+      // The first two requests are never answered; the third is.
+      return calls <= 2 ? new Promise(() => {}) : Promise.resolve({ ok: true });
+    }) as unknown as RpcTransport;
+    const sleeps: number[] = [];
+    await expect(
+      retryingTransport(stalls, undefined, async (ms) => void sleeps.push(ms), 20)(config),
+    ).resolves.toEqual({ ok: true });
+    expect(calls).toBe(3);
+    expect(sleeps).toEqual([1000, 2000]);
+    expect(signals.map((signal) => signal.aborted)).toEqual([true, true, false]);
+  });
+
+  it("step 4.9: ends with a timeout error when no answer ever comes, and never sends a transaction twice", async () => {
+    let calls = 0;
+    const silent = (() => {
+      calls++;
+      return new Promise(() => {});
+    }) as unknown as RpcTransport;
+    const failure = await retryingTransport(
+      silent,
+      undefined,
+      async () => {},
+      10,
+    )(config).then(
+      () => null,
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(RpcTimeoutError);
+    expect((failure as RpcTimeoutError).message).toBe(
+      "the network did not answer getSlot within 0.01 seconds",
+    );
+    expect(calls).toBe(MAX_RPC_RETRIES + 1);
+    // A send with no answer may have been accepted: it is asked once, and the caller looks it up.
+    let sends = 0;
+    const send = (() => {
+      sends++;
+      return new Promise(() => {});
+    }) as unknown as RpcTransport;
+    const sendConfig = {
+      payload: { jsonrpc: "2.0", id: 1, method: "sendTransaction" },
+    } as unknown as Parameters<RpcTransport>[0];
+    await expect(
+      retryingTransport(send, undefined, async () => {}, 10)(sendConfig),
+    ).rejects.toBeInstanceOf(RpcTimeoutError);
+    expect(sends).toBe(1);
   });
 });

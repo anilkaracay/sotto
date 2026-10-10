@@ -12,7 +12,7 @@ import {
 import type { TransactionVersionChoice } from "./budget.ts";
 import { decodeTransactionError } from "./errors.ts";
 import { prepareTransaction, type PreparedTransaction } from "./prepare.ts";
-import type { SolanaRpc } from "./rpc.ts";
+import { RpcTimeoutError, type SolanaRpc } from "./rpc.ts";
 
 export type Commitment = "confirmed" | "finalized";
 
@@ -27,6 +27,42 @@ export class TransactionFailedError extends Error {
   }
 }
 
+/** What the chain says of a signature when asked with its history. */
+export type LandedState = "landed" | "failed" | "unknown";
+
+/**
+ * Step 4.9: whether a transaction that was sent has landed, asked with the ledger's history, for a
+ * caller whose wait for its confirmation ended without an answer. `unknown` when the chain does not
+ * know the signature within the time, or cannot be asked.
+ */
+export async function transactionLanded(
+  rpc: SolanaRpc,
+  signature: Signature,
+  timeoutMs = 60_000,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+): Promise<LandedState> {
+  const deadline = Date.now() + timeoutMs;
+  do {
+    try {
+      const { value } = await rpc
+        .getSignatureStatuses([signature], { searchTransactionHistory: true })
+        .send();
+      const status = value[0];
+      if (status?.err) return "failed";
+      if (
+        status?.confirmationStatus === "confirmed" ||
+        status?.confirmationStatus === "finalized"
+      ) {
+        return "landed";
+      }
+    } catch {
+      // Asked again below, until the deadline.
+    }
+    await sleep(1000);
+  } while (Date.now() < deadline);
+  return "unknown";
+}
+
 /**
  * Waits until the signature reaches the commitment: `confirmed` for progress in the UI, `finalized`
  * for the settled state and for disclosures (06 section 9).
@@ -39,8 +75,16 @@ export async function waitForConfirmation(
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const { value } = await rpc.getSignatureStatuses([signature]).send();
-    const status = value[0];
+    // Step 4.9: a question the network did not answer is asked again until the deadline.
+    const answer = await rpc
+      .getSignatureStatuses([signature])
+      .send()
+      .catch((error: unknown) => {
+        if (error instanceof RpcTimeoutError) return null;
+        throw error;
+      });
+    if (answer === null) continue;
+    const status = answer.value[0];
     if (status?.err) {
       throw new TransactionFailedError(
         signature,

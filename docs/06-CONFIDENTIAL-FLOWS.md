@@ -80,6 +80,8 @@ Implementation (step 1.9; the real signature and plan of step 2 are facts A16, v
 - Step 5, the integrity check: the page reads the sender's account again after the transfer is finalized and compares the available balance with the previous one minus the amount; the result is recorded, and a mismatch is logged as `payment_integrity_alert` (no amount).
 - Step 6: the self disclosure and the recipient disclosure (AC-06.4 Phase 1 part) are sealed in the worker to the owner's and the recipient's registered viewing keys after their registration signatures verify (I-8), and posted with one manifest the owner wallet signs (07 section 4). A recipient without a viewing key gets no disclosure yet.
 
+Step 4.9 (D-36): a request to the network has a time limit and a send with no answer is never sent twice; when the wait for the transfer itself ends without an answer after it was sent, the chain is asked with its history (`transactionLanded`), then the payment's status on the server is followed, before the attempt is called a failure (`isUndecidedTransfer`, `sendTransferTransactions`, `payment-run.ts`). A transfer whose outcome is not known is neither cleaned up nor recorded as failed.
+
 ## 6. Withdraw and unwrap
 
 1. Apply pending if needed.

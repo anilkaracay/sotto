@@ -25,7 +25,7 @@ import {
 } from "@solana/kit";
 import type { TransactionVersionChoice } from "./budget.ts";
 import { prepareTransaction } from "./prepare.ts";
-import type { SolanaRpc } from "./rpc.ts";
+import { RpcTimeoutError, type SolanaRpc } from "./rpc.ts";
 import { waitForConfirmation, type SendResult } from "./send-keypair.ts";
 import {
   compareSignedMessage,
@@ -108,12 +108,18 @@ export async function sendWithWallet(options: {
   assertIsTransactionWithinSizeLimit(signed);
   const signature = getSignatureFromTransaction(signed);
   await options.onSignature?.(signature);
-  await rpc
-    .sendTransaction(getBase64EncodedWireTransaction(signed), {
-      encoding: "base64",
-      preflightCommitment: "confirmed",
-    })
-    .send();
+  try {
+    await rpc
+      .sendTransaction(getBase64EncodedWireTransaction(signed), {
+        encoding: "base64",
+        preflightCommitment: "confirmed",
+      })
+      .send();
+  } catch (error) {
+    // Step 4.9: with no answer to the send, the network may still have the transaction. It is not
+    // sent twice; the wait below tells whether it landed.
+    if (!(error instanceof RpcTimeoutError)) throw error;
+  }
   await waitForConfirmation(rpc, signature, options.confirmTimeoutMs, "confirmed");
   if (options.finalize) {
     await waitForConfirmation(rpc, signature, options.confirmTimeoutMs ?? 90_000, "finalized");

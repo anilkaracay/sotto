@@ -3,9 +3,13 @@
 // one confirmed, the transfer itself up to `finalized`. A failure names the step that failed. If the
 // transfer does not complete, closeProofAccounts closes the proof context and record accounts that
 // exist, with their rent to the fee payer, so nothing is left behind and the balances are unchanged.
+// Step 4.9: when the wait for the transfer itself ends without an answer after the transfer was
+// sent, the chain is asked with its history before anything is called a failure: a transfer that
+// landed is a payment that went through, whatever happened to the page's wait.
 import {
   fetchEncodedAccounts,
   type Address,
+  type Signature,
   type SignatureBytes,
   type Transaction,
   type TransactionModifyingSigner,
@@ -14,7 +18,12 @@ import type { TransactionVersionChoice } from "../tx/budget.ts";
 import { fromPortableInstruction } from "../tx/plan.ts";
 import type { PortableInstruction } from "../tx/portable.ts";
 import type { SolanaRpc } from "../tx/rpc.ts";
-import { sendWithWallet } from "../tx/send-wallet.ts";
+import { TransactionFailedError, transactionLanded } from "../tx/send-keypair.ts";
+import {
+  sendWithWallet,
+  WalletChangedTransactionError,
+  WalletSigningError,
+} from "../tx/send-wallet.ts";
 import type { SignedMessageComparison } from "../tx/signed-message.ts";
 import { measureTransaction } from "../tx/size.ts";
 
@@ -42,6 +51,21 @@ export class TransferStepError extends Error {
   }
 }
 
+/**
+ * Step 4.9: the transfer itself was signed and handed to the network, and what became of it could
+ * not be read: neither the chain refused it nor the wallet. It may have landed, so it is not a
+ * failure yet, and nothing of it is closed or sent again.
+ */
+export function isUndecidedTransfer(error: TransferStepError): boolean {
+  return (
+    error.role === "transfer" &&
+    error.signatures.length === error.index + 1 &&
+    !(error.cause instanceof TransactionFailedError) &&
+    !(error.cause instanceof WalletSigningError) &&
+    !(error.cause instanceof WalletChangedTransactionError)
+  );
+}
+
 export async function sendTransferTransactions(options: {
   rpc: SolanaRpc;
   wallet: TransactionModifyingSigner;
@@ -58,10 +82,13 @@ export async function sendTransferTransactions(options: {
     signature: string,
   ) => void | Promise<void>;
   confirmTimeoutMs?: number;
+  /** How long the chain is asked whether a sent transfer landed, when its wait gave no answer. */
+  landedTimeoutMs?: number;
 }): Promise<{ signatures: string[]; transferSignature: string }> {
   const signatures: string[] = [];
   let transferSignature: string | null = null;
   for (const [index, transaction] of options.transactions.entries()) {
+    const before = signatures.length;
     try {
       await options.onStep?.(index, transaction.role);
       const sent = await sendWithWallet({
@@ -75,14 +102,32 @@ export async function sendTransferTransactions(options: {
         ...(options.confirmTimeoutMs === undefined
           ? {}
           : { confirmTimeoutMs: options.confirmTimeoutMs }),
+        // The caller records the signature first; it counts as handed out once that is done, just
+        // before the transaction is sent.
         onSignature: async (signature) => {
-          signatures.push(signature);
           await options.onSignature?.(index, transaction.role, signature);
+          signatures.push(signature);
         },
       });
       if (transaction.role === "transfer") transferSignature = sent.signature;
     } catch (error) {
-      throw new TransferStepError(index, transaction.role, error, [...signatures]);
+      // Step 4.9: the transfer was signed and handed to the network, and then its wait failed for
+      // another reason than the chain refusing it or the wallet: ask the chain before failing.
+      const failure = new TransferStepError(index, transaction.role, error, [...signatures]);
+      const sentSignature = signatures.length > before ? signatures[signatures.length - 1] : null;
+      if (
+        sentSignature &&
+        isUndecidedTransfer(failure) &&
+        (await transactionLanded(
+          options.rpc,
+          sentSignature as Signature,
+          options.landedTimeoutMs,
+        )) === "landed"
+      ) {
+        transferSignature = sentSignature;
+        continue;
+      }
+      throw failure;
     }
   }
   if (!transferSignature) throw new Error("the transfer plan had no transfer transaction");

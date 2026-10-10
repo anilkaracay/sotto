@@ -10,6 +10,9 @@ export class ApiCallError extends Error {
   }
 }
 
+/** A call that gets no answer within this time is given up (step 4.9): no page waits without end. */
+export const API_TIMEOUT_MS = 30_000;
+
 export async function callApi<T>(
   path: string,
   init: { method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE"; body?: unknown } = { method: "GET" },
@@ -19,11 +22,15 @@ export async function callApi<T>(
     response = await fetch(path, {
       method: init.method,
       credentials: "same-origin",
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
       ...(init.body === undefined
         ? {}
         : { headers: { "content-type": "application/json" }, body: JSON.stringify(init.body) }),
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "TimeoutError") {
+      throw new ApiCallError(0, "timeout", "Sotto did not answer in time. Try again.");
+    }
     throw new ApiCallError(
       0,
       "network_error",

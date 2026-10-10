@@ -12,6 +12,7 @@ import { getDb } from "../../../../lib/server/db.ts";
 import { ApiError } from "../../../../lib/server/errors.ts";
 import { loadMe } from "../../../../lib/server/me.ts";
 import { loadNetworkView } from "../../../../lib/server/network-view.ts";
+import { orgHasPayments } from "../../../../lib/server/payments.ts";
 import { readViewerKey } from "../../../../lib/server/viewer-keys.ts";
 import { readOrgTokenAccount } from "../../../../lib/server/token-accounts.ts";
 import { AppShell } from "../../_components/app-shell.tsx";
@@ -36,9 +37,10 @@ export default async function OverviewPage({ params }: { params: Promise<{ org: 
       throw error;
     }),
   ]);
-  const recorded = network.available
-    ? await readOrgTokenAccount(db, session.userId, orgId, network.cluster)
-    : null;
+  const [recorded, hasPayments] = await Promise.all([
+    network.available ? readOrgTokenAccount(db, session.userId, orgId, network.cluster) : null,
+    orgHasPayments(db, orgId),
+  ]);
   return (
     <AppShell me={me} network={network} nav={ownerNav(orgId, "overview")}>
       {network.available ? (
@@ -52,6 +54,7 @@ export default async function OverviewPage({ params }: { params: Promise<{ org: 
           recorded={
             recorded ? { address: recorded.address, applyFlagged: recorded.applyFlagged } : null
           }
+          hasPayments={hasPayments}
           ownerKey={
             ownerKey
               ? {

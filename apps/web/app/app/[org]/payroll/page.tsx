@@ -11,6 +11,7 @@ import { loadMe } from "../../../../lib/server/me.ts";
 import { loadNetworkView } from "../../../../lib/server/network-view.ts";
 import { listRuns } from "../../../../lib/server/payroll.ts";
 import { listRecipients } from "../../../../lib/server/recipients.ts";
+import { readOrgTokenAccount } from "../../../../lib/server/token-accounts.ts";
 import { readViewerKey } from "../../../../lib/server/viewer-keys.ts";
 import { AppShell } from "../../_components/app-shell.tsx";
 import { PayrollPanel } from "./payroll-panel.tsx";
@@ -35,6 +36,10 @@ export default async function PayrollPage({ params }: { params: Promise<{ org: s
     }),
     loadNetworkView({ orgId }),
   ]);
+  // Step 4.11: the checklist's account step records the account.
+  const recorded = network.available
+    ? await readOrgTokenAccount(db, session.userId, orgId, network.cluster)
+    : null;
   return (
     <AppShell me={me} network={network} nav={ownerNav(orgId, "payroll")}>
       <PageHeader overline={owned.orgName} title="Payroll" />
@@ -52,6 +57,9 @@ export default async function PayrollPage({ params }: { params: Promise<{ org: s
             readiness: recipient.readiness,
           }))}
           runs={runs}
+          recorded={
+            recorded ? { address: recorded.address, applyFlagged: recorded.applyFlagged } : null
+          }
           ownerKey={
             ownerKey
               ? {

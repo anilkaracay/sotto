@@ -24,6 +24,11 @@ import { CryptoWorkerClient } from "../../../../lib/crypto-worker/client.ts";
 import type { LockReason } from "../../../../lib/crypto-worker/key-session.ts";
 import { unlockKeys, unlockViewingKey } from "../../../../lib/crypto-worker/unlock.ts";
 import { formatDate, shortWallet } from "../../../../lib/format.ts";
+import {
+  PRIVATE_VIEWING_KEY,
+  PUBLIC_VIEWING_KEY,
+  REGISTER_PUBLIC_VIEWING_KEY,
+} from "../../../../lib/key-names.ts";
 import { useKeySession } from "../key-session.tsx";
 import privacy from "../privacy.module.css";
 import styles from "./cards.module.css";
@@ -144,6 +149,25 @@ export function WalletCard({ className }: { className?: string }) {
         </p>
       ) : null}
     </Card>
+  );
+}
+
+/**
+ * Step 4.11: this browser's wallets, each with its Connect button, for a block that needs the
+ * wallet where the tab holds no connection (after a reload a wallet may not connect by itself).
+ */
+export function ConnectWallets() {
+  const { wallets } = useConfidential();
+  const [problem, setProblem] = useState<string | null>(null);
+  return (
+    <>
+      <ul className={styles.wallets} data-testid="connect-wallets">
+        {wallets.map((w, index) => (
+          <ConnectWallet key={`${index}:${w.name}`} wallet={w} onProblem={setProblem} />
+        ))}
+      </ul>
+      {problem ? <span role="alert">{problem}</span> : null}
+    </>
   );
 }
 
@@ -269,7 +293,7 @@ export function KeysCard({ className }: { className?: string }) {
             <dd className="mono" data-testid="elgamal-public-key">
               {vault.unlocked.elgamalPubkey}
             </dd>
-            <dt>Viewing key</dt>
+            <dt>{PRIVATE_VIEWING_KEY}, in this tab</dt>
             <dd data-testid="viewing-unlocked">{viewingOpen ? "Unlocked" : "Not unlocked"}</dd>
           </dl>
           {viewingOpen || busy ? null : (
@@ -280,8 +304,9 @@ export function KeysCard({ className }: { className?: string }) {
                   <WalletSaid words={said} />{" "}
                 </>
               ) : null}
-              Your confidential balances are unlocked, but without the viewing key the amounts you
-              keep sealed and the payment details shared with you stay closed in this tab.
+              Your confidential balances are unlocked, but without the private viewing key the
+              amounts you keep sealed and the payment details shared with you stay closed in this
+              tab.
             </p>
           )}
           <p className={styles.lead}>
@@ -355,7 +380,7 @@ export function ViewingUnlockCard({ className }: { className?: string }) {
   return (
     <Card className={className} data-testid="viewing-unlock-card">
       <div className={styles.head}>
-        <h2 className={styles.cardTitle}>Viewing key</h2>
+        <h2 className={styles.cardTitle}>{PRIVATE_VIEWING_KEY}</h2>
         <Chip tone={open ? "green" : "amber"} data-testid="viewing-unlocked">
           {open ? "Unlocked" : "Locked"}
         </Chip>
@@ -402,13 +427,13 @@ export function ViewingUnlockCard({ className }: { className?: string }) {
   );
 }
 
-export function ViewingKeyCard({
-  viewerKey,
-  className,
-}: {
-  viewerKey: ViewerKey | null;
-  className?: string;
-}) {
+/**
+ * Step 4.11 (D-38): registers the public half of the wallet's viewing key with Sotto. One signature
+ * when the private half is unlocked in the tab, two otherwise (the first makes the key in a worker of
+ * its own). Shared by the Public viewing key card, the checklist and the fix buttons of the pay and
+ * payroll forms. Resolves true once the registration is stored.
+ */
+export function useRegisterViewingKey(registeredPublicKey: string | null) {
   const { wallet, connected } = useConfidential();
   const { viewing } = useKeySession();
   const router = useRouter();
@@ -422,8 +447,8 @@ export function ViewingKeyCard({
   // The viewing key the tab unlocked (Unlock asks for it), whose public key needs no new signature.
   const unlockedKey = viewing?.wallet === wallet ? viewing.publicKey : null;
 
-  async function create() {
-    if (!connected) return;
+  async function register(): Promise<boolean> {
+    if (!connected) return false;
     setBusy(true);
     setProblem(null);
     let worker: CryptoWorkerClient | null = null;
@@ -433,39 +458,68 @@ export function ViewingKeyCard({
         const derivation = await connected.sign(viewKeyMessage(wallet));
         if (typeof derivation === "string") {
           setProblem({ kind: derivation, said: connected.walletWords() });
-          return;
+          return false;
         }
         // A worker of its own: it derives the viewing key, returns the public key and ends.
         worker = new CryptoWorkerClient();
         ({ publicKey } = await worker.unlockViewing(wallet, derivation));
         worker.terminate();
       }
-      if (viewerKey?.publicKey === publicKey) return;
+      if (registeredPublicKey === publicKey) return true;
       const registration = await connected.sign(viewKeyRegistrationMessage(fromBase64(publicKey)));
       if (typeof registration === "string") {
         setProblem({ kind: registration, said: connected.walletWords() });
-        return;
+        return false;
       }
       await callApi("/api/viewer-keys", {
         method: "POST",
         body: { publicKey, signature: toBase64(registration) },
       });
       startRefresh(() => router.refresh());
+      return true;
     } catch (error) {
       setProblem({
         kind: "register_failed",
         ...(error instanceof ApiCallError ? { detail: error.message } : {}),
       });
+      return false;
     } finally {
       worker?.terminate();
       setBusy(false);
     }
   }
 
+  return {
+    register,
+    busy: busy || refreshing,
+    unlockedKey,
+    canSign: connected !== null,
+    problem,
+    /** The problem as the card shows it, or null. */
+    problemNode: problem ? (
+      <>
+        {problemText(problem.kind, problem.detail)}
+        <WalletSaid words={problem.said} />
+      </>
+    ) : null,
+  };
+}
+
+export function ViewingKeyCard({
+  viewerKey,
+  className,
+}: {
+  viewerKey: ViewerKey | null;
+  className?: string;
+}) {
+  const { register, busy, unlockedKey, canSign, problemNode } = useRegisterViewingKey(
+    viewerKey?.publicKey ?? null,
+  );
+
   return (
     <Card className={className} data-testid="viewing-key-card">
       <div className={styles.head}>
-        <h2 className={styles.cardTitle}>Viewing key</h2>
+        <h2 className={styles.cardTitle}>{PUBLIC_VIEWING_KEY}</h2>
         <Chip tone={viewerKey ? "green" : "neutral"} data-testid="viewing-key-status">
           {viewerKey ? "Registered" : "Not registered"}
         </Chip>
@@ -473,8 +527,8 @@ export function ViewingKeyCard({
       {viewerKey ? (
         <>
           <p className={styles.lead}>
-            Registered {formatDate(viewerKey.createdAt)}. Payment details shared with you are
-            encrypted to this key, so only this wallet can read them.
+            Registered {formatDate(viewerKey.createdAt)}. It is the public half of your viewing key:
+            payment details shared with you are encrypted to it, so only this wallet can read them.
           </p>
           <dl className={styles.details}>
             <dt>Public key</dt>
@@ -493,24 +547,23 @@ export function ViewingKeyCard({
       ) : (
         <>
           <p className={styles.lead}>
-            Payment details shared with you are encrypted to your viewing key, so only this wallet
-            can read them.{" "}
+            The public half of your viewing key. Payment details are encrypted to it, so only this
+            wallet, which holds the private half, can read them.{" "}
             {unlockedKey
-              ? "Creating it asks your wallet for one signature, which publishes the public key of the viewing key unlocked in this tab."
-              : "Creating it asks your wallet for two signatures: one derives the key in this tab, the other publishes its public key."}{" "}
-            Sotto stores the public key, never the key itself.
+              ? "Registering it asks your wallet for one signature, which publishes the public half of the viewing key unlocked in this tab."
+              : "Registering it asks your wallet for two signatures: one makes the key in this tab, the other publishes its public half."}{" "}
+            Sotto stores the public half, never the private one.
           </p>
           <div className={styles.actions}>
-            <Button variant="line" disabled={!connected || busy || refreshing} onClick={create}>
-              {busy || refreshing ? "Waiting for your wallet…" : "Create viewing key"}
+            <Button variant="line" disabled={!canSign || busy} onClick={() => void register()}>
+              {busy ? "Waiting for your wallet…" : REGISTER_PUBLIC_VIEWING_KEY}
             </Button>
           </div>
         </>
       )}
-      {problem ? (
+      {problemNode ? (
         <p className={styles.problem} role="alert">
-          {problemText(problem.kind, problem.detail)}
-          <WalletSaid words={problem.said} />
+          {problemNode}
         </p>
       ) : null}
     </Card>

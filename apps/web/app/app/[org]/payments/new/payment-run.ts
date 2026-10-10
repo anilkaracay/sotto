@@ -30,7 +30,11 @@ import { ApiCallError, callApi } from "../../../../../lib/client/api.ts";
 import { activeGrantViewers, coveringGrants } from "../../../../../lib/client/grant-viewers.ts";
 import { storeRecords, type RecordItem } from "../../../../../lib/client/records.ts";
 import { browserRpc } from "../../../../../lib/client/rpc.ts";
-import { describeTransactionError } from "../../../../../lib/client/transactions.ts";
+import {
+  describeTransactionError,
+  failureReason,
+  type FailureReason,
+} from "../../../../../lib/client/transactions.ts";
 import { withWalletWords } from "../../../../../lib/client/wallet-words.ts";
 import { reportComparison } from "../../../../../lib/client/wallet-report.ts";
 import type { CryptoWorkerClient } from "../../../../../lib/crypto-worker/client.ts";
@@ -67,7 +71,12 @@ export type PaymentRunOutcome =
       /** Who got a disclosure, or why none was written. */
       disclosed: Disclosed;
     }
-  | { kind: "failed"; message: string };
+  | {
+      kind: "failed";
+      message: string;
+      /** Step 4.11: the wallet did not sign, so the page asks whether it is on devnet. */
+      reason?: FailureReason;
+    };
 
 const ROLE_WORDS: Record<TransferTransactionRole, string> = {
   proof: "verifying a proof",
@@ -109,7 +118,10 @@ export async function runPayment(options: {
     };
   const decrypted = await options.worker().decrypt(source);
   if (decrypted.pending > 0n) {
-    onProgress("Applying your pending balance first…");
+    // Step 4.11: said before the wallet opens, since it is one approval more than the payment's own.
+    onProgress(
+      "Applying your pending balance first: your wallet asks once more, for that transaction…",
+    );
     const apply = await options.worker().applyInstruction(sourceToken, source);
     await sendWithWallet({
       rpc,
@@ -201,7 +213,11 @@ export async function runPayment(options: {
     return await finish(sent.transferSignature);
   } catch (error) {
     if (!(error instanceof TransferStepError)) {
-      return { kind: "failed", message: describeTransactionError(error, connected.info.name) };
+      return {
+        kind: "failed",
+        message: describeTransactionError(error, connected.info.name),
+        reason: failureReason(error),
+      };
     }
     // Step 4.9: the transfer was sent and the network did not say what became of it. It is not a
     // failure yet: nothing is closed and nothing is recorded as failed. Sotto's worker follows every
@@ -248,6 +264,7 @@ export async function runPayment(options: {
     }
     return {
       kind: "failed",
+      reason: failureReason(error),
       message: cleaned
         ? `${where} Sotto closed the proof accounts this attempt created, so no rent is left behind, and your balances are unchanged. You can try again.`
         : `${where} Sotto could not close every proof account this attempt created; try again to close them.`,

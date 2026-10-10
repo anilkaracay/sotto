@@ -44,7 +44,7 @@ export const SNAPSHOT_NOTES: Partial<Record<SnapshotResult | "failed", string>> 
   not_signed:
     "Your wallet did not sign today's balance record, so today is not in the history yet. Sotto asks again the next time you unlock here.",
   key_unverified:
-    "Your viewing key did not verify, so today's balance was not recorded. Register your viewing key again on Account setup.",
+    "Your viewing key did not verify, so today's balance was not recorded. Register your public viewing key again on Account setup.",
   failed: "Today's balance could not be recorded. Sotto tries again the next time you unlock here.",
 };
 

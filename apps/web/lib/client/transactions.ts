@@ -68,3 +68,17 @@ export function describeTransactionError(
   if (isRateLimited(error)) return "The network is busy. Try again in a moment.";
   return "The transaction could not be completed. Check your balances, then try again.";
 }
+
+/**
+ * Step 4.11 (D-38): what kind of failure this was, for the guidance that goes with its words. A
+ * wallet that cancelled or refused did not sign; the app cannot see why, and one common reason is a
+ * wallet on another network, so the page then asks whether the wallet is on devnet.
+ */
+export type FailureReason = "rejected" | "wallet_refused" | null;
+
+export function failureReason(error: unknown): FailureReason {
+  const cause = error instanceof Error && error.name === "TransferStepError" ? error.cause : error;
+  if (isWalletCancel(cause)) return "rejected";
+  if (cause instanceof WalletSigningError) return "wallet_refused";
+  return null;
+}

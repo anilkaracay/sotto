@@ -485,7 +485,7 @@ export function RunView(props: {
         {actionable && !canAct ? (
           <p className={styles.approvalNote}>
             {!ownerKey
-              ? "Create your viewing key on the Account setup page first."
+              ? "Register your public viewing key on the Account setup page first."
               : "Connect your wallet and unlock your keys to run: the proofs are made in this tab."}
           </p>
         ) : null}

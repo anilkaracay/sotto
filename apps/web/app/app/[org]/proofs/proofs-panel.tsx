@@ -35,7 +35,10 @@ import {
   useConfidential,
   type AvailableNetwork,
 } from "../../_components/confidential/context.tsx";
+import type { RecordedAccount } from "../../_components/confidential/account-cards.tsx";
 import { KeysCard, WalletCard } from "../../_components/confidential/keys.tsx";
+import { ReadyChecklist, useReadyToPay } from "../../_components/confidential/ready-checklist.tsx";
+import { READY_FIRST } from "../../../../lib/ready.ts";
 import { useSend } from "../../_components/confidential/use-send.ts";
 import { SkyArt } from "../../_components/sky-art.tsx";
 import { runProof, type ProofRunOutcome } from "./proof-run.ts";
@@ -57,14 +60,25 @@ export function ProofsPanel(props: {
   proofs: IssuedProof[];
   /** The sotto_proofs config is paused: no new record can be written. */
   paused: boolean;
+  /** Step 4.11: for the checklist: the registered public viewing key and the recorded account. */
+  publicViewingKey?: string | null;
+  recorded?: RecordedAccount | null;
 }) {
+  // Step 4.11: where the checklist belongs (devnet's test dollar) the page reads the account.
+  const checklist =
+    props.network.cluster === "devnet" && Boolean(props.network.asset.devnetTestAsset);
   return (
     <ConfidentialProvider
       wallet={props.wallet}
       orgId={props.orgId}
       network={props.network}
-      readAccount={false}
+      readAccount={checklist}
     >
+      <ReadyChecklist
+        recorded={props.recorded ?? null}
+        publicViewingKey={props.publicViewingKey ?? null}
+        variant="pinned"
+      />
       <Proofs {...props} />
     </ConfidentialProvider>
   );
@@ -78,8 +92,11 @@ export function Proofs(props: {
   program: string;
   proofs: IssuedProof[];
   paused: boolean;
+  publicViewingKey?: string | null;
 }) {
   const { connected, vault, blocked } = useConfidential();
+  // Step 4.11: on devnet a proof is ready only once "Get ready to pay" is complete.
+  const setupReady = useReadyToPay(props.publicViewingKey ?? null);
   const router = useRouter();
   const [stage, setStage] = useState<Stage>({ kind: "idle" });
 
@@ -126,7 +143,12 @@ export function Proofs(props: {
         again={stage.kind === "done"}
         ready={Boolean(connected?.signer && vault.unlocked && props.network.wrappedMint)}
         stopped={
-          blocked ?? (props.paused ? "Paused while the Sotto proof program is paused." : null)
+          blocked ??
+          (props.paused
+            ? "Paused while the Sotto proof program is paused."
+            : setupReady === false
+              ? READY_FIRST
+              : null)
         }
         onProve={prove}
       />

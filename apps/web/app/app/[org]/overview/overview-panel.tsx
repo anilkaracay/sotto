@@ -21,7 +21,7 @@ import { WithdrawForm } from "../../_components/confidential/withdraw.tsx";
 import type { OwnerViewerKey } from "../../../../lib/client/balance-snapshot.ts";
 import type { RecordedAccount } from "../../_components/confidential/account-cards.tsx";
 import { AccountSky } from "./account-sky.tsx";
-import { FirstRunCard } from "./first-run-card.tsx";
+import { ReadyChecklist } from "../../_components/confidential/ready-checklist.tsx";
 import { BalanceGrowth } from "./balance-growth.tsx";
 import { RecentActivity } from "./activity.tsx";
 import { ChainPanel } from "./chain-panel.tsx";
@@ -36,6 +36,7 @@ export function OverviewPanel({
   network,
   ownerKey,
   recorded,
+  hasPayments,
 }: {
   wallet: string;
   userId: string;
@@ -46,8 +47,10 @@ export function OverviewPanel({
   network: AvailableNetwork;
   /** The owner's registered viewing key, which the daily balance snapshot is sealed to (step 2.12). */
   ownerKey: OwnerViewerKey | null;
-  /** The account Sotto has on record for this wallet, for the first-run card (step 4.6). */
+  /** The account Sotto has on record for this wallet, for the checklist (steps 4.6, 4.11). */
   recorded: RecordedAccount | null;
+  /** The company has made a payment: the dashboard no longer offers the first one (step 4.11). */
+  hasPayments: boolean;
 }) {
   return (
     <ConfidentialProvider wallet={wallet} orgId={orgId} network={network}>
@@ -57,6 +60,7 @@ export function OverviewPanel({
         displayName={displayName}
         ownerKey={ownerKey}
         recorded={recorded}
+        hasPayments={hasPayments}
       />
     </ConfidentialProvider>
   );
@@ -68,12 +72,14 @@ function Overview({
   displayName,
   ownerKey,
   recorded,
+  hasPayments,
 }: {
   userId: string;
   orgName: string;
   displayName: string | null;
   ownerKey: OwnerViewerKey | null;
   recorded: RecordedAccount | null;
+  hasPayments: boolean;
 }) {
   const { orgId, network, data } = useConfidential();
   const [withdrawing, setWithdrawing] = useState(false);
@@ -103,8 +109,14 @@ function Overview({
       />
       <div className={styles.grid}>
         <NetworkBanner check={network.check} label={network.label} />
-        {/* Step 4.6 (D-33): devnet's first run, until the account and the test money are there. */}
-        <FirstRunCard recorded={recorded} />
+        {/* Step 4.11 (D-38): devnet's "Get ready to pay", until the wallet can pay; then the way to
+            the first payment, until one was made. */}
+        <ReadyChecklist
+          recorded={recorded}
+          publicViewingKey={ownerKey?.publicKey ?? null}
+          variant="dashboard"
+          hasPayments={hasPayments}
+        />
         <BalancesSection />
         {/* Step 3.7 (M2): the design's first row, the dark balance growth beside a card of a third,
             here the account's sky card. */}

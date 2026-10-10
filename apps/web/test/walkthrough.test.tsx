@@ -1,6 +1,6 @@
 // The walkthrough (step 4.8, D-35): the page names each of Sotto's controls by the label its screen
 // shows, so a label the walkthrough names must be in the source of that screen; the page shows every
-// step with a picture that exists; the first-run card and the demo banner link to it; and the
+// step with a picture that exists; the checklist and the demo banner link to it; and the
 // README's section carries the same steps and labels. Nothing public says who the walkthrough is for.
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -71,11 +71,11 @@ describe("the walkthrough (step 4.8)", () => {
     }
   });
 
-  it("is linked from the first-run card and from the demo banner", async () => {
+  it("is linked from the checklist and from the demo banner", async () => {
     expect(WALKTHROUGH_PATH).toBe("/app/walkthrough");
-    const card = source("app/app/[org]/overview/first-run-card.tsx");
+    const card = source("app/app/_components/confidential/ready-checklist.tsx");
     expect(card).toContain("href={WALKTHROUGH_PATH}");
-    expect(card).toContain('data-testid="first-run-walkthrough"');
+    expect(card).toContain('data-testid="ready-walkthrough"');
     const { DemoShell } = await import("../app/demo/_components/demo-shell.tsx");
     const banner = renderToStaticMarkup(
       <DemoShell orgName="Northwind Labs" current="picker">

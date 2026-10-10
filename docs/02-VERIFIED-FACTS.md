@@ -372,3 +372,9 @@ O5. The same path with Phantom 26.31.0 and a new wallet on https://sottoapp.xyz 
 O6. With the SOL faucet's limit of 3 requests per IP per 24 hours used up, a fourth new wallet from the same network got "Too many requests, retry later" (HTTP 429) on the first-run card and no SOL (2026-10-09). With 0.05 SOL sent to the wallet from elsewhere, the card showed "Your wallet holds 0.05 SOL, enough for fees." and went on with the account step.
 
 **VERIFIED** 2026-10-10 · devnet, https://sottoapp.xyz, Phantom 26.31.0 · steps 4.8 and 4.9.
+
+O7. A Token-2022 confidential account's two public counters tell, without any key, whether it ever took a deposit or a transfer and whether one was applied (read from devnet with `fetchToken`, 2026-10-10): a wallet that funded, applied and paid reads pending counter 0 and `actualPendingBalanceCreditCounter` 1; a wallet that only set its account up reads 0 and 0; the demo recipient, which receives and never applies, reads 12 and 0. So "something was deposited" is pending > 0 or applied > 0, and "a balance was applied" is applied > 0.
+
+O8. What a payment ties up in SOL (two real payments on devnet, 2026-10-09 and 2026-10-10, read back with `getTransaction`): with Phantom (five version 0 transactions) the wallet's SOL fell from 0.046952 to 0.034771 over the four proof transactions and came back to 0.046892 with the fifth, a net cost of 0.00006 SOL; with Solflare (one version 1 transaction) the cost was 0.00002 SOL, the proof accounts being made and closed inside it. So a payment needs about 0.0122 SOL of headroom while it runs; the app asks for SOL when a wallet holds under 0.013. The account's setup cost 0.003038 SOL.
+
+**VERIFIED** 2026-10-10 · devnet · step 4.11.

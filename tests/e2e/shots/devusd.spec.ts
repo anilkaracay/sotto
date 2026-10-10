@@ -64,7 +64,7 @@ test("the devUSD elements at 1440 and 390", async ({ page, browser }) => {
   await expect(page).toHaveURL(OVERVIEW_URL);
   await openSetup(page);
   await unlock(page);
-  await page.getByRole("button", { name: "Create viewing key" }).click();
+  await page.getByRole("button", { name: "Register public viewing key" }).click();
   await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
   await page.getByRole("button", { name: "Set up the account" }).click();
   await expect(page.getByTestId("account-recorded")).toHaveText("Recorded");

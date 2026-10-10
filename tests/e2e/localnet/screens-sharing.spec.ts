@@ -119,7 +119,7 @@ async function newPage(browser: Browser): Promise<Page> {
 
 /** Connects the wallet on a page with the wallet card, if this tab has not yet. */
 async function connectWallet(page: Page) {
-  const connect = page.getByRole("button", { name: "Connect" });
+  const connect = page.getByRole("button", { name: "Connect" }).first();
   const signing = page.getByTestId("keys-wallet");
   await expect(connect.or(signing)).toBeVisible();
   if (await connect.isVisible()) await connect.click();
@@ -206,7 +206,7 @@ test("the sharing and records screens in every state, for the design pass", asyn
   const orgId = OVERVIEW_URL.exec(new URL(page.url()).pathname)?.[1] ?? "";
   await openSetup(page);
   await unlock(page);
-  await page.getByRole("button", { name: "Create viewing key" }).click();
+  await page.getByRole("button", { name: "Register public viewing key" }).click();
   await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
   const origin = new URL(page.url()).origin;
   // The account the SDK set up, recorded as the setup page records it (the indexer reads it).
@@ -287,7 +287,7 @@ test("the sharing and records screens in every state, for the design pass", asyn
   await expect(maya.getByTestId("invite-joined")).toContainText(`You joined ${LEGAL}`);
   await shoot(maya, "11-invite-joined");
   await unlock(maya);
-  await maya.getByRole("button", { name: "Create viewing key" }).click();
+  await maya.getByRole("button", { name: "Register public viewing key" }).click();
   await expect(maya.getByTestId("viewing-key-status")).toHaveText("Registered");
   await maya.context().close();
   // Daniel joins as a recipient too (no account set up), so he has a pay page.
@@ -373,7 +373,7 @@ test("the sharing and records screens in every state, for the design pass", asyn
   await expect(daniel.getByTestId("invite-joined")).toContainText("as its accountant");
   await shoot(daniel, "22-accountant-joined");
   await connectWallet(daniel);
-  await daniel.getByRole("button", { name: "Create viewing key" }).click();
+  await daniel.getByRole("button", { name: "Register public viewing key" }).click();
   await expect(daniel.getByTestId("viewing-key-status")).toHaveText("Registered");
   await shoot(daniel, "23-accountant-key-registered");
 

@@ -123,7 +123,7 @@ test(`seeds Northwind Labs Demo Ltd on ${target.name}`, async ({ page, browser }
   await test.step("2. Elif sets up the account and funds the treasury", async () => {
     await openSetup(page);
     await unlock(page);
-    await page.getByRole("button", { name: "Create viewing key" }).click();
+    await page.getByRole("button", { name: "Register public viewing key" }).click();
     await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
     await page.getByRole("button", { name: "Set up the account" }).click();
     await expect(page.getByTestId("account-status")).toHaveText("Set up");
@@ -171,7 +171,7 @@ test(`seeds Northwind Labs Demo Ltd on ${target.name}`, async ({ page, browser }
         `You joined ${NORTHWIND.displayName}`,
       );
       await unlock(recipient);
-      await recipient.getByRole("button", { name: "Create viewing key" }).click();
+      await recipient.getByRole("button", { name: "Register public viewing key" }).click();
       await expect(recipient.getByTestId("viewing-key-status")).toHaveText("Registered");
       await recipient.getByRole("button", { name: "Set up the account" }).click();
       await expect(recipient.getByTestId("account-status")).toHaveText("Set up");
@@ -264,7 +264,7 @@ test(`seeds Northwind Labs Demo Ltd on ${target.name}`, async ({ page, browser }
     await daniel.getByRole("button", { name: "Accept invite" }).click();
     await expect(daniel.getByTestId("invite-joined")).toContainText("as its accountant");
     await connectWallet(daniel);
-    await daniel.getByRole("button", { name: "Create viewing key" }).click();
+    await daniel.getByRole("button", { name: "Register public viewing key" }).click();
     await expect(daniel.getByTestId("viewing-key-status")).toHaveText("Registered");
     await page.reload();
     const row = page.getByTestId("key-row").filter({ hasText: DANIEL.name });

@@ -89,7 +89,7 @@ test("AC-03.2 unlocks only after the click, derives the CLI's key in the worker 
   await expect(page.getByTestId("unlock-warning")).toContainText(
     "can read the confidential balances of this wallet on every account, but can never move them. Only sign this in Sotto.",
   );
-  await page.getByRole("button", { name: "Connect" }).click();
+  await page.getByRole("button", { name: "Connect" }).first().click();
   await expect(page.getByTestId("keys-wallet")).toContainText("EQMW…RLZC");
   // Nothing has been signed for keys yet: the signature is requested only by the click (10 section 3).
   expect(await signedMessages(page)).toEqual([]);
@@ -155,7 +155,7 @@ test("AC-03.2 unlocks only after the click, derives the CLI's key in the worker 
   // stores (07 section 5).
   await openSetup(page);
   await expect(page.getByTestId("viewing-unlocked")).toHaveText("Unlocked");
-  await page.getByRole("button", { name: "Create viewing key" }).click();
+  await page.getByRole("button", { name: "Register public viewing key" }).click();
   await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
   const viewSignature = signWithTestKey(viewKeyMessage(wallet));
   const viewing = await deriveViewingKey(address(wallet), viewSignature);

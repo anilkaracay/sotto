@@ -101,9 +101,15 @@ export async function expectAmountsWrapped(page: Page, where: string): Promise<v
   if ((await amount.count()) === 0) return;
   const filter = () => amount.evaluate((element) => getComputedStyle(element).filter);
   await expect.poll(filter).toContain("blur(7px)");
-  await amount.focus();
-  await expect.poll(filter).toBe("none");
-  await amount.blur();
+  // Focused and read in one step: which amount is the first can change while a page still loads
+  // its balances, and the focus must be on the amount that is read.
+  const focused = () =>
+    amount.evaluate((element) => {
+      (element as HTMLElement).focus();
+      return getComputedStyle(element).filter;
+    });
+  await expect.poll(focused).toBe("none");
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
 }
 
 /**

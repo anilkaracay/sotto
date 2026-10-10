@@ -5,7 +5,7 @@ import { expect, type Page } from "@playwright/test";
 
 /** Connects the wallet on a page with the wallet card, if this tab has not yet. */
 export async function connectWallet(page: Page) {
-  const connect = page.getByRole("button", { name: "Connect" });
+  const connect = page.getByRole("button", { name: "Connect" }).first();
   const signing = page.getByTestId("keys-wallet");
   await expect(connect.or(signing)).toBeVisible();
   if (await connect.isVisible()) await connect.click();

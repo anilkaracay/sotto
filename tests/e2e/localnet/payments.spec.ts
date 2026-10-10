@@ -14,6 +14,7 @@ import { decryptTokenAccount } from "@sotto/sdk/confidential";
 import {
   associatedTokenAccount,
   decodeToken2022Account,
+  formatTokenAmount,
   readPublicTokenBalance,
 } from "@sotto/sdk/confidential/public";
 import { validateManifest, verifyManifest } from "@sotto/sdk/disclosure";
@@ -112,7 +113,7 @@ async function newPage(browser: Browser): Promise<Page> {
 
 /** Connects the wallet if needed and unlocks both keys with one click. */
 async function unlock(page: Page) {
-  const connect = page.getByRole("button", { name: "Connect" });
+  const connect = page.getByRole("button", { name: "Connect" }).first();
   const signing = page.getByTestId("keys-wallet");
   await expect(connect.or(signing)).toBeVisible();
   if (await connect.isVisible()) await connect.click();
@@ -203,7 +204,7 @@ test.describe.serial("single confidential payment on localnet", () => {
     orgId = OVERVIEW_URL.exec(new URL(page.url()).pathname)?.[1] ?? "";
     await openSetup(page);
     await unlock(page);
-    await page.getByRole("button", { name: "Create viewing key" }).click();
+    await page.getByRole("button", { name: "Register public viewing key" }).click();
     await expect(page.getByTestId("viewing-key-status")).toHaveText("Registered");
 
     // Two recipients whose accounts are ready; Maya joins through her invite.
@@ -236,7 +237,7 @@ test.describe.serial("single confidential payment on localnet", () => {
     await option.getByRole("button", { name: "Sign in" }).click();
     await recipient.getByRole("button", { name: "Accept invite" }).click();
     await unlock(recipient);
-    await recipient.getByRole("button", { name: "Create viewing key" }).click();
+    await recipient.getByRole("button", { name: "Register public viewing key" }).click();
     await expect(recipient.getByTestId("viewing-key-status")).toHaveText("Registered");
     await recipient.context().close();
 
@@ -411,5 +412,133 @@ test.describe.serial("single confidential payment on localnet", () => {
     expect(await publicUsdcOf(maya)).toBe(mayaUsdcBefore + 5n * USDC);
     await expectAmountsWrapped(recipient, "my pay after a withdrawal");
     await recipient.context().close();
+  });
+
+  // Step 4.11 (D-38): a payment that cannot go on says what happened and why, and is fixed where it
+  // stands, with the form's values kept: the keys locked in the tab, the confidential balance below
+  // the amount (the balances shown, the missing part prefilled and moved from the public balance),
+  // and a request the wallet rejects (nothing sent, the same payment again with "Try again"). The
+  // blocks' words, one by one, are in apps/web/test/pay-guides.test.tsx.
+  test("step 4.11: a blocked payment is fixed in place and the form keeps its values", async ({
+    page,
+  }) => {
+    test.setTimeout(480_000);
+    await signIn(page, OWNER.keypair, OVERVIEW_URL);
+    await page.getByRole("link", { name: "Payments" }).click();
+    await expect(page).toHaveURL(/\/payments\/new$/);
+    const pay = page.getByTestId("pay-card");
+    const mayaLabel = `Maya Chen · ${MAYA.address.slice(0, 4)}…${MAYA.address.slice(-4)}`;
+    const NOTE = "Guided retry 4.11";
+    const expectForm = async (amount: string) => {
+      await expect(pay.getByLabel("Recipient").locator("option:checked")).toHaveText(mayaLabel);
+      await expect(pay.getByLabel("Amount (USDC)")).toHaveValue(amount);
+      await expect(pay.getByLabel("Memo")).toHaveValue(NOTE);
+    };
+    const signed = () =>
+      page.evaluate(
+        () =>
+          (window as unknown as { __sottoTestWallet: { signedTransactions: number } })
+            .__sottoTestWallet.signedTransactions,
+      );
+
+    // The keys are locked in a new tab: the form says so and unlocks them in place.
+    const before = await balancesOf(owner);
+    const publicBefore = await publicUsdcOf(owner);
+    expect(before.pending).toBe(0n);
+    // 10 USDC more than the confidential balance holds, and less than the wallet holds in public.
+    const need = before.available + 10n * USDC;
+    expect(publicBefore).toBeGreaterThanOrEqual(10n * USDC);
+    const shown = (base: bigint) => formatTokenAmount(base, 6);
+    const amount = shown(need);
+    await pay.getByLabel("Recipient").selectOption({ label: mayaLabel });
+    await pay.getByLabel("Amount (USDC)").fill(amount);
+    await pay.getByLabel("Memo").fill(NOTE);
+    const locked = page.getByTestId("guidance-locked");
+    await expect(locked).toContainText("Your keys are locked in this tab.");
+    await expect(locked).toContainText("The proofs of a confidential payment are made in this tab");
+    await expect(pay.getByRole("button", { name: "Pay", exact: true })).toBeDisabled();
+    const connect = page.getByRole("button", { name: "Connect" }).first();
+    if (await connect.isVisible()) await connect.click();
+    await locked.getByRole("button", { name: "Unlock my keys" }).click();
+    await expect(locked).toHaveCount(0);
+    await expect(page.getByTestId("viewing-unlocked")).toHaveText("Unlocked");
+    await expectForm(amount);
+
+    // The confidential balance is below the amount: found before anything is created or signed.
+    const rows = await page.getByTestId("payment-row").count();
+    const signedBefore = await signed();
+    await pay.getByRole("button", { name: "Pay", exact: true }).click();
+    const low = page.getByTestId("guidance-insufficient");
+    await expect(low).toContainText(
+      `Your confidential balance does not cover ${amount} USDC. Nothing was sent.`,
+    );
+    await expect(low).toContainText(
+      "A confidential payment is paid from the available confidential balance only.",
+    );
+    await expect(low.getByTestId("guidance-balances").getByRole("listitem")).toHaveText([
+      `Available, confidential: ${shown(before.available)} wUSDC`,
+      "Pending, confidential: 0 wUSDC",
+      `Public, in your wallet: ${shown(publicBefore)} USDC`,
+    ]);
+    await expect(low.getByTestId("guidance-move-amount")).toHaveValue("10");
+    await expect(low).toContainText("Your wallet will ask 2 times");
+    expect(await signed()).toBe(signedBefore);
+    await expect(page.getByTestId("payment-row")).toHaveCount(rows);
+    await expect(page.getByTestId("payment-problem")).toHaveCount(0);
+    // AC-15.1: every number of the block is under the privacy screen.
+    await expectAmountsWrapped(page, "payments with the balance block");
+
+    // The fix in place: the missing 10 USDC wrapped, deposited and applied, in two transactions.
+    await low.getByRole("button", { name: "Move USDC to confidential balance" }).click();
+    await expect(low).toHaveCount(0, { timeout: 180_000 });
+    expect(await signed()).toBe(signedBefore + 2);
+    const moved = await balancesOf(owner);
+    expect(moved.available).toBe(need);
+    expect(moved.pending).toBe(0n);
+    expect(await publicUsdcOf(owner)).toBe(publicBefore - 10n * USDC);
+    await expectForm(amount);
+
+    // The wallet rejects the request: nothing is sent, the form is kept, and the block says so.
+    await page.evaluate(() =>
+      (
+        window as unknown as {
+          __sottoTestWallet: { refuseTransactions: (refusal: object | null) => void };
+        }
+      ).__sottoTestWallet.refuseTransactions({
+        name: "WalletSignTransactionError",
+        message: "User rejected the request.",
+      }),
+    );
+    await pay.getByRole("button", { name: "Pay", exact: true }).click();
+    const refused = page.getByTestId("guidance-wallet");
+    await expect(refused).toContainText("You cancelled in your wallet. Nothing was sent.", {
+      timeout: 120_000,
+    });
+    await expect(refused).toContainText("Sotto Test Wallet said");
+    await expect(refused).toContainText("Your form is kept.");
+    // The devnet question belongs to devnet; this ledger is a local one.
+    await expect(refused).not.toContainText("devnet");
+    await expect(page.getByTestId("payment-problem")).toHaveCount(0);
+    await expectForm(amount);
+    expect((await balancesOf(owner)).available).toBe(need);
+    await expect(page.getByTestId("payment-row")).toHaveCount(rows + 1);
+
+    // "Try again" runs the same payment again: one more row never appears, and it settles.
+    await page.evaluate(() =>
+      (
+        window as unknown as {
+          __sottoTestWallet: { refuseTransactions: (refusal: object | null) => void };
+        }
+      ).__sottoTestWallet.refuseTransactions(null),
+    );
+    await refused.getByRole("button", { name: "Try again" }).click();
+    await expect(page.getByTestId("payment-done")).toContainText(
+      `Paid ${amount} USDC to Maya Chen. Settled onchain`,
+      { timeout: 180_000 },
+    );
+    await expect(refused).toHaveCount(0);
+    await expect(page.getByTestId("payment-row")).toHaveCount(rows + 1);
+    await expect(page.getByTestId("payment-row").first()).toHaveAttribute("data-status", "settled");
+    expect((await balancesOf(owner)).available).toBe(0n);
   });
 });

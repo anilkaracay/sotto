@@ -1,7 +1,7 @@
 // The walkthrough page in the browser (step 4.8, D-35): public, every step with its picture loaded,
 // readable at 1440 and 390 without sideways scrolling, and accessible. The demo banner's link to it
 // is in demo.spec.ts. The labels it names are checked against the screens' sources in
-// apps/web/test/walkthrough.test.tsx; the first-run card's link is in onboarding.spec.ts.
+// apps/web/test/walkthrough.test.tsx; the checklist's link is in onboarding.spec.ts.
 import { copyFile, mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
@@ -12,15 +12,13 @@ const SHOTS = fileURLToPath(new URL("../../../.demo-shots/walkthrough/", import.
 const STEPS = [
   "Switch your wallet to devnet",
   "Quick start: sign in",
-  "Set up and get test money",
-  "Create your viewing key",
-  "Move devUSD into your confidential balance",
+  "Get ready to pay",
   "Pay Atlas Freight",
   "Check on the explorer that the amount is hidden",
   "Prove a balance without showing it",
 ];
 
-test("the walkthrough: eight steps with their pictures, at 1440 and 390, with no session", async ({
+test("the walkthrough: six steps with their pictures, at 1440 and 390, with no session", async ({
   page,
 }) => {
   const response = await page.goto("/app/walkthrough");

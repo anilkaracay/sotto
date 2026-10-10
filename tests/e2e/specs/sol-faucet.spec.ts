@@ -3,7 +3,8 @@
 // Account setup and the card. No ledger runs beside this server, so the faucet's answers are stood in by the spec: the
 // wallet may ask, asks once, the grant is on its way, then paid with its link to the explorer, and
 // the wallet's next time. The limits themselves are in the API tests (apps/web/test/api-sol-faucet.test.ts)
-// and the transfer in the worker's localnet test.
+// and the transfer in the worker's localnet test. Step 4.10 (D-37): a request refused for a limit shows
+// where else devnet SOL comes from, on the first-run card and on this card.
 import { expect, test } from "@playwright/test";
 import { expectAccessible } from "../a11y.ts";
 import { openSetup, OVERVIEW_URL, signIn } from "../helpers.ts";
@@ -88,4 +89,72 @@ test("the SOL faucet card: a new wallet asks once, sees the grant paid and its l
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(900);
   await expectAccessible(page, "the setup page with the SOL faucet card");
+});
+
+test("a request the SOL faucet refuses for its limit points to Solana's own faucet, on the card and on Account setup", async ({
+  page,
+}) => {
+  let wallet = "";
+  let posts = 0;
+  // The faucet as it answers a wallet from a network address that had its requests for the day. The
+  // answers are in place before the wallet signs in, so the card reads them when it first shows.
+  await page.route("**/api/faucet/sol", async (route) => {
+    if (route.request().method() === "POST") {
+      posts += 1;
+      await route.fulfill({
+        status: 429,
+        headers: { "retry-after": "3600" },
+        json: { error: { code: "rate_limited", message: "Too many requests, retry later" } },
+      });
+      return;
+    }
+    await route.fulfill({
+      json: {
+        faucet: {
+          wallet,
+          grantLamports: "50000000",
+          ceilingLamports: "20000000",
+          balanceLamports: "0",
+          state: "available",
+          nextAt: null,
+          grants: [],
+        },
+      },
+    });
+  });
+  await page.route("**/api/orgs/*/faucet", async (route) => {
+    await route.fulfill({
+      json: { faucet: { wallet, limit: "1000000000000", remaining: "1000000000000", mints: [] } },
+    });
+  });
+
+  wallet = await signIn(page, undefined, OVERVIEW_URL);
+
+  // The first-run card: the note with its link, in place of the bare refusal.
+  const card = page.getByTestId("first-run-card");
+  await expect(card.getByTestId("first-run-sol")).toContainText("Your wallet holds 0 SOL");
+  await expect(card.getByTestId("first-run-sol-elsewhere")).toHaveCount(0);
+  await card.getByRole("button", { name: "Set up and get test money" }).click();
+  const note = card.getByTestId("first-run-sol-elsewhere");
+  await expect(note).toHaveText(
+    "Sotto's faucet cannot send this wallet test SOL right now. Get devnet SOL for it at faucet.solana.com, then reload this page.",
+  );
+  const link = note.getByRole("link", { name: "faucet.solana.com" });
+  await expect(link).toHaveAttribute("href", "https://faucet.solana.com");
+  await expect(link).toHaveAttribute("target", "_blank");
+  await expect(card).not.toContainText("Too many requests");
+  expect(posts).toBe(1);
+
+  // The SOL faucet card on Account setup says the same when its own request is refused.
+  await openSetup(page);
+  const faucet = page.getByTestId("sol-faucet-card");
+  await faucet.getByRole("button", { name: "Get 0.05 SOL" }).click();
+  const elsewhere = faucet.getByTestId("sol-faucet-elsewhere");
+  await expect(elsewhere).toContainText("Get devnet SOL for it at faucet.solana.com");
+  await expect(elsewhere.getByRole("link", { name: "faucet.solana.com" })).toHaveAttribute(
+    "href",
+    "https://faucet.solana.com",
+  );
+  await expect(faucet).not.toContainText("Too many requests");
+  expect(posts).toBe(2);
 });

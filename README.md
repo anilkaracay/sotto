@@ -22,14 +22,15 @@
 ## Demo
 
 <p align="center">
-  <a href="https://youtu.be/99sRcDDkwgE">
+  <a href="https://youtu.be/JuFm1sN6jMg">
     <img src="docs/assets/demo-thumbnail.jpg" alt="Watch the Sotto product demo on YouTube" width="820">
   </a>
 </p>
 
 <p align="center">
   <a href="https://sottoapp.xyz">sottoapp.xyz</a> ·
-  <a href="https://sottoapp.xyz/v/7ssfLgVmvaC4zAFm9aVBw4jrJdb9mSisCKQXvFHjUbEX">A live proof of funds</a>
+  <a href="https://sottoapp.xyz/v/7ssfLgVmvaC4zAFm9aVBw4jrJdb9mSisCKQXvFHjUbEX">A live proof of funds</a> ·
+  <a href="https://docsend.com/view/qpvuwf336whbtsti">Pitch deck</a>
 </p>
 
 ## Why
@@ -86,6 +87,8 @@ Connect Phantom or Solflare on Solana devnet and sign in. A new wallet gets a co
 
 A live proof of funds, for anyone: https://sottoapp.xyz/v/7ssfLgVmvaC4zAFm9aVBw4jrJdb9mSisCKQXvFHjUbEX
 It states that Northwind Labs Demo Ltd holds at least 250,000 devUSD. Status: Proven, valid until 4 April 2027. Balance disclosed: none.
+
+Pitch deck: https://docsend.com/view/qpvuwf336whbtsti
 
 Every step with a picture is in the [Walkthrough](#walkthrough) below. The same in detail, with your own account:
 

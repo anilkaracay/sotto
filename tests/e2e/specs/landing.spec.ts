@@ -29,7 +29,10 @@ test("AC-17.1 serves the landing with its corrected copy and no console error", 
   await expect(page.getByTestId("landing-facts")).toContainText(
     "A confidential payment is one Solana transaction in Solflare.",
   );
-  await expect(page.getByText("Built for Colosseum's Crypto World's Fair")).toBeVisible();
+  await expect(page.getByText("\u00a9 2026 Sotto \u00b7 A Cayvox Labs product.")).toBeVisible();
+  await expect(
+    page.getByText("All trademarks are property of their respective owners."),
+  ).toBeVisible();
   const body = await page.locator("body").innerText();
   expect(body).not.toMatch(/\b(True|False)\b|one transaction|open source|mainnet-beta/i);
   // The hero's views change on a timer; the page keeps running without a problem.

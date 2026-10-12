@@ -177,7 +177,9 @@ describe("the landing (AC-17.1)", () => {
     expect(html).toMatch(/autocomplete="organization"/i);
     expect(text).toContain("Work email");
     expect(text).toContain("Company");
-    expect(text).toContain("Built for Colosseum's Crypto World's Fair");
+    expect(text).toContain("\u00a9 2026 Sotto \u00b7 A Cayvox Labs product.");
+    expect(text).toContain("All trademarks are property of their respective owners.");
+    expect(text).not.toMatch(/Colosseum|World's Fair|hackathon/i);
     expect(links.map((link) => link.label)).not.toEqual(
       expect.arrayContaining(["Privacy", "Terms", "Docs", "GitHub", "Revenue"]),
     );

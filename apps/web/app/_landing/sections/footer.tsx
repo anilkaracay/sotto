@@ -114,7 +114,7 @@ export function Footer({ v }: { v: LandingView }) {
         </div>
         <div className="fbase">
           <span>
-            {"\u00a9 2026 Sotto. Built for Colosseum's Crypto World's Fair."}
+            {"\u00a9 2026 Sotto \u00b7 A Cayvox Labs product."}
             <br />
             {"All trademarks are property of their respective owners."}
           </span>

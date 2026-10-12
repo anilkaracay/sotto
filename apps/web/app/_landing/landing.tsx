@@ -35,7 +35,7 @@ export function Landing() {
       <Trust v={v} />
       <Developers v={v} />
       <Faq v={v} />
-      <Footer v={v} />
+      <Footer />
     </div>
   );
 }

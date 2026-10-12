@@ -1,4 +1,4 @@
-// The landing design sets CSS custom properties inline (--i, --l, --L, --o, --fx, --fy), which
+// The landing design sets CSS custom properties inline (--i, --l, --L, --o), which
 // React's style type does not list (step 3.1).
 import "react";
 

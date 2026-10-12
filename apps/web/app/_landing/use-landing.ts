@@ -133,9 +133,6 @@ export function useLanding() {
     ty: 0,
     open: false,
     auto: true,
-    fx: 0,
-    fy: 0,
-    footManual: false,
     split: 54,
     role: "public" as (typeof ROLES)[number]["id"],
     proof: "idle" as "idle" | "run" | "done",
@@ -286,12 +283,6 @@ export function useLanding() {
       heroCap: s.open
         ? "Sample data. Accountant view: every amount decrypted with a viewing key."
         : "Sample data. Public view: anyone can verify the payments, nobody can read the amounts.",
-      fx: Math.round(s.fx),
-      fy: Math.round(s.fy),
-      wmCls: s.footManual ? "wmk man" : "wmk auto",
-      onFootMove: (e: MouseEvent<HTMLElement>) =>
-        track("f", e, (x, y) => ({ fx: x, fy: y, footManual: true })),
-      onFootLeave: () => update({ footManual: false }),
       split: s.split,
       onSplit: (e: ChangeEvent<HTMLInputElement>) => update({ split: Number(e.target.value) }),
       roles: ROLES.map((r) => ({

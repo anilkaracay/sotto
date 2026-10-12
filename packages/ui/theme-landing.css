@@ -12,6 +12,12 @@
   inherits: true;
   initial-value: 60%;
 }
+/* How far the footer wordmark's focus has moved from its own glide (0) to the cursor (1). */
+@property --wm {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
 .theme-landing {
   margin: 0;
   background: #ffffff;
@@ -4292,6 +4298,21 @@ body:has(> main.theme-landing) {
   opacity: 0.55;
   filter: blur(12px);
 }
+/* The focus: a round window onto the sharp layer, placed in that layer's own box. It glides by
+   itself (--ax, --ay, in percent of the layer) and follows the cursor (--fx, --fy, in the layer's
+   pixels, written by wordmark-focus.tsx). --wm mixes the two and is eased, so the focus travels to
+   the cursor when it arrives and back to the glide, which never stops, when it leaves. */
+.theme-landing .wmk {
+  --fx: 50%;
+  --fy: 50%;
+  --cx: calc(var(--ax) * (1 - var(--wm)) + var(--fx) * var(--wm));
+  --cy: calc(var(--ay) * (1 - var(--wm)) + var(--fy) * var(--wm));
+  animation: landing-wmL 11s ease-in-out infinite;
+  transition: --wm 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.theme-landing .wmk.man {
+  --wm: 1;
+}
 .theme-landing .wmk .sh {
   color: #ffffff;
   -webkit-mask-image: radial-gradient(
@@ -4300,15 +4321,6 @@ body:has(> main.theme-landing) {
     transparent 162px
   );
   mask-image: radial-gradient(circle 160px at var(--cx) var(--cy), #000 0 128px, transparent 162px);
-}
-.theme-landing .wmk.auto {
-  --cx: var(--ax);
-  --cy: var(--ay);
-  animation: landing-wmL 11s ease-in-out infinite;
-}
-.theme-landing .wmk.man {
-  --cx: var(--fx);
-  --cy: var(--fy);
 }
 .theme-landing .fcols {
   display: grid;

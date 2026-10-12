@@ -1,9 +1,9 @@
 // The landing's footer section (F-17, step 3.1), from the approved landing design.
 import { RequestAccessForm } from "../request-access.tsx";
-import { SottoLockupInk, SottoWordmarkWhite } from "@sotto/ui";
-import type { LandingView } from "../use-landing.ts";
+import { SottoLockupInk } from "@sotto/ui";
+import { WordmarkFocus } from "../wordmark-focus.tsx";
 
-export function Footer({ v }: { v: LandingView }) {
+export function Footer() {
   return (
     <footer id="v8access">
       <div className="fsky">
@@ -64,20 +64,7 @@ export function Footer({ v }: { v: LandingView }) {
           </p>
           <RequestAccessForm />
         </div>
-        <div
-          className={v.wmCls}
-          style={{ "--fx": `${v.fx}px`, "--fy": `${v.fy}px` }}
-          onMouseMove={v.onFootMove}
-          onMouseLeave={v.onFootLeave}
-          aria-hidden="true"
-        >
-          <span className="bl">
-            <SottoWordmarkWhite height={256} decorative />
-          </span>
-          <span className="sh">
-            <SottoWordmarkWhite height={256} decorative />
-          </span>
-        </div>
+        <WordmarkFocus />
       </div>
       <div className="w5">
         <div className="fcols">
@@ -114,7 +101,7 @@ export function Footer({ v }: { v: LandingView }) {
         </div>
         <div className="fbase">
           <span>
-            {"\u00a9 2026 Sotto. Built for Colosseum's Crypto World's Fair."}
+            {"\u00a9 2026 Sotto \u00b7 A Cayvox Labs product."}
             <br />
             {"All trademarks are property of their respective owners."}
           </span>

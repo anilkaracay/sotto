@@ -29,7 +29,10 @@ test("AC-17.1 serves the landing with its corrected copy and no console error", 
   await expect(page.getByTestId("landing-facts")).toContainText(
     "A confidential payment is one Solana transaction in Solflare.",
   );
-  await expect(page.getByText("Built for Colosseum's Crypto World's Fair")).toBeVisible();
+  await expect(page.getByText("\u00a9 2026 Sotto \u00b7 A Cayvox Labs product.")).toBeVisible();
+  await expect(
+    page.getByText("All trademarks are property of their respective owners."),
+  ).toBeVisible();
   const body = await page.locator("body").innerText();
   expect(body).not.toMatch(/\b(True|False)\b|one transaction|open source|mainnet-beta/i);
   // The hero's views change on a timer; the page keeps running without a problem.
@@ -203,3 +206,172 @@ for (const width of [1440, 1280, 430, 390]) {
     await expectVisual(page, `landing-${width}`);
   });
 }
+
+// Step 4.12: the footer wordmark's focus follows the mouse. The mask is drawn in the sharp layer's
+// own box, narrower than the footer and centred in it, so the cursor is measured against that layer
+// on every frame. At 1280, 1440 and 1920 the focus is under the cursor on the left, in the middle
+// and on the right, after the page scrolled under a still cursor and after a resize; leaving eases
+// back with a transition, never a jump; touch input and a reader who asks for less motion are not
+// followed.
+type FocusState = {
+  manual: boolean;
+  dx: number;
+  dy: number;
+  mix: number;
+  gliding: boolean;
+};
+function focusState(page: Page, x: number, y: number): Promise<FocusState> {
+  return page.evaluate(
+    ([clientX, clientY]) => {
+      const root = document.querySelector<HTMLElement>('[data-testid="wordmark-focus"]');
+      const layer = root?.querySelector<HTMLElement>(".sh");
+      if (!root || !layer) throw new Error("no wordmark");
+      const rect = layer.getBoundingClientRect();
+      const style = getComputedStyle(root);
+      return {
+        manual: root.classList.contains("man"),
+        // How far the focus is from the cursor, in the layer's pixels.
+        dx: parseFloat(root.style.getPropertyValue("--fx")) - ((clientX ?? 0) - rect.left),
+        dy: parseFloat(root.style.getPropertyValue("--fy")) - ((clientY ?? 0) - rect.top),
+        mix: Number(style.getPropertyValue("--wm")),
+        gliding: style.animationName.includes("landing-wmL"),
+      };
+    },
+    [x, y],
+  );
+}
+
+test("the footer wordmark's focus sits under the cursor at 1280, 1440 and 1920, after a scroll and a resize, and eases back", async ({
+  page,
+}) => {
+  const problems = watchConsole(page);
+  for (const width of [1280, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    const mark = page.getByTestId("wordmark-focus");
+    await mark.scrollIntoViewIfNeeded();
+    const before = await focusState(page, 0, 0);
+    expect(before).toMatchObject({ manual: false, mix: 0, gliding: true });
+
+    const under = async (x: number, y: number, when: string) => {
+      await expect
+        .poll(async () => {
+          const state = await focusState(page, x, y);
+          return state.manual && Math.abs(state.dx) <= 1 && Math.abs(state.dy) <= 1;
+        }, `${width}: the focus under the cursor ${when}`)
+        .toBe(true);
+    };
+    const box = async () => {
+      const found = await mark.boundingBox();
+      if (!found) throw new Error("the wordmark has no box");
+      return found;
+    };
+    let area = await box();
+    // The layer is narrower than the footer: the left and right points lie outside it, over the
+    // footer's sky, where the old code was furthest off.
+    for (const [part, name] of [
+      [0.08, "at the left"],
+      [0.5, "in the middle"],
+      [0.92, "at the right"],
+    ] as const) {
+      const x = Math.round(area.x + area.width * part);
+      const y = Math.round(area.y + area.height * 0.55);
+      await page.mouse.move(x, y, { steps: 4 });
+      await under(x, y, name);
+    }
+    // The eased mix reaches the cursor.
+    await expect.poll(async () => (await focusState(page, 0, 0)).mix).toBe(1);
+
+    // The page scrolls under a cursor that does not move.
+    const still = {
+      x: Math.round(area.x + area.width * 0.3),
+      y: Math.round(area.y + area.height * 0.5),
+    };
+    await page.mouse.move(still.x, still.y);
+    await under(still.x, still.y, "before the scroll");
+    await page.evaluate(() => window.scrollBy(0, -70));
+    await expect.poll(async () => (await box()).y).not.toBe(area.y);
+    await under(still.x, still.y, "after the scroll");
+
+    // A resize moves and scales the layer; the next move is measured against it as it is now.
+    await page.setViewportSize({ width: width - 180, height: 820 });
+    await mark.scrollIntoViewIfNeeded();
+    area = await box();
+    const moved = {
+      x: Math.round(area.x + area.width * 0.7),
+      y: Math.round(area.y + area.height * 0.5),
+    };
+    await page.mouse.move(moved.x, moved.y, { steps: 3 });
+    await under(moved.x, moved.y, "after the resize");
+
+    // Leaving: the mix starts back from where it was, through a transition, and ends at the glide.
+    await expect.poll(async () => (await focusState(page, 0, 0)).mix).toBe(1);
+    const left = await page.evaluate(async () => {
+      const root = document.querySelector<HTMLElement>('[data-testid="wordmark-focus"]');
+      if (!root) throw new Error("no wordmark");
+      root.dispatchEvent(new PointerEvent("pointerleave", { pointerType: "mouse" }));
+      const first = Number(getComputedStyle(root).getPropertyValue("--wm"));
+      const easing = root
+        .getAnimations()
+        .filter(
+          (animation) =>
+            animation instanceof CSSTransition && animation.transitionProperty === "--wm",
+        );
+      await Promise.all(easing.map((animation) => animation.finished));
+      return {
+        manual: root.classList.contains("man"),
+        first,
+        transitions: easing.length,
+        last: Number(getComputedStyle(root).getPropertyValue("--wm")),
+      };
+    });
+    expect(left.manual).toBe(false);
+    expect(left.transitions).toBe(1);
+    expect(left.first).toBeGreaterThan(0.9);
+    expect(left.last).toBe(0);
+    expect((await focusState(page, 0, 0)).gliding).toBe(true);
+  }
+  expect(problems).toEqual([]);
+});
+
+test("the footer wordmark does not follow touch input or a reader who asks for less motion", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  const mark = page.getByTestId("wordmark-focus");
+  await mark.scrollIntoViewIfNeeded();
+  const area = await mark.boundingBox();
+  if (!area) throw new Error("the wordmark has no box");
+  const x = Math.round(area.x + area.width / 2);
+  const y = Math.round(area.y + area.height / 2);
+  const settle = () =>
+    page.evaluate(
+      () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+    );
+
+  // A finger and a pen: nothing follows them, and the glide goes on.
+  for (const pointerType of ["touch", "pen"]) {
+    await page.evaluate(
+      ([clientX, clientY, type]) => {
+        document.querySelector('[data-testid="wordmark-focus"]')?.dispatchEvent(
+          new PointerEvent("pointermove", {
+            pointerType: type as string,
+            clientX: clientX as number,
+            clientY: clientY as number,
+            bubbles: true,
+          }),
+        );
+      },
+      [x, y, pointerType],
+    );
+    await settle();
+    expect(await focusState(page, x, y)).toMatchObject({ manual: false, mix: 0, gliding: true });
+  }
+
+  // Less motion: no glide, no tracking; the focus holds still where the design puts it.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.mouse.move(x, y, { steps: 3 });
+  await settle();
+  expect(await focusState(page, x, y)).toMatchObject({ manual: false, mix: 0, gliding: false });
+});
